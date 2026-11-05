@@ -30,7 +30,7 @@ Nothing in the server SHALL change a product's stock or write a stock line excep
 - **THEN** all three count, each with its own line
 
 ### Requirement: A stock change never hangs on a held product
-A stock change SHALL wait a short time for a product something else holds, then say Wheelhouse is busy and change nothing. A till's sale SHALL be sent again by the till, and a Shopify refund again by Shopify, and each SHALL then count once. A Shopify order SHALL wait longer, as it can't be sent again.
+A stock change SHALL wait a short time for a product something else holds, then say Wheelhouse is busy and change nothing. A till's sale SHALL be sent again by the till, and a Shopify order or refund again by Shopify, and each SHALL then count once. Staff SHALL be told Wheelhouse is busy, not that something failed, and at the till SHALL NOT be told to reverse a card payment for it.
 
 #### Scenario: Adjusting a held product
 - **WHEN** a product is held and someone adjusts it
@@ -39,6 +39,33 @@ A stock change SHALL wait a short time for a product something else holds, then 
 #### Scenario: A till's sale while the product is held
 - **WHEN** a till's sale reaches a held product
 - **THEN** the till is told to send again, and when it does the sale counts once
+
+#### Scenario: A Shopify order while the product is held
+- **WHEN** a Shopify order reaches a held product, and Shopify sends it again
+- **THEN** the first changes nothing, and the second sells it once with one line
+
+#### Scenario: A paid Shopify order with an item at nothing
+- **WHEN** a Shopify order has one item with none in stock and another with some
+- **THEN** both lines are recorded, the first goes below zero, and it shows in Today's below-zero warning
+
+#### Scenario: A paid Shopify order with a product taken off sale
+- **WHEN** a Shopify order has one product taken off sale here and another on sale
+- **THEN** both lines are recorded with their stock changes, and the product stays off sale, refused at the till and everywhere else
+
+#### Scenario: A job already paid
+- **WHEN** an answer was lost on a job's card payment and Card approved is pressed again
+- **THEN** the till says the sale was recorded and not to take payment again
+
+#### Scenario: A card sale at a busy moment
+- **WHEN** Card approved is pressed and Wheelhouse is busy
+- **THEN** it says the sale isn't recorded yet and to try again, and that if the card machine took the payment not to take it again
+
+### Requirement: Applying a very large count doesn't stop the shop
+Applying a count SHALL hold its products as briefly as it can. A sale of one of them during a very large count (50,000 products) MAY be told to try again for about 6 seconds, and SHALL then go through.
+
+#### Scenario: A sale during a large count
+- **WHEN** a count of 50,000 products is being applied and one of them is sold
+- **THEN** the sale goes through, after being told to try again if it had to wait over 2 seconds
 
 ### Requirement: A supplier's item imported with stock has a history line
 Importing a supplier's item with stock SHALL write a line in the new product's history saying where it came from.

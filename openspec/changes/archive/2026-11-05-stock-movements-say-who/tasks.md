@@ -21,6 +21,6 @@
 
 - [x] 4.1 Migration from empty on a scratch database and on a populated one.
 - [x] 4.2 `npm test`, `npm run test:browser`, consolidate, lint, typecheck, check-migrations on each head after merging latest main.
-- [x] 4.3 Self-review of each diff; the independent review and `/review` by whoever merges.
+- [x] 4.3 Self-review of each diff; the independent review (its fixes are here) and `/review` by whoever merges.
 - [x] 4.4 Large made-up tables: the migration's lock, a big Apply's hold against the 2 seconds, query plans.
 - [x] 4.5 Archive as the last commit of the top pull request.

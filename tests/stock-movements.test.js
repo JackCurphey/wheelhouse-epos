@@ -213,13 +213,19 @@ test('changes at once never go under zero between them when they mustn’t', asy
 
 test('the lock limit ends with its transaction, and never stays on a connection another request reuses', async () => {
   await inShop(async () => {
-    const before = (await prepare('SHOW lock_timeout').get()).lock_timeout;
     await dbExec('BEGIN');
     await lockStock([await (async () => (await prepare("INSERT INTO products (name, updated_at) VALUES ('[Product]', now()) RETURNING id").get()).id)()]);
     assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '2s', 'on during the transaction');
     await dbExec('COMMIT');
-    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, before);
+    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '0', 'off again, as every connection starts');
   });
+});
+
+test('moveStock takes what the caller already holds, and doesn’t lock it again', async () => {
+  const id = await product(6);
+  // A figure only the caller's row could give: refused from it, not from the 6 stored.
+  const out = await inTransaction(() => moveStock([{ productId: id, change: -1, type: 'sale' }], {}, { neverBelowZero: true, held: [{ id, name: '[Held]', stock_qty: 0 }] }));
+  assert.equal(out.refused.name, '[Held]');
 });
 
 test('moveStock tells Shopify only the products it holds there, with the figure after', async () => {

@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHmac, timingSafeEqual, randomBytes, scryptSync } from 'node:crypto';
-import { prepare, runWithShop } from './db.js';
+import { dbExec, prepare, runWithShop } from './db.js';
+import { limitLockWait } from './lib/stock.js';
 
 // SHOPIFY_TOKEN_ENCRYPTION_KEY derives the key used to encrypt stored
 // Shopify tokens (see README.md). The 'dev-only-insecure-key' fallback below
@@ -401,6 +402,22 @@ export async function recordShopifyEventError(shopifyEventId, kind, errorMessage
      DO UPDATE SET error_message = EXCLUDED.error_message
      WHERE shopify_processed_events.status = 'error' AND starts_with(shopify_processed_events.error_message, ?)`
   ).run(String(shopifyEventId), kind, ROLLED_BACK_ERROR_PREFIX, errorMessage, ROLLED_BACK_ERROR_PREFIX);
+}
+
+// A failed delivery's record, with the stock limit, as an unfinished delivery of the same
+// event holds the row it writes. Its own failure is logged and never hides the event's.
+export async function recordFailedDelivery(shopId, eventId, kind, message) {
+  await runWithShop(shopId, async () => {
+    await dbExec('BEGIN');
+    try {
+      await limitLockWait();
+      await recordShopifyEventError(eventId, kind, message);
+      await dbExec('COMMIT');
+    } catch (err) {
+      await dbExec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+  }).catch((recordErr) => console.error(`Shopify ${kind} error record failed`, recordErr));
 }
 
 export async function markShopifyEventError(shopifyEventId, kind, errorMessage) {

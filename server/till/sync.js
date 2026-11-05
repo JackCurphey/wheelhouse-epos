@@ -19,6 +19,7 @@
 // is accepted is recorded and flagged; the price charged at the till stands.
 // Spec: docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md §3, §5, §8
 import { prepare, dbExec } from '../db.js';
+import { lockStock, moveStock } from '../lib/stock.js';
 import { vatFromGrossPence, receiptLabel } from './money.js';
 import { flag } from './attention.js';
 import { liveCustomer, noteMoved, clientIdKnown } from '../merged-customers.js';
@@ -32,12 +33,12 @@ const inInt4 = (n) => Number.isInteger(n) && n >= INT4_MIN && n <= INT4_MAX;
 const isObject = (v) => v !== null && typeof v === 'object';
 
 // Postgres errors that describe a passing condition, not a bad item: a
-// deadlock (40P01), a serialization failure (40001), a cancelled statement
+// deadlock (40P01), a held product's lock limit (55P03), a serialization failure (40001), a cancelled statement
 // (57014) and any connection problem (class 08). Retrying later can succeed.
 export function isTransient(err) {
   const code = err?.code;
   if (typeof code !== 'string') return false;
-  return code === '40P01' || code === '40001' || code === '57014' || code.startsWith('08');
+  return code === '40P01' || code === '55P03' || code === '40001' || code === '57014' || code.startsWith('08');
 }
 
 // Thrown out of processSyncItems when an item hit a transient error; the
@@ -129,7 +130,7 @@ async function recordSale(till, item) {
   // An id outside int4 cannot exist in an INTEGER column: it is "not found",
   // never a database error.
   const employee = inInt4(item.employeeId)
-    ? await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId) : null;
+    ? await prepare('SELECT id, name FROM employees WHERE id = ?').get(item.employeeId) : null;
   // A customer since merged into another is found as the one kept (customer-merge design 8).
   let customer = null;
   if (inInt4(item.customerId)) customer = await liveCustomer({ id: item.customerId });
@@ -154,6 +155,9 @@ async function recordSale(till, item) {
   // Lines are stored in the till's order, but stock is changed in ascending
   // product id order: two sales touching the same products then always take
   // the row locks in the same order, so they queue rather than deadlock.
+  // Taken before the lines, as saving a line checks its product: a held one answers
+  // send-again here rather than waiting with no limit (stock-movements-say-who).
+  await lockStock(lines.filter((l) => inInt4(l.productId)).map((l) => l.productId));
   const stocked = [];
   for (const l of lines) {
     const product = inInt4(l.productId)
@@ -170,21 +174,20 @@ async function recordSale(till, item) {
   }
   stocked.sort((a, b) => a.productId - b.productId);
 
+  // Relative, so two tills' sales both count however they interleave. A line names
+  // its sale, so a stock take can allow for it by when it was made at the till, not
+  // when it synced (openspec/changes/stock-take).
+  const moved = await moveStock(
+    stocked.map(({ line: l, productId }) => ({ productId, change: -l.qty, type: 'till_sale', note: `Till sale ${label}`, tillSaleId: saleId })),
+    { employeeId: employee?.id, name: employee?.name, siteId: till.site_id }
+  );
   for (const { line: l, productId } of stocked) {
-    // Relative update, so two tills' sales both count however they interleave.
-    // No row back means the product was deleted between the lookup above and
-    // here - treat that exactly like a product we no longer hold.
-    const updated = await prepare(
-      'UPDATE products SET stock_qty = stock_qty - ?, updated_at = now() WHERE id = ? RETURNING stock_qty'
-    ).get(l.qty, productId);
+    // Deleted between the lookup above and here: exactly like one we no longer hold.
+    const updated = moved.products.get(productId);
     if (!updated) {
       await raise('unknown_product', { detail: `${label}: "${l.description}" is not a product we hold`, tillSaleId: saleId });
       continue;
     }
-    // The line names its sale, so a stock take can allow for it by when it
-    // was made at the till, not when it synced (openspec/changes/stock-take).
-    await prepare("INSERT INTO stock_movements (product_id, change_qty, type, note, till_sale_id) VALUES (?, ?, 'till_sale', ?, ?)")
-      .run(productId, -l.qty, `Till sale ${label}`, saleId);
     if (updated.stock_qty < 0) await raise('stock_below_zero', { detail: `"${l.description}" is at ${updated.stock_qty} after ${label}`, productId });
   }
 

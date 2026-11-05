@@ -39,6 +39,24 @@ test('the list stops at 200 and says how many there are', async () => {
 
 // ---- Fix ----
 
+test('a row fixed with stock names who fixed it, by their PIN, and that till’s shop, on its line', async () => {
+  await aSite();
+  const site = (await staff('/api/sites', { method: 'POST', body: { name: '[Second site]', code: 'F' } })).body;
+  const offer = await staff('/api/your-settings/till-pin/offer', { method: 'POST' });
+  assert.equal((await staff('/api/your-settings/till-pin', { method: 'POST', body: { pin: offer.body.pin } })).status, 200);
+  const till = browser();
+  assert.equal((await till.post('/api/till-setup', { siteId: site.id, number: 7 })).status, 201);
+  assert.equal((await till.post('/api/till-checkin', { pin: offer.body.pin })).status, 201);
+  const row = pads({ Price: null });
+  const look = await oneLook(await bring(priceList(row)));
+  const res = await till.post(`/api/move/rows/${look.id}/fix`, body(look, { fields: { ...look.fields, Price: '28.00' } }));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const line = await inShop(() => prepare('SELECT m.who_name, m.employee_id, m.site_id FROM stock_movements m JOIN products p ON p.id = m.product_id WHERE p.sku = ?').get(row['Item Lookup Code']));
+  assert.equal(line.who_name, 'Jack Lewis');
+  assert.ok(Number.isInteger(line.employee_id));
+  assert.equal(line.site_id, site.id);
+});
+
 test('a product with no price, fixed: it comes across with its stock and one history line, and the counts follow', async () => {
   const row = pads({ Price: null });
   const fileId = await bring(priceList(row));

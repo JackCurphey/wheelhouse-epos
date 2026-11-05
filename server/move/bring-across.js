@@ -6,6 +6,7 @@
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
 import { priceTooBig } from '../lib/pence.js';
+import { moveStock, oldestSite } from '../lib/stock.js';
 import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
 // A batch holds every move file, so it's short: well under the 800ms a deletion waits,
@@ -80,13 +81,19 @@ async function priceListRow(d, file, context) {
   const active = /^(no|false|0)$/i.test(d.Active ?? '') ? 0 : 1;
   // Never overwrites (design 9): a code already here stays as it is.
   const made = await prepare(
-    `INSERT INTO products (sku, name, category, price, cost, vat_rate_bp, stock_qty, low_stock_threshold, supplier, active, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+    `INSERT INTO products (sku, name, category, price, cost, vat_rate_bp, low_stock_threshold, supplier, active, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
      ON CONFLICT (shop_id, sku) WHERE sku IS NOT NULL DO NOTHING RETURNING id`
-  ).get(sku, d.Description, category, price, cost, vat, qty, min, d.Supplier ?? '', active);
+  ).get(sku, d.Description, category, price, cost, vat, min, d.Supplier ?? '', active);
   if (!made) return { state: 'same' };
   if (qty !== 0) {
-    await prepare(`INSERT INTO stock_movements (product_id, change_qty, type, note, login_id) VALUES (?, ?, 'intake', ?, ?)`).run(made.id, qty, STOCK_NOTE, file.sent_by_login_id);
+    // Made just now, so nothing else can hold it: no lock to take, and the batch's own
+    // wait stands. The shop was read once for the batch.
+    await moveStock(
+      [{ productId: made.id, change: qty, type: 'intake', note: STOCK_NOTE }],
+      { siteId: context.siteId, ...(file.moved_by ?? { loginId: file.sent_by_login_id }) },
+      { wait: false, held: [{ id: made.id, name: d.Description, stock_qty: 0 }] }
+    );
     return { state: 'in', stock: 1 };
   }
   return { state: 'in' };
@@ -150,7 +157,7 @@ export async function batchContext(file) {
   if (file.report === 'customers' || file.report === 'bikes') return { salt: await moveSalt() };
   if (file.report !== 'price_list') return {};
   const first = await prepare(`SELECT store_name FROM move_files WHERE report = 'price_list' AND store_name <> '' ORDER BY id LIMIT 1`).get();
-  return { firstStore: first?.store_name ?? '' };
+  return { firstStore: first?.store_name ?? '', siteId: await oldestSite() };
 }
 
 // A row's outcome, then the file's counts: added up once per batch, not per row.
