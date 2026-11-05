@@ -90,6 +90,15 @@ function fileToBase64(file) {
   });
 }
 
+// A request key for the sale in progress, kept across retries, so a lost answer then a
+// second press records it once (openspec/changes/sale-request-key, design 5).
+let tillSaleKey = null;
+const orderSaleKey = new Map(); // each order's own, by its id
+function saleKeyFollowsBasket() {
+  if (!cart.length) tillSaleKey = null;
+}
+const newSaleKey = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, '0')).join('');
+
 async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,
@@ -693,6 +702,7 @@ function resetCart() {
 }
 
 function renderCart() {
+  saleKeyFollowsBasket();
   const body = document.getElementById('cart-body');
   if (!body) return;
 
@@ -1277,7 +1287,9 @@ async function completeSale() {
   btn.disabled = true;
   btn.textContent = 'Processing…';
   try {
-    const sale = await api('/api/sales', { method: 'POST', body: payload });
+    tillSaleKey ??= newSaleKey();
+    const sale = await api('/api/sales', { method: 'POST', body: { ...payload, requestKey: tillSaleKey } });
+    tillSaleKey = null;
     receiptSale = sale;
     cart = [];
     discount = 0;
@@ -1331,7 +1343,8 @@ async function completeOrderFulfillment() {
     return;
   }
   try {
-    const sale = await api(`/api/sale-documents/${activeOrderId}/convert`, { method: 'POST', body: payload });
+    if (!orderSaleKey.has(activeOrderId)) orderSaleKey.set(activeOrderId, newSaleKey());
+    const sale = await api(`/api/sale-documents/${activeOrderId}/convert`, { method: 'POST', body: { ...payload, requestKey: orderSaleKey.get(activeOrderId) } });
     receiptSale = sale;
     cart = [];
     discount = 0;
@@ -4109,6 +4122,7 @@ function renderDocumentModal(holder, doc) {
 
   const convertBtn = document.getElementById('doc-convert-btn');
   if (convertBtn) {
+    let convertKey = null;
     convertBtn.addEventListener('click', async () => {
       // A workshop job's order is paid at the new till (Jack, 21 Oct).
       if (doc.workshopJobId) {
@@ -4127,9 +4141,10 @@ function renderDocumentModal(holder, doc) {
       convertBtn.disabled = true;
       convertBtn.textContent = 'Processing…';
       try {
+        convertKey ??= newSaleKey();
         const sale = await api(`/api/sale-documents/${doc.id}/convert`, {
           method: 'POST',
-          body: { cashAmount: docCashAmount, cardAmount: docCardAmount, cashTendered: docCashTendered, cashierId: activeCashierId },
+          body: { requestKey: convertKey, cashAmount: docCashAmount, cardAmount: docCardAmount, cashTendered: docCashTendered, cashierId: activeCashierId },
         });
         showToast(`${kindLabel} converted to sale`);
         closeModal();

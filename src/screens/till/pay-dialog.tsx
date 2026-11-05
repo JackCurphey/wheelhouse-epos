@@ -5,7 +5,7 @@ import { useSession, type SessionEmployee } from '@/lib/auth/use-session.ts';
 import { useYourSettings } from '@/lib/your-settings.ts';
 import { useTillCheckin } from '@/lib/till-checkin.ts';
 import { Button } from '@/components/ui/button.tsx';
-import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
+import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
 import { EmailReceiptDialog, type ReceiptCustomer } from './email-receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
@@ -48,7 +48,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  */
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
-export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment }) {
+export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
@@ -73,7 +73,7 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
     setError(null);
     try {
       // To the penny: the screen rounds what staff type, so the record must too.
-      const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, cashierId: serving.id };
+      const amounts = { cashAmount: pence(cash) / 100, cardAmount: pence(card) / 100, cashTendered: tendered === null ? null : pence(tendered) / 100, requestKey, cashierId: serving.id };
       let note: string | null = null;
       // Both reply with the whole sale, which is what the receipt prints.
       let sale: ReceiptSale & { jobWarning?: string };
@@ -85,11 +85,23 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
         sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true, ...signOff });
         note = await job.afterPaid(sale);
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
+      onAnswerSettled?.();
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });
     } catch (err) {
+      // No answer at all: the sale may be there, so the till keeps its key. A refusal
+      // says nothing was recorded, unless it's a key already used, when a sale is. Busy
+      // and server faults say neither, so they change nothing.
+      if (!(err instanceof ApiError)) onAnswerLost?.();
+      else if (err.status < 500 && (err.body as { code?: string } | null)?.code !== 'reused_key') onAnswerSettled?.();
       // Busy: nothing was recorded and trying again can work, so it's never a reason to
       // reverse a card payment or take it twice (the review of 5 Nov).
       if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);
+      // The key went on a sale with other details, as when the basket changed after a lost
+      // answer. That sale stands, so nothing here says to reverse it; Clear gets out.
+      else if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'reused_key') {
+        const { saleId } = err.body as { saleId?: number };
+        setError(`Sale ${saleId} is already recorded, with different details, so this one isn’t. If the card machine took a payment for this basket, check it against sale ${saleId}. Close this and press Clear to start a new sale.`);
+      }
       // Already paid, as when an answer was lost and this was pressed again: the sale is
       // there, so reversing the card would refund a good sale (the re-check of 5 Nov).
       else if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'already_converted') setError(`This job is already paid: sale ${(err.body as { saleId?: number }).saleId} was recorded. Don’t take payment again. If the card machine took a second payment, reverse that one on the machine.`);
@@ -202,6 +214,8 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
           <DialogTitle id="pay-title" ref={titleRef} tabIndex={-1} className="outline-none">{title}</DialogTitle>
           <DialogDescription id="pay-sub">{description}</DialogDescription>
         </div>
+        {/* Drawn on till-pay, and the only way out on a till with no Escape key. */}
+        <DialogClose onClick={close} />
       </DialogHeader>
       <DialogBody className="flex flex-col gap-4">
         {body}
