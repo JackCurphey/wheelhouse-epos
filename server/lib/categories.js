@@ -7,11 +7,13 @@ import { prepare } from '../db.js';
 export const NONE = 'Uncategorised';
 export const JOIN = ' › ';
 
-// Split on "›", each part trimmed, empty parts and "Uncategorised" dropped: it isn't a
-// category, so "Uncategorised › Tyres" is Tyres. Nothing left is Uncategorised. Letters
-// keep their case, as the shop wrote them.
+// Split on "›", each part trimmed of every kind of space trim() knows, empty parts and
+// "Uncategorised" in any case dropped: it isn't a category, so "Uncategorised › Tyres" is
+// Tyres. Nothing left is Uncategorised. Letters keep their case, as the shop wrote them.
+// Migration 119 does exactly this in SQL; tests/migration-119.test.js holds the two alike.
+export const isNone = (part) => part.toLowerCase() === NONE.toLowerCase();
 export function partsOf(text) {
-  return String(text ?? '').split('›').map((p) => p.trim()).filter((p) => p && p !== NONE);
+  return String(text ?? '').split('›').map((p) => p.trim()).filter((p) => p && !isNone(p));
 }
 export function tidyCategory(text) {
   const parts = partsOf(text);

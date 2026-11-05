@@ -157,3 +157,13 @@ test('a count can be started on a category whose path is longer than 60 characte
   const area = await staff('/api/stock-takes', { method: 'POST', body: { kind: 'area', target: 'x'.repeat(61) } });
   assert.equal(area.status, 400, 'an area’s name still stops at 60');
 });
+
+test('every kind of space is trimmed, and Uncategorised in any case isn’t a category', async () => {
+  for (const [written, tidy] of [
+    ['Brakes\t', 'Brakes'], ['Brakes\u00A0', 'Brakes'], ['\u3000Brakes\u2003', 'Brakes'], ['Brakes \u2003›\u00A0Pads', 'Brakes › Pads'],
+    ['uncategorised › Tyres', 'Tyres'], ['UNCATEGORISED', 'Uncategorised'], ['Tyres › unCategorised', 'Tyres'],
+  ]) assert.equal(tidyCategory(written), tidy, JSON.stringify(written));
+  const before = (await tree()).length;
+  assert.equal(await textOf(await add('uncategorised')), 'Uncategorised');
+  assert.equal((await tree()).length, before);
+});
