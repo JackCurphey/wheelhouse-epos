@@ -6,7 +6,7 @@
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
-import { JOIN } from '../lib/categories.js';
+import { JOIN, isNone } from '../lib/categories.js';
 import { limitLockWait } from '../lib/stock.js';
 
 const db = { prepare, exec: dbExec };
@@ -26,6 +26,8 @@ function nameProblem(name) {
   if (typeof name !== 'string' || !name.trim()) return 'A category needs a name';
   if (name.includes('›')) return 'A category’s name can’t have › in it';
   if (name.trim().length > MAX_NAME) return `A category’s name can be up to ${MAX_NAME} characters`;
+  // What a product with no category shows, so never a category (category-tree, design 2).
+  if (isNone(name.trim())) return 'Uncategorised is what a product with no category shows, so a category can’t be called that';
   return null;
 }
 

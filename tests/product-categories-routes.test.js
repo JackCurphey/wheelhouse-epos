@@ -305,3 +305,20 @@ test('moving a category checks every detail’s name against its new place, and 
   assert.equal((await save(bearings.id, { parentId: wheels.id })).status, 200);
   assert.equal((await save(bearings.id, { details: [MM('[Bore]')] })).status, 200);
 });
+
+test('no category can be called Uncategorised, in any case or with spaces round it, added or renamed', async () => {
+  const says = 'Uncategorised is what a product with no category shows, so a category can’t be called that';
+  for (const name of ['Uncategorised', ' uncategorised\t', 'UNCATEGORISED\u00A0']) {
+    const res = await make(name);
+    assert.equal(res.status, 400, name);
+    assert.equal(res.body.error, says);
+  }
+  const spares = (await make(`[Spares ${randomUUID().slice(0, 4)}]`)).body;
+  assert.equal((await make('Uncategorised', spares.id)).status, 400, 'not inside another either');
+  const pid = await product(spares.path);
+  const renamed = await save(spares.id, { name: 'uncategorised' });
+  assert.equal(renamed.status, 400);
+  assert.equal(renamed.body.error, says);
+  assert.equal(await textOf(pid), spares.path, 'its products keep their category');
+  assert.ok(!(await list()).some((c) => c.name.toLowerCase() === 'uncategorised'));
+});
