@@ -536,8 +536,11 @@ test('the counting pageâ€™s search sends only names and codes, within the countâ
   assert.equal((await staff(`/api/stock-takes/${take.id}/products?search=shimano`, undefined, other)).status, 404);
 });
 
+const firstShopCode = async () => (await staff('/api/sites')).body.sort((a, b) => a.id - b.id)[0].code;
+
 test('a till sale made offline before the count, synced after it, is already in the count', async () => {
-  const till = await registerTill(server.baseUrl, owner, { siteCode: 'S', number: 3 });
+  // At the shop being counted: a sale at another isn't in this count (stock-per-shop).
+  const till = await registerTill(server.baseUrl, owner, { siteCode: await firstShopCode(), number: 3 });
   cashier ??= (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
   const pads = await product({ stockQty: 6 });
   const take = await areaTake();
@@ -572,7 +575,7 @@ test('Download the count: a name or code that starts like a formula is written a
 let receipt = 9100;
 let reviewTill;
 async function tillSale(productId, { tillClockAt, madeOffline }) {
-  reviewTill ??= await registerTill(server.baseUrl, owner, { siteCode: 'R', number: 4 });
+  reviewTill ??= await registerTill(server.baseUrl, owner, { siteCode: await firstShopCode(), number: 4 });
   cashier ??= (await staff('/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } })).body;
   receipt += 1;
   const res = await tillRequest(server.baseUrl, owner.shop.slug, reviewTill.token, '/sync', { method: 'POST', body: { pendingCount: 0, items: [{
