@@ -442,8 +442,9 @@ live('small bodies have an overall limit of their own too', async () => {
   const b = await stalledSmall(other, 10);
   const c = await stalledSmall(third, 9);
   try {
-    await until('the overall limit: the third shop refused under its own', 15_000, () => refusedCount(c) >= 1);
-    assert.equal(refusedCount(a) + refusedCount(b), 0);
+    // Each shop is under its own 20 MB, so any refusal is the overall limit. Which one
+    // is refused depends on whose bytes arrive last.
+    await until('the overall limit', 15_000, () => refusedCount([...a, ...b, ...c]) >= 1);
   } finally {
     endAll(a, b, c);
   }
