@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readRawBody, nowIso, ValidationError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, nowIso, ValidationError, ClientGoneError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import {
   loadDocumentLine, createSale,
@@ -623,6 +623,7 @@ async function dispatch(req, res) {
           await r.handler(req, res, params, url.searchParams, till);
         });
       } catch (err) {
+        if (err instanceof ClientGoneError) return;
         // The details go to the log; a till, a website visitor and someone
         // signing in get the same fixed words, never a database's message
         // (server-stays-up-when-busy). Signed-in staff routes below are as before.
@@ -654,6 +655,7 @@ async function dispatch(req, res) {
         try {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
+          if (err instanceof ClientGoneError) return;
           console.error(err);
           sendJson(res, 500, { error: 'Internal server error' });
         }
@@ -669,6 +671,7 @@ async function dispatch(req, res) {
         await rememberCustomerSession(req);
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
       } catch (err) {
+        if (err instanceof ClientGoneError) return;
         console.error(err);
         sendJson(res, 500, { error: 'Internal server error' });
       }
@@ -694,6 +697,7 @@ async function dispatch(req, res) {
         try {
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
+          if (err instanceof ClientGoneError) return;
           console.error(err);
           sendJson(res, 500, { error: 'Internal server error' });
         }
@@ -725,6 +729,7 @@ async function dispatch(req, res) {
           runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id))
         );
       } catch (err) {
+        if (err instanceof ClientGoneError) return;
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });
         return;
