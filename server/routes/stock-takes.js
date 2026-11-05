@@ -356,7 +356,7 @@ export function register(route) {
       if (take.status !== 'counting') return [409, APPLIED];
       const ids = (await db.prepare('SELECT DISTINCT product_id FROM stock_take_counts WHERE stock_take_id = ? ORDER BY product_id').all(id)).map((r) => r.product_id);
       if (ids.length === 0) return [400, 'Nothing has been counted yet'];
-      await lockStock(ids);
+      const held = await lockStock(ids);
       const what = label(take);
       const rows = await differencesOf(take);
       const changed = rows.filter((r) => r.difference !== 0);
@@ -365,7 +365,7 @@ export function register(route) {
       const moved = await moveStock(changed.map((r) => {
         const by = names([...new Set(r.byCounter.filter((b) => b.qty > 0).map((b) => b.name))]);
         return { productId: r.productId, change: r.difference, type: 'count', stockTakeId: id, note: `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}` };
-      }), who);
+      }), who, { held });
       pushes.push(...moved.pushes);
       const movementOf = moved.lineOf;
       await db.prepare(

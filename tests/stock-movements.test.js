@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
 import { lockStock, moveStock } from '../server/lib/stock.js';
+import { differenceRows } from '../server/lib/stock-take-differences.js';
+import { removeShop } from '../server/remove-shop.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -209,6 +211,17 @@ test('changes at once never go under zero between them when they mustn’t', asy
   assert.deepEqual([await stockOf(id), (await linesOf(id)).length], [0, 3]);
 });
 
+test('the lock limit ends with its transaction, and never stays on a connection another request reuses', async () => {
+  await inShop(async () => {
+    const before = (await prepare('SHOW lock_timeout').get()).lock_timeout;
+    await dbExec('BEGIN');
+    await lockStock([await (async () => (await prepare("INSERT INTO products (name, updated_at) VALUES ('[Product]', now()) RETURNING id").get()).id)()]);
+    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '2s', 'on during the transaction');
+    await dbExec('COMMIT');
+    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, before);
+  });
+});
+
 test('moveStock tells Shopify only the products it holds there, with the figure after', async () => {
   const [linked, plain] = [await product(), await product()];
   await inShop(() => prepare("UPDATE products SET shopify_inventory_item_id = '[item]' WHERE id = ?").run(linked));
@@ -243,6 +256,58 @@ test('another business can’t move or read this one’s stock', async () => {
   await inTransaction(() => moveStock([{ productId: id, change: -1, type: 'sale' }], { name: 'Jo Taylor' }));
   const seen = await runWithShop(other.shop.id, () => prepare('SELECT count(*)::int AS n FROM stock_movements WHERE product_id = ?').get(id));
   assert.equal(seen.n, 0);
+});
+
+test('working out a very large count’s differences takes no time, however many lines it has', () => {
+  // It blocks the server for every shop while it runs, under the products' locks.
+  const SIZE = 50000;
+  const counted = Array.from({ length: SIZE }, (_, i) => ({ product_id: i, counted: 9, name: '[Product]', sku: null, stock_qty: 10, cost_pence: 1400 }));
+  const moved = Array.from({ length: SIZE }, (_, i) => ({ product_id: i, type: 'sale', change: -1 }));
+  const by = Array.from({ length: SIZE }, (_, i) => ({ product_id: i, name: 'Jo Taylor', qty: 9 }));
+  const started = Date.now();
+  const rows = differenceRows(counted, moved, by);
+  const took = Date.now() - started;
+  assert.ok(took < 1000, `took ${took}ms`);
+  assert.equal(rows.length, SIZE);
+  // Sold 1 after the count: expected is what's here plus that, and 9 were counted.
+  assert.deepEqual([rows[7].expected, rows[7].difference, rows[7].byCounter, rows[7].allowedFor], [11, -2, [{ name: 'Jo Taylor', qty: 9 }], [{ kind: 'sold', change: -1 }]]);
+});
+
+test('differences keep each product’s own rows, and none for a product nothing moved', () => {
+  const counted = [{ product_id: 1, counted: 3, stock_qty: 5, cost_pence: 100 }, { product_id: 2, counted: 2, stock_qty: 2, cost_pence: 100 }];
+  const rows = differenceRows(counted, [{ product_id: 1, type: 'sale', change: -1 }, { product_id: 1, type: 'intake', change: 4 }], [{ product_id: 1, name: 'Jo Taylor', qty: 1 }, { product_id: 1, name: 'Jack Lewis', qty: 2 }]);
+  assert.deepEqual(rows.map((r) => [r.expected, r.difference, r.byCounter.length, r.allowedFor.length]), [[2, 1, 2, 2], [2, 0, 0, 0]]);
+});
+
+test('removing a shop clears its stock lines before what they point at', async () => {
+  const shop = await staffSignup(server.baseUrl);
+  const seen = [];
+  const realConnect = pool.connect;
+  pool.connect = async function connect() {
+    const client = await realConnect.call(pool);
+    const realQuery = client.query;
+    client.query = function query(sql, ...rest) {
+      if (typeof sql === 'string') seen.push(sql);
+      return realQuery.call(client, sql, ...rest);
+    };
+    const realRelease = client.release;
+    client.release = function release(...args) {
+      client.query = realQuery;
+      client.release = realRelease;
+      return realRelease.apply(client, args);
+    };
+    return client;
+  };
+  try {
+    await removeShop(shop.shop.id);
+  } finally {
+    pool.connect = realConnect;
+  }
+  const at = (table) => seen.findIndex((sql) => new RegExp(`^DELETE FROM ${table} WHERE shop_id`).test(sql));
+  assert.ok(at('stock_movements') >= 0, 'stock lines are cleared');
+  for (const table of ['sales', 'deliveries', 'employees', 'sites', 'purchase_orders', 'till_sales']) {
+    assert.ok(at('stock_movements') < at(table), `before ${table}: ${at('stock_movements')} and ${at(table)}`);
+  }
 });
 
 // ---- Adjusting ----
@@ -417,6 +482,19 @@ test('a count applied in one go holds every product’s line and result, however
   for (const id of ids) assert.equal(await stockOf(id), 4);
 });
 
+test('applying or undoing a count at a till with nobody checked in asks for a PIN and changes nothing', async () => {
+  const id = await product(6);
+  const take = await countOneUnder(id, asOwner());
+  const empty = await computer('till', bolton);
+  const refused = await empty(`/api/stock-takes/${take}/apply`, POST());
+  assert.deepEqual([refused.status, refused.body.code], [409, 'check_in_first']);
+  assert.equal(await stockOf(id), 6);
+  assert.equal((await asOwner()(`/api/stock-takes/${take}/apply`, POST())).status, 200);
+  const noUndo = await empty(`/api/stock-takes/${take}/undo`, POST());
+  assert.deepEqual([noUndo.status, noUndo.body.code], [409, 'check_in_first']);
+  assert.equal(await stockOf(id), 5);
+});
+
 // ---- Waiting ----
 
 async function whileHeld(id, ask) {
@@ -482,6 +560,44 @@ test('applying a count of a held product answers busy and stays counting; so doe
   assert.equal(await stockOf(id), 5);
   assert.equal((await send(`/api/stock-takes/${take}/undo`, POST())).status, 200);
   assert.equal(await stockOf(id), 6);
+});
+
+test('a deadlock broken by the database answers busy, not a fault, and changes nothing', async () => {
+  const [low, high] = [await product(6), await product(6)];
+  const send = asOwner();
+  n += 1;
+  const take = (await send('/api/stock-takes', POST({ kind: 'area', target: `[Area ${n}]` }))).body.id;
+  await send(`/api/stock-takes/${take}/join`, POST());
+  for (const id of [low, high]) assert.equal((await send(`/api/stock-takes/${take}/counts`, POST({ productId: id, qty: 5 }))).status, 200);
+  const holder = await pool.connect();
+  let reply;
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    const { rows: [{ pid }] } = await holder.query('SELECT pg_backend_pid() AS pid');
+    await holder.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [high]);
+    reply = send(`/api/stock-takes/${take}/apply`, POST());
+    // Once Apply holds the lower and waits on the higher, for half the database's
+    // deadlock check, ask for the lower: it's the server's check that then finds it.
+    const deadline = Date.now() + 1800;
+    for (;;) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM pg_stat_activity a WHERE $1 = ANY(pg_blocking_pids(a.pid)) AND EXISTS (
+           SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND NOT l.granted AND clock_timestamp() - l.waitstart >= current_setting('deadlock_timeout')::interval / 2)`, [pid]
+      );
+      if (rows.length) break;
+      assert.ok(Date.now() < deadline, 'Apply never waited on the held product');
+      await new Promise((resolve) => { setTimeout(resolve, 25); });
+    }
+    await holder.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [low]);
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+  }
+  const res = await reply;
+  assert.equal(res.status, 503, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'busy');
+  assert.deepEqual([await stockOf(low), await stockOf(high)], [6, 6]);
 });
 
 // What's locked ahead of the products has the same limit.
