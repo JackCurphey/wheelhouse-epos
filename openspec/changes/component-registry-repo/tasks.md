@@ -1,0 +1,133 @@
+# Tasks: Wheelhouse's components in their own repository
+
+> **Status, 26 Oct 2026 (Mark's session).** The repository is called **`react-repo`**
+> (not `wheelhouse-registry`; the name is changed throughout). What was built
+> locally, at `~/Documents/GitHub/react-repo`, differs from this document in
+> scope and in a few places, and is the more recent truth:
+>
+> - **Scope is wider.** Mark asked for the full shadcn range and "everything we
+>   would ever expect": the registry holds all 61 shadcn components shadcn serves
+>   for the style we use, and **93 Wheelhouse pieces** built from the 47 building
+>   blocks (the till, the diary, settings, forms, customer pages, reports), each
+>   with tests, a gallery demo and an accessibility check. See `docs/component-plan.md`
+>   in that repository. This document's "version 1.0.0 is the 15 components as
+>   they are today, byte for byte" was **not** done: the 15 are not carried over
+>   as they were; the app's own `registry/` stays until Jack says it can go.
+> - **Themes.** Eleven themes (Soft sand, shadcn's five base colours, five accent
+>   colours), each light and dark, with a theme switcher, so designs can be tried
+>   on the app. Success, warning and info colours were added (shadcn has none).
+> - **Radix.** Mark approved option 1 (Radix only for menus, pop-overs, hover
+>   previews and tabs, browser controls elsewhere). 37 of shadcn's 61 components use
+>   Radix, so it is in `react-repo`; it reaches the app only when a screen installs
+>   one. **Jack's yes is still needed** (it reverses his 26 Sep choice), as is his yes
+>   to deleting the app's `registry/` later.
+> - **Not done here, and still needs the repository:** the app's sync job
+>   (task groups 4 to 6), the checks that run on GitHub, Pages, and the first
+>   release. Task groups 1 to 3 were done differently (see that repository's README
+>   and `docs/adding-components.md`); `npm run check:consumer` there installs
+>   everything into a fresh app and type-checks it.
+> - **Waiting on Jack:** create the empty repository, add Mark, then the settings
+>   in "Steps for Mark" (#511).
+
+Who: Mark (working agreement: either person may pick up any group; take it
+in STATUS first). Groups 1 to 3 are built in the local folder
+`~/Documents/GitHub/react-repo/` on branches, with no GitHub remote.
+Group 4 is the real-account steps (Mark's, with the settings steps Jack's or
+Mark's as admin). Groups 5 and 6 are app pull requests. Groups 7 and 8 are
+registry releases, each reaching the app through the sync job. Every test is
+written first and watched failing for the right reason; after it passes,
+break the thing it covers, see it fail, and put it back.
+
+**Why some tasks are tagged `[careful]`.** `openspec/config.yaml` lists no
+careful kinds, so the tags follow the spec author's list: money (a task that
+pins, tests or moves the money box `money-input`: 1.3, 1.4, 1.8), CI, deploy
+and the `Dockerfile` (3.5, 5.8, 6.3), and dependencies (1.2, 8.2, and 7.6 if
+it runs). Mark approves the tags with the spec.
+
+When each group can start:
+
+- **Groups 1-3:** after Mark's yes to dependency row 1 (proposal, open question 4).
+- **Group 4:** after Mark's yes to Steps for Mark and Jack's answer to open question 3.
+- **Group 5:** after group 4 (it needs the `v1.0.0` release).
+- **Task 6.3:** after Jack's yes to open question 2.
+- **Group 7:** after group 5, unless Jack answers contradiction 4 by ruling out porting shadcn's files.
+- **Task 7.6:** only if Mark picks option 1 or 3 of open question 6, with his yes to the matching dependency rows.
+- **Group 8:** after Jack's answer to open question 1.
+
+## 1. The registry repository, holding today's 15 components (local)
+
+- [ ] 1.1 Fetch shadcn's list from `https://ui.shadcn.com/r/index.json` (the address the installed CLI 4.19.1 uses) and save it as `upstream/index.snapshot.json`, with the date. For each `registry:ui` name, fetch `https://ui.shadcn.com/r/styles/new-york-v4/<name>.json` and note its `dependencies`, its `registryDependencies`, and whether its files import `radix-ui`, `@radix-ui/*`, `Slot` or `Separator`. Compare the names with `design.md` §1; write each difference into `design.md` §8 (decision log) and correct §1's table and counts. Copy shadcn/ui's MIT licence text from the shadcn repository into `THIRD_PARTY_NOTICES.md`
+- [ ] 1.2 [careful] `git init` the folder with `main`, branch `scaffold`. Add `package.json` (name `react-repo`, version `1.0.0`, `"type": "module"`), `components.json` (as the app's, style `new-york`), `tsconfig.json`, `README.md` (what it is; how the app picks it up, `design.md` §3; the push commands for Steps for Mark 3; the fixed port 6107), `CHANGELOG.md` with a `1.0.0` section ("What changes on screens: nothing"), `.gitignore` (`node_modules/`, `.test-build/`, `test-results/`). Install dependency row 1 exactly as listed in the proposal, at those versions, and nothing else
+- [ ] 1.3 [careful] Copy `tests/fixtures/epos-public-r/` from `wheelhouse-epos`'s `public/r/*.json`, and `src/styles/theme.css` to `tests/fixtures/epos-theme.css`, both at one commit, and write `tests/fixtures/epos-public-r/SOURCE.txt` with that commit's sha. Write `tests/identity.test.js` (`design.md` §7) and watch it fail because `public/r/` does not exist yet. (Tagged careful: it pins `money-input`, the money box.)
+- [ ] 1.4 [careful] Copy `registry/registry.json`, `registry/primitives/` and `registry/patterns/` from `wheelhouse-epos` unchanged, with the `homepage` lines pointing at `https://github.com/JackCurphey/react-repo`; add `registry.json` at the root including the three sub-registries (theme comes in 2.2). Add scripts `build`, `validate`, `typecheck`. Run `npm run build`; verify 1.3 passes, then change one character in `registry/patterns/money-input.tsx`, rebuild, see 1.3 fail naming `money-input`, and put it back
+- [ ] 1.5 Copy the app's component tests (`tests/registry/*.test.js`, `tests/helpers/dom.js`, `tests/helpers/css.js`) and a Vite build matching `vite.registry-test.config.ts`, as `pretest`. Adjust only paths; `colours.test.js` reads `tests/fixtures/epos-theme.css` (from 1.3) for its list of defined names until task 2.2 repoints it. Verify `npm test` passes; break `registry/primitives/button.tsx`'s accent class, see `button.test.js` fail, put it back; add `var(--wh-not-a-token)` to one registry file, see `colours.test.js` fail, put it back
+- [ ] 1.6 Port `scripts/ci/check-registry-drift.mjs` with paths for this repo (`registry.json`, `public/r/`). Verify it passes on a fresh build and fails after hand-editing one file in `public/r/`
+- [ ] 1.7 Port the ESLint config with both gates (`eslint.config.js:12-56`): no raw hex colour; Radix only inside `registry/primitives/`. Verify `npm run lint` passes, and fails on a test line holding `bg-[#123456]`
+- [ ] 1.8 [careful] Write `tests/money-input.test.js` with every case in `design.md` §7 (`parsePence`, `formatPence`, `MoneyInput` typing, leaving the field, an invalid draft, emptying, the `£` outside the text). These pin today's behaviour, so they pass on the unchanged file; prove each is real by breaking the line it covers in `registry/patterns/money-input.tsx` (for example drop the `.slice(0, 2)`, the `Number.isInteger` check, `setDraft(null)` on blur, the `aria-invalid` line), watching the matching test fail for that reason, and putting it back; confirm with `git diff` that the file is byte-identical afterwards and 1.3 still passes
+- [ ] 1.9 Write `tests/guards.test.js` and `tests/registry-deps.test.js` (`design.md` §7): the raw-colour guard and its self-test ported from the app's `tests/design-tokens.test.js:65-101` (with an opacity suffix like `bg-black/50` caught), the fixed-text-size guard from `:112-117`, the shadcn named-colour guard from §1's table, and the `@wheelhouse/<name>` dependency rule. Watch each fail on a sample (`bg-black/50`, `text-white`, `text-[13px]`, `hover:bg-accent`, `ring-ring`, a `registryDependencies` entry `"button"`), then pass on the 15 items
+
+## 2. The tokens file, `utils`, fonts, and the pop-up box's behaviour (local)
+
+- [ ] 2.1 Write `tests/tokens.test.js` (`design.md` §7: every custom property in `tests/fixtures/epos-theme.css`, from 1.3, is in the tokens file in the same block with the same value; the Soft sand values and contrast minimums from `tests/design-sand.test.js`) and watch it fail because `registry/theme/wheelhouse-tokens.css` does not exist
+- [ ] 2.2 Write `registry/theme/wheelhouse-tokens.css` with the seven parts in `design.md` §2 (the `.dark` block keeps its "nothing switches it on" note), and `registry/theme/registry.json` with item `theme` (`registry:file`, target `src/styles/wheelhouse-tokens.css`). Verify 2.1 passes; change one value, see it fail, put it back. Repoint `colours.test.js` at `registry/theme/wheelhouse-tokens.css` and verify it still passes and still fails on `var(--wh-not-a-token)`
+- [ ] 2.3 Add item `utils` (`registry:lib`, `registry/lib/utils.ts`), byte for byte the app's `src/lib/utils.ts`; a test compares it with a fixture copy. Watch the test fail before the file exists
+- [ ] 2.4 Copy the app's `public/fonts/public-sans/` and `public/fonts/dm-mono/` (each `.woff2` and its `OFL.txt`) to `site/public/fonts/`. Write `tests/fonts.test.js` (`design.md` §7) and watch it fail before the copy. Add `site/` (one Vite page showing a chosen component at `?item=<name>&mode=light|dark`), importing `wheelhouse-tokens.css`, and Playwright config serving it on `127.0.0.1:6107`. Write `tests/visual/accent-override.spec.ts` with both cases in `design.md` §7 (on `<html>`: accent `Button` and a `bg-primary` element turn `rgb(47, 95, 150)`; on a wrapper: the `Button` turns, the `bg-primary` element stays `rgb(42, 40, 34)`); watch case 1 fail with no override set, then pass. Check in the browser that `document.fonts.check('16px "Public Sans"')` is true on the page
+- [ ] 2.5 Write `tests/visual/dialog.spec.ts` for the behaviours in `design.md` §6 (opening uses `showModal`, Escape closes and calls `onOpenChange(false)`, focus stays inside and returns, backdrop closes only with `dismissOnBackdrop`, `confirm-dialog` destructive ignores the backdrop, close button named "Close", 480px and 640px widths, `var(--modal-bg)` background). Watch each fail by breaking the matching line in `registry/primitives/dialog.tsx` or `registry/patterns/confirm-dialog.tsx`, then put it back
+- [ ] 2.6 Verify `shadcn add` copies `theme` byte for byte into a scratch app made in `/tmp/` (target path honoured, no change to the CSS). Then, in the same scratch app, add `input` from its built JSON, then a copy of `money-input`'s built JSON with `registryDependencies` emptied (as `sync.mjs` will, `design.md` §3.6), and check both installed files match the built content (after the CLI's import rewrite) and that `package.json` did not change. If either does not hold, record what happened in `design.md` §8 and change the delivery to what does work before going on
+
+## 3. The registry's checks, releases and watch job (local)
+
+- [ ] 3.1 Write `upstream/coverage.json` from `design.md` §1 (as corrected in 1.1) and `upstream/ported.json` (empty until group 7)
+- [ ] 3.2 Write tests for `findUnsorted` and `findNotUpstream` (`design.md` §7), watch them fail, then write `scripts/ci/check-coverage.mjs`. Verify it passes on the snapshot, and fails with "Not yet sorted: <name>" after removing one label. Write `scripts/upstream/refresh.mjs` and the `upstream:refresh` script; run it once and verify `check:coverage` still passes on the refreshed list (or sort what it finds)
+- [ ] 3.3 Picture tests: `tests/visual/components.spec.ts` takes each published component in `site/`, light and dark, at 1280px and 390px wide, against `tests/visual/baselines/`, after `document.fonts.ready`. Check the Playwright image tag for 1.63.0 exists (`docker pull mcr.microsoft.com/playwright:v1.63.0-noble`, or the tag Playwright's docs give; record the real one in the README and `design.md` §8). Make the baselines in that image with `npm run test:visual:update`; verify they pass, fail after changing one colour token, and fail after removing the Public Sans `@font-face` rule
+- [ ] 3.4 Write tests for `packRelease` (`design.md` §7): the tarball holds exactly `r/*.json`, `SHA256SUMS` matches, and the two refusals. Watch them fail, then write `scripts/release/pack.mjs`
+- [ ] 3.5 [careful] Write `.github/workflows/ci.yml` (one job with id `ci`, `design.md` §4.3, every step), `release.yml`, `pages.yml`, `upstream-watch.yml` (its issue body gives the `upstream:refresh` steps in §4.3) and `.github/dependabot.yml` (npm and github-actions, weekly). `release.yml` checks CI passed on the commit with `gh run list --commit <sha> --workflow ci.yml --json conclusion` and refuses otherwise. These only run once the repository is on GitHub; group 4 watches each run
+- [ ] 3.6 Run every check locally: `npm run typecheck`, `npm run lint`, `npm run validate`, `npm run check:drift`, `npm run check:coverage`, `npm test`, `npm run test:visual`. Get a fresh review of the folder against this change's `design.md` and `specs/component-registry/spec.md`, including the money box's tests. Merge `scaffold` into the local `main` only after both
+
+## 4. On GitHub (Mark; settings steps by Jack, or Mark as admin)
+
+- [ ] 4.1 Steps for Mark 1 to 4 in the proposal (repository created by Jack in his account, Mark added, local `main` pushed, `main` protected with the `ci` check required, Pages on if wanted). Watch the first `ci.yml` run go green on GitHub, and see it go red on a throwaway pull request that breaks one token, then close that pull request
+- [ ] 4.2 Steps for Mark 5 only if the repository is private
+- [ ] 4.3 Run `release.yml` with `v1.0.0`; check the release has `react-repo-v1.0.0.tar.gz` and `SHA256SUMS`, and (if Pages is on) that `https://jackcurphey.github.io/react-repo/r/button.json` opens
+- [ ] 4.4 Steps for Mark 7 and 8 (the check named `test` required on `wheelhouse-epos`'s `main`; GitHub Actions allowed to create pull requests)
+- [ ] 4.5 Prove a pull request with no check cannot merge: in `wheelhouse-epos`, push a throwaway branch whose only commit (a blank line in a doc file) has `[skip ci]` in its message, open a pull request, confirm it shows no `test` result on that commit, and try `gh pr merge --merge`; see GitHub refuse because the required check is missing. Close the pull request and delete the branch. If `[skip ci]` does not stop the Tests run, record it in `design.md` §8 and ask Mark how to make a check-less pull request; this task is not ticked until a refusal has been seen. Repeat for `react-repo` with the `ci` check
+
+## 5. The app copies from the registry (two or three pull requests in `wheelhouse-epos`; the one that commits `vendor/` runs `/review` as a money pull request)
+
+- [ ] 5.1 Write `tests/registry-sync.test.js` for `hashFile`, `readLock`/`writeLock`, `planInstall` (including the "missing from registry" message), `installOrder` (dependencies first, a missing dependency added, both messages from `design.md` §3.6), `missingPackages` (a package `package.json` lacks; a version-suffixed name), `bootstrapLock` (names from a temporary `src/components/ui/`, the "not in registry" and "A lock already exists" refusals), and `syncFrom` with a fake `run` and temporary folders (the `skipVersions` refusal; each `shadcn add` gets a copy with `registryDependencies` emptied; `money-input` planned alone installs `input` first; a fake `run` that edits `package.json` gets it put back and the stop message). Watch each fail because `scripts/registry/sync.mjs` does not exist
+- [ ] 5.2 Write `scripts/registry/sync.mjs` (`design.md` §3.6, §3.7, §7). Verify 5.1 passes
+- [ ] 5.3 Download `v1.0.0` and run `node scripts/registry/sync.mjs --from <folder> --version v1.0.0 --commit <sha> --bootstrap`. Verify the lock lists the 11 installed components, `git diff -- src/components/ui package.json package-lock.json` is empty, and `node scripts/ci/check-registry-drift.mjs` (the old mode) and `tests/customer/installed-controls.test.js` still pass. Commit `vendor/react-repo/r/` and `react-repo.lock.json`
+- [ ] 5.4 Write `tests/registry-drift-vendored.test.js` against a temporary copy (`--root`): a hand-edited vendored file, a hand-edited installed file, an unlisted file in `src/components/ui/`, each with its message from `design.md` §7, and the OK line. Watch each fail, then add the `--vendored` mode to `scripts/ci/check-registry-drift.mjs`, leaving its default mode unchanged. Verify the existing default mode still passes
+- [ ] 5.5 Write `scripts/registry/capture-css-rules.mjs` and run it against the current `npm run build` before changing anything, writing `tests/fixtures/theme-css-rules-before.json`. Write `tests/theme-split.test.js` (`design.md` §7: no token redefined in `theme.css`; every captured rule still present with the same declarations; nothing switches the dark look on); watch it fail because `src/styles/wheelhouse-tokens.css` is missing, and watch the dark check fail on a temporary `document.documentElement.classList.add('dark')` line in a scratch file under `src/`, then remove it
+- [ ] 5.6 Add `theme` to the lock's `installed` and sync it; cut `src/styles/theme.css` down to `@import "tailwindcss";`, `@import "./wheelhouse-tokens.css";`, the cursor rule, the print rules and the Reduce motion rule. Repoint the four tests that read `theme.css`, paths and messages only, assertions unchanged: `tests/design-sand.test.js:17` reads `src/styles/wheelhouse-tokens.css`; `tests/design-fonts.test.js:27`'s list becomes `['public/tokens.css', 'src/styles/wheelhouse-tokens.css']`; `tests/design-tokens.test.js:120` reads `src/styles/wheelhouse-tokens.css`, and its messages at `:100` and `:116` name that file; `tests/registry/colours.test.js:10` builds `DEFINED` from `src/styles/wheelhouse-tokens.css` and `src/styles/theme.css` together. Verify 5.5 and all four pass, `npm test` passes, and open `http://localhost:8080/` to see the diary and the booking pages look as before
+- [ ] 5.7 Only if Pages is on: point `components.json`'s `@wheelhouse` at `https://jackcurphey.github.io/react-repo/r/{name}.json`. Verify `curl https://jackcurphey.github.io/react-repo/r/button.json` returns the same bytes as `vendor/react-repo/r/button.json` and `node scripts/ci/check-registry-drift.mjs --vendored` still passes
+- [ ] 5.8 [careful] Add `workflow_dispatch:` to `.github/workflows/test.yml`'s triggers and the step "Fail if a registry file was edited by hand" (`node scripts/ci/check-registry-drift.mjs --vendored`) after the existing drift step. Write `.github/workflows/registry-sync.yml` (`design.md` §3.3; `WHEELHOUSE_REGISTRY_TOKEN` read only from secrets and never printed). After merge, release a patch `v1.0.1` (changelog only) and watch: the job opens "Registry v1.0.1" (if it fails to open the pull request, check Steps for Mark 8 and record the real setting name in `design.md` §8), the Tests workflow runs on that branch's last commit and shows on the pull request as the `test` check. If a pull request opened by the job does start Tests by itself, remove step 6 and record it in `design.md` §8. Run the job again and see "Already on" or the open pull request stop it
+- [ ] 5.9 Verify `npm test` and `npm run test:browser` pass, self-review against this change's spec, run `/review` on the pull request that commits `vendor/` (it carries the money box's released file), and open the pull requests
+
+## 6. The app's tests move to the new source
+
+- [ ] 6.1 Change `tests/customer/installed-controls.test.js` so every installed file must be in the lock with a matching hash, and, while `registry/` still exists, an installed file whose name has a source in `registry/primitives/` or `registry/patterns/` must still match it; a name with no source there (a component added later through `sync.mjs --add`) is checked against the lock only. Watch it fail on an unlisted file and on a hand-edited one, then pass; check a fake new name in the lock with no `registry/` source passes
+- [ ] 6.2 Point `tests/registry/*.test.js` at the installed copies (`.test-build/components/ui/<name>.js`) and `tests/registry/colours.test.js` at `src/components/ui/**/*.tsx` as well as `registry/`. Verify each still fails when its component is broken
+- [ ] 6.3 [careful] Only after Jack's yes (open question 2), and after one release has synced through group 5 with every check green: remove `registry/`, `public/r/`, the `registry:build` and `registry:validate` scripts, `vite.registry-test.config.ts` and its half of `pretest`, the CI steps "Validate the registry" and "Fail if the registry is out of date", the drift script's default mode, and `Dockerfile` lines 15 (`&& npm run registry:build`) and 42 (`COPY … public/r/`). Also remove `tsconfig.json`'s `"@/registry/*"` path (line 26) and `"registry"` from `"include"` (line 29), `eslint.config.js`'s `registry/**` file entries (lines 82 and 107) and its `@/registry` import ban (line 25, with its message), and `registry` from `tests/design-tokens.test.js`'s `REACT_SOURCES` glob. First search `src/`, `public/`, `server/`, `tests/`, `scripts/` and the config files for `/r/`, `public/r`, `@/registry` and `registry/` and fix every use. Verify `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:browser` and a Docker build pass
+
+## 7. The first new components (registry releases; no Radix)
+
+Each component: port from the shadcn file fetched in 1.1, apply `design.md` §1 "How a ported component is changed" (the colour-class table, `@wheelhouse/` dependencies, no `Slot`), log any class not in the table in `docs/decisions/decided-while-building.md` (Mark's section), add to `upstream/ported.json`, add a component test and picture baselines (each watched failing first), add it to `tests/visual/accent-override.spec.ts` if it uses the shop colour, and a `CHANGELOG.md` line. `npm test` (with 1.9's guards) must pass before the pull request. About 3 to 5 components per pull request.
+
+- [ ] 7.1 `card`, `badge`, `alert`, `separator` (plain `<hr>`)
+- [ ] 7.2 `skeleton`, `spinner`, `empty`
+- [ ] 7.3 `switch` on a button with `role="switch"` and `aria-checked`, matching `src/screens/settings/row-switch.tsx`'s look and 48px row; `progress` on `<progress>`; `native-select` on `<select>`
+- [ ] 7.4 `accordion` and `collapsible` on `<details>`/`<summary>`; `item`, `button-group`, `input-group` with `Slot` and `asChild` removed and `registryDependencies` as `@wheelhouse/button`, `@wheelhouse/input`, `@wheelhouse/textarea`
+- [ ] 7.5 `sheet` built on the native pop-up box, reusing 2.5's behaviour tests from the left, right and bottom edges, full screen on phones
+- [ ] 7.6 [careful] Only if Mark picks option 1 or 3 of open question 6, and with his yes to the matching rows: option 3 adds `sonner` (row 3); option 1 adds `sonner`, `command` (row 5, `cmdk`) and `chart` (row 6, `recharts`). Each as above, with `next-themes` removed from `sonner`. `navigation-menu` waits for group 8 whatever Mark picks
+- [ ] 7.7 Release `v1.1.0`; the app's sync pull request goes green and merges. Nothing is installed in the app until a screen piece runs `sync.mjs --add <name>`
+
+## 8. Menus, pop-overs, hover previews and tabs (after Jack's answer)
+
+- [ ] 8.1 Write Jack's answer as D-008 in a new `docs/decisions/2026-10-<dd>-component-registry-radix.md` and add a line under open item 3 of `docs/decisions/2026-08-31-frontend-platform.md` pointing to it
+- [ ] 8.2 [careful] If option 1 or 2: with Mark's yes to dependency row 4, add `radix-ui` to the registry repository; port `dropdown-menu`, `context-menu` (press and hold on touch, j12:15), `popover`, `hover-card`, `tabs`, each with keyboard and screen-reader tests watched failing first, and pictures. If option 3: build the same five on the browser's `popover` attribute with the same tests. Release, sync, and add `radix-ui` to the app only when a screen piece installs one (the sync stops until it is in `package.json`, `design.md` §3.6)
+
+## 9. Finish
+
+- [ ] 9.1 In the app: `npm test` and `npm run test:browser` pass; a fresh review against `design.md` and `specs/component-registry/spec.md`; walk each requirement and say which are met, dropped or changed in `design.md` §8
+- [ ] 9.2 `/opsx:archive component-registry-repo` as the last commit in the last app pull request of this change
