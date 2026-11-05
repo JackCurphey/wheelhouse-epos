@@ -23,11 +23,26 @@ const SMALL_BODY_BYTES = 2_000_000;
 
 const MB = 1024 * 1024;
 
+// What's cheap to send can be dear to parse: 2 MB of {},{},{} takes 43 MB of heap, and
+// 69 MB of it ran the server out of memory. Base64 takes no more than its size, and has
+// none of these characters, so counting them tells the two apart without parsing.
+// Each makes at most one value. Counted inside strings too: a note's commas are few.
+const MAKES_A_VALUE = new Uint8Array(256);
+for (const ch of '{[,:') MAKES_A_VALUE[ch.charCodeAt(0)] = 1;
+function valuesIn(chunk) {
+  let count = 0;
+  for (let i = 0; i < chunk.length; i++) count += MAKES_A_VALUE[chunk[i]];
+  return count;
+}
+
+const SMALL_PUBLIC_BODY_BYTES = 100 * 1024;
+
 export function createBodyReadGate(limits) {
   const keys = new Map(); // key -> { reads, bytes }
   let reads = 0;
   let bytes = 0;
   return {
+    limits,
     // A place for one read, or null if there is none to be had.
     enter(key) {
       const entry = keys.get(key) ?? { reads: 0, bytes: 0 };
@@ -75,18 +90,19 @@ export function createBodyReadGate(limits) {
 export const readGates = {
   // By address. A booking with photos, about 73 MB, is the most anyone can send
   // with no sign-in; 100 MB leaves room for one and a little more.
-  website: createBodyReadGate({ readsPerKey: 10, reads: 200, bytesPerKey: 100 * MB, bytes: 200 * MB }),
+  website: createBodyReadGate({ readsPerKey: 10, reads: 200, bytesPerKey: 100 * MB, bytes: 200 * MB, smallBody: SMALL_PUBLIC_BODY_BYTES, values: 10_000 }),
   // By address. Staff sign-up, sign-out and password posts, apart from the website.
   // Signing in with WorkOS is GETs with no body, so it never comes here.
-  staffAccounts: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 10 * MB, bytes: 20 * MB }),
-  // By address. Shopify's, which retries.
+  staffAccounts: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 10 * MB, bytes: 20 * MB, smallBody: SMALL_PUBLIC_BODY_BYTES, values: 10_000 }),
+  // By address. Shopify's, which retries. Parsed only once its signature is good, so
+  // no limit on what it's made of.
   webhook: createBodyReadGate({ readsPerKey: 10, reads: 100, bytesPerKey: 30 * MB, bytes: 30 * MB }),
   // By shop. Uploads have a gate of their own, so however many are stalled, every
   // shop's sales, payments and till syncs still get through. 150 MB is a full Citrus
   // Lime file, 42 MB, and five job attachments at 21 MB, all arriving at once.
-  signedInUploads: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 150 * MB, bytes: 200 * MB }),
+  signedInUploads: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 150 * MB, bytes: 200 * MB, values: 200_000 }),
   // By shop: staff's and tills' small bodies, each at most 2 MB and usually far less.
-  signedIn: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 20 * MB, bytes: 50 * MB }),
+  signedIn: createBodyReadGate({ readsPerKey: 200, reads: 2000, bytesPerKey: 20 * MB, bytes: 50 * MB, values: 200_000 }),
 };
 
 // Whatever a socket's requests need done when it closes, under one listener: any
@@ -116,11 +132,12 @@ const tooManyAtOnce = (res) =>
 
 // True if the route should go on. False if the request has been dealt with here:
 // answered, or its client has gone. A route says what it needs when it's registered:
-// - maxBody: the most it ever reads, if over the 2 MB of a small route;
+// - maxBody: the most it ever reads, if over a small route's: 2 MB, or 100 KB where a
+//   gate with no sign-in says so;
 // - answerOverflow: it answers a body too large, as readJsonBody's option of that name;
 // - upload: it gets the longer deadline.
 // The dispatcher says which gate, and the key if it isn't the caller's address.
-export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answerOverflow = false, upload = false } = {}, { gate, key = clientIp(req) } = {}) {
+export async function readBodyFirst(req, res, { maxBody: routeMaxBody, answerOverflow = false, upload = false } = {}, { gate, key = clientIp(req) } = {}) {
   // Nothing to wait for, whatever has happened to the client since.
   if (!hasBody(req)) {
     holdRequestBody(req, { chunks: [], bytes: 0, overflowed: false });
@@ -143,8 +160,16 @@ export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answ
     });
   }
 
+  const maxBody = routeMaxBody ?? gate?.limits.smallBody ?? SMALL_BODY_BYTES;
+  const maxValues = gate?.limits.values ?? Infinity;
+  // A small route with no sign-in, over the limit set for it by its gate: told so in
+  // words here. A client still sending when its connection is cut may never see an
+  // answer, so what's left is read and thrown away, up to where the old limit was.
+  const answerSmall = routeMaxBody === undefined && Boolean(gate?.limits.smallBody);
+  const readOnTo = answerSmall ? SMALL_BODY_BYTES : maxBody * 2;
   const chunks = [];
   let bytes = 0;
+  let values = 0;
   let overflowed = false;
   const outcome = await new Promise((resolve) => {
     const timer = setTimeout(() => finish('late'), upload ? UPLOAD_BODY_DEADLINE_MS : BODY_DEADLINE_MS);
@@ -161,15 +186,19 @@ export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answ
     function onData(chunk) {
       bytes += chunk.length;
       if (overflowed) {
-        // Still reading so the client can be answered; stop at twice the cap.
-        if (bytes > maxBody * 2) finish('over');
+        // Still reading so the client can be answered, up to a point.
+        if (bytes > readOnTo) finish('over');
         return;
       }
       if (bytes > maxBody) {
         overflowed = true;
         chunks.length = 0;
-        if (!answerOverflow) finish('over');
+        if (!answerOverflow && !answerSmall) finish('over');
         return;
+      }
+      if (maxValues !== Infinity) {
+        values += valuesIn(chunk);
+        if (values > maxValues) return finish('tangled');
       }
       if (place && !place.hold(chunk.length)) return finish('busy');
       chunks.push(chunk);
@@ -189,6 +218,10 @@ export async function readBodyFirst(req, res, { maxBody = SMALL_BODY_BYTES, answ
   }
   if (outcome === 'busy') {
     tooManyAtOnce(res);
+    return false;
+  }
+  if (outcome === 'tangled' || (overflowed && answerSmall)) {
+    answerAndClose(res, 400, 'That’s too much to send in one go.');
     return false;
   }
   // Too large goes on to the route, whose reader refuses it in the route's own words.

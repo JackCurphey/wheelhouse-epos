@@ -11,6 +11,10 @@ A business's categories SHALL form a tree: each sits at the top or inside one ot
 - **WHEN** a product is added with the category "Uncategorised › Tyres"
 - **THEN** its category is Tyres, and there is no category called Uncategorised
 
+#### Scenario: A category called Uncategorised
+- **WHEN** the Owner adds a category called "uncategorised", or renames one to it
+- **THEN** it is refused, saying it's what a product with no category shows
+
 ### Requirement: Each category has its own details
 In Settings › Stockroom › Categories the Owner SHALL give a category details: a name and the kind of answer, a number with its unit, a choice from a list with its choices, or text. A category SHALL pass its details down to the categories inside it, and a detail's name SHALL be used once from the top of the tree to the bottom. Removing a detail SHALL remove its answers, and the edit box SHALL be able to say how many products that is.
 
