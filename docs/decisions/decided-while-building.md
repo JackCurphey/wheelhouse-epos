@@ -2225,6 +2225,11 @@ WP-1.5's. So: slice C, WP-2.3.
 7. **Reading the tree is for anyone signed in; changing it is the Owner's** until "Can order stock" (decision 11, 5 Oct later change).
 8. **Not built: deleting a category** (not drawn). Moving one leaves its products' answers to details it no longer inherits stored and unshown, for piece 6 to say.
 9. **Building the tree at 1,000,000 products held products against stock changes for 2.9 seconds,** telling one sale to try again; 0.3 seconds at 100,000. Renaming a category with 50,000 products takes half a second.
+10. **"Uncategorised" inside a path isn't a category either: the rest of the path is** (the independent review). "Uncategorised › Tyres" is Tyres, in the app and in migration 119.
+11. **Moving a category checks its details against where it's going,** and those of everything inside it, saying which two categories share a name: "[Bearings] can’t go inside [Wheels]: [Wheels] already has a detail called Height." Not drawn.
+12. **A count of a category can be any length;** an area's name still stops at 60. Starting one holds the category against a rename at the same moment.
+13. **A Citrus Lime file sent again makes no categories for rows already here,** so a renamed category's old name doesn't come back empty.
+14. **Deploy note:** a count running on untidy category text follows its products, as 119 tidies a running count's name the same way.
 
 ## Decided here, for Jack to overrule
 
