@@ -13,6 +13,7 @@ import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js
 import { deferShopifyPushes } from '../lib/sales.js';
 import { categoryFor } from '../lib/categories.js';
 import { notProductEditor } from '../lib/product-editor.js';
+import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
@@ -188,6 +189,8 @@ export function register(route) {
     sendJson(res, 200, {
       ...serializeProduct(row, await canSeeCosts(req)),
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
+      // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
+      details: await detailsOf(row),
       history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
     });
   });
@@ -373,6 +376,36 @@ export function register(route) {
     if (pushes.length) deferShopifyPushes(afterRelease, shopId, pushes);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
+  });
+
+  // A product's answers to its details (rs-add-product, st-product's Details · Edit;
+  // openspec/changes/product-editing). The Owner only, as any change to a product. Under the
+  // product's lock, with the save's limit on waiting; reply after COMMIT.
+  route('PUT', '/api/products/:id/details', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) return notFound(res, 'Product not found');
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Array.isArray(body.answers) || body.answers.length > 100) return badRequest(res, 'Send the answers as a list');
+    await db.exec('BEGIN');
+    try {
+      await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
+      const product = await db.prepare('SELECT id, category FROM products WHERE id = ? FOR UPDATE').get(id);
+      if (!product) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Product not found');
+      }
+      const refused = await saveAnswers(product, body.answers);
+      if (refused) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, refused);
+      }
+      await db.exec('COMMIT');
+      sendJson(res, 200, { details: await detailsOf(product) });
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
   });
 
   route('GET', '/api/categories', async (req, res) => {

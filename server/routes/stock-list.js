@@ -42,15 +42,65 @@ function groupRow(g, items, costs) {
 // Every word must be found. A word is found in a name, code, barcode or supplier, or is a
 // size's or colour's whole name. A whole barcode or code is that size (decision 4: "Scanning
 // a barcode or searching 'jersey M' opens that size and colour"); a size or colour named is
-// that size in each colour it comes in; otherwise a group found is the group.
-function matches(p, g, words, whole) {
+// that size in each colour it comes in; otherwise a group found is the group. A measurement,
+// "30 mm" or "30mm", is found in a number detail with that unit and that value (decision 10:
+// "bearing 30 mm"); a number on its own in a name or code, or any number detail.
+function matches(p, g, conds, whole) {
   if (whole && [p.barcode, p.sku].some((v) => v && same(v, whole))) return 'exact';
   let bySize = false;
-  for (const w of words) {
+  for (const { w, ids, measure } of conds) {
+    if (measure) { if (!ids.has(p.id)) return null; continue; }
     if ([p.size, p.colour].some((v) => v && same(v, w))) { bySize = true; continue; }
-    if (![g?.name ?? p.name, p.sku, p.barcode, p.supplier].some((v) => has(v, w))) return null;
+    if (![g?.name ?? p.name, p.sku, p.barcode, p.supplier].some((v) => has(v, w)) && !ids?.has(p.id)) return null;
   }
   return bySize ? 'size' : 'name';
+}
+
+const MEASURE = /^(-?\d{1,9}(?:\.\d{1,4})?)([a-z]+)?$/i;
+const keyOf = (n) => Math.round(Number(n) * 10000);
+// The products with a number answer of `n`, in any of `detailIds`: an = on whole numbers,
+// which row-level security lets the index serve (migration 121).
+async function answering(detailIds, n) {
+  if (detailIds.length === 0) return new Set();
+  return new Set((await db.prepare('SELECT product_id FROM product_details WHERE detail_id = ANY(?::int[]) AND value_key = ?')
+    .all(detailIds, keyOf(n))).map((r) => r.product_id));
+}
+// The words, with a measurement as one: each with the products whose details it names.
+async function conditionsOf(words) {
+  if (!words.some((w) => MEASURE.test(w))) return words.map((w) => ({ w }));
+  const numbers = await db.prepare("SELECT id, unit FROM category_details WHERE kind = 'number'").all();
+  const withUnit = (u) => numbers.filter((d) => d.unit && same(d.unit, u)).map((d) => d.id);
+  const conds = [];
+  for (let i = 0; i < words.length; i += 1) {
+    const m = MEASURE.exec(words[i]);
+    if (!m) { conds.push({ w: words[i] }); continue; }
+    const unit = m[2] ?? (words[i + 1] && withUnit(words[i + 1]).length ? words[i + 1] : null);
+    if (unit) {
+      if (!m[2]) i += 1;
+      conds.push({ w: words[i], measure: true, ids: await answering(withUnit(unit), m[1]) });
+    } else {
+      conds.push({ w: words[i], ids: await answering(numbers.map((d) => d.id), m[1]) });
+    }
+  }
+  return conds;
+}
+// A category picked takes those inside it; each detail picked narrows it (st-filter-bearings).
+async function filtersOf(query) {
+  const category = String(query.get('category') ?? '').trim() || null;
+  const sets = [];
+  for (const [key, value] of query.entries()) {
+    const id = /^d(\d{1,9})$/.exec(key)?.[1];
+    if (!id) continue;
+    const detail = await db.prepare('SELECT id, kind, choices FROM category_details WHERE id = ?').get(Number(id));
+    if (!detail) { sets.push(new Set()); continue; }
+    if (detail.kind === 'number') {
+      sets.push(MEASURE.test(value) && !MEASURE.exec(value)[2] ? await answering([detail.id], value) : new Set());
+    } else {
+      const text = detail.kind === 'choice' ? detail.choices.find((c) => same(c, value)) ?? value : value.trim();
+      sets.push(new Set((await db.prepare('SELECT product_id FROM product_details WHERE detail_id = ? AND value_text = ?').all(detail.id, text)).map((r) => r.product_id)));
+    }
+  }
+  return (p) => (!category || p.category === category || p.category.startsWith(`${category} › `)) && sets.every((s) => s.has(p.id));
 }
 
 export function register(route) {
@@ -58,12 +108,14 @@ export function register(route) {
     const costs = await canSeeCosts(req);
     const all = query.get('all') === '1';
     const search = String(query.get('search') ?? '').trim();
-    const words = search.split(/\s+/).filter(Boolean);
+    const words = await conditionsOf(search.split(/\s+/).filter(Boolean));
+    const kept = await filtersOf(query);
     const groups = new Map((await db.prepare('SELECT id, name, category FROM product_groups').all()).map((g) => [g.id, g]));
     const products = await db.prepare(`SELECT * FROM products ${all ? '' : 'WHERE active = 1'} ORDER BY category, name, id`).all();
     const singles = new Map();
     const grouped = new Map();
     for (const p of products) {
+      if (!kept(p)) continue;
       const g = p.group_id === null ? null : groups.get(p.group_id);
       if (!g) {
         if (!words.length || matches(p, null, words, search)) singles.set(p.id, productRow(p, costs));
