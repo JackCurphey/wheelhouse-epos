@@ -61,12 +61,12 @@ export function register(route) {
     const words = search.split(/\s+/).filter(Boolean);
     const groups = new Map((await db.prepare('SELECT id, name, category FROM product_groups').all()).map((g) => [g.id, g]));
     const products = await db.prepare(`SELECT * FROM products ${all ? '' : 'WHERE active = 1'} ORDER BY category, name, id`).all();
-    const rows = [];
+    const singles = new Map();
     const grouped = new Map();
     for (const p of products) {
       const g = p.group_id === null ? null : groups.get(p.group_id);
       if (!g) {
-        if (!words.length || matches(p, null, words, search)) rows.push(productRow(p, costs));
+        if (!words.length || matches(p, null, words, search)) singles.set(p.id, productRow(p, costs));
         continue;
       }
       if (!grouped.has(g.id)) grouped.set(g.id, { g, items: [], found: [], sized: false });
@@ -76,8 +76,22 @@ export function register(route) {
       if (how) entry.found.push(p);
       if (how === 'exact' || how === 'size') entry.sized = true;
     }
-    for (const { g, items, found, sized } of grouped.values()) {
-      if (!found.length) continue;
+    // Products and products with sizes together, by category then name, as the database
+    // orders them; a size found by a search sits where its product with sizes would.
+    const order = await db.prepare(
+      `SELECT 'product' AS kind, id, category, name FROM products WHERE group_id IS NULL ${all ? '' : 'AND active = 1'}
+       UNION ALL SELECT 'group', id, category, name FROM product_groups
+       ORDER BY category, name, kind, id`
+    ).all();
+    const rows = [];
+    for (const o of order) {
+      if (o.kind === 'product') {
+        if (singles.has(o.id)) rows.push(singles.get(o.id));
+        continue;
+      }
+      const entry = grouped.get(o.id);
+      if (!entry?.found.length) continue;
+      const { g, items, found, sized } = entry;
       if (sized) rows.push(...found.filter((p) => matches(p, g, words, search) !== 'name').map((p) => sizeRow(p, g, costs)));
       else rows.push(groupRow(g, items, costs));
     }

@@ -17,7 +17,7 @@ Nothing in this piece makes a group. Making and editing groups and their sizes i
 
 ## 3. The new stock list's server (`GET /api/stock-list`)
 
-One row per group: its name and category, how many sizes and colours, its total stock, how many sizes are below zero and how many running low, and its lowest and highest price (and cost, for someone who can see costs). How a range of prices reads on screen is piece 9's: the server gives the two figures and no words. One row per product with no group, as now. Taken off sale left out unless `?all=1`, as `/api/products`.
+One row per group: its name and category, how many sizes and colours, its total stock, how many sizes are below zero and how many running low, and its lowest and highest price (and cost, for someone who can see costs). How a range of prices reads on screen is piece 9's: the server gives the two figures and no words. One row per product with no group, as now, all in one order by category then name, as the database orders them, a product with sizes among the rest (the review). Taken off sale left out unless `?all=1`, as `/api/products`: a size taken off sale counts in its product's sizes, stock and prices only with `?all=1`. A size at exactly nothing isn't below zero.
 
 **Search** (decision 4: "scanning a barcode or searching 'jersey M' opens that size and colour"; `st-search-size`). Every word must be found. A word is found in a name, code, barcode or supplier, or is a size's or colour's whole name, in any case: "L" is size L, not the "l" in "[Blue]". Then:
 
@@ -41,7 +41,12 @@ Each size is counted as the product it is; only its name and line change. Wherev
 
 The counting page's search finds a size by its group's name too. It doesn't take "jersey M" as the stock list does: scanning, the drawn way to count, finds a size by its own barcode.
 
+## 5a. A category renamed or moved
+
+A product with sizes says its category, the same whole path a product's text holds. Renaming or moving a category (`category-tree`) now rewrites it too, in the same transaction: after the category's products, the groups in id order, then each one's path. Whatever writes a group (piece 6) takes it after its products, the same order.
+
 ## 6. Not built, and for later pieces
 
 - **A size row's own name.** `products.name` is what the old till and old stock list show for each size. Whoever makes sizes (piece 6, piece 7) writes it; including the size and colour in it ("[Product with sizes] M [Colour 1]") would let the old screens tell sizes apart. Noted for piece 6.
 - The screens (pieces 9 and 10); "+ Add a size or colour" (piece 6).
+- **For piece 6:** a group's category is a whole path, and making or saving a group finds or makes the categories in it (`categoryFor`), as a product's does; taking the group's row after its sizes', as a rename does.
