@@ -268,7 +268,7 @@ A stock change SHALL wait a short time for a product something else holds, then 
 
 #### Scenario: A card sale at a busy moment
 - **WHEN** Card approved is pressed and Wheelhouse is busy
-- **THEN** it says the sale isn't recorded yet and to try again, and that if the card machine took the payment not to take it again
+- **THEN** it says the sale may not be recorded yet and to try again, and that if the card machine took the payment not to take it again
 
 ### Requirement: Applying a very large count doesn't stop the shop
 Applying a count SHALL hold its products as briefly as it can. A sale of one of them during a very large count (50,000 products) MAY be told to try again for about 6 seconds, and SHALL then go through.

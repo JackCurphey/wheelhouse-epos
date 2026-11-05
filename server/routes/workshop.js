@@ -1796,7 +1796,7 @@ export function register(route) {
       .run(jobId, storageKey, originalName, contentType, buffer.length);
     const row = await db.prepare('SELECT * FROM workshop_job_attachments WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeAttachment(row));
-  });
+  }, { maxBody: MAX_ATTACHMENT_BODY_BYTES, upload: true });
 
   route('GET', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, params) => {
     const attachment = await db

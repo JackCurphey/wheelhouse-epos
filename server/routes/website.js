@@ -7,7 +7,7 @@
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { badRequest, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
-import { readUploadedImage } from '../lib/uploads.js';
+import { readUploadedImage, uploadedImageBody } from '../lib/uploads.js';
 import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, serializeShopifyConnection } from '../shopify.js';
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
 
@@ -93,7 +93,7 @@ export function register(route) {
       throw err;
     }
     sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
-  });
+  }, uploadedImageBody(MAX_SHOP_IMAGE_BYTES));
 
   route('POST', '/api/storefront-settings/hero', async (req, res) => {
     // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
@@ -106,5 +106,5 @@ export function register(route) {
       throw err;
     }
     sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
-  });
+  }, uploadedImageBody(MAX_SHOP_IMAGE_BYTES));
 }

@@ -13,8 +13,9 @@ import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readRawBody, ValidationError, ClientGoneError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
+import { readBodyFirst, readGates } from './lib/read-body-first.js';
 import {
   loadDocumentLine, createSale,
   pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes,
@@ -77,7 +78,8 @@ const MIME = {
 // ---------- Route handlers ----------
 
 const routes = [];
-function route(method, pattern, handler) {
+// `body` is what the route needs of its request's body: see readBodyFirst.
+function route(method, pattern, handler, body = {}) {
   // pattern like '/api/products/:id'
   const paramNames = [];
   const regex = new RegExp(
@@ -94,7 +96,7 @@ function route(method, pattern, handler) {
         .join('/') +
       '$'
   );
-  routes.push({ method, pattern, regex, paramNames, handler });
+  routes.push({ method, pattern, regex, paramNames, handler, body });
 }
 
 // The table as "METHOD pattern", in registration order: what
@@ -468,6 +470,46 @@ const server = createServer((req, res) => {
   });
 });
 
+// A signed-in staff route, its body already read: runs it on the shop's connection.
+async function serveStaffRoute(req, res, r, params, url, ctx) {
+  // A handler that needs work done AFTER its pooled client goes back to
+  // the pool (currently: firing Shopify inventory pushes queued by
+  // createSale's deferShopifyPushesTo - see the comment there) pushes a
+  // callback onto this array instead of running that work itself while
+  // still inside runWithShop. It is only read below once the
+  // `runWithShop` call has fully resolved, which cannot happen until its
+  // `finally` has already released the client back to the pool - so
+  // anything queued here is guaranteed to run without holding one of the
+  // ten pooled connections across it.
+  const afterRelease = [];
+  try {
+    // runRequestWithPushSlotCleanup (see registerPendingShopifyPushSlot's
+    // comment) settles any pendingShopifyPushes slot this request
+    // registered at commit time if the request itself fails anywhere in
+    // its own tail, before ever reaching the afterRelease loop below.
+    await runRequestWithPushSlotCleanup(() =>
+      runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id))
+    );
+  } catch (err) {
+    console.error(err);
+    // A lock limit ran out, or a deadlock was broken: nothing was stored and
+    // trying again can work (openspec/changes/stock-movements-say-who, design 4).
+    if (err.code === '55P03' || err.code === '40P01') {
+      sendJson(res, 503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' });
+      return;
+    }
+    sendJson(res, 500, { error: err.message || 'Internal server error' });
+    return;
+  }
+  for (const work of afterRelease) {
+    try {
+      work();
+    } catch (err) {
+      console.error('Post-release work failed', err);
+    }
+  }
+}
+
 async function dispatch(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let pathname;
@@ -528,6 +570,7 @@ async function dispatch(req, res) {
     // process, taking down every shop, for a route reachable by an
     // unauthenticated caller with a guessable shopId.
     try {
+      if (!(await readBodyFirst(req, res, {}, { gate: readGates.webhook }))) return;
       let rawBody;
       try {
         rawBody = await readRawBody(req);
@@ -627,14 +670,15 @@ async function dispatch(req, res) {
         const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
         if (!shop) return refuse();
 
-        await runWithShop(shop.id, async () => {
-          const till = await db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token));
-          if (!till) return refuse();
-          if (!tillAuthFailures.isBlocked(key)) tillAuthFailures.clear(key);
-          await r.handler(req, res, params, url.searchParams, till);
-        });
+        const till = await runWithShop(shop.id, () =>
+          db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token)));
+        if (!till) return refuse();
+        if (!tillAuthFailures.isBlocked(key)) tillAuthFailures.clear(key);
+        // Known to be a till, so it counts against its shop, not an address; its
+        // body is in hand before it takes a connection to do the work.
+        if (!(await readBodyFirst(req, res, r.body, { gate: readGates.signedIn, key: shop.id }))) return;
+        await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, till));
       } catch (err) {
-        if (err instanceof ClientGoneError) return;
         // The details go to the log; a till, a website visitor and someone
         // signing in get the same fixed words, never a database's message
         // (server-stays-up-when-busy). Signed-in staff routes below are as before.
@@ -664,9 +708,9 @@ async function dispatch(req, res) {
       // inside the handler itself via currentCustomerSession().
       if (/\/(signup|login|logout)$/.test(pathname)) {
         try {
+          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.website }))) return;
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
-          if (err instanceof ClientGoneError) return;
           console.error(err);
           sendJson(res, 500, { error: 'Internal server error' });
         }
@@ -677,12 +721,12 @@ async function dispatch(req, res) {
       if (!shop) return notFound(res, 'Shop not found');
 
       try {
+        if (!(await readBodyFirst(req, res, r.body, { gate: readGates.website }))) return;
         // Which customer is asking, looked up before runWithShop takes this
         // request's connection, so a route asking again needs no second one.
         await rememberCustomerSession(req);
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
       } catch (err) {
-        if (err instanceof ClientGoneError) return;
         console.error(err);
         sendJson(res, 500, { error: 'Internal server error' });
       }
@@ -706,9 +750,9 @@ async function dispatch(req, res) {
       // becomes `db` for the duration of this one request.
       if (pathname.startsWith('/api/auth/')) {
         try {
+          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.staffAccounts }))) return;
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
-          if (err instanceof ClientGoneError) return;
           console.error(err);
           sendJson(res, 500, { error: 'Internal server error' });
         }
@@ -721,42 +765,18 @@ async function dispatch(req, res) {
       // handler asking again gets this answer, not a second connection.
       rememberSession(req, ctx);
 
-      // A handler that needs work done AFTER its pooled client goes back to
-      // the pool (currently: firing Shopify inventory pushes queued by
-      // createSale's deferShopifyPushesTo - see the comment there) pushes a
-      // callback onto this array instead of running that work itself while
-      // still inside runWithShop. It is only read below once the
-      // `runWithShop` call has fully resolved, which cannot happen until its
-      // `finally` has already released the client back to the pool - so
-      // anything queued here is guaranteed to run without holding one of the
-      // ten pooled connections across it.
-      const afterRelease = [];
-      try {
-        // runRequestWithPushSlotCleanup (see registerPendingShopifyPushSlot's
-        // comment) settles any pendingShopifyPushes slot this request
-        // registered at commit time if the request itself fails anywhere in
-        // its own tail, before ever reaching the afterRelease loop below.
-        await runRequestWithPushSlotCleanup(() =>
-          runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id))
-        );
-      } catch (err) {
-        if (err instanceof ClientGoneError) return;
-        console.error(err);
-        // A lock limit ran out, or a deadlock was broken: nothing was stored and
-        // trying again can work (openspec/changes/stock-movements-say-who, design 4).
-        if (err.code === '55P03' || err.code === '40P01') {
-          sendJson(res, 503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' });
-          return;
-        }
-        sendJson(res, 500, { error: err.message || 'Internal server error' });
-        return;
+      // A route that must turn someone away before taking their body (the one
+      // Citrus Lime file a shop can send at a time) does so on a connection it
+      // gives straight back. What it takes, it has until this request is over.
+      let letGo = null;
+      if (r.body.beforeBody) {
+        letGo = await runWithShop(ctx.shop.id, () => r.body.beforeBody(req, res, ctx.shop.id));
+        if (!letGo) return;
       }
-      for (const work of afterRelease) {
-        try {
-          work();
-        } catch (err) {
-          console.error('Post-release work failed', err);
-        }
+      try {
+        if (await readBodyFirst(req, res, r.body, { gate: r.body.upload ? readGates.signedInUploads : readGates.signedIn, key: ctx.shop.id })) await serveStaffRoute(req, res, r, params, url, ctx);
+      } finally {
+        letGo?.();
       }
       return;
     }

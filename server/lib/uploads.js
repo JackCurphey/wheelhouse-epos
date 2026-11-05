@@ -35,10 +35,13 @@ export const MAX_SERIAL = 2147483647;
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+// What a route using readUploadedImage registers (server/lib/read-body-first.js).
+export const uploadedImageBody = (maxBytes) => ({ maxBody: Math.ceil(maxBytes * 1.4), upload: true });
+
 // Shared by product photo, logo, and hero image uploads - only the size
 // cap and what happens with the resulting URL differ between them.
 export async function readUploadedImage(req, maxBytes) {
-  const maxBodyBytes = Math.ceil(maxBytes * 1.4);
+  const maxBodyBytes = uploadedImageBody(maxBytes).maxBody;
   let body;
   try {
     body = await readJsonBody(req, maxBodyBytes);
