@@ -6,7 +6,7 @@
 import { pool, prepare, dbExec, runWithShop } from '../db.js';
 import { readInWorker, ReadBusy } from '../lib/read-in-worker.js';
 import { priceTooBig } from '../lib/pence.js';
-import { moveStock } from '../lib/stock.js';
+import { moveStock, oldestSite } from '../lib/stock.js';
 import { NO_CUSTOMER, bikeRow, customerRow, lockBikeOwners, moveSalt } from './bring-customers.js';
 
 // A batch holds every move file, so it's short: well under the 800ms a deletion waits,
@@ -87,8 +87,13 @@ async function priceListRow(d, file, context) {
   ).get(sku, d.Description, category, price, cost, vat, min, d.Supplier ?? '', active);
   if (!made) return { state: 'same' };
   if (qty !== 0) {
-    // The row was made just now, so nothing holds it; the batch's own wait stands.
-    await moveStock([{ productId: made.id, change: qty, type: 'intake', note: STOCK_NOTE }], file.moved_by ?? { loginId: file.sent_by_login_id }, { wait: false });
+    // Made just now, so nothing else can hold it: no lock to take, and the batch's own
+    // wait stands. The shop was read once for the batch.
+    await moveStock(
+      [{ productId: made.id, change: qty, type: 'intake', note: STOCK_NOTE }],
+      { siteId: context.siteId, ...(file.moved_by ?? { loginId: file.sent_by_login_id }) },
+      { wait: false, held: [{ id: made.id, name: d.Description, stock_qty: 0 }] }
+    );
     return { state: 'in', stock: 1 };
   }
   return { state: 'in' };
@@ -152,7 +157,7 @@ export async function batchContext(file) {
   if (file.report === 'customers' || file.report === 'bikes') return { salt: await moveSalt() };
   if (file.report !== 'price_list') return {};
   const first = await prepare(`SELECT store_name FROM move_files WHERE report = 'price_list' AND store_name <> '' ORDER BY id LIMIT 1`).get();
-  return { firstStore: first?.store_name ?? '' };
+  return { firstStore: first?.store_name ?? '', siteId: await oldestSite() };
 }
 
 // A row's outcome, then the file's counts: added up once per batch, not per row.

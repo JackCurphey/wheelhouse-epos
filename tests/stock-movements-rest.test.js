@@ -8,7 +8,8 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { encryptSecret } from '../server/shopify.js';
-import { readNextFile, bringBatch } from '../server/move/bring-across.js';
+import { readNextFile, bringBatch, ROW_APPLIERS } from '../server/move/bring-across.js';
+import { dbExec } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { registerTill, tillRequest } from './helpers/till.js';
@@ -183,24 +184,94 @@ test('a Shopify refund: nobody named, the refund, the shop; a held product is re
   assert.equal(await stockOf(id), 7);
 });
 
-test('a Shopify order waits out a held product over 2 seconds rather than being lost', async () => {
+const orderOf = (variantId, over = {}) => ({ id: Number(randomBytes(4).readUInt32BE(0)), order_number: 1001, total_discounts: '0', line_items: [{ variant_id: Number(variantId), quantity: 1, price: '28.00' }], ...over });
+const eventOf = (id) => inShop(() => prepare("SELECT status, error_message FROM shopify_processed_events WHERE shopify_order_id = ? AND kind = 'order'").get(String(id)));
+const salesFor = (id) => inShop(async () => (await prepare('SELECT count(*)::int AS c FROM sale_items WHERE product_id = ?').get(id)).c);
+
+test('a Shopify order for a held product fails after its 2 seconds, and Shopify’s retry counts it once', async () => {
   const v = variant();
   const id = await product(6, v);
-  const order = { id: Number(randomBytes(4).readUInt32BE(0)), order_number: 1001, total_discounts: '0', line_items: [{ variant_id: Number(v), quantity: 1, price: '28.00' }] };
-  const holder = await pool.connect();
-  await holder.query('BEGIN');
-  await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
-  await holder.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [id]);
-  const sent = shopify('orders', order);
-  await new Promise((resolve) => { setTimeout(resolve, 3000); });
-  await holder.query('ROLLBACK');
-  holder.release();
-  const res = await Promise.race([sent, new Promise((_, reject) => { setTimeout(() => reject(new Error('still waiting 8s after the hold ended')), 8000); })]);
-  assert.equal(res.status, 200);
+  const order = orderOf(v);
+  const { res, waited } = await whileHeld(id, () => shopify('orders', order));
+  assert.equal(res.status, 500, 'Shopify retries on an error');
+  assert.ok(waited >= 1900 && waited < 4500, `waited ${waited}ms`);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [6, 0, 0]);
+  assert.equal((await eventOf(order.id)).status, 'error');
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [5, 1, 1]);
+  assert.equal((await eventOf(order.id)).status, 'ok');
   const [line] = await linesOf(id);
   assert.deepEqual([line.change_qty, line.type, line.who_name, line.site_id], [-1, 'sale', null, bolton.id]);
   assert.ok(Number.isInteger(line.sale_id));
-  assert.equal(await stockOf(id), 5);
+  // Sent again after it counted: nothing more.
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length], [5, 1]);
+});
+
+test('a Shopify order that fails for any other reason is retried too, and counts once', async () => {
+  const v = variant();
+  const id = await product(6, v);
+  const good = orderOf(v);
+  // Too large a figure for the sale's own columns: a database error, not a refusal.
+  const failing = { ...good, line_items: [{ variant_id: Number(v), quantity: 1, price: '99999999999.00' }] };
+  assert.equal((await shopify('orders', failing)).status, 500);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length], [6, 0]);
+  assert.equal((await shopify('orders', good)).status, 200);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [5, 1, 1]);
+});
+
+test('the same Shopify order delivered twice at once counts once', async () => {
+  const v = variant();
+  const id = await product(6, v);
+  const order = orderOf(v);
+  const replies = await Promise.all([shopify('orders', order), shopify('orders', order), shopify('orders', order)]);
+  assert.ok(replies.some((r) => r.status === 200), replies.map((r) => r.status).join());
+  // A delivery told to wait can answer an error; Shopify's retry then finds it done.
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [5, 1, 1]);
+});
+
+test('a Shopify order refused for good stays refused: no sale, and no retry changes that', async () => {
+  const v = variant();
+  const id = await product(0, v);
+  const order = orderOf(v);
+  assert.equal((await shopify('orders', order)).status, 200);
+  const event = await eventOf(order.id);
+  assert.equal(event.status, 'error');
+  assert.match(event.error_message, /Not enough stock/);
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [0, 0, 0]);
+});
+
+test('a Shopify order and refund behind an unfinished delivery of themselves give up after 2 seconds, and retry', async () => {
+  const v = variant();
+  const id = await product(6, v);
+  for (const [kind, event, name] of [['order', orderOf(v), 'orders'], ['refund', refundOf(v), 'refunds']]) {
+    const holder = await pool.connect();
+    let res;
+    let waited;
+    try {
+      await holder.query('BEGIN');
+      await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+      await holder.query('INSERT INTO shopify_processed_events (shopify_order_id, kind) VALUES ($1, $2)', [String(event.id), kind]);
+      const started = Date.now();
+      res = await Promise.race([shopify(name, event), new Promise((_, reject) => { setTimeout(() => reject(new Error(`${kind} still waiting after 8s`)), 8000); })]);
+      waited = Date.now() - started;
+    } finally {
+      await holder.query('ROLLBACK');
+      holder.release();
+    }
+    assert.equal(res.status, 500, kind);
+    assert.ok(waited >= 1900 && waited < 4500, `${kind} waited ${waited}ms`);
+    assert.equal((await shopify(name, event)).status, 200, kind);
+  }
+  assert.deepEqual([await stockOf(id), (await linesOf(id)).length], [6, 2], 'one sold, one back');
+});
+
+test('a Shopify order for nothing we hold is claimed and sells nothing', async () => {
+  const order = orderOf(variant());
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.equal((await eventOf(order.id)).status, 'ok');
 });
 
 // ---- The imports ----
@@ -232,6 +303,26 @@ test('importing with stock at a till with nobody checked in asks for a PIN, and 
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.equal(res.body.code, 'check_in_first');
   assert.equal((await inShop(() => prepare('SELECT count(*)::int AS c FROM products WHERE sku = ?').get(code))).c, 0);
+});
+
+test('a Citrus Lime row keeps the batch’s own shorter wait, and uses the batch’s shop', async () => {
+  const sku = `B05S-RX-${randomUUID().slice(0, 6)}`;
+  const row = { 'Item Lookup Code': sku, Description: 'Shimano brake pads', Price: '28', 'Qty On Hand': '2' };
+  await inShop(async () => {
+    await dbExec('BEGIN');
+    await prepare("SET LOCAL lock_timeout = '500ms'").run();
+    const done = await ROW_APPLIERS.price_list(row, { sent_by_login_id: owner.loginId }, { firstStore: '', siteId: second.id });
+    assert.equal(done.state, 'in');
+    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '500ms');
+    await dbExec('ROLLBACK');
+  });
+  await inShop(async () => {
+    await dbExec('BEGIN');
+    await ROW_APPLIERS.price_list(row, { sent_by_login_id: owner.loginId }, { firstStore: '', siteId: second.id });
+    const line = await prepare('SELECT m.site_id, m.login_id FROM stock_movements m JOIN products p ON p.id = m.product_id WHERE p.sku = ?').get(sku);
+    assert.deepEqual([line.site_id, line.login_id], [second.id, owner.loginId]);
+    await dbExec('ROLLBACK');
+  });
 });
 
 test('a Citrus Lime row with stock: its line, who sent the file, the shop', async () => {

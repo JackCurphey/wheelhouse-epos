@@ -465,7 +465,7 @@ export async function loadDocumentLine(it, { checkStock }) {
 // behaviour runs unchanged, which is what every direct createSale() caller
 // that doesn't care about pool-connection lifetime (tests, the Shopify
 // webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {} }, { deferShopifyPushesTo, stockLockWait } = {}) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {} }, { deferShopifyPushesTo } = {}) {
   // sellPastStock: the new till sells past zero stock and says so on the
   // line (journey 11 decision 5); everything else still refuses.
   const loaded = [];
@@ -504,7 +504,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     // Product rows are locked in id order up front, with a limit on waiting, so two
     // sales with the same products in a different order wait for each other instead
     // of deadlocking, and a held product answers busy (lib/stock.js; Jack's check, 21 Oct).
-    await lockStock(loaded.filter((l) => l.product).map((l) => l.product.id), { wait: stockLockWait });
+    await lockStock(loaded.filter((l) => l.product).map((l) => l.product.id));
     const saleInfo = await db
       .prepare(
         `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
@@ -547,7 +547,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     // two tills sold at once. The stock check repeats for the same reason. The person
     // is the sale's own cashier, so the line and the sale agree (stock-movements-say-who).
     const cashier = cashierId ? await db.prepare('SELECT name FROM employees WHERE id = ?').get(cashierId) : null;
-    const moved = await moveStock(moves, { ...movedBy, ...(cashier ? { employeeId: cashierId, name: cashier.name } : {}) }, { neverBelowZero: !sellPastStock, wait: stockLockWait });
+    const moved = await moveStock(moves, { ...movedBy, ...(cashier ? { employeeId: cashierId, name: cashier.name } : {}) }, { neverBelowZero: !sellPastStock });
     if (moved.refused) {
       const need = moves.filter((m) => m.productId === moved.refused.id).reduce((sum, m) => sum - m.change, 0);
       throw new ValidationError(`Not enough stock for "${moved.refused.name}" (need ${need})`);

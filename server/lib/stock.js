@@ -9,6 +9,9 @@ import { nowIso } from './http.js';
 // busy (server.js), rather than holding a connection until the server has none left.
 export const STOCK_LOCK_WAIT = '2s';
 
+// The shop a change is at when nothing says which.
+export const oldestSite = async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())?.id ?? null;
+
 // The same limit for what a stock change locks before its products (an order, a
 // count, a request key), so nothing ahead of them can wait without one.
 export const limitLockWait = (wait = STOCK_LOCK_WAIT) => prepare(`SET LOCAL lock_timeout = '${wait}'`).run();
@@ -32,7 +35,8 @@ export async function lockStock(productIds, { wait = STOCK_LOCK_WAIT } = {}) {
  * caused it: purchaseOrderId, deliveryId, stockTakeId, tillSaleId, saleId, shopifyRefundId }.
  * `who`: { loginId, employeeId, name, siteId }: the sign-in, the person (who may be
  * someone checked in under it), and the shop; a shop not given is the business's
- * oldest, if it has one yet. Background work with nobody behind it sends none.
+ * oldest, if it has one yet (null: looked already, it has none). Background work with
+ * nobody behind it sends none.
  * `neverBelowZero`: a change taking a product under zero refuses the whole call, and
  * going up is always allowed, so Found works on a product below zero.
  * `held`: what lockStock returned, when the caller already holds these, to save locking twice.
@@ -69,7 +73,7 @@ export async function moveStock(moves, who = {}, { neverBelowZero = false, wait,
     if (product.shopify_inventory_item_id) result.pushes.push({ product, newQty: product.stock_qty });
   }
 
-  const siteId = who.siteId ?? (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())?.id ?? null;
+  const siteId = who.siteId !== undefined ? who.siteId : await oldestSite();
   const column = (read) => stocked.map((m) => read(m) ?? null);
   const lines = await prepare(
     `INSERT INTO stock_movements (product_id, change_qty, type, note, reason, value_pence, to_see, login_id, employee_id, who_name, site_id,

@@ -87,9 +87,12 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });
     } catch (err) {
+      // Busy: nothing was recorded and trying again can work, so it's never a reason to
+      // reverse a card payment or take it twice (the review of 5 Nov).
+      if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
-      if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      else if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else if (job && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {

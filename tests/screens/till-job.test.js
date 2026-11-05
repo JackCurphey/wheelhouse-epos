@@ -219,6 +219,15 @@ test('an order the server won\'t pay (a retired part) says why, and Take payment
   assert.equal((await sale.findByRole('button', { name: /^Take payment/ })).disabled, true);
 });
 
+test('busy after the card step says to try again and not to take the card again, never to reverse it', async () => {
+  const t = await openJobTill();
+  convertReply = { status: 503, ok: false, json: async () => ({ error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }) };
+  const dlg = await payByCard(t);
+  assert.ok(has(await dlg.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.equal(has(dlg.queryByText(/reverse/)), false);
+  assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
+});
+
 test('any refusal after the card step says no sale was recorded and to reverse the card', async () => {
   const t = await openJobTill();
   convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted' }) };
