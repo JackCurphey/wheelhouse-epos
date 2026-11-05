@@ -38,7 +38,7 @@ const SAVE_LOCK_WAIT = '2s';
 // `show_online`/`active` fields - callers pass the row as loaded before and
 // after the change (a synthetic "nothing was live yet" stand-in for a
 // brand-new product).
-async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
+export async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
   const isLive = (row) => !!row.show_online && !!row.active;
   try {
     if (isLive(updatedProductRow)) {
@@ -94,7 +94,7 @@ function sentCost(value) {
 // form sends it. `price` is undefined when no pence were sent, leaving the old
 // `price` to its caller; `cost` is null when none was given; `refused` is a
 // refusal's message. Someone who can't see costs has any cost ignored, not refused.
-function sentMoney(body, costs) {
+export function sentMoney(body, costs) {
   if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
     return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
   }

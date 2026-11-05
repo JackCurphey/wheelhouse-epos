@@ -2253,6 +2253,15 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **Renaming or moving a category renames a product with sizes' category too,** in the same go (the independent review). For piece 6: making a product with sizes finds or makes the categories in its path, as a product does.
 9. **The new list keeps one order, by category then name, with products with sizes among the rest** (the review). A size taken off sale counts in its product's figures only when "taken off sale" is asked for, as the old list leaves such products out.
 
+### 5 Nov 2026: adding and editing products on the server (WP-1.5, piece 6; `openspec/changes/product-editing`; `rs-add-product`, `rs-add-left`, `st-product`, `st-product-sizes`, `st-search-measure`, `st-filter-bearings`)
+
+1. **Adding and changing a product, its price and cost, is the Owner's until "Can order stock" exists,** as stock control decision 11 says; until now anyone signed in could. It covers taking a product off sale, its photo, its details, a supplier's item brought in and a product with sizes. The Owner's sign-in with someone else checked in by PIN is that person. Staff still adjust, count and receive. Staff saving a product on the old app are told "Only the shop’s owner can add or change products" and nothing is saved. Receiving an unknown barcode is unchanged: it says nothing has that barcode, and the Owner adds the product (`rs-add-left`'s list isn't built yet).
+2. **Each size's own product is named "Jersey M Blue"** (Jack, answer 9), kept in step whenever the product, a size or a colour is renamed. A product's name up to 60 characters, a size 20, a colour 30: at most 112, within what shows it. A sale's saved line reads that name.
+3. **A size left out of a save stays;** taking one off sale is how it goes. A barcode or code another product has is refused, saying which.
+4. **"bearing 30 mm" and "30mm" find a number detail in that unit;** a number alone is found in a name, a code or any number detail. 30 cm isn't 30 mm. A category picked takes those inside it.
+5. **A number answer is up to nine digits and four places;** a choice is saved as the choice is written; text up to 200 characters; an empty answer takes it off.
+6. **Known, no code:** saving one size alone on the old app can give it a category other than its product's until the product is next saved, as answer 9 accepts for its name. Matching a product's supplier to a supplier is the restock list's (answer 10).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
