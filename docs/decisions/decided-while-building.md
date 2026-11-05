@@ -2152,6 +2152,12 @@ WP-1.5's. So: slice C, WP-2.3.
 7. **A margin near a half point can show 1 point differently.** It now works on whole pence: £12.00 with a £9.55 cost at 20% VAT is exactly 4.5%, which showed 4% and now shows 5%, the right rounding. Kept (the independent review, 4 Nov).
 8. **Known, no code: 40 saves at once on one held product give some server errors at the pool's limit,** rather than all answering busy (the independent review, 4 Nov). Each waits its 2 seconds holding a connection. Nothing is stored by any of them.
 
+### 5 Nov 2026: a request's body is read before it takes a connection (`openspec/changes/body-read-first`; nothing on screen changes)
+
+1. **A request has 30 seconds to arrive, or 4 minutes for an upload,** then gets "That took too long to arrive. Please try again." 30 seconds is 2 MB at about 530 kilobits a second. A full Citrus Lime file, 42 MB once encoded, needs about 1.4 megabits a second to arrive in 4 minutes. It had 5 minutes before, Node's own limit.
+2. **Anyone not known to be staff or a till can have 10 requests with a body going at once from one address and 200 overall, holding at most 100 MB per address and 300 MB overall.** Over that: "Too many requests at once. Please try again in a moment." 100 MB leaves room for one full booking with photos, about 73 MB. Staff and tills are outside this. A flood from more than 20 addresses can fill the 200, and then customers and new sign-ins are refused until those requests run out of time, about 30 seconds to 4 minutes.
+3. **A body that can't be parsed, sent to pay for an order, gets its error before the check that the order exists,** since the body now comes before the lock.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

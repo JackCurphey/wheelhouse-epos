@@ -514,11 +514,13 @@ export function register(route) {
   // locked here: a reopen during payment is a decided case (the sale stands and
   // the reply warns; docs/decisions/2026-10-08-paying-for-finished-work.md).
   route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
+    // Before the lock: a slow client mustn't hold this order against a second try.
+    const body = await readJsonBody(req);
     await db.exec('BEGIN');
     let reply;
     try {
       await db.prepare('SELECT id FROM sale_documents WHERE id = ? FOR UPDATE').get(Number(params.id));
-      reply = await convertOrder(req, res, params);
+      reply = await convertOrder(req, res, params, body);
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
@@ -537,7 +539,7 @@ export function register(route) {
   // Answers a refusal straight away (nothing was written, so nothing to wait
   // for) and otherwise returns {payload, shopifyPushes} for the route to send
   // once the payment has committed.
-  async function convertOrder(req, res, params) {
+  async function convertOrder(req, res, params, body) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
@@ -580,7 +582,6 @@ export function register(route) {
       }
     }
 
-    const body = await readJsonBody(req);
     // A workshop job is paid at the till, which always answers who signed the
     // work off (null when it didn't ask). A payment with no answer comes only
     // from the old app, which never takes a job's payment (Jack, 21 Oct,

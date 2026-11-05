@@ -101,11 +101,34 @@ export class ClientGoneError extends Error {
   }
 }
 
+// A body already read off the wire by readBodyFirst (server/lib/read-body-first.js),
+// which the readers then use instead of the stream. The route's own limit still
+// decides: too large is refused, and destroying the request cuts the connection if
+// more of it is still to come. If it has all arrived, the route can still answer.
+const heldBodies = new WeakMap();
+
+export function holdRequestBody(req, held) {
+  heldBodies.set(req, held);
+}
+
+function takeHeldBody(req, held, maxBytes, resolve, reject) {
+  if (held.taken) return reject(new Error('Request body already read'));
+  held.taken = true;
+  if (held.overflowed || held.bytes > maxBytes) {
+    reject(new Error('Payload too large'));
+    req.destroy();
+    return;
+  }
+  resolve(Buffer.concat(held.chunks));
+}
+
 // Always ends (openspec/changes/dropped-request-releases). Waiting for 'end' alone
 // is not enough: a request destroyed before anyone listens never says so again, so
 // the wait would go on for good, holding the request's database connection.
 function readBody(req, maxBytes, answerOverflow) {
   return new Promise((resolve, reject) => {
+    const held = heldBodies.get(req);
+    if (held) return takeHeldBody(req, held, maxBytes, resolve, reject);
     // Node destroys an IncomingMessage only once it is finished with, or when the
     // connection fails, so which of the two this is depends on whether it ended.
     if (req.readableEnded) return reject(new Error('Request body already read'));
