@@ -305,7 +305,7 @@ live('behind a trusted proxy each real address has its own limit', async () => {
   }
 }, { TRUST_PROXY: '1' });
 
-live('the whole server has a limit, and signed-in staff and tills are outside it', async () => {
+live('the whole gate has a limit, and signed-in staff and tills are outside it', async () => {
   const stall = await stalled(server.baseUrl, 205, { path: bookings(), headers: (i) => ({ 'X-Forwarded-For': `203.0.${100 + Math.floor(i / 250)}.${i % 250}` }) });
   try {
     await until('the refused', 5000, () => refusedCount(stall.clients) === 5);
@@ -349,6 +349,112 @@ live('over the limit, a request with no body is still answered: reading the webs
     stall.end();
   }
 });
+
+// ---------- Honest customers, and who shares what ----------
+
+live('100 complete small requests at once from one address: none refused', async () => {
+  const answers = await Promise.all(Array.from({ length: 100 }, () => within(20_000, 'an answer',
+    fetch(server.baseUrl + bookings(), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then((r) => r.status))));
+  assert.deepEqual(answers.filter((status) => status === 429), [], 'the database pool limits the work, not this');
+});
+
+const doors = () => ({
+  'the website': bookings(),
+  'a customer signing in': `/api/portal/${owner.shop.slug}/login`,
+  'staff signing in': '/api/auth/login',
+  'a Shopify webhook': `/webhooks/shopify/${owner.shop.id}/orders`,
+});
+
+for (const door of ['the website', 'a customer signing in', 'staff signing in', 'a Shopify webhook']) {
+  live(`${door}: one address gets 10 reads at once, whatever else it does`, async () => {
+    const stall = await stalled(server.baseUrl, 11, { path: doors()[door] });
+    try {
+      await until('the one refused', 3000, () => refusedCount(stall.clients) === 1);
+    } finally {
+      stall.end();
+    }
+  });
+}
+
+live('10 stalled bookings from an address leave its staff signing in, and webhooks, alone; customers share them', async () => {
+  const stall = await stalled(server.baseUrl, 10, { path: bookings() });
+  try {
+    await pause(200);
+    const post = (path) => within(4000, path, fetch(server.baseUrl + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then((r) => r.status));
+    assert.notEqual(await post('/api/auth/login'), 429, 'staff signing in');
+    assert.notEqual(await post(doors()['a Shopify webhook']), 429, 'a webhook');
+    assert.equal(await post(doors()['a customer signing in']), 429, 'customers and bookings share a gate');
+  } finally {
+    stall.end();
+  }
+});
+
+// ---------- Staff and tills: memory, per shop ----------
+
+const TEN_MB = Buffer.alloc(10 * 1024 * 1024, 'x');
+
+live('one shop\'s stalled uploads stop at its limit on bytes; another shop and the public aren\'t touched', async () => {
+  const clients = [];
+  for (let i = 0; i < 16; i++) {
+    const client = await open(server.baseUrl);
+    client.socket.write(head('POST', '/api/workshop-jobs/999999/attachments', sized(20 * 1024 * 1024, { Cookie: owner.cookie })));
+    client.socket.write(TEN_MB);
+    clients.push(client);
+  }
+  try {
+    await until('over 150 MB refused', 15_000, () => refusedCount(clients) >= 1);
+    await until('at most 150 MB held', 3000, () => clients.filter((c) => !c.closed).length <= 15);
+    const theirs = await open(server.baseUrl);
+    theirs.socket.write(head('POST', '/api/workshop-jobs/999999/attachments', sized(20 * 1024 * 1024, { Cookie: other.cookie })));
+    theirs.socket.write(TEN_MB);
+    await pause(300);
+    assert.equal(refusedCount([theirs]), 0, 'another shop has its own');
+    theirs.socket.destroy();
+    const pub = await within(4000, 'a booking', fetch(server.baseUrl + bookings(), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }));
+    assert.notEqual(pub.status, 429);
+  } finally {
+    for (const c of clients) c.socket.destroy();
+  }
+  await pause(300);
+  const again = await within(4000, 'the shop again', staffOf(owner, '/api/customers', { method: 'POST', body: {} }));
+  assert.equal(again.status, 400, 'its bytes came back');
+});
+
+live('a shop\'s stalled till syncs stop at the same limit', async () => {
+  const part = Buffer.alloc(1_900_000, 'x');
+  const clients = [];
+  for (let i = 0; i < 85; i++) {
+    const client = await open(server.baseUrl);
+    client.socket.write(head('POST', `/api/till/${owner.shop.slug}/sync`, sized(1_950_000, { Authorization: `Bearer ${till.token}` })));
+    client.socket.write(part);
+    clients.push(client);
+  }
+  try {
+    await until('over 150 MB refused', 15_000, () => refusedCount(clients) >= 1);
+  } finally {
+    for (const c of clients) c.socket.destroy();
+  }
+});
+
+live('the upload deadline is on every upload route, and not on a small one', async () => {
+  const uploads = {
+    'a booking': { path: bookings() },
+    'a photo for a line': { path: `/api/portal/${owner.shop.slug}/photo-codes/nope` },
+    'a job\'s attachment': { path: '/api/workshop-jobs/999999/attachments', headers: { Cookie: owner.cookie } },
+    'a product photo': { path: '/api/products/999999/photo', headers: { Cookie: owner.cookie } },
+    'the logo': { path: '/api/storefront-settings/logo', headers: { Cookie: owner.cookie } },
+    'the hero image': { path: '/api/storefront-settings/hero', headers: { Cookie: owner.cookie } },
+    'a Citrus Lime file': { path: '/api/move/files', headers: { Cookie: owner.cookie } },
+  };
+  const all = await Promise.all(Object.values(uploads).map((u) => stalled(server.baseUrl, 1, u)));
+  try {
+    await pause(2200);
+    Object.keys(uploads).forEach((what, i) => assert.equal(all[i].clients[0].text, '', `${what}: past the small deadline, still being read`));
+    await until('the long deadline', 4000, () => all.every((a) => a.clients[0].text.includes('HTTP/1.1 408')));
+  } finally {
+    for (const a of all) a.end();
+  }
+}, DEADLINES);
 
 // ---------- Paying for an order ----------
 
@@ -546,33 +652,36 @@ live('normal: a webhook split inside a character with a good signature, and a ba
 
 // ---------- The limits, counted exactly ----------
 
-test('the limits: requests at once, bytes held, per address and for everyone, and all given back', () => {
-  const gate = createBodyReadGate({ readsPerAddress: 2, reads: 3, bytesPerAddress: 100, bytes: 150 });
+test('the limits: reads at once, bytes held, per key and overall, and all given back', () => {
+  const gate = createBodyReadGate({ readsPerKey: 2, reads: 3, bytesPerKey: 100, bytes: 150 });
   const a1 = gate.enter('a');
   const a2 = gate.enter('a');
   assert.ok(a1 && a2);
-  assert.equal(gate.enter('a'), null, 'the address is full');
+  assert.equal(gate.enter('a'), null, 'the key is full');
   const b1 = gate.enter('b');
   assert.ok(b1);
-  assert.equal(gate.enter('c'), null, 'the server is full');
+  assert.equal(gate.enter('c'), null, 'the gate is full');
 
   assert.equal(a1.hold(60), true);
-  assert.equal(a2.hold(41), false, 'over the address\'s bytes');
+  assert.equal(a2.hold(41), false, 'over the key\'s bytes');
   assert.equal(a2.hold(40), true);
-  assert.equal(b1.hold(51), false, 'over everyone\'s bytes');
+  assert.equal(b1.hold(51), false, 'over all the bytes');
   assert.equal(b1.hold(50), true);
 
-  a1.leave();
-  a1.leave();
+  // The read over: its place is free, its bytes aren't yet, and twice changes nothing.
+  a1.readDone();
+  a1.readDone();
   const a3 = gate.enter('a');
   assert.ok(a3, 'a place back, once');
   assert.equal(gate.enter('a'), null);
-  assert.equal(a3.hold(60), true, 'and its bytes');
+  assert.equal(a3.hold(1), false, 'the bytes are still held');
+
+  a1.leave();
+  a1.leave();
+  assert.equal(a3.hold(60), true, 'and back when the request is over, once');
   assert.equal(a3.hold(1), false);
   for (const place of [a2, a3, b1]) place.leave();
-  const c1 = gate.enter('c');
-  assert.equal(c1.hold(100), true);
-  assert.ok(gate.enter('a') && gate.enter('b'), 'all free again');
+  assert.ok(gate.enter('a') && gate.enter('a') && gate.enter('b'), 'all free again');
 });
 
 test('a body read twice: the second read is refused', async () => {
@@ -668,6 +777,89 @@ test('a client gone during the read: it ends, with nothing answered', { timeout:
     await until('the read to end', 1000, () => result !== undefined);
     assert.equal(result, false);
     assert.equal(response.headersSent, false);
+  } finally {
+    await close();
+  }
+});
+
+// ---------- A place and its bytes, with the timing fixed ----------
+
+const testGate = () => createBodyReadGate({ readsPerKey: 1, reads: 1, bytesPerKey: 10, bytes: 10 });
+const allBack = (gate) => {
+  const place = gate.enter('a');
+  if (!place) return false;
+  const fits = place.hold(10);
+  place.leave();
+  return fits;
+};
+
+test('a place is held only while the body is read; its bytes until the answer has gone', { timeout: 15_000 }, async () => {
+  const gate = testGate();
+  let read;
+  let respond;
+  const { client, close } = await onRequest(async (req, res) => {
+    read = await readBodyFirst(req, res, {}, { gate, key: 'a' });
+    await new Promise((r) => { respond = r; });
+    res.end('{}');
+  }, `${head('POST', '/', sized(6))}{"a":`);
+  try {
+    await pause(50);
+    assert.equal(gate.enter('a'), null, 'read not over: the place is taken');
+    client.socket.write('1');
+    await until('the read', 3000, () => read === true);
+    const next = gate.enter('a');
+    assert.ok(next, 'read over: the place is free');
+    assert.equal(next.hold(10), false, 'answer not gone: the bytes are held');
+    next.leave();
+    respond();
+    await until('the answer', 3000, () => statuses(client.text).length === 1);
+    await until('the bytes back, the connection still open', 1000, () => allBack(gate));
+    assert.equal(client.closed, false);
+  } finally {
+    await close();
+  }
+});
+
+// A pipelined second response has no socket while the first is unanswered. On Node 22
+// its 'close' never fires when the client goes. Every outcome must give everything back.
+for (const [name, second, whenRead] of [
+  ['all of its body read', `${head('POST', '/b', sized(5))}{"a":`, true],
+  ['part of its body read', `${head('POST', '/b', sized(5))}{"`, false],
+]) {
+  test(`a pipelined request, ${name}, its client gone before the first is answered: everything comes back`, { timeout: 15_000 }, async () => {
+    const gate = testGate();
+    let reached;
+    let result;
+    const { client, close } = await onRequest(async (req, res) => {
+      if (req.url === '/a') { reached = true; return; } // never answered
+      result = await readBodyFirst(req, res, {}, { gate, key: 'a' });
+    }, `${head('GET', '/a')}${second}`);
+    try {
+      await until('the first', 3000, () => reached);
+      if (whenRead) await until('the read', 3000, () => result === true);
+      else await pause(100);
+      assert.equal(allBack(gate), false, 'something is held before the client goes');
+      client.socket.resetAndDestroy();
+      await until('all back', 2000, () => allBack(gate));
+    } finally {
+      await close();
+    }
+  });
+}
+
+test('a body refused for going over gives everything back', { timeout: 20_000 }, async () => {
+  const gate = testGate();
+  let result;
+  const { client, close } = await onRequest(async (req, res) => {
+    result = await readBodyFirst(req, res, {}, { gate, key: 'a' });
+  }, head('POST', '/', sized(100)));
+  try {
+    await pause(50);
+    client.socket.write('x'.repeat(20));
+    await until('the refusal', 3000, () => result === false);
+    await until('the answer', 3000, () => statuses(client.text).length === 1);
+    assert.deepEqual(statuses(client.text), [429]);
+    assert.equal(allBack(gate), true, 'too much for the gate');
   } finally {
     await close();
   }

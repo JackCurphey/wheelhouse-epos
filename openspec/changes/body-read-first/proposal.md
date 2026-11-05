@@ -9,7 +9,7 @@ A second finding: paying for an order (`POST /api/sale-documents/:id/convert`) s
 - A request's body is read before it takes a database connection, on every route. The dispatcher does this once it knows the route; the routes go on using `readJsonBody` and `readRawBody`, which use what was read and still apply each route's own limit.
 - Staff and tills are checked first, so an unknown caller is turned away without sending a body.
 - The whole body has a deadline, however slowly its bytes arrive: 30 seconds, or 4 minutes on the seven upload routes. Past it, the client gets 408 and the connection closes.
-- Callers not known to be staff or a till have limits on reads at once and on bytes held, per address and for the whole server. Over them, the client gets 429 and the connection closes.
+- Separate gates limit reads at once and bytes held: by address for the website, staff sign-in and webhooks, and by shop for signed-in staff and tills. A place is held only while a body is being read; its bytes are counted until the request is over. Over a limit, the client gets 429 and the connection closes.
 - Sending a Citrus Lime file still checks who is sending, and takes the shop's one place, before the file is read.
 - Paying for an order reads its body before the transaction and the lock.
 

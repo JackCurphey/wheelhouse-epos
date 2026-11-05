@@ -15,7 +15,7 @@ import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { sendJson, notFound, badRequest, readRawBody, ValidationError } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
-import { readBodyFirst } from './lib/read-body-first.js';
+import { readBodyFirst, readGates } from './lib/read-body-first.js';
 import {
   loadDocumentLine, createSale,
   pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes,
@@ -570,7 +570,7 @@ async function dispatch(req, res) {
     // process, taking down every shop, for a route reachable by an
     // unauthenticated caller with a guessable shopId.
     try {
-      if (!(await readBodyFirst(req, res, {}, { public: true }))) return;
+      if (!(await readBodyFirst(req, res, {}, { gate: readGates.webhook }))) return;
       let rawBody;
       try {
         rawBody = await readRawBody(req);
@@ -674,9 +674,9 @@ async function dispatch(req, res) {
           db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token)));
         if (!till) return refuse();
         if (!tillAuthFailures.isBlocked(key)) tillAuthFailures.clear(key);
-        // Known to be a till, so outside the limit on no-sign-in reads; its body
-        // is in hand before it takes a connection to do the work.
-        if (!(await readBodyFirst(req, res, r.body))) return;
+        // Known to be a till, so it counts against its shop, not an address; its
+        // body is in hand before it takes a connection to do the work.
+        if (!(await readBodyFirst(req, res, r.body, { gate: readGates.signedIn, key: shop.id }))) return;
         await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, till));
       } catch (err) {
         // The details go to the log; a till, a website visitor and someone
@@ -708,7 +708,7 @@ async function dispatch(req, res) {
       // inside the handler itself via currentCustomerSession().
       if (/\/(signup|login|logout)$/.test(pathname)) {
         try {
-          if (!(await readBodyFirst(req, res, r.body, { public: true }))) return;
+          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.website }))) return;
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
@@ -721,7 +721,7 @@ async function dispatch(req, res) {
       if (!shop) return notFound(res, 'Shop not found');
 
       try {
-        if (!(await readBodyFirst(req, res, r.body, { public: true }))) return;
+        if (!(await readBodyFirst(req, res, r.body, { gate: readGates.website }))) return;
         // Which customer is asking, looked up before runWithShop takes this
         // request's connection, so a route asking again needs no second one.
         await rememberCustomerSession(req);
@@ -750,7 +750,7 @@ async function dispatch(req, res) {
       // becomes `db` for the duration of this one request.
       if (pathname.startsWith('/api/auth/')) {
         try {
-          if (!(await readBodyFirst(req, res, r.body, { public: true }))) return;
+          if (!(await readBodyFirst(req, res, r.body, { gate: readGates.staffSignIn }))) return;
           await r.handler(req, res, params, url.searchParams);
         } catch (err) {
           console.error(err);
@@ -774,7 +774,7 @@ async function dispatch(req, res) {
         if (!letGo) return;
       }
       try {
-        if (await readBodyFirst(req, res, r.body)) await serveStaffRoute(req, res, r, params, url, ctx);
+        if (await readBodyFirst(req, res, r.body, { gate: readGates.signedIn, key: ctx.shop.id })) await serveStaffRoute(req, res, r, params, url, ctx);
       } finally {
         letGo?.();
       }

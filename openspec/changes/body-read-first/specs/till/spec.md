@@ -25,11 +25,23 @@ A request SHALL be told it took too long, and its connection closed, if the whol
 - **THEN** the client is told it took too long and the connection closes
 
 ### Requirement: One caller can't take all the room
-The server SHALL limit how many requests with a body can be going at once, and how much of them it holds, for anyone not known to be staff or a till, both from one address and overall, and SHALL ask those over the limit to try again shortly. Staff and tills SHALL NOT be subject to these limits.
+The server SHALL limit how many requests can be arriving at once, and how much of them it holds, and SHALL ask those over the limit to try again shortly. Anyone with no sign-in SHALL count by their address; staff and tills SHALL count by their shop. A request SHALL hold its place only while it is arriving. The website, staff signing in, and signed-in staff and tills SHALL each have their own limits, so that one can't use up another's.
 
 #### Scenario: Too many at once from one address
-- **WHEN** one address has 10 requests going at once and starts another
+- **WHEN** one address has 10 requests arriving at once and starts another
 - **THEN** that one is asked to try again shortly, and the address's other requests, and everyone else, carry on as normal
+
+#### Scenario: Customers sending at the same moment
+- **WHEN** 100 customers on one address each send a whole small request at the same moment
+- **THEN** none of them is asked to try again
+
+#### Scenario: Stalled bookings and staff signing in
+- **WHEN** one address has 10 bookings stalled part-way through sending
+- **THEN** staff at that address can still sign in
+
+#### Scenario: A shop's stalled uploads
+- **WHEN** one shop has uploads stalled holding 150 MB between them
+- **THEN** its next upload is asked to try again shortly, and every other shop carries on as normal
 
 #### Scenario: A made-up address
 - **WHEN** a client puts a different address on each request, and the server isn't behind a proxy that sets it
