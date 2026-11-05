@@ -117,3 +117,43 @@ test('another business’s categories are its own', async () => {
   const seen = await inShop(() => prepare('SELECT id FROM product_categories WHERE id = ?').get(mine.id), other);
   assert.ok(seen === undefined || seen === null);
 });
+
+// ---- From the independent review ----
+
+test('"Uncategorised" inside a path isn’t a category: the rest of the path is', async () => {
+  assert.equal(tidyCategory('Uncategorised › Tyres'), 'Tyres');
+  assert.equal(tidyCategory('[Wheels] › Uncategorised'), '[Wheels]');
+  assert.equal(tidyCategory(' Uncategorised › Uncategorised '), 'Uncategorised');
+  const id = await add('Uncategorised › [Thing]');
+  assert.equal(await textOf(id), '[Thing]');
+  assert.ok(!(await tree()).some((c) => c.name === 'Uncategorised'));
+});
+
+test('a Citrus Lime row already here makes no category: the old names don’t come back after a rename', async () => {
+  const sku = `CL-AGAIN-${randomUUID().slice(0, 6)}`;
+  const row = { 'Item Lookup Code': sku, Description: 'Shimano brake pads', Price: '28', Department: '[Again]', Category: '[Old name]' };
+  const bring = () => inShop(async () => {
+    await dbExec('BEGIN');
+    const done = await ROW_APPLIERS.price_list(row, { sent_by_login_id: owner.loginId }, { firstStore: '' });
+    await dbExec('COMMIT');
+    return done.state;
+  });
+  assert.equal(await bring(), 'in');
+  await inShop(async () => {
+    await prepare("UPDATE product_categories SET name = '[New name]', path = '[Again] › [New name]' WHERE path = '[Again] › [Old name]' RETURNING id").get();
+    await prepare('UPDATE products SET category = ? WHERE sku = ? RETURNING id').get('[Again] › [New name]', sku);
+  });
+  assert.equal(await bring(), 'same');
+  assert.deepEqual((await tree()).filter((c) => c.path.startsWith('[Again]')).map((c) => c.path), ['[Again]', '[Again] › [New name]']);
+});
+
+test('a count can be started on a category whose path is longer than 60 characters', async () => {
+  const path = 'Components › Drivetrain › Derailleurs › Rear derailleurs › 12-speed';
+  assert.ok(path.length > 60);
+  await add(path);
+  const res = await staff('/api/stock-takes', { method: 'POST', body: { kind: 'category', target: path } });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.label, path);
+  const area = await staff('/api/stock-takes', { method: 'POST', body: { kind: 'area', target: 'x'.repeat(61) } });
+  assert.equal(area.status, 400, 'an area’s name still stops at 60');
+});

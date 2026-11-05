@@ -67,9 +67,16 @@ END $$;
 -- filter, and renaming a category. Plain = on plain columns, so row-level security allows it.
 CREATE INDEX IF NOT EXISTS idx_products_shop_category ON products (shop_id, category);
 
+-- A count of a category goes by its whole path, which a tree makes longer than 60
+-- characters; an area's name still stops at 60, as the route says. NOT VALID: it only
+-- allows more than 099's check did.
+ALTER TABLE stock_takes DROP CONSTRAINT IF EXISTS stock_takes_target_check;
+ALTER TABLE stock_takes ADD CONSTRAINT stock_takes_target_check
+  CHECK ((kind = 'category' OR length(target) <= 60) AND (kind IN ('category', 'area')) = (btrim(target) <> '')) NOT VALID;
+
 -- The tree, from each business's text, as server/lib/categories.js tidies it: split on
--- "›", each part trimmed, empty parts dropped, joined with " › ". Nothing left is
--- Uncategorised, which isn't a category. Letters keep their case: "bearings" and
+-- "›", each part trimmed, empty parts and "Uncategorised" dropped, joined with " › ".
+-- Nothing left is Uncategorised, which isn't a category. Letters keep their case: "bearings" and
 -- "Bearings" stay two, as the shop wrote them.
 DO $$
 DECLARE
@@ -84,7 +91,7 @@ BEGIN
   FOR business IN SELECT id FROM shops ORDER BY id LOOP
     PERFORM set_config('app.current_shop_id', business.id::text, true);
     FOR written IN SELECT DISTINCT category FROM products WHERE category <> 'Uncategorised' LOOP
-      SELECT coalesce(array_agg(btrim(part) ORDER BY n) FILTER (WHERE btrim(part) <> ''), '{}')
+      SELECT coalesce(array_agg(btrim(part) ORDER BY n) FILTER (WHERE btrim(part) NOT IN ('', 'Uncategorised')), '{}')
         INTO parts FROM unnest(string_to_array(written.category, '›')) WITH ORDINALITY AS u(part, n);
       tidy := CASE WHEN cardinality(parts) = 0 THEN 'Uncategorised' ELSE array_to_string(parts, ' › ') END;
       parent := NULL;
@@ -96,6 +103,9 @@ BEGIN
       END LOOP;
       IF tidy <> written.category THEN
         UPDATE products SET category = tidy WHERE category = written.category;
+        -- A count running on that text follows its products; an applied one keeps what it said.
+        UPDATE stock_takes SET target = tidy
+         WHERE kind = 'category' AND status = 'counting' AND target = written.category;
       END IF;
     END LOOP;
   END LOOP;

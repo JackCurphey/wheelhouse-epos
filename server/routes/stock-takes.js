@@ -157,7 +157,8 @@ export function register(route) {
     const named = kind === 'category' || kind === 'area';
     const target = named ? String(body.target ?? '').trim() : '';
     if (named && !target) return badRequest(res, kind === 'area' ? 'Name the area' : 'Pick a category');
-    if (target.length > MAX_TARGET) return badRequest(res, `Keep the name to ${MAX_TARGET} characters`);
+    // An area's name stops at 60; a category is its whole path, however deep (category-tree).
+    if (kind === 'area' && target.length > MAX_TARGET) return badRequest(res, `Keep the name to ${MAX_TARGET} characters`);
     if (kind === 'category' && !(await db.prepare('SELECT 1 FROM products WHERE category = ? LIMIT 1').get(target))) {
       return badRequest(res, 'No products are in that category');
     }
