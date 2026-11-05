@@ -3,6 +3,8 @@
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
+import { limitLockWait, moveStock } from '../lib/stock.js';
+import { thisWorkshop } from '../till/this-workshop.js';
 import { prepare, dbExec } from '../db.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
@@ -139,6 +141,7 @@ function readProblem(p) {
 async function inTransaction(fn) {
   await db.exec('BEGIN');
   try {
+    await limitLockWait();
     const done = await fn();
     await db.exec(done.refusal ? 'ROLLBACK' : 'COMMIT');
     return done;
@@ -165,12 +168,19 @@ const serializeDelivery = (d) => ({
 // till or workshop computer stays signed in as someone else, so with nobody
 // checked in there it names nobody: null, and the route asks for a PIN.
 export const CHECK_IN_FIRST = { error: 'Check in with your PIN first', code: 'check_in_first' };
+// `siteId`: a till or workshop computer's own shop (stock-movements-say-who); on an
+// ordinary browser none yet, until the session has a chosen shop (WP-1.4).
+export async function siteHere(req) {
+  return (await thisTill(req))?.site_id ?? (await thisWorkshop(req))?.site_id;
+}
 export async function whoIsBooking(req) {
   const ctx = await currentSession(req);
   const checkin = await currentCheckin(req);
-  if (checkin) return { loginId: ctx.login.id, employeeId: checkin.employee_id, name: checkin.name };
-  if (!(await ownAccountHere(req, ctx)) || (await thisTill(req))) return null;
-  return { loginId: ctx.login.id, employeeId: ctx.login.employee_id ?? null, name: ctx.login.name };
+  const till = await thisTill(req);
+  const siteId = await siteHere(req);
+  if (checkin) return { loginId: ctx.login.id, employeeId: checkin.employee_id, name: checkin.name, siteId };
+  if (!(await ownAccountHere(req, ctx)) || till) return null;
+  return { loginId: ctx.login.id, employeeId: ctx.login.employee_id ?? null, name: ctx.login.name, siteId };
 }
 
 // Book in sent again with its request key (design 6), inside the transaction:
@@ -285,14 +295,12 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     } else {
       note = supplier ? `Delivery from ${supplier.name}, not on an order` : 'Delivery, not on an order';
     }
-    const product = await db.prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? RETURNING *').get(qty, nowIso(), productId);
-    await db.prepare(
-      'INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id, login_id) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(product.id, qty, fromOrder ? 'po_receipt' : 'intake', note, fromOrder?.id ?? null, loginId);
+    const moved = await moveStock([{ productId, change: qty, type: fromOrder ? 'po_receipt' : 'intake', note, purchaseOrderId: fromOrder?.id, deliveryId }], who);
+    const product = moved.products.get(productId);
     await db.prepare(
       'INSERT INTO delivery_lines (delivery_id, product_id, product_name, product_sku, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost);
-    if (product.shopify_inventory_item_id) shopifyPushes.push({ product, newQty: product.stock_qty });
+    shopifyPushes.push(...moved.pushes);
     booked += qty;
   }
   for (const { itemId, productId, kind, qty, note } of problems) {

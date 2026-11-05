@@ -41,7 +41,7 @@ afterEach(async () => {
 
 // The server, pretended: a take's page holds this person's lines, and counts
 // change them as the real one does.
-async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = CHECK, product } = {}) {
+async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = CHECK, product, actReply = {} } = {}) {
   const calls = [];
   const realFetch = globalThis.fetch;
   let mine = [...(page?.mine ?? [])];
@@ -82,6 +82,7 @@ async function open(path, { me = OWNER, hub = HUB, page, countReply, checked = C
         if (stillToFind) stillToFind = stillToFind.filter((s) => s.productId !== p.id);
         return reply(200, { productId: p.id, name: p.name, sku: p.sku, qty });
       }
+      if (actReply[m[2]]) return reply(...actReply[m[2]]);
       if (m[2] === 'check') return reply(200, { ...take({ id: Number(m[1]) }), ...checked });
       if (m[2] === 'apply') return reply(200, { ...take({ id: Number(m[1]) }), status: 'applied', appliedAt: STARTED, appliedBy: 'Jack Lewis', productsChanged: 2, valuePence: -2800 });
       if (m[2] === 'undo') return reply(200, take({ id: Number(m[1]) }));
@@ -325,6 +326,24 @@ test('an area count has no “not counted” list', async () => {
   await ui.findByRole('button', { name: 'Apply to 2 products' });
   assert.ok(ui.queryByRole('button', { name: 'Count them as none' }) === null);
   assert.ok(ui.queryByText(/^Not counted/) === null);
+});
+
+test('a held product says Wheelhouse is busy on Apply', async () => {
+  const busy = [503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }];
+  const r = await open('/workshop/stocktake/5/check', { actReply: { apply: busy } });
+  r.fireEvent.click(await r.ui.findByRole('button', { name: 'Apply to 2 products' }));
+  await r.ui.findByText('Wheelhouse is busy with this just now. Try again in a moment.');
+  assert.equal(window.location.pathname, '/workshop/stocktake/5/check');
+});
+
+test('a held product says Wheelhouse is busy on Undo', async () => {
+  const busy = [503, { error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }];
+  const r = await open('/workshop/stocktake/5/check', { actReply: { undo: busy } });
+  r.fireEvent.click(await r.ui.findByRole('button', { name: 'Apply to 2 products' }));
+  await waitFor(r, () => window.location.pathname === '/workshop/stocktake/5/applied');
+  const bar = await r.ui.findByText('Count applied · [Area] · 2 products corrected');
+  r.fireEvent.click(r.within(bar.closest('[role="status"]')).getByRole('button', { name: 'Undo' }));
+  await r.ui.findByText('Wheelhouse is busy with this just now. Try again in a moment.');
 });
 
 test('Apply goes to Count applied, with Undo in its bar; Undo takes it back to checking', async () => {

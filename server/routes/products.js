@@ -8,10 +8,11 @@ import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { readUploadedImage } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
-import { currentSession } from '../lib/session.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
+import { lockStock, moveStock } from '../lib/stock.js';
+import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -169,7 +170,7 @@ export function register(route) {
     const moves = await db
       // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
       .prepare(
-        `SELECT m.id, m.type, m.change_qty, m.note, m.reason, l.name AS who, m.created_at
+        `SELECT m.id, m.type, m.change_qty, m.note, m.reason, COALESCE(m.who_name, l.name) AS who, m.created_at
          FROM stock_movements m LEFT JOIN logins l ON l.id = m.login_id
          WHERE m.product_id = ? ORDER BY m.created_at DESC, m.id DESC LIMIT 200`
       )
@@ -202,17 +203,25 @@ export function register(route) {
     const description = (body.description || '').trim();
     const photoUrl = body.photoUrl || null;
 
+    // Starting stock needs someone to name; a product with none doesn't.
+    const who = stockQty !== 0 ? await whoIsBooking(req) : null;
+    if (stockQty !== 0 && !who) return sendJson(res, 409, CHECK_IN_FIRST);
+
     try {
-      const info = await db
-        .prepare(
-          `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, showOnline, description, photoUrl, nowIso());
-      if (stockQty !== 0) {
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'intake', 'Initial stock')`
-        ).run(info.lastInsertRowid, stockQty);
+      await db.exec('BEGIN');
+      let info;
+      try {
+        info = await db
+          .prepare(
+            `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, showOnline, description, photoUrl, nowIso());
+        if (stockQty !== 0) await moveStock([{ productId: info.lastInsertRowid, change: stockQty, type: 'intake', note: 'Initial stock' }], who);
+        await db.exec('COMMIT');
+      } catch (err) {
+        await db.exec('ROLLBACK').catch(() => {});
+        throw err;
       }
       const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
       await syncProductWithShopifyIfNeeded({ show_online: false, active: false }, row);
@@ -284,7 +293,8 @@ export function register(route) {
   // every change records who made it. The old app's booking in (type
   // "intake") needs no reason.
   route('POST', '/api/products/:id/stock', async (req, res, params, query, afterRelease, shopId) => {
-    const ctx = await currentSession(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -310,20 +320,12 @@ export function register(route) {
       if (reason === 'other' && !note) return badRequest(res, 'Write a note for Other');
     }
 
-    // One atomic update: two adjustments at once both count, and the
-    // below-zero check sees the row as it is when the update runs. Going up
-    // is always allowed, so Found works on a product below zero.
+    // Under the product's lock: two adjustments at once both count, the below-zero
+    // check sees the row as it is, and the cost can't change under the value.
     await db.exec('BEGIN');
-    let newQty;
+    let pushes;
     try {
-      const updated = await db
-        .prepare('UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ? AND (? > 0 OR stock_qty + ? >= 0) RETURNING stock_qty')
-        .get(change, nowIso(), id, change, change);
-      if (!updated) {
-        await db.exec('ROLLBACK');
-        return badRequest(res, 'Stock cannot go below zero');
-      }
-      newQty = updated.stock_qty;
+      await lockStock([id]);
       // An adjustment keeps its value at cost, in whole pence, and goes to
       // the Owner's Today when that is more than the amount set in Settings ›
       // Stockroom, decided now (openspec/changes/stock-warnings-on-today
@@ -339,26 +341,20 @@ export function register(route) {
         valuePence = Math.abs(change) * costPence;
         toSee = over !== null && valuePence > over;
       }
-      await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note, reason, login_id, value_pence, to_see) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(
-        id,
-        change,
-        type,
-        note,
-        reason,
-        ctx.login.id,
-        valuePence,
-        toSee
-      );
+      const moved = await moveStock([{ productId: id, change, type, note, reason, valuePence, toSee }], who, { neverBelowZero: true });
+      if (moved.refused) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'Stock cannot go below zero');
+      }
+      pushes = moved.pushes;
       await db.exec('COMMIT');
     } catch (err) {
-      await db.exec('ROLLBACK');
+      await db.exec('ROLLBACK').catch(() => {});
       throw err;
     }
-    if (existing.shopify_inventory_item_id) {
-      // After the reply, from a fresh connection; a Shopify hiccup is logged
-      // and never fails the adjustment (firePendingShopifyPushes).
-      deferShopifyPushes(afterRelease, shopId, [{ product: existing, newQty }]);
-    }
+    // After the reply, from a fresh connection; a Shopify hiccup is logged
+    // and never fails the adjustment (firePendingShopifyPushes).
+    if (pushes.length) deferShopifyPushes(afterRelease, shopId, pushes);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
   });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { Card, Page, Tag, mono } from '@/screens/deliveries/deliveries-bits.tsx';
@@ -60,7 +60,7 @@ export function CheckPage() {
       if (after) after(reply);
       else await queryClient.invalidateQueries({ queryKey: key });
     } catch (err) {
-      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
+      setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t do that. Try again in a moment.');
     } finally {
       setBusy(false);
     }

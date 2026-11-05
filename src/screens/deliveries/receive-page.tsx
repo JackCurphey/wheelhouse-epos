@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input.tsx';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
@@ -196,7 +196,7 @@ export function ReceivePage() {
     } catch (err) {
       // A refusal is usually counts that moved on: show the server's.
       void queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t book the delivery in. Try again in a moment.');
+      setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t book the delivery in. Try again in a moment.');
       // Only a failure turns Book in back on: after a success the page is moving on.
       setBusy(false);
     }

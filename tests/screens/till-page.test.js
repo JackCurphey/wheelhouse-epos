@@ -228,6 +228,23 @@ test('Paid counts down, then the next sale starts by itself', async () => {
   assert.equal(has(t.ui.queryByRole('dialog')), false);
 });
 
+test('busy on a card sale says to try again and not to take the card again; on cash, just to try again', async () => {
+  const t = await openTill();
+  await addService(t);
+  saleReply = { status: 503, ok: false, json: async () => ({ error: 'Wheelhouse is busy with this just now. Try again in a moment.', code: 'busy' }) };
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment: if the card machine took the payment, don’t take it again.')));
+  assert.equal(has(pay.queryByText(/reverse/)), false);
+  assert.equal(has(pay.queryByText('Paid')), false);
+  t.fireEvent.click(pay.getByRole('button', { name: 'Back' }));
+  t.fireEvent.click(await pay.findByRole('button', { name: /^Cash/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: '£20.00' }));
+  t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
+  assert.ok(has(await pay.findByText('Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment.')));
+});
+
 test('if the sale can’t be saved, staff are told and the sale stays', async () => {
   const t = await openTill();
   await addService(t);
