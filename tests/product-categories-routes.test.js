@@ -211,3 +211,97 @@ test('a save waits at most its limit for a held category, then answers busy and 
     holder.release();
   }
 });
+
+// ---- From the independent review ----
+
+// Holds a product, so a rename of its category stops between its own checks and taking
+// its products; resolves once `pattern` is waiting on a lock, or after 3 s.
+async function holdProduct(id) {
+  const holder = await pool.connect();
+  await holder.query('BEGIN');
+  await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+  await holder.query('SELECT id FROM products WHERE id = $1 FOR UPDATE', [id]);
+  return holder;
+}
+async function waitingOn(pattern) {
+  const until = Date.now() + 3000;
+  while (Date.now() < until) {
+    const { rows } = await pool.query("SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1", [pattern]);
+    if (rows.length) return true;
+    await new Promise((r) => { setTimeout(r, 20); });
+  }
+  return false;
+}
+const inStep = async () => inShop(() => prepare(`SELECT c.path, p.path AS parent_path, c.name FROM product_categories c
+  LEFT JOIN product_categories p ON p.id = c.parent_id
+  WHERE c.path <> CASE WHEN p.id IS NULL THEN c.name ELSE p.path || ' › ' || c.name END`).all());
+
+test('a count started during a rename doesn’t end up counting a category that’s gone', async () => {
+  const cat = (await make(`[Race count ${randomUUID().slice(0, 4)}]`)).body;
+  const pid = await product(cat.path);
+  const holder = await holdProduct(pid);
+  let renamed;
+  let started;
+  try {
+    const renaming = save(cat.id, { name: `[Renamed ${randomUUID().slice(0, 4)}]` });
+    assert.ok(await waitingOn('%FROM products WHERE category = ANY%FOR NO KEY UPDATE%'), 'the rename is waiting on the product');
+    const starting = as(owner, '/api/stock-takes', { method: 'POST', body: { kind: 'category', target: cat.path } });
+    // Either it finishes now, in the gap, or it waits on the rename: whichever is first.
+    await Promise.race([starting, waitingOn('%product_categories WHERE path%FOR KEY SHARE%')]);
+    await holder.query('ROLLBACK');
+    [renamed, started] = await Promise.all([renaming, starting]);
+  } finally {
+    await holder.query('ROLLBACK').catch(() => {});
+    holder.release();
+  }
+  assert.ok(!(renamed.status === 200 && started.status === 201), `rename ${renamed.status}, count ${started.status}`);
+  const lost = await inShop(() => prepare(`SELECT t.target FROM stock_takes t WHERE t.kind = 'category' AND t.status = 'counting'
+    AND NOT EXISTS (SELECT 1 FROM product_categories c WHERE c.path = t.target)`).all());
+  assert.deepEqual(lost, []);
+});
+
+test('a product saved into a category being renamed keeps the tree in step', async () => {
+  const cat = (await make(`[Race write ${randomUUID().slice(0, 4)}]`)).body;
+  const pid = await product(cat.path);
+  const holder = await holdProduct(pid);
+  let answers;
+  try {
+    const renaming = save(cat.id, { name: `[Renamed ${randomUUID().slice(0, 4)}]` });
+    assert.ok(await waitingOn('%FROM products WHERE category = ANY%FOR NO KEY UPDATE%'), 'the rename is waiting on the product');
+    n += 1;
+    const writing = as(owner, '/api/products', { method: 'POST', body: { name: `[Product ${n}]`, sku: `RACE-${n}-${randomUUID().slice(0, 4)}`, category: `${cat.path} › [New]`, price: 1 } });
+    await Promise.race([writing, waitingOn('%product_categories%')]);
+    await holder.query('ROLLBACK');
+    answers = await Promise.all([renaming, writing]);
+  } finally {
+    await holder.query('ROLLBACK').catch(() => {});
+    holder.release();
+  }
+  assert.deepEqual(answers.map((a) => a.status), [200, 201]);
+  assert.deepEqual(await inStep(), []);
+  const text = await textOf(answers[1].body.id);
+  assert.ok(await find(text), `${text} is a category`);
+});
+
+test('moving a category checks every detail’s name against its new place, and says why', async () => {
+  const tag = randomUUID().slice(0, 4);
+  const wheels = (await make(`[Wheels ${tag}]`)).body;
+  const bearings = (await make(`[Bearings ${tag}]`)).body;
+  assert.equal((await save(wheels.id, { details: [MM('Height')] })).status, 200);
+  assert.equal((await save(bearings.id, { details: [MM('Height')] })).status, 200);
+  const res = await save(bearings.id, { parentId: wheels.id });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, `${bearings.name} can’t go inside ${wheels.name}: ${wheels.name} already has a detail called Height`);
+  assert.equal((await find(bearings.path)).parentId, null, 'it stayed where it was');
+  // One inside it, too.
+  assert.equal((await save(bearings.id, { details: [] })).status, 200);
+  const sealed = (await make('[Sealed]', bearings.id)).body;
+  assert.equal((await save(sealed.id, { details: [MM('Height')] })).status, 200);
+  const inner = await save(bearings.id, { parentId: wheels.id });
+  assert.equal(inner.status, 400);
+  assert.equal(inner.body.error, `${bearings.name} can’t go inside ${wheels.name}: [Sealed] and ${wheels.name} both have a detail called Height`);
+  // With nothing in the way it moves, and its details still save.
+  assert.equal((await save(sealed.id, { details: [MM('[Width]')] })).status, 200);
+  assert.equal((await save(bearings.id, { parentId: wheels.id })).status, 200);
+  assert.equal((await save(bearings.id, { details: [MM('[Bore]')] })).status, 200);
+});

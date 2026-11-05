@@ -162,15 +162,44 @@ export function register(route) {
         grew = false;
         for (const c of all) if (c.parent_id !== null && inside.has(c.parent_id) && !inside.has(c.id)) { inside.add(c.id); grew = true; }
       }
-      const above = [];
-      for (let p = me.parent_id; p !== null; p = byId.get(p).parent_id) above.push(byId.get(p));
-
       const name = body.name !== undefined ? body.name.trim() : me.name;
       const newParent = moving ? parentId : me.parent_id;
       if (newParent !== null && !byId.has(newParent)) return refuse(400, 'Choose where it sits');
       if (newParent !== null && inside.has(newParent)) return refuse(400, 'A category can’t sit inside itself or one of its own');
       const parent = newParent === null ? null : byId.get(newParent);
       const path = parent ? `${parent.path}${JOIN}${name}` : name;
+
+      // A detail's name once from the top of the tree to the bottom, where it will sit:
+      // its own details against those above and inside it, and on a move, everything
+      // inside it against what's above its new place.
+      const above = [];
+      for (let p = newParent; p !== null; p = byId.get(p).parent_id) above.push(byId.get(p));
+      const aboveIds = new Set(above.map((c) => c.id));
+      const allDetails = await db.prepare('SELECT id, category_id, name, kind FROM category_details ORDER BY id').all();
+      if (sent) {
+        for (const d of sent.details) {
+          if (d.id === null) continue;
+          const kept = allDetails.find((m) => m.id === d.id && m.category_id === id);
+          if (!kept) return refuse(400, `${d.name} isn’t one of this category’s details`);
+          if (kept.kind !== d.kind) return refuse(400, `${d.name}’s kind of answer can’t change. Remove it and add it again.`);
+        }
+      }
+      const own = sent ? sent.details : allDetails.filter((d) => d.category_id === id);
+      const aboveDetails = allDetails.filter((d) => aboveIds.has(d.category_id));
+      const belowDetails = allDetails.filter((d) => d.category_id !== id && inside.has(d.category_id));
+      const moved = newParent !== me.parent_id;
+      for (const d of own) {
+        const up = aboveDetails.find((e) => same(e.name, d.name));
+        if (up && moved) return refuse(400, `${name} can’t go inside ${parent.name}: ${byId.get(up.category_id).name} already has a detail called ${up.name}`);
+        const taken = up ?? belowDetails.find((e) => same(e.name, d.name));
+        if (taken) return refuse(400, `${byId.get(taken.category_id).name} already has a detail called ${taken.name}`);
+      }
+      if (moved) {
+        for (const d of belowDetails) {
+          const up = aboveDetails.find((e) => same(e.name, d.name));
+          if (up) return refuse(400, `${name} can’t go inside ${parent.name}: ${byId.get(d.category_id).name} and ${byId.get(up.category_id).name} both have a detail called ${up.name}`);
+        }
+      }
 
       if (path !== me.path) {
         const clash = all.find((c) => c.id !== id && c.parent_id === newParent && same(c.name, name));
@@ -181,35 +210,19 @@ export function register(route) {
           "SELECT target FROM stock_takes WHERE kind = 'category' AND status = 'counting' AND target = ANY(?::text[]) ORDER BY id LIMIT 1"
         ).get(old);
         if (counted) return refuse(409, `${counted.target} is being counted. Apply that count first.`);
-        const moved = (p) => `${path}${p.slice(me.path.length)}`;
+        const renamed = (p) => `${path}${p.slice(me.path.length)}`;
         // Their products, in id order as everything takes them, then each text.
         await db.prepare('SELECT id FROM products WHERE category = ANY(?::text[]) ORDER BY id FOR NO KEY UPDATE').all(old);
         await db.prepare(
           `UPDATE products p SET category = v.now FROM unnest(?::text[], ?::text[]) AS v(was, now) WHERE p.category = v.was`
-        ).run(old, old.map(moved));
+        ).run(old, old.map(renamed));
         await db.prepare(
           'UPDATE product_categories c SET path = v.now FROM unnest(?::text[], ?::text[]) AS v(was, now) WHERE c.path = v.was'
-        ).run(old, old.map(moved));
+        ).run(old, old.map(renamed));
         await db.prepare('UPDATE product_categories SET name = ?, parent_id = ? WHERE id = ?').run(name, newParent, id);
       }
 
       if (sent) {
-        const mine = await db.prepare('SELECT id, name, kind FROM category_details WHERE category_id = ?').all(id);
-        for (const d of sent.details) {
-          if (d.id === null) continue;
-          const kept = mine.find((m) => m.id === d.id);
-          if (!kept) return refuse(400, `${d.name} isn’t one of this category’s details`);
-          if (kept.kind !== d.kind) return refuse(400, `${d.name}’s kind of answer can’t change. Remove it and add it again.`);
-        }
-        // A name once from the top down to the bottom: above it, and anywhere inside it.
-        const elsewhere = await db.prepare(
-          `SELECT d.name, c.name AS category FROM category_details d JOIN product_categories c ON c.id = d.category_id
-            WHERE d.category_id = ANY(?::int[]) ORDER BY d.id`
-        ).all([...above.map((c) => c.id), ...[...inside].filter((c) => c !== id)]);
-        for (const d of sent.details) {
-          const taken = elsewhere.find((e) => same(e.name, d.name));
-          if (taken) return refuse(400, `${taken.category} already has a detail called ${taken.name}`);
-        }
         const keep = sent.details.filter((d) => d.id !== null).map((d) => d.id);
         await db.prepare('DELETE FROM category_details WHERE category_id = ? AND NOT (id = ANY(?::int[]))').run(id, keep);
         for (const [position, d] of sent.details.entries()) {
