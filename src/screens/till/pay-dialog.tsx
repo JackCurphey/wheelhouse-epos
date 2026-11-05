@@ -48,7 +48,7 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  */
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
-export function PayDialog({ lines, onClose, onNextSale, job, requestKey }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; requestKey: string }) {
+export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
@@ -85,8 +85,14 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey }: { lin
         sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true, ...signOff });
         note = await job.afterPaid(sale);
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
+      onAnswerSettled?.();
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });
     } catch (err) {
+      // No answer at all: the sale may be there, so the till keeps its key. A refusal
+      // says nothing was recorded, unless it's a key already used, when a sale is. Busy
+      // and server faults say neither, so they change nothing.
+      if (!(err instanceof ApiError)) onAnswerLost?.();
+      else if (err.status < 500 && (err.body as { code?: string } | null)?.code !== 'reused_key') onAnswerSettled?.();
       // Busy: nothing was recorded and trying again can work, so it's never a reason to
       // reverse a card payment or take it twice (the review of 5 Nov).
       if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);

@@ -24,7 +24,7 @@ The order's row is already locked first. The key is stored on the sale it makes.
 
 ## 4. The till
 
-The key belongs to the sale on the till, not to one press: `TillPage` holds it and passes it to `PayDialog`, so Back, another payment method, or closing and reopening the dialog keep it. It goes with the basket: however the basket empties, the next sale has a new one. If the basket really changed after a lost answer, the 409 says the sale was recorded and how to get out: close the box (the drawn ✕, which wasn't built) and press Clear. A job's payment keeps one key for as long as its page is open.
+The key belongs to the sale on the till, not to one press: `TillPage` holds it and passes it to `PayDialog`, so Back, another payment method, or closing and reopening the dialog keep it. It goes with the basket: however the basket empties, the next sale has a new one, except that while the last answer is lost (what `pay-dialog` calls "Lost touch": no answer at all), removing every line by hand keeps it, so correcting a one-line sale can't record it twice. Clear, Next sale, a sale going through and a refusal end that; busy, a server fault and `reused_key` don't, as they don't say the sale isn't there. If the basket really changed after a lost answer, the 409 says the sale was recorded and how to get out: close the box (the drawn ✕, which wasn't built) and press Clear. A job's payment keeps one key for as long as its page is open.
 
 `reused_key` gives no reversal advice, as the sale exists. A reload, or Clear, after a lost answer loses the key: known, and logged.
 

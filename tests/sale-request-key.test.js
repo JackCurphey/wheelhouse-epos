@@ -233,6 +233,17 @@ test('an order’s payment with a lost answer: the second press gets the first s
   assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
 });
 
+test('an order’s payment with the same details in another order of fields is the same payment', async () => {
+  const id = await product(10);
+  const orderId = await order(id);
+  const requestKey = key();
+  const first = await staff(`/api/sale-documents/${orderId}/convert`, POST({ cardAmount: 28, cashierId: cashier, sellPastStock: true, requestKey }));
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const again = await staff(`/api/sale-documents/${orderId}/convert`, POST({ requestKey, sellPastStock: true, cashierId: cashier, cardAmount: 28 }));
+  assert.deepEqual([again.status, again.body.id], [201, first.body.id]);
+  assert.deepEqual([await stockOf(id), await salesOf(id)], [9, 1]);
+});
+
 test('another till’s payment, or this one with different details, is told it’s already paid and which sale', async () => {
   const id = await product(10);
   const orderId = await order(id);

@@ -116,13 +116,15 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const [editing, setEditing] = useState<TillLine | null>(null);
   const [paying, setPaying] = useState(false);
   // One key for the sale on the till, kept across retries. It goes with the basket:
-  // emptied by Clear, by Next sale or by hand, the next sale has a new one
-  // (sale-request-key, design 4).
+  // emptied by Clear, by Next sale or by hand, the next sale has a new one. Not by hand
+  // while an answer is lost: that sale may be there, and a cashier correcting the basket
+  // would otherwise record it twice (sale-request-key, design 4).
   const [saleKey, setSaleKey] = useState(newRequestKey);
+  const [answerLost, setAnswerLost] = useState(false);
   const [basketHasLines, setBasketHasLines] = useState(false);
   if (basketHasLines !== lines.length > 0) {
     setBasketHasLines(lines.length > 0);
-    if (lines.length === 0) setSaleKey(newRequestKey());
+    if (lines.length === 0 && !answerLost) setSaleKey(newRequestKey());
   }
   useSaleOpen(lines.length > 0 || paying, onOpenChange);
   const total = saleTotal(lines);
@@ -175,7 +177,7 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
       <section aria-labelledby="sale-title" className="flex w-full shrink-0 flex-col gap-3 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px] md:w-[380px]">
         <div className="flex items-center justify-between gap-2">
           <h2 id="sale-title" className="m-0 text-size-17 font-bold">Sale</h2>
-          {lines.length ? <Button variant="ghost" size="sm" onClick={() => setLines([])}>Clear</Button> : null}
+          {lines.length ? <Button variant="ghost" size="sm" onClick={() => { setAnswerLost(false); setLines([]); }}>Clear</Button> : null}
         </div>
         {lines.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 py-8 text-center text-[var(--wh-muted)]">
@@ -234,6 +236,8 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
         <PayDialog
           lines={lines}
           requestKey={saleKey}
+          onAnswerLost={() => setAnswerLost(true)}
+          onAnswerSettled={() => setAnswerLost(false)}
           onClose={() => setPaying(false)}
           onNextSale={() => { setLines([]); setPaying(false); }}
         />

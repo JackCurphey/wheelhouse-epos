@@ -14,6 +14,14 @@ A sale sent with a key already used for different details SHALL be refused, sayi
 - **WHEN** a sale's answer is lost, a line is added, and it's sent again with its key
 - **THEN** it's refused, saying the sale was recorded, and without telling anyone to reverse a payment
 
+#### Scenario: A one-line sale corrected after a lost answer
+- **WHEN** a sale's answer is lost, the box is closed, its only line is removed and added again, and Card approved is pressed
+- **THEN** the first sale comes back, and nothing is recorded twice
+
+#### Scenario: The next customer after an ordinary removal
+- **WHEN** no answer is lost, every line is removed by hand and a new basket is paid
+- **THEN** it's a new sale
+
 #### Scenario: A key used somewhere else
 - **WHEN** an order is paid with a key already on another sale or order
 - **THEN** it's refused saying which sale, nothing is paid, and the order stays open
