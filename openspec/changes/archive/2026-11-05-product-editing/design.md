@@ -2,7 +2,7 @@
 
 ## 1. Who adds and changes a product (decision 11)
 
-`server/lib/product-editor.js`, one place for WP-1.1 to replace with "Can order stock": the Owner's sign-in, and nobody else checked in by PIN on it. Refused: "Only the shop’s owner can add or change products", 403 `owner_only`. It guards adding a product, saving one (its price and cost included), taking it off or back on sale, its photo, its details, bringing a supplier's item in, and making or changing a product with sizes.
+`server/lib/product-editor.js`, one place for WP-1.1 to replace with "Can order stock": the Owner's sign-in, with the Owner the one there, the same people `canSeeCosts` tells. Refused: "Only the shop’s owner can add or change products", 403 `owner_only`; someone else checked in by PIN under the Owner's sign-in is refused the same. A till or workshop computer with nobody checked in could be anyone, so it asks for a PIN (409 `check_in_first`), as changing stock there does, with or without starting stock. The tests that pinned staff saving without a cost now expect the refusal. It guards adding a product, saving one (its price and cost included), taking it off or back on sale, its photo, its details, bringing a supplier's item in, and making or changing a product with sizes.
 
 Not guarded, as decisions 5, 6 and receiving 4 say everyone may: adjusting and counting stock, and receiving a delivery.
 
