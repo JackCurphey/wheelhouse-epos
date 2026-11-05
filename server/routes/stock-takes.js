@@ -18,7 +18,7 @@ import { deferShopifyPushes } from '../lib/sales.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { csvCell, textCell } from '../lib/csv.js';
-import { checkOf, differencesOf, notCountedOf, recountsAskedOf, siteOfTake, takeLabel as label } from '../lib/stock-take-differences.js';
+import { checkOf, differencesOf, named, notCountedOf, recountsAskedOf, siteOfTake, takeLabel as label } from '../lib/stock-take-differences.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -188,23 +188,23 @@ export function register(route) {
     const take = await takeOf(Number(params.id));
     if (!take) return notFound(res, 'Count not found');
     const mine = await db.prepare(
-      `SELECT c.product_id, c.qty, p.name, p.sku FROM stock_take_counts c JOIN products p ON p.id = c.product_id
+      `SELECT c.product_id, c.qty, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku FROM stock_take_counts c JOIN products p ON p.id = c.product_id LEFT JOIN product_groups g ON g.id = p.group_id
         WHERE c.stock_take_id = ? AND c.login_id = ? AND c.qty > 0 ORDER BY c.first_counted_at DESC, c.id DESC`
     ).all(take.id, ctx.login.id);
     const others = await db.prepare(
       'SELECT l.name FROM stock_take_counters c JOIN logins l ON l.id = c.login_id WHERE c.stock_take_id = ? AND c.login_id <> ? AND c.finished_at IS NULL ORDER BY c.joined_at, l.name'
     ).all(take.id, ctx.login.id);
     const stillToFind = take.kind !== 'below_zero' ? null : (await db.prepare(
-      `SELECT p.id, p.name, p.sku FROM products p WHERE p.id = ANY(?)
-         AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = ? AND c.product_id = p.id) ORDER BY p.name, p.id`
-    ).all(take.product_ids, take.id)).map((p) => ({ productId: p.id, name: p.name, sku: p.sku }));
+      `SELECT p.id, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku FROM products p LEFT JOIN product_groups g ON g.id = p.group_id WHERE p.id = ANY(?)
+         AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = ? AND c.product_id = p.id) ORDER BY 2, p.id`
+    ).all(take.product_ids, take.id)).map((p) => ({ productId: p.id, ...named(p) }));
     const recounts = await recountsAskedOf(take);
     sendJson(res, 200, {
       ...serializeTake(take),
-      mine: mine.map((l) => ({ productId: l.product_id, name: l.name, sku: l.sku, qty: l.qty })),
+      mine: mine.map((l) => ({ productId: l.product_id, ...named(l), qty: l.qty })),
       myItems: mine.reduce((n, l) => n + l.qty, 0),
       othersCounting: others.map((o) => o.name),
-      recountAsked: recounts.map((r) => ({ productId: r.product_id, name: r.name, sku: r.sku, askedBy: r.asked_by })),
+      recountAsked: recounts.map((r) => ({ productId: r.product_id, ...named(r), askedBy: r.asked_by })),
       stillToFind,
     });
   });
@@ -218,14 +218,14 @@ export function register(route) {
     const search = String(query.get('search') ?? '').trim();
     if (!search) return sendJson(res, 200, []);
     const like = `%${search.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-    const scope = take.kind === 'category' ? ' AND category = ?' : take.kind === 'below_zero' ? ' AND id = ANY(?)' : '';
+    const scope = take.kind === 'category' ? ' AND p.category = ?' : take.kind === 'below_zero' ? ' AND p.id = ANY(?)' : '';
     const args = take.kind === 'category' ? [take.target] : take.kind === 'below_zero' ? [take.product_ids] : [];
     const rows = await db.prepare(
-      `SELECT id, name, sku, barcode FROM products WHERE active = 1${scope}
-         AND (name ILIKE ? ESCAPE '\\' OR sku ILIKE ? ESCAPE '\\' OR barcode ILIKE ? ESCAPE '\\')
-       ORDER BY COALESCE(lower(barcode) = lower(?) OR lower(sku) = lower(?), false) DESC, name, id LIMIT ${MATCHES}`
-    ).all(...args, like, like, like, search, search);
-    sendJson(res, 200, rows.map((p) => ({ id: p.id, name: p.name, sku: p.sku, barcode: p.barcode })));
+      `SELECT p.id, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku, p.barcode FROM products p LEFT JOIN product_groups g ON g.id = p.group_id WHERE p.active = 1${scope}
+         AND (p.name ILIKE ? ESCAPE '\\' OR g.name ILIKE ? ESCAPE '\\' OR p.sku ILIKE ? ESCAPE '\\' OR p.barcode ILIKE ? ESCAPE '\\')
+       ORDER BY COALESCE(lower(p.barcode) = lower(?) OR lower(p.sku) = lower(?), false) DESC, 2, p.id LIMIT ${MATCHES}`
+    ).all(...args, like, like, like, like, search, search);
+    sendJson(res, 200, rows.map((p) => ({ id: p.id, ...named(p), barcode: p.barcode })));
   });
 
   // Join (tk-hub-staff's Join), or come back to counting.
@@ -432,13 +432,14 @@ export function register(route) {
     if (!take) return notFound(res, 'Count not found');
     const { all } = await checkOf(take);
     const costs = await canSeeCosts(req);
-    const lines = [['Product', 'Supplier code', 'Expected', 'Counted', 'Difference', ...(costs ? ['At cost'] : [])],
-      ...all.map((r) => [textCell(r.name), textCell(r.sku ?? ''), r.expected, r.counted, r.difference, ...(costs ? [pounds(r.valuePence)] : [])])];
+    // A size's own size and colour beside its product with sizes (sizes-and-colours).
+    const lines = [['Product', 'Size', 'Colour', 'Supplier code', 'Expected', 'Counted', 'Difference', ...(costs ? ['At cost'] : [])],
+      ...all.map((r) => [textCell(r.name), textCell(r.size ?? ''), textCell(r.colour ?? ''), textCell(r.sku ?? ''), r.expected, r.counted, r.difference, ...(costs ? [pounds(r.valuePence)] : [])])];
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="stock-take-${take.id}.csv"`,
     });
     // Text cells are made safe above; the headings and numbers need only quoting.
-    res.end(`${lines.map((l, i) => l.map((v, j) => (i > 0 && j < 2 ? v : csvCell(v))).join(',')).join('\r\n')}\r\n`);
+    res.end(`${lines.map((l, i) => l.map((v, j) => (i > 0 && j < 4 ? v : csvCell(v))).join(',')).join('\r\n')}\r\n`);
   });
 }

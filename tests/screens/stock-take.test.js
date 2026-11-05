@@ -479,3 +479,32 @@ test('no values sent: the check has its counts and differences, and no value at 
   assert.ok(!first.textContent.includes('£'), first.textContent);
   assert.ok(!first.textContent.includes('NaN'), first.textContent);
 });
+
+// ---- A size on a line (openspec/changes/sizes-and-colours; tk-count-below, tk-diff) ----
+
+const SIZED = { name: '[Product with sizes]', sku: '[Supplier code]', size: 'M', colour: '[Colour 1]' };
+
+test('counting: a size is its product with sizes over “Size M · [Colour 1]”, in place of its code', async () => {
+  const r = await open('/workshop/stocktake/5', { page: {
+    kind: 'below_zero', label: 'Below zero',
+    mine: [{ productId: 21, ...SIZED, qty: 1 }],
+    stillToFind: [{ productId: 22, ...SIZED, size: 'L', colour: null }],
+  } });
+  const { ui } = r;
+  const line = await ui.findByRole('group', { name: '[Product with sizes]' });
+  assert.match(line.closest('li')?.textContent ?? line.parentElement.textContent, /Size M · \[Colour 1\]/);
+  assert.ok(ui.queryByText('[Supplier code]') === null, 'the size says which, not the code');
+  assert.ok(await ui.findByText('Size L'));
+});
+
+test('the check: a size’s difference says “Size M · [Colour 1]” and “was below zero”, and not counted names its size', async () => {
+  const r = await open('/workshop/stocktake/5/check', { checked: { ...CHECK,
+    rows: [ROW({ productId: 21, ...SIZED, expected: -1, counted: 0, difference: 1, valuePence: 1400, byCounter: [], allowedFor: [] })],
+    notCounted: { products: 1, expected: 2, list: [{ productId: 22, ...SIZED, size: null, colour: '[Colour 2]' }] },
+  } });
+  const { ui } = r;
+  // Each on its own line under the name, as the code and "was below zero" already are.
+  const cell = (await ui.findByText('Size M · [Colour 1]')).parentElement;
+  assert.deepEqual([...cell.children].map((c) => c.textContent), ['[Product with sizes]', 'Size M · [Colour 1]', 'was below zero']);
+  assert.ok(ui.getByText('[Product with sizes] · [Colour 2]'));
+});

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { Card, Page, Tag, mono } from '@/screens/deliveries/deliveries-bits.tsx';
 import { appliedHref, atCost, plural, pounds, type Applied, type Take } from './stock-take-bits.ts';
+import { lineOf, type Named } from './size-line.ts';
 
 /**
  * Check the count (tk-diff in stock.mjs; stock control decisions 5 and 11;
@@ -16,13 +17,13 @@ import { appliedHref, atCost, plural, pounds, type Applied, type Take } from './
  * "Apply to [n] products". For the Owner.
  */
 type Row = {
-  productId: number; name: string; sku: string | null; expected: number; counted: number; difference: number;
+  productId: number; name: string; sku: string | null; size?: string | null; colour?: string | null; expected: number; counted: number; difference: number;
   valuePence?: number; byCounter: { name: string; qty: number }[]; allowedFor: { kind: string; change: number }[];
 };
 type Checked = Take & {
   productsCounted: number; productsMatching: number; productsDiffering: number; valuePence?: number; rows: Row[];
-  recountAsked: { productId: number; name: string; sku: string | null; askedBy: string }[];
-  notCounted: { products: number; expected: number; list: { productId: number; name: string; sku: string | null }[] } | null;
+  recountAsked: (Named & { productId: number; name: string; askedBy: string })[];
+  notCounted: { products: number; expected: number; list: (Named & { productId: number; name: string })[] } | null;
 };
 
 // "1 sold during the count, allowed for" (drawn on tk-diff), one line for each kind.
@@ -92,7 +93,7 @@ export function CheckPage() {
             <div role="row" key={r.productId} className={`${GRID} min-h-14 border-t border-[var(--wh-border)] py-2`}>
               <span role="cell" className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-size-15 font-semibold">{r.name}</span>
-                {[r.sku, r.expected < 0 ? 'was below zero' : null, ...r.allowedFor.map(allowed)].filter(Boolean).map((t) => (
+                {[lineOf(r), r.expected < 0 ? 'was below zero' : null, ...r.allowedFor.map(allowed)].filter(Boolean).map((t) => (
                   <span key={t} className="text-size-13 text-[var(--wh-muted)]">{t}</span>
                 ))}
               </span>
@@ -111,7 +112,7 @@ export function CheckPage() {
             <div role="row" key={`r${r.productId}`} className={`${GRID} min-h-14 border-t border-[var(--wh-border)] py-2`}>
               <span role="cell" className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-size-15 font-semibold">{r.name}</span>
-                {r.sku ? <span className="text-size-13 text-[var(--wh-muted)]">{r.sku}</span> : null}
+                {lineOf(r) ? <span className="text-size-13 text-[var(--wh-muted)]">{lineOf(r)}</span> : null}
               </span>
               <span role="cell" className="max-md:hidden" />
               <span role="cell" className="max-md:hidden" />
@@ -125,7 +126,7 @@ export function CheckPage() {
             <details className="border-t border-[var(--wh-border)] pt-2">
               <summary className="flex min-h-11 cursor-pointer items-center text-size-15 font-semibold">{`Not counted · ${plural(c.notCounted.products, 'product')} · expected ${c.notCounted.expected} in all`}</summary>
               <ul aria-label="Not counted" className="m-0 list-none p-0">
-                {c.notCounted.list.map((p) => <li key={p.productId} className="py-1 text-sm">{p.sku ? `${p.name} · ${p.sku}` : p.name}</li>)}
+                {c.notCounted.list.map((p) => <li key={p.productId} className="py-1 text-sm">{lineOf(p) ? `${p.name} · ${lineOf(p)}` : p.name}</li>)}
               </ul>
             </details>
             <div className="flex flex-wrap items-center justify-between gap-2.5">

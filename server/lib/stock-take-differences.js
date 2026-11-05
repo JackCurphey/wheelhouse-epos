@@ -12,6 +12,10 @@
 import { prepare } from '../db.js';
 import { oldestSite } from './stock.js';
 
+// A product's name and line, as a count shows it: a size is named by its product with
+// sizes, with its size and colour (sizes-and-colours; tk-count-below, tk-diff).
+export const named = (r) => ({ name: r.name, sku: r.sku, size: r.size ?? null, colour: r.colour ?? null });
+
 // The shop a count belongs to. Migration 117 and starting one give every count its own.
 export const siteOfTake = async (take) => take.site_id ?? await oldestSite();
 
@@ -40,7 +44,7 @@ export async function notCountedOf(take) {
       : 'p.id = ANY(?)';
   const args = take.kind === 'category' ? [take.target] : take.kind === 'below_zero' ? [take.product_ids] : [];
   const rows = await prepare(
-    `SELECT p.id, p.name, p.sku FROM products p WHERE ${scope}
+    `SELECT p.id, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku FROM products p LEFT JOIN product_groups g ON g.id = p.group_id WHERE ${scope}
        AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = ? AND c.product_id = p.id)
        AND NOT EXISTS (SELECT 1 FROM stock_take_recounts r WHERE r.stock_take_id = ? AND r.product_id = p.id)
      ORDER BY p.name, p.id`
@@ -54,9 +58,9 @@ export async function notCountedOf(take) {
 export async function differencesOf(take) {
   const siteId = await siteOfTake(take);
   const counted = await withFigureAt(siteId, await prepare(
-    `SELECT c.product_id, SUM(c.qty)::int AS counted, p.name, p.sku, p.cost_pence
-       FROM stock_take_counts c JOIN products p ON p.id = c.product_id
-      WHERE c.stock_take_id = ? GROUP BY c.product_id, p.name, p.sku, p.cost_pence ORDER BY c.product_id`
+    `SELECT c.product_id, SUM(c.qty)::int AS counted, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku, p.cost_pence
+       FROM stock_take_counts c JOIN products p ON p.id = c.product_id LEFT JOIN product_groups g ON g.id = p.group_id
+      WHERE c.stock_take_id = ? GROUP BY c.product_id, g.name, p.name, p.size, p.colour, p.sku, p.cost_pence ORDER BY c.product_id`
   ).all(take.id), (r) => r.product_id);
   if (counted.length === 0) return [];
   // A till sale counts by close-the-day's rule (second review, 28 Oct): an
@@ -108,8 +112,7 @@ export function differenceRows(counted, moved, by) {
     }
     return {
       productId: r.product_id,
-      name: r.name,
-      sku: r.sku,
+      ...named(r),
       expected,
       counted: r.counted,
       difference,
@@ -124,8 +127,8 @@ export function differenceRows(counted, moved, by) {
 // Lines asked to be recounted that nobody has counted again since.
 export function recountsAskedOf(take) {
   return prepare(
-    `SELECT r.product_id, p.name, p.sku, l.name AS asked_by FROM stock_take_recounts r
-       JOIN products p ON p.id = r.product_id JOIN logins l ON l.id = r.asked_by_login_id
+    `SELECT r.product_id, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku, l.name AS asked_by FROM stock_take_recounts r
+       JOIN products p ON p.id = r.product_id LEFT JOIN product_groups g ON g.id = p.group_id JOIN logins l ON l.id = r.asked_by_login_id
       WHERE r.stock_take_id = ? AND NOT EXISTS (SELECT 1 FROM stock_take_counts c WHERE c.stock_take_id = r.stock_take_id AND c.product_id = r.product_id)
       ORDER BY p.name, p.id`
   ).all(take.id);
@@ -136,9 +139,9 @@ export async function checkOf(take) {
   let rows;
   if (take.status === 'applied') {
     rows = (await prepare(
-      `SELECT r.*, p.name, p.sku FROM stock_take_results r JOIN products p ON p.id = r.product_id WHERE r.stock_take_id = ? ORDER BY r.product_id`
+      `SELECT r.*, COALESCE(g.name, p.name) AS name, p.size, p.colour, p.sku FROM stock_take_results r JOIN products p ON p.id = r.product_id LEFT JOIN product_groups g ON g.id = p.group_id WHERE r.stock_take_id = ? ORDER BY r.product_id`
     ).all(take.id)).map((r) => ({
-      productId: r.product_id, name: r.name, sku: r.sku, expected: r.expected, counted: r.counted, difference: r.difference,
+      productId: r.product_id, ...named(r), expected: r.expected, counted: r.counted, difference: r.difference,
       costPence: r.cost_pence, valuePence: r.difference * r.cost_pence, byCounter: [], allowedFor: [],
     }));
   } else {
@@ -154,11 +157,11 @@ export async function checkOf(take) {
     // Largest value first, either way (drawn: "Differences, largest value first").
     rows: differ.sort((a, b) => Math.abs(b.valuePence) - Math.abs(a.valuePence) || Math.abs(b.difference) - Math.abs(a.difference) || a.productId - b.productId),
     all: rows,
-    recountAsked: take.status === 'applied' ? [] : (await recountsAskedOf(take)).map((r) => ({ productId: r.product_id, name: r.name, sku: r.sku, askedBy: r.asked_by })),
+    recountAsked: take.status === 'applied' ? [] : (await recountsAskedOf(take)).map((r) => ({ productId: r.product_id, ...named(r), askedBy: r.asked_by })),
     notCounted: notCounted && {
       products: notCounted.length,
       expected: notCounted.reduce((n, p) => n + p.stock_qty, 0),
-      list: notCounted.slice(0, 200).map((p) => ({ productId: p.id, name: p.name, sku: p.sku })),
+      list: notCounted.slice(0, 200).map((p) => ({ productId: p.id, ...named(p) })),
     },
   };
 }

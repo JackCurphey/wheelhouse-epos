@@ -8,6 +8,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { Card, Page, Row, Tag } from '@/screens/deliveries/deliveries-bits.tsx';
 import { Count } from '@/screens/deliveries/new-order.tsx';
 import { names, useActiveOption, type Take } from './stock-take-bits.ts';
+import { lineOf as sizeLine, type Named } from './size-line.ts';
 
 /**
  * Counting in a stock take (tk-count, tk-count-below in stock.mjs; stock
@@ -19,10 +20,10 @@ import { names, useActiveOption, type Take } from './stock-take-bits.ts';
  * to find, by name; a line the manager asked to be recounted shows with no
  * number until someone counts it. Sizes come later (WP-1.5).
  */
-type Line = { productId: number; name: string; sku: string | null; qty: number };
-type Product = { id: number; sku: string | null; barcode: string | null; name: string };
-type Recount = { productId: number; name: string; sku: string | null; askedBy: string };
-type CountView = Take & { mine: Line[]; myItems: number; othersCounting: string[]; recountAsked?: Recount[]; stillToFind: { productId: number; name: string; sku: string | null }[] | null };
+type Line = Named & { productId: number; name: string; qty: number };
+type Product = Named & { id: number; barcode: string | null; name: string };
+type Recount = Named & { productId: number; name: string; askedBy: string };
+type CountView = Take & { mine: Line[]; myItems: number; othersCounting: string[]; recountAsked?: Recount[]; stillToFind: (Named & { productId: number; name: string })[] | null };
 type Body = { productId: number; add: 1 } | { productId: number; qty: number };
 
 // The count's own search (review, 28 Oct): names and codes only, never stock
@@ -91,7 +92,7 @@ export function CountPage() {
   function take(p: Product) {
     setText('');
     const qty = (lineOf(p.id)?.qty ?? 0) + 1;
-    send({ productId: p.id, add: 1 }, { productId: p.id, name: p.name, sku: p.sku, qty });
+    send({ productId: p.id, add: 1 }, { productId: p.id, name: p.name, sku: p.sku, size: p.size, colour: p.colour, qty });
     setSaid(`Added ${p.name} · 1`);
   }
   const setQty = (l: Line, qty: number) => send({ productId: l.productId, qty }, { ...l, qty });
@@ -164,7 +165,7 @@ export function CountPage() {
                 <li key={p.id} id={`tk-match-${i}`} role="option" aria-selected={keys.index === i} tabIndex={-1} onClick={() => take(p)}
                   className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 border-t border-[var(--wh-border)] px-3 first:border-t-0 hover:bg-[var(--wh-hover)] ${keys.index === i ? 'bg-[var(--wh-hover)]' : ''}`}>
                   <span className="text-size-15 font-semibold">{p.name}</span>
-                  <span className="text-size-13 text-[var(--wh-muted)]">{p.sku}</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{sizeLine(p)}</span>
                 </li>
               ))}
             </ul>
@@ -177,7 +178,7 @@ export function CountPage() {
             <h3 className="m-0 mt-1 text-size-15 font-bold">{`Still to find · ${v.stillToFind.length}`}</h3>
             {v.stillToFind.length > 0 ? (
               <ul aria-label="Still to find" className="m-0 list-none p-0">
-                {v.stillToFind.map((s) => <Row key={s.productId} title={s.name} sub={s.sku ?? undefined}><Tag>Not found yet</Tag></Row>)}
+                {v.stillToFind.map((s) => <Row key={s.productId} title={s.name} sub={sizeLine(s) ?? undefined}><Tag>Not found yet</Tag></Row>)}
               </ul>
             ) : null}
             <h3 className="m-0 mt-1 text-size-15 font-bold">Counted</h3>
@@ -186,8 +187,8 @@ export function CountPage() {
         {recounts.length > 0 ? (
           <ul aria-label="Recounts asked" className="m-0 list-none p-0">
             {recounts.map((r) => (
-              <Row key={r.productId} title={r.name} sub={<>{r.sku ? `${r.sku} · ` : ''}<strong className="text-[var(--wh-ink)]">{`Recount asked by ${r.askedBy}`}</strong></>}>
-                <Count name={r.name} value={null} onChange={(n) => setQty({ productId: r.productId, name: r.name, sku: r.sku, qty: n }, n)} />
+              <Row key={r.productId} title={r.name} sub={<>{sizeLine(r) ? `${sizeLine(r)} · ` : ''}<strong className="text-[var(--wh-ink)]">{`Recount asked by ${r.askedBy}`}</strong></>}>
+                <Count name={r.name} value={null} onChange={(n) => setQty({ productId: r.productId, name: r.name, sku: r.sku, size: r.size, colour: r.colour, qty: n }, n)} />
               </Row>
             ))}
           </ul>
@@ -195,7 +196,7 @@ export function CountPage() {
         {v.mine.length > 0 ? (
           <ul aria-label="Counted" className="m-0 list-none p-0">
             {v.mine.map((l) => (
-              <Row key={l.productId} title={l.name} sub={l.sku ?? undefined}>
+              <Row key={l.productId} title={l.name} sub={sizeLine(l) ?? undefined}>
                 <Count name={l.name} value={l.qty} onChange={(n) => setQty(l, n)} onBelowOne={() => setQty(l, 0)} />
               </Row>
             ))}
