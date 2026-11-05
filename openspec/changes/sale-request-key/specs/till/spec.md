@@ -8,14 +8,18 @@ A sale sent again with its request key and the same details SHALL get the first 
 - **THEN** there is one sale, one stock line, and [n] − 1 in stock, and the till shows Paid
 
 ### Requirement: A sale's key with different details is refused
-A sale sent with a key already used for different details SHALL be refused, saying that sale was recorded and which it is, and SHALL record nothing.
+A sale sent with a key already used for different details SHALL be refused, saying that sale was recorded and which it is, and SHALL record nothing. The same details in another order of fields are the same details. The till SHALL say how to start a new sale, and a basket emptied any way SHALL start a new key.
 
 #### Scenario: The basket changed after a lost answer
 - **WHEN** a sale's answer is lost, a line is added, and it's sent again with its key
 - **THEN** it's refused, saying the sale was recorded, and without telling anyone to reverse a payment
 
+#### Scenario: A key used somewhere else
+- **WHEN** an order is paid with a key already on another sale or order
+- **THEN** it's refused saying which sale, nothing is paid, and the order stays open
+
 ### Requirement: An order's payment sent twice counts once
-A payment of an order sent again with its request key and the same details SHALL get the first answer, its warning included, and move nothing. Any other payment of an order already paid SHALL say which sale paid it.
+A payment of an order sent again with its request key and the same details SHALL get the first answer, its warning included, and move nothing. Any other payment of an order already paid SHALL say which sale paid it, and SHALL NEVER answer with another order's sale. A repeat SHALL NOT run a deposit refund again.
 
 #### Scenario: A lost answer on a job
 - **WHEN** a job's payment is saved, its answer is lost, and Card approved is pressed again

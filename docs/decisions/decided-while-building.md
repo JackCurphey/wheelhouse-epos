@@ -2172,12 +2172,14 @@ WP-1.5's. So: slice C, WP-2.3.
 ### 5 Nov 2026: a sale sent twice counts once (`openspec/changes/sale-request-key`; `till-*`, nothing new on screen)
 
 1. **A lost answer, then pressing again, records one sale.** It goes on to Paid with the first sale, and a job goes on to its usual after-paid step, with the first answer's warning if it had one.
-2. **The key belongs to the sale on the till,** not to one press: Back and another payment method keep it, and Next sale and Clear start a new one. *Pattern:* Book in.
-3. **The same key with different items or a different payment is refused:** "This sale was already recorded, as sale [n], with different items or a different payment. Check it before taking payment again." Not drawn. It doesn't mention reversing a payment, as that sale may be the right one.
+2. **The key belongs to the sale on the till,** not to one press: Back, another payment method and closing the box keep it. It goes with the basket: Clear, Next sale, or removing every line by hand starts a new one. *Pattern:* Book in.
+3. **The same key with different details is refused, and the till says what to do next:** "Sale [n] is already recorded, with different details, so this one isn't. If the card machine took a payment for this basket, check it against sale [n]. Close this and press Clear to start a new sale." Not drawn. *Pattern:* the till's other refusals, but it doesn't say to reverse a payment, as that sale may be the right one. Any detail counts, a cashier or cash handed over included; the same details in another order of fields don't.
 4. **"Already paid" on a job now only means someone else's payment,** or this one with different details, so its advice about a second card payment is true when it shows.
 5. **The till's "Lost touch with the server, so the sale may have saved" wording stays.** Pressing again is now safe, but what's on screen wasn't asked to change.
-6. **The old till sends a key too,** checked by reading its source, as no browser test drives it.
-7. **Reloading the till's page starts a new key,** so a lost answer, then a reload, then the same sale, records it twice. The key isn't kept across a reload.
+6. **The old till sends a key too,** one for the sale, kept until the basket's emptied, and one for each order. A refusal doesn't clear it, or the next press would record a second sale. Its payment functions are run in a test with everything around them stubbed; no browser test drives it.
+7. **Known, no code: a lost answer, then Clear or a reload, then the same basket, records a second sale.** "The sale may have saved. Check…" warns the cashier. The key isn't kept across either.
+8. **A key on another sale or order is refused on an open order,** with nothing recorded, the same refusal as a sale's.
+9. **Till's Take payment box has the drawn ✕.** The drawing has it (`till-pay`), and it wasn't built: with no Escape key on a touch till, that left no way out.
 
 ## Decided here, for Jack to overrule
 
