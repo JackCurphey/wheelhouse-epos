@@ -62,6 +62,10 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     ids.empty = await product(' › ');
     ids.none = await product('Uncategorised');
     ids.lower = await product('bearings');
+    ids.inside = await product('Uncategorised › Tyres');
+    ids.login = (await one(c, "INSERT INTO logins (shop_id, name, email, password_hash) VALUES ($1, '[Owner]', 'o119@example.test', 'x') RETURNING id", [ids.a])).id;
+    ids.take = (await one(c, "INSERT INTO stock_takes (kind, target, started_by_login_id) VALUES ('category', '  Drivetrain ›  Derailleurs ', $1) RETURNING id", [ids.login])).id;
+    ids.done = (await one(c, "INSERT INTO stock_takes (kind, target, started_by_login_id, status, applied_at, applied_by_login_id) VALUES ('category', '  Drivetrain ›  Derailleurs ', $1, 'applied', now(), $1) RETURNING id", [ids.login])).id;
     await inShop(c, ids.b);
     ids.theirs = await product('Bearings');
     await c.query('DELETE FROM schema_migrations WHERE filename = ANY($1)', [LATER]);
@@ -77,6 +81,7 @@ test('119 builds each business’s tree from its products’ text, tidies only u
       { name: 'Bearings', path: 'Bearings', parent: null },
       { name: 'Drivetrain', path: 'Drivetrain', parent: null },
       { name: 'Derailleurs', path: 'Drivetrain › Derailleurs', parent: 'Drivetrain' },
+      { name: 'Tyres', path: 'Tyres', parent: null },
       { name: 'bearings', path: 'bearings', parent: null },
     ]);
     const text = async (id) => (await one(c, 'SELECT category FROM products WHERE id = $1', [id])).category;
@@ -85,6 +90,18 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     assert.equal(await text(ids.empty), 'Uncategorised');
     assert.equal(await text(ids.none), 'Uncategorised');
     assert.equal(await text(ids.lower), 'bearings');
+    // "Uncategorised" inside a path isn't a category: the rest of the path is.
+    assert.equal(await text(ids.inside), 'Tyres');
+    // A count running on untidy text follows its products; one applied keeps what it said.
+    const target = async (id) => (await one(c, 'SELECT target FROM stock_takes WHERE id = $1', [id])).target;
+    assert.equal(await target(ids.take), 'Drivetrain › Derailleurs');
+    assert.equal(await target(ids.done), '  Drivetrain ›  Derailleurs ');
+    // A count's category can be longer than 60 characters; an area's can't.
+    const long = 'Components › Drivetrain › Derailleurs › Rear derailleurs › 12-speed';
+    await c.query('BEGIN');
+    await c.query("INSERT INTO stock_takes (kind, target, started_by_login_id) VALUES ('category', $1, $2)", [long, ids.login]);
+    await c.query('ROLLBACK');
+    await assert.rejects(c.query("INSERT INTO stock_takes (kind, target, started_by_login_id) VALUES ('area', $1, $2)", ['x'.repeat(61), ids.login]), /check/i);
     await inShop(c, ids.b);
     assert.deepEqual((await c.query('SELECT name, path FROM product_categories')).rows, [{ name: 'Bearings', path: 'Bearings' }]);
   };
