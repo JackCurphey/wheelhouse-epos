@@ -396,10 +396,10 @@ test('adding a product with stock writes its line with who; with nobody checked 
   const refused = await add(till, 4);
   assert.equal(refused.status, 409, JSON.stringify(refused.body));
   assert.equal((await inShop(() => prepare('SELECT count(*)::int AS c FROM products WHERE sku = ?').get(`[Add ${n}]`))).c, 0);
-  // No stock, nothing to name anybody on.
+  // With no stock too, now: changing products is the Owner's, who must be the one there
+  // (product-editing; decision 11).
   const none = await add(till, 0);
-  assert.equal(none.status, 201, JSON.stringify(none.body));
-  assert.equal((await linesOf(none.body.id)).length, 0);
+  assert.deepEqual([none.status, none.body.code], [409, 'check_in_first']);
 });
 
 test('a code already in use adds no product and no stock line', async () => {
