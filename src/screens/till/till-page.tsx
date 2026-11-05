@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
+import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { FloatCheck } from './float-check.tsx';
 import { PinCheckin, ServingButton } from './pin-checkin.tsx';
 import { WorkingPills } from './workshop-computer.tsx';
@@ -114,6 +115,17 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
   const [lines, setLines] = useState<TillLine[]>([]);
   const [editing, setEditing] = useState<TillLine | null>(null);
   const [paying, setPaying] = useState(false);
+  // One key for the sale on the till, kept across retries. It goes with the basket:
+  // emptied by Clear, by Next sale or by hand, the next sale has a new one. Not by hand
+  // while an answer is lost: that sale may be there, and a cashier correcting the basket
+  // would otherwise record it twice (sale-request-key, design 4).
+  const [saleKey, setSaleKey] = useState(newRequestKey);
+  const [answerLost, setAnswerLost] = useState(false);
+  const [basketHasLines, setBasketHasLines] = useState(false);
+  if (basketHasLines !== lines.length > 0) {
+    setBasketHasLines(lines.length > 0);
+    if (lines.length === 0 && !answerLost) setSaleKey(newRequestKey());
+  }
   useSaleOpen(lines.length > 0 || paying, onOpenChange);
   const total = saleTotal(lines);
 
@@ -165,7 +177,7 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
       <section aria-labelledby="sale-title" className="flex w-full shrink-0 flex-col gap-3 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px] md:w-[380px]">
         <div className="flex items-center justify-between gap-2">
           <h2 id="sale-title" className="m-0 text-size-17 font-bold">Sale</h2>
-          {lines.length ? <Button variant="ghost" size="sm" onClick={() => setLines([])}>Clear</Button> : null}
+          {lines.length ? <Button variant="ghost" size="sm" onClick={() => { setAnswerLost(false); setLines([]); }}>Clear</Button> : null}
         </div>
         {lines.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 py-8 text-center text-[var(--wh-muted)]">
@@ -223,6 +235,9 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
       {paying ? (
         <PayDialog
           lines={lines}
+          requestKey={saleKey}
+          onAnswerLost={() => setAnswerLost(true)}
+          onAnswerSettled={() => setAnswerLost(false)}
           onClose={() => setPaying(false)}
           onNextSale={() => { setLines([]); setPaying(false); }}
         />
@@ -315,6 +330,8 @@ function JobTill({ jobId, onDone, onOpenChange }: { jobId: number; onDone: () =>
   const due = dueQuery.data;
   const [collect, setCollect] = useState(true);
   const [paying, setPaying] = useState(false);
+  // One key for paying this job, kept across retries (sale-request-key, design 4).
+  const [paymentKey] = useState(newRequestKey);
   // Work still in progress is finished by paying, so the till asks who is
   // signing it off first (Jack, 16 Oct, mechanic sign-off answer 5).
   const [signing, setSigning] = useState(false);
@@ -452,6 +469,7 @@ function JobTill({ jobId, onDone, onOpenChange }: { jobId: number; onDone: () =>
       {paying && job?.orderId ? (
         <PayDialog
           lines={lines}
+          requestKey={paymentKey}
           job={{ orderId: job.orderId, total, customer: job.customerId ? { id: job.customerId, name: job.customerName ?? '' } : null, receipt: { reference: job.reference, bikeLabel: job.bikeLabel ?? null, customerWords: job.customerDescription ?? null, checkedBy: showSignOff ? (signerName ?? job.signedOffByName ?? null) : null }, signedOffBy: job.workState === 'in_progress' ? signedOffBy : null, afterPaid }}
           onClose={() => setPaying(false)}
           onNextSale={() => { setPaying(false); onDone(); }}

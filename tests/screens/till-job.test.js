@@ -119,6 +119,11 @@ async function payByCard(t) {
   return dlg;
 }
 
+// An answer that never arrives, marked handled as it sits waiting to be used.
+const lostAnswer = () => { const lost = Promise.reject(new TypeError('Failed to fetch')); lost.catch(() => {}); return lost; };
+// What was sent, with the sale's request key checked by its own tests.
+const noKey = ({ requestKey, ...rest }) => rest;
+
 test('the job\'s agreed lines load locked, with the customer and job, and Bike collected when paid on', async () => {
   const { sale } = await openJobTill();
   assert.ok(has(await sale.findByText('Maya Patel · workshop job WH-1042')));
@@ -135,7 +140,7 @@ test('paying pays the whole order, then records the bike as collected', async ()
   await t.sale.findByText('Maya Patel · workshop job WH-1042');
   await payByCard(t);
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: null });
+  assert.deepEqual(noKey(posts('/api/sale-documents/40/convert')[0]), { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: null });
   await t.waitFor(() => assert.deepEqual(posts('/api/workshop-jobs/1/collect'), [{ version: 8 }]));
   assert.equal(posts('/api/sales').length, 0);
 });
@@ -228,7 +233,21 @@ test('busy after the card step says to try again and not to take the card again,
   assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
 });
 
-test('a job already paid, after a lost answer, says the sale was recorded and not to take it again', async () => {
+test('a job’s lost answer, then Card approved again: the same request key, and on to Paid', async () => {
+  const t = await openJobTill();
+  convertReply = lostAnswer();
+  const dlg = await payByCard(t);
+  await dlg.findByText(/Lost touch with the server/);
+  convertReply = null;
+  t.fireEvent.click(dlg.getByRole('button', { name: 'Card approved' }));
+  await dlg.findByRole('heading', { name: 'Paid' });
+  const sent = posts('/api/sale-documents/40/convert');
+  assert.equal(sent.length, 2);
+  assert.ok(typeof sent[0].requestKey === 'string' && sent[0].requestKey.length >= 32, 'a key');
+  assert.equal(sent[1].requestKey, sent[0].requestKey);
+});
+
+test('a job already paid by another till says the sale was recorded and not to take it again', async () => {
   const t = await openJobTill();
   convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted', code: 'already_converted', saleId: 501 }) };
   const dlg = await payByCard(t);
@@ -282,7 +301,7 @@ test('work in progress asks who is signing it off before the payment opens, the 
   t.fireEvent.click(dlg.getByRole('button', { name: /^Card · / }));
   t.fireEvent.click(await dlg.findByRole('button', { name: 'Card approved' }));
   await t.waitFor(() => assert.equal(posts('/api/sale-documents/40/convert').length, 1));
-  assert.deepEqual(posts('/api/sale-documents/40/convert')[0], { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: 12 });
+  assert.deepEqual(noKey(posts('/api/sale-documents/40/convert')[0]), { cashAmount: 0, cardAmount: 83, cashTendered: null, cashierId: 21, sellPastStock: true, signedOffBy: 12 });
 });
 
 test('Cancel on the sign-off takes nothing', async () => {

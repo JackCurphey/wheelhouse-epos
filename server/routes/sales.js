@@ -13,6 +13,8 @@ import {
   poundsToPence, documentTotalsPence,
 } from '../lib/sales.js';
 import { currentShopToday } from '../workshop/jobs.js';
+import { readRequestKey } from '../booking-request-key.js';
+import { limitLockWait } from '../lib/stock.js';
 import { currentSession } from '../lib/session.js';
 import { siteHere } from './purchase-orders.js';
 import { countedDeposit, depositShare, DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
@@ -116,6 +118,36 @@ async function insertDocumentLine(docId, line) {
 // sale's cashier (stock-movements-say-who, design 2).
 const saleMovedBy = async (req) => ({ loginId: (await currentSession(req)).login.id, siteId: await siteHere(req) });
 
+// A sale already made with this request key: { saleId, sameDetails, jobWarning }, or null.
+async function firstSaleOf({ keyHash, bodyHash }) {
+  const made = await db.prepare('SELECT id, request_body_hash, request_job_warning FROM sales WHERE request_key_hash = ?').get(keyHash);
+  return made ? { saleId: made.id, sameDetails: made.request_body_hash === bodyHash, jobWarning: made.request_job_warning } : null;
+}
+// The same, queued behind any other send of this key, in the caller's transaction.
+async function lockedFirstSaleOf(key) {
+  await db.prepare('SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))').get(key.keyHash);
+  return firstSaleOf(key);
+}
+async function keepRequestKey(saleId, key, jobWarning = null) {
+  if (!key) return;
+  await db.prepare('UPDATE sales SET request_key_hash = ?, request_body_hash = ?, request_job_warning = ? WHERE id = ?').run(key.keyHash, key.bodyHash, jobWarning, saleId);
+}
+async function savedSale(saleId) {
+  const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
+  return serializeSale(sale, await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId), await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId));
+}
+// That sale was recorded, so nothing here may suggest otherwise.
+const refuseUsedKey = (res, saleId) => sendJson(res, 409, {
+  error: `This sale was already recorded, as sale ${saleId}, with different details. Check it before taking payment again.`,
+  code: 'reused_key',
+  saleId,
+});
+// The first answer again, or the refusal for the key with other details.
+async function answerRepeat(res, { saleId, sameDetails }) {
+  if (sameDetails) return sendJson(res, 201, await savedSale(saleId));
+  return refuseUsedKey(res, saleId);
+}
+
 export function register(route) {
   // ---------- Sales ----------
 
@@ -191,6 +223,12 @@ export function register(route) {
 
   route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease, shopId) => {
     const body = await readJsonBody(req);
+    const key = readRequestKey(body, { anyFieldOrder: true });
+    if (key.error) return badRequest(res, key.error);
+    // A repeat gets its first answer whatever has changed since, such as a cashier
+    // no longer active (openspec/changes/sale-request-key, design 2).
+    const repeat = key.value && await firstSaleOf(key.value);
+    if (repeat) return answerRepeat(res, repeat);
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) return badRequest(res, 'Sale must include at least one item');
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
@@ -215,12 +253,26 @@ export function register(route) {
 
     let saleId;
     const shopifyPushes = [];
+    // The sale and its key together: two sends at once queue on the key, and a
+    // refused or failed one keeps nothing. createSale's own BEGIN becomes a savepoint.
+    await db.exec('BEGIN');
     try {
+      await limitLockWait();
+      if (key.value) {
+        const queued = await lockedFirstSaleOf(key.value);
+        if (queued) {
+          await db.exec('ROLLBACK');
+          return answerRepeat(res, queued);
+        }
+      }
       saleId = await createSale(
         { movedBy: await saleMovedBy(req), customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
         { deferShopifyPushesTo: shopifyPushes }
       );
+      await keepRequestKey(saleId, key.value);
+      await db.exec('COMMIT');
     } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
       if (err instanceof ValidationError) return badRequest(res, err.message);
       throw err;
     }
@@ -549,8 +601,21 @@ export function register(route) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
-    // Already paid says which sale, as the sale exists: a till that lost its answer and
-    // pressed again must not be told none was recorded (stock-movements-say-who, design 10).
+    const key = readRequestKey(body, { anyFieldOrder: true });
+    if (key.error) return badRequest(res, key.error);
+    // Queues on the key as a sale does, so this and a sale sent with it can't both go
+    // in (sale-request-key, design 3).
+    const first = key.value ? await lockedFirstSaleOf(key.value) : null;
+    // This till's own lost answer: the first answer again, and nothing moves, so it
+    // carries on to its after-paid step.
+    if (doc.status === 'converted' && first?.saleId === doc.converted_sale_id && first.sameDetails) {
+      const payload = await savedSale(first.saleId);
+      return { payload: first.jobWarning ? { ...payload, jobWarning: first.jobWarning } : payload, shopifyPushes: [], jobId: null };
+    }
+    // The key went on another sale or order, and this one is still open: nothing paid here.
+    if (doc.status === 'open' && first) return refuseUsedKey(res, first.saleId);
+    // Already paid says which sale, as the sale exists: someone else's payment, or this
+    // one with other details, so it must not be told none was recorded.
     if (doc.status === 'converted') return sendJson(res, 400, { error: `This ${doc.kind} is already converted`, code: 'already_converted', saleId: doc.converted_sale_id });
     if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
@@ -743,10 +808,8 @@ export function register(route) {
       }
     }
 
-    const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
-    const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
-    const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
-    const payload = serializeSale(sale, savedItems, savedPayments);
+    await keepRequestKey(saleId, key.value, jobWarning);
+    const payload = await savedSale(saleId);
     return { payload: jobWarning ? { ...payload, jobWarning } : payload, shopifyPushes, jobId: doc.workshop_job_id };
   }
 }
