@@ -2230,6 +2230,8 @@ WP-1.5's. So: slice C, WP-2.3.
 12. **A count of a category can be any length;** an area's name still stops at 60. Starting one holds the category against a rename at the same moment.
 13. **A Citrus Lime file sent again makes no categories for rows already here,** so a renamed category's old name doesn't come back empty.
 14. **Deploy note:** a count running on untidy category text follows its products, as 119 tidies a running count's name the same way.
+15. **No category can be called "Uncategorised", in any case or with spaces round it** (the re-check). It would take in every product with no category, and renaming one to it would empty another's. "Uncategorised is what a product with no category shows, so a category can’t be called that." Not drawn. In product text, "uncategorised" in any case is dropped from a path too.
+16. **Tidying trims every kind of space,** tabs and no-break spaces included, the same in the app and in migration 119, so "Brakes" with a tab after it is Brakes.
 
 ## Decided here, for Jack to overrule
 
