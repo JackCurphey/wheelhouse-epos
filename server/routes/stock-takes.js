@@ -15,10 +15,10 @@ import { ownerOnly } from '../lib/owner-only.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { currentSession } from '../lib/session.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { limitLockWait, lockStock, moveStock } from '../lib/stock.js';
-import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
+import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
+import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { csvCell, textCell } from '../lib/csv.js';
-import { checkOf, differencesOf, notCountedOf, recountsAskedOf, takeLabel as label } from '../lib/stock-take-differences.js';
+import { checkOf, differencesOf, notCountedOf, recountsAskedOf, siteOfTake, takeLabel as label } from '../lib/stock-take-differences.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -166,8 +166,10 @@ export function register(route) {
       productIds = (await db.prepare('SELECT id FROM products WHERE stock_qty < 0 AND active = 1 ORDER BY id').all()).map((p) => p.id);
       if (productIds.length === 0) return badRequest(res, 'Nothing is below zero');
     }
-    const { id } = await db.prepare('INSERT INTO stock_takes (kind, target, product_ids, started_by_login_id) VALUES (?, ?, ?, ?) RETURNING id')
-      .get(kind, target, productIds, ctx.login.id);
+    // It belongs to the shop it's started at, whichever computer applies it (stock-per-shop).
+    const siteId = (await siteHere(req)) ?? await oldestSite();
+    const { id } = await db.prepare('INSERT INTO stock_takes (kind, target, product_ids, started_by_login_id, site_id) VALUES (?, ?, ?, ?, ?) RETURNING id')
+      .get(kind, target, productIds, ctx.login.id, siteId);
     sendJson(res, 201, serializeTake(await takeOf(id)));
   });
 
@@ -365,7 +367,7 @@ export function register(route) {
       const moved = await moveStock(changed.map((r) => {
         const by = names([...new Set(r.byCounter.filter((b) => b.qty > 0).map((b) => b.name))]);
         return { productId: r.productId, change: r.difference, type: 'count', stockTakeId: id, note: `Stock take of ${what} · counted ${r.counted}, expected ${r.expected}${by ? ` · counted by ${by}` : ''}` };
-      }), who, { held });
+      }), { ...who, siteId: await siteOfTake(take) }, { held });
       pushes.push(...moved.pushes);
       const movementOf = moved.lineOf;
       await db.prepare(
@@ -407,7 +409,7 @@ export function register(route) {
       ).get(changed.map((r) => r.product_id), id, id);
       if (later) return [409, `A later count has corrected ${later.name}; undo that one first.`];
       const note = `Undid the stock take of ${label(take)}`;
-      const moved = await moveStock(changed.map((r) => ({ productId: r.product_id, change: -r.difference, type: 'count_undone', note, stockTakeId: id })), who);
+      const moved = await moveStock(changed.map((r) => ({ productId: r.product_id, change: -r.difference, type: 'count_undone', note, stockTakeId: id })), { ...who, siteId: await siteOfTake(take) });
       pushes.push(...moved.pushes);
       await db.prepare('DELETE FROM stock_take_results WHERE stock_take_id = ?').run(id);
       await db.prepare("UPDATE stock_takes SET status = 'counting', applied_at = NULL, applied_by_login_id = NULL WHERE id = ?").run(id);

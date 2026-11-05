@@ -75,7 +75,7 @@ function TillName({ till }: { till: ThisTillName }) {
   return (
     <span className="flex flex-col gap-px">
       <span className="font-[family-name:var(--wh-font-mono)] text-base font-bold">{`Till ${till.code}`}</span>
-      <span className="text-xs text-[var(--wh-muted)]">{shop ? `${till.siteName} · ${shop}` : till.siteName}</span>
+      <span className="text-xs text-[var(--wh-muted)]">{shop && shop !== till.siteName ? `${till.siteName} · ${shop}` : till.siteName}</span>
     </span>
   );
 }
