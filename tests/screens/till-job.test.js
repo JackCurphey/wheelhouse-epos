@@ -228,11 +228,19 @@ test('busy after the card step says to try again and not to take the card again,
   assert.ok(has(dlg.getByRole('button', { name: 'Card approved' })), 'the same button tries again');
 });
 
-test('any refusal after the card step says no sale was recorded and to reverse the card', async () => {
+test('a job already paid, after a lost answer, says the sale was recorded and not to take it again', async () => {
   const t = await openJobTill();
-  convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted' }) };
+  convertReply = { status: 400, ok: false, json: async () => ({ error: 'This order is already converted', code: 'already_converted', saleId: 501 }) };
   const dlg = await payByCard(t);
-  assert.ok(has(await dlg.findByText('This order is already converted. No sale was recorded: if the card machine took the payment, reverse it on the machine.')));
+  assert.ok(has(await dlg.findByText('This job is already paid: sale 501 was recorded. Don’t take payment again. If the card machine took a second payment, reverse that one on the machine.')));
+  assert.equal(has(dlg.queryByText(/No sale was recorded/)), false);
+});
+
+test('any other refusal after the card step says no sale was recorded and to reverse the card', async () => {
+  const t = await openJobTill();
+  convertReply = { status: 400, ok: false, json: async () => ({ error: 'Payment amounts must add up to the total' }) };
+  const dlg = await payByCard(t);
+  assert.ok(has(await dlg.findByText('Payment amounts must add up to the total. No sale was recorded: if the card machine took the payment, reverse it on the machine.')));
 });
 
 test('a server fault on the amount due says try again, not change the job, and Take payment stays off', async () => {

@@ -112,6 +112,24 @@ test('a sale of a held product answers busy, sells nothing, and then goes throug
   assert.equal(await stockOf(id), 5);
 });
 
+test('paying an order already paid says it’s paid and which sale, told apart from a real refusal', async () => {
+  const id = await product();
+  const made = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ lineType: 'product', productId: id, qty: 1 }] } });
+  assert.ok(made.body.id, JSON.stringify(made.body));
+  const pay = { cardAmount: 28, cashierId: jo.employeeId, sellPastStock: true };
+  const first = await staff(`/api/sale-documents/${made.body.id}/convert`, { method: 'POST', body: pay });
+  assert.ok(first.status < 300, JSON.stringify(first.body));
+  const again = await staff(`/api/sale-documents/${made.body.id}/convert`, { method: 'POST', body: pay });
+  assert.equal(again.status, 400);
+  assert.deepEqual([again.body.code, again.body.saleId], ['already_converted', first.body.id]);
+  assert.equal(await stockOf(id), 5, 'one sale');
+  const gone = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ lineType: 'product', productId: id, qty: 1 }] } });
+  await inShop(() => prepare("UPDATE sale_documents SET status = 'cancelled' WHERE id = ?").run(gone.body.id));
+  const refused = await staff(`/api/sale-documents/${gone.body.id}/convert`, { method: 'POST', body: pay });
+  assert.equal(refused.status, 400);
+  assert.equal(refused.body.code, undefined);
+});
+
 // ---- The till's sync ----
 
 let receipt = 0;
@@ -231,16 +249,59 @@ test('the same Shopify order delivered twice at once counts once', async () => {
   assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [5, 1, 1]);
 });
 
-test('a Shopify order refused for good stays refused: no sale, and no retry changes that', async () => {
-  const v = variant();
-  const id = await product(0, v);
-  const order = orderOf(v);
+test('a paid Shopify order with an item at nothing is recorded: below zero, on Today, and a retry changes nothing', async () => {
+  const [v1, v2] = [variant(), variant()];
+  const [none, some] = [await product(0, v1), await product(6, v2)];
+  const order = orderOf(v1, { line_items: [{ variant_id: Number(v1), quantity: 1, price: '28.00' }, { variant_id: Number(v2), quantity: 2, price: '28.00' }] });
   assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(none), await stockOf(some)], [-1, 4]);
+  assert.equal((await eventOf(order.id)).status, 'ok');
+  assert.deepEqual([await salesFor(none), await salesFor(some)], [1, 1]);
+  assert.match(JSON.stringify((await staff('/api/needs-attention')).body), /below_zero/);
+  // Shopify sends it again: nothing more.
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(none), await stockOf(some), (await linesOf(none)).length], [-1, 4, 1]);
+  // Refunded afterwards: it goes back.
+  assert.equal((await shopify('refunds', refundOf(v1))).status, 200);
+  assert.equal(await stockOf(none), 0);
+});
+
+test('a paid order refused for good is logged as a fault, not only answered 200', async () => {
+  const v = variant();
+  const id = await product(6, v);
+  await inShop(() => prepare('UPDATE products SET active = 0 WHERE id = ?').run(id));
+  const order = orderOf(v);
+  assert.equal((await shopify('orders', order)).status, 200, 'a retry would be refused the same');
   const event = await eventOf(order.id);
   assert.equal(event.status, 'error');
-  assert.match(event.error_message, /Not enough stock/);
+  assert.match(event.error_message, /not found or inactive/);
+  assert.ok(server.stderr.includes(`Shopify order ${order.id} refused for good`), server.stderr.slice(-300));
+  assert.deepEqual([await stockOf(id), await salesFor(id)], [6, 0]);
+});
+
+test('lines of a paid order that match nothing here are logged as a fault', async () => {
+  const v = variant();
+  const id = await product(6, v);
+  const order = orderOf(v, { line_items: [{ variant_id: Number(v), quantity: 1, price: '28.00' }, { variant_id: Number(variant()), quantity: 1, price: '9.00' }] });
   assert.equal((await shopify('orders', order)).status, 200);
-  assert.deepEqual([await stockOf(id), (await linesOf(id)).length, await salesFor(id)], [0, 0, 0]);
+  assert.equal(await stockOf(id), 5);
+  assert.ok(server.stderr.includes(`Shopify order ${order.id}: 1 of 2 lines match nothing here`), server.stderr.slice(-300));
+  const none = orderOf(variant());
+  assert.equal((await shopify('orders', none)).status, 200);
+  assert.ok(server.stderr.includes(`Shopify order ${none.id}: 1 of 1 lines match nothing here`), server.stderr.slice(-300));
+});
+
+test('a failed delivery’s record leaves no lock limit on the connection it used', async () => {
+  const { recordFailedDelivery } = await import('../server/shopify.js');
+  await recordFailedDelivery(owner.shop.id, `[event ${randomUUID().slice(0, 8)}]`, 'order', '[Message]');
+  const clients = [];
+  try {
+    for (let i = 0; i < pool.totalCount; i += 1) clients.push(await pool.connect());
+    assert.ok(clients.length > 0);
+    for (const client of clients) assert.equal((await client.query('SHOW lock_timeout')).rows[0].lock_timeout, '0');
+  } finally {
+    for (const client of clients) client.release();
+  }
 });
 
 test('a Shopify order and refund behind an unfinished delivery of themselves give up after 2 seconds, and retry', async () => {

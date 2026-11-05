@@ -90,6 +90,9 @@ export function PayDialog({ lines, onClose, onNextSale, job }: { lines: TillLine
       // Busy: nothing was recorded and trying again can work, so it's never a reason to
       // reverse a card payment or take it twice (the review of 5 Nov).
       if (err instanceof ApiError && err.code === 'busy') setError(`Wheelhouse is busy just now, so this sale isn’t recorded yet. Try again in a moment${card > 0 ? ': if the card machine took the payment, don’t take it again.' : '.'}`);
+      // Already paid, as when an answer was lost and this was pressed again: the sale is
+      // there, so reversing the card would refund a good sale (the re-check of 5 Nov).
+      else if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'already_converted') setError(`This job is already paid: sale ${(err.body as { saleId?: number }).saleId} was recorded. Don’t take payment again. If the card machine took a second payment, reverse that one on the machine.`);
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
       else if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);

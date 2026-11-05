@@ -44,6 +44,14 @@ A stock change SHALL wait a short time for a product something else holds, then 
 - **WHEN** a Shopify order reaches a held product, and Shopify sends it again
 - **THEN** the first changes nothing, and the second sells it once with one line
 
+#### Scenario: A paid Shopify order with an item at nothing
+- **WHEN** a Shopify order has one item with none in stock and another with some
+- **THEN** both lines are recorded, the first goes below zero, and it shows in Today's below-zero warning
+
+#### Scenario: A job already paid
+- **WHEN** an answer was lost on a job's card payment and Card approved is pressed again
+- **THEN** the till says the sale was recorded and not to take payment again
+
 #### Scenario: A card sale at a busy moment
 - **WHEN** Card approved is pressed and Wheelhouse is busy
 - **THEN** it says the sale isn't recorded yet and to try again, and that if the card machine took the payment not to take it again

@@ -547,6 +547,9 @@ export function register(route) {
     const id = Number(params.id);
     const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
     if (!doc) return notFound(res, 'Not found');
+    // Already paid says which sale, as the sale exists: a till that lost its answer and
+    // pressed again must not be told none was recorded (stock-movements-say-who, design 10).
+    if (doc.status === 'converted') return sendJson(res, 400, { error: `This ${doc.kind} is already converted`, code: 'already_converted', saleId: doc.converted_sale_id });
     if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
     // Tendering the order for a job is the shop saying the work is done, so the

@@ -37,7 +37,7 @@ import {
   matchRefundLineItemsToProducts,
   claimShopifyEventInTransaction,
   markShopifyEventError,
-  recordShopifyEventError,
+  recordFailedDelivery,
   pushStockToShopify,
 } from './shopify.js';
 
@@ -121,32 +121,21 @@ function idParamsWellFormed(params) {
 
 // ---------- Shopify order and refund webhooks (the dispatcher calls these) ----------
 
-// A failed delivery's record, with the same limit, as an unfinished delivery of the same
-// event holds the row it writes. Its own failure is logged and never hides the event's.
-async function recordFailedEvent(shopId, eventId, kind, message) {
-  await runWithShop(shopId, async () => {
-    await db.exec('BEGIN');
-    try {
-      await limitLockWait();
-      await recordShopifyEventError(eventId, kind, message);
-      await db.exec('COMMIT');
-    } catch (err) {
-      await db.exec('ROLLBACK').catch(() => {});
-      throw err;
-    }
-  }).catch((recordErr) => console.error(`Shopify ${kind} error record failed`, recordErr));
-}
-
 // Three database scopes, as a refund's below: the claim and the sale in one transaction,
 // so any failure takes the claim with it and Shopify's retry applies the order, counted
 // once; then on failure its error record; then the push to Shopify. A duplicate waits on
-// the claim, then finds it taken. Only a refusal that would be the same next time
-// (ValidationError) stays claimed, with its reason, as it always has.
+// the claim, then finds it taken. A paid order sells past stock, as the till's offline
+// sync does (Jack, 5 Nov): stock goes below zero and shows on Today. Only a refusal that
+// would be the same next time (ValidationError: a product taken off sale, a bad figure)
+// stays claimed, with its reason and logged as a fault, as a paid order has gone unrecorded.
 async function processShopifyOrderWebhook(shopId, order) {
   const pushes = [];
   try {
     await runWithShop(shopId, async () => {
       const items = await matchOrderLineItemsToProducts(order);
+      if (items.length < order.line_items.length) {
+        console.error(`Shopify order ${order.id}: ${order.line_items.length - items.length} of ${order.line_items.length} lines match nothing here, so aren't recorded`);
+      }
       await db.exec('BEGIN');
       try {
         await limitLockWait();
@@ -177,9 +166,11 @@ async function processShopifyOrderWebhook(shopId, order) {
               cashTendered: null,
               payments: [{ tenderType: 'Shopify', amount: payableTotal }],
               note: `Shopify order #${order.order_number || order.id}`,
+              sellPastStock: true,
             }, { deferShopifyPushesTo: pushes });
           } catch (err) {
             if (!(err instanceof ValidationError)) throw err;
+            console.error(`Shopify order ${order.id} refused for good: ${err.message}`);
             await markShopifyEventError(order.id, 'order', err.message);
           }
         }
@@ -192,7 +183,7 @@ async function processShopifyOrderWebhook(shopId, order) {
   } catch (err) {
     // The claim rolled back, so this is a record for whoever investigates: the retry
     // still applies the order. Its own failure is logged and never hides the order's.
-    await recordFailedEvent(shopId, order.id, 'order', err.message);
+    await recordFailedDelivery(shopId, order.id, 'order', err.message);
     throw err;
   }
   // After COMMIT and with the connection back, so a slow Shopify never holds the row.
@@ -235,7 +226,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
     // The claim rolled back, so this is a record for whoever investigates,
     // not a claim: the retry still applies the refund. Its own failure is
     // logged and never hides the refund's.
-    await recordFailedEvent(shopId, refund.id, 'refund', err.message);
+    await recordFailedDelivery(shopId, refund.id, 'refund', err.message);
     throw err;
   }
   // After COMMIT, so a slow Shopify never holds the product's row.
@@ -567,7 +558,9 @@ async function dispatch(req, res) {
       }
 
       if (kind === 'orders') {
-        await processShopifyOrderWebhook(shopId, payload);
+        // An order queues its push before its own COMMIT: if that fails, this settles
+        // the queued slot, so stopping the server doesn't wait for it.
+        await runRequestWithPushSlotCleanup(() => processShopifyOrderWebhook(shopId, payload));
       } else {
         await processShopifyRefundWebhook(shopId, payload);
       }

@@ -119,17 +119,15 @@ function registerPendingShopifyPushSlot() {
 
 // registerPendingShopifyPushSlot's slot is only cleaned up on a request
 // tail's failure if that call happened inside runRequestWithPushSlotCleanup.
-// Today that is true of exactly ONE branch: the generic non-auth `/api/*`
-// loop in server.js's dispatcher (the one that wraps its route call in
+// Today that is true of TWO branches: the generic non-auth `/api/*` loop in
+// server.js's dispatcher and the Shopify order webhook (each wraps its call in
 // runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
 // inside that same loop, the /api/portal/* branch, the website branch, or
-// the Shopify webhook branch - a deferred push registered from any of those
-// would not be settled by a request-tail throw and would orphan the slot.
-// No branch does that today (processShopifyOrderWebhook, the only webhook
-// caller of createSale, never passes deferShopifyPushesTo, so it always
-// takes the immediate-push path and never reaches here without a store) -
-// but nothing stops a future change to one of those four branches from
-// doing so. The guard in registerPendingShopifyPushSlot's `else` branch
+// the refund webhook - a deferred push registered from any of those would not
+// be settled by a request-tail throw and would orphan the slot. No branch does
+// that today, and the order webhook, which does defer its pushes (so they run
+// after its own COMMIT), is wrapped too - but nothing stops a future change to
+// one of those branches from doing so. The guard in registerPendingShopifyPushSlot's `else` branch
 // above is what will tell you if that ever happens; it is not structural
 // coverage, only a loud signal that coverage is missing.
 const pendingPushSlotRequestStorage = new AsyncLocalStorage();
