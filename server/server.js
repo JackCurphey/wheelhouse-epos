@@ -125,9 +125,10 @@ function idParamsWellFormed(params) {
 // so any failure takes the claim with it and Shopify's retry applies the order, counted
 // once; then on failure its error record; then the push to Shopify. A duplicate waits on
 // the claim, then finds it taken. A paid order sells past stock, as the till's offline
-// sync does (Jack, 5 Nov): stock goes below zero and shows on Today. Only a refusal that
-// would be the same next time (ValidationError: a product taken off sale, a bad figure)
-// stays claimed, with its reason and logged as a fault, as a paid order has gone unrecorded.
+// sync does (Jack, 5 Nov): stock goes below zero and shows on Today. A product taken off
+// sale here is sold too (answer 8). Only a refusal that would be the same next time
+// (ValidationError: a bad figure) stays claimed, with its reason and logged as a fault,
+// as a paid order has gone unrecorded.
 async function processShopifyOrderWebhook(shopId, order) {
   const pushes = [];
   try {
@@ -167,6 +168,7 @@ async function processShopifyOrderWebhook(shopId, order) {
               payments: [{ tenderType: 'Shopify', amount: payableTotal }],
               note: `Shopify order #${order.order_number || order.id}`,
               sellPastStock: true,
+              evenIfOffSale: true,
             }, { deferShopifyPushesTo: pushes });
           } catch (err) {
             if (!(err instanceof ValidationError)) throw err;

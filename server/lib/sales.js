@@ -364,7 +364,9 @@ export async function computeOrderTotals({ items, discount, customerId }) {
 // /api/sale-documents/:id/items, so the rules cannot drift between them.
 // checkStock is true only at tender - a quote or an open order may reference
 // something that is currently out of stock.
-export async function loadDocumentLine(it, { checkStock }) {
+// `evenIfOffSale`: for a Shopify order only, already paid for (Jack, 5 Nov, answer 8).
+// Off sale stays refused everywhere else.
+export async function loadDocumentLine(it, { checkStock, evenIfOffSale = false }) {
   // A labour line is a typed price with an optional recorded duration. It
   // carries no product, so nothing downstream may treat it as stock.
   if (it.lineType === 'labour') {
@@ -421,7 +423,7 @@ export async function loadDocumentLine(it, { checkStock }) {
   if (!productId || !Number.isFinite(qty) || qty <= 0) {
     throw new ValidationError('Each item needs a valid productId and positive qty');
   }
-  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND (active = 1 OR ?)').get(productId, evenIfOffSale);
   if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
   if (checkStock && product.stock_qty < qty) {
     throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
@@ -463,12 +465,12 @@ export async function loadDocumentLine(it, { checkStock }) {
 // behaviour runs unchanged, which is what every direct createSale() caller
 // that doesn't care about pool-connection lifetime (tests, the Shopify
 // webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {} }, { deferShopifyPushesTo } = {}) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {}, evenIfOffSale = false }, { deferShopifyPushesTo } = {}) {
   // sellPastStock: the new till sells past zero stock and says so on the
   // line (journey 11 decision 5); everything else still refuses.
   const loaded = [];
   for (const it of items) {
-    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
+    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock, evenIfOffSale }));
   }
 
   const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId });

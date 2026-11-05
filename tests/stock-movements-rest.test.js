@@ -266,15 +266,51 @@ test('a paid Shopify order with an item at nothing is recorded: below zero, on T
   assert.equal(await stockOf(none), 0);
 });
 
+test('a paid Shopify order with a product taken off sale is recorded, every line; a retry changes nothing; a refund puts it back', async () => {
+  const [v1, v2] = [variant(), variant()];
+  const [off, on] = [await product(6, v1), await product(6, v2)];
+  await inShop(() => prepare('UPDATE products SET active = 0 WHERE id = ?').run(off));
+  const order = orderOf(v1, { line_items: [{ variant_id: Number(v1), quantity: 1, price: '28.00' }, { variant_id: Number(v2), quantity: 2, price: '28.00' }] });
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.equal((await eventOf(order.id)).status, 'ok');
+  assert.deepEqual([await stockOf(off), await stockOf(on), await salesFor(off), await salesFor(on)], [5, 4, 1, 1]);
+  const [line] = await linesOf(off);
+  assert.deepEqual([line.change_qty, line.type], [-1, 'sale']);
+  assert.ok(Number.isInteger(line.sale_id));
+  assert.equal((await shopify('orders', order)).status, 200);
+  assert.deepEqual([await stockOf(off), await stockOf(on), (await linesOf(off)).length], [5, 4, 1]);
+  assert.equal((await shopify('refunds', refundOf(v1))).status, 200);
+  assert.equal(await stockOf(off), 6);
+  // It's still off sale.
+  const row = await inShop(() => prepare('SELECT active FROM products WHERE id = ?').get(off));
+  assert.equal(row.active, 0);
+});
+
+test('a product taken off sale stays refused at the till and on an order, whatever Shopify may do', async () => {
+  const id = await product();
+  const sell = { items: [{ productId: id, qty: 1 }], cardAmount: 28, cashierId: jo.employeeId, sellPastStock: true };
+  const order = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ lineType: 'product', productId: id, qty: 1 }] } });
+  assert.ok(order.body.id, JSON.stringify(order.body));
+  await inShop(() => prepare('UPDATE products SET active = 0 WHERE id = ?').run(id));
+  const res = await staff('/api/sales', { method: 'POST', body: sell });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /not found or inactive/);
+  const paid = await staff(`/api/sale-documents/${order.body.id}/convert`, { method: 'POST', body: { cardAmount: 28, cashierId: jo.employeeId, sellPastStock: true } });
+  assert.equal(paid.status, 400, JSON.stringify(paid.body));
+  assert.match(paid.body.error, /not found or inactive/);
+  const added = await staff('/api/sale-documents', { method: 'POST', body: { kind: 'order', items: [{ lineType: 'product', productId: id, qty: 1 }] } });
+  assert.equal(added.status, 400, JSON.stringify(added.body));
+  assert.deepEqual([await stockOf(id), await salesFor(id)], [6, 0]);
+});
+
 test('a paid order refused for good is logged as a fault, not only answered 200', async () => {
   const v = variant();
   const id = await product(6, v);
-  await inShop(() => prepare('UPDATE products SET active = 0 WHERE id = ?').run(id));
-  const order = orderOf(v);
+  const order = orderOf(v, { line_items: [{ variant_id: Number(v), quantity: 0, price: '28.00' }] });
   assert.equal((await shopify('orders', order)).status, 200, 'a retry would be refused the same');
   const event = await eventOf(order.id);
   assert.equal(event.status, 'error');
-  assert.match(event.error_message, /not found or inactive/);
+  assert.match(event.error_message, /valid productId and positive qty/);
   assert.ok(server.stderr.includes(`Shopify order ${order.id} refused for good`), server.stderr.slice(-300));
   assert.deepEqual([await stockOf(id), await salesFor(id)], [6, 0]);
 });

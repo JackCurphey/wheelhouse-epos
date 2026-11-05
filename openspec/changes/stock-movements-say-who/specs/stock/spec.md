@@ -48,6 +48,10 @@ A stock change SHALL wait a short time for a product something else holds, then 
 - **WHEN** a Shopify order has one item with none in stock and another with some
 - **THEN** both lines are recorded, the first goes below zero, and it shows in Today's below-zero warning
 
+#### Scenario: A paid Shopify order with a product taken off sale
+- **WHEN** a Shopify order has one product taken off sale here and another on sale
+- **THEN** both lines are recorded with their stock changes, and the product stays off sale, refused at the till and everywhere else
+
 #### Scenario: A job already paid
 - **WHEN** an answer was lost on a job's card payment and Card approved is pressed again
 - **THEN** the till says the sale was recorded and not to take payment again
