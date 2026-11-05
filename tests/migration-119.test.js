@@ -10,6 +10,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../scripts/dev/new-db.mjs';
+import { tidyCategory } from '../server/lib/categories.js';
+
+// Text the migration and the server must tidy alike: every kind of space JavaScript's
+// trim() takes, line breaks, "›" with them around it, and Uncategorised in any case.
+export const AWKWARD = [
+  'Brakes', 'Brakes\t', 'Brakes\u00A0', '\u3000Brakes', '\uFEFFBrakes\u2003', 'Brakes\v\f', '\u1680Brakes\u202F\u205F',
+  'Brakes\n› Pads', 'Brakes \u2003›\u00A0Pads', 'Brakes\r\n›\u2028Pads\u2029', '\u2000\u200A›Brakes›\u00A0›Pads',
+  'uncategorised › Tyres', 'UNCATEGORISED', ' Uncategorised\t', 'Tyres › unCategorised', '\u00A0›\t',
+];
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
@@ -63,6 +72,8 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     ids.none = await product('Uncategorised');
     ids.lower = await product('bearings');
     ids.inside = await product('Uncategorised › Tyres');
+    ids.awkward = [];
+    for (const text of AWKWARD) ids.awkward.push([text, (await one(c, "INSERT INTO products (name, category) VALUES ('[Awkward]', $1) RETURNING id", [text])).id]);
     ids.login = (await one(c, "INSERT INTO logins (shop_id, name, email, password_hash) VALUES ($1, '[Owner]', 'o119@example.test', 'x') RETURNING id", [ids.a])).id;
     ids.take = (await one(c, "INSERT INTO stock_takes (kind, target, started_by_login_id) VALUES ('category', '  Drivetrain ›  Derailleurs ', $1) RETURNING id", [ids.login])).id;
     ids.done = (await one(c, "INSERT INTO stock_takes (kind, target, started_by_login_id, status, applied_at, applied_by_login_id) VALUES ('category', '  Drivetrain ›  Derailleurs ', $1, 'applied', now(), $1) RETURNING id", [ids.login])).id;
@@ -79,6 +90,8 @@ test('119 builds each business’s tree from its products’ text, tidies only u
       LEFT JOIN product_categories p ON p.id = c.parent_id ORDER BY c.path COLLATE "C"`)).rows;
     assert.deepEqual(tree, [
       { name: 'Bearings', path: 'Bearings', parent: null },
+      { name: 'Brakes', path: 'Brakes', parent: null },
+      { name: 'Pads', path: 'Brakes › Pads', parent: 'Brakes' },
       { name: 'Drivetrain', path: 'Drivetrain', parent: null },
       { name: 'Derailleurs', path: 'Drivetrain › Derailleurs', parent: 'Drivetrain' },
       { name: 'Tyres', path: 'Tyres', parent: null },
@@ -92,6 +105,8 @@ test('119 builds each business’s tree from its products’ text, tidies only u
     assert.equal(await text(ids.lower), 'bearings');
     // "Uncategorised" inside a path isn't a category: the rest of the path is.
     assert.equal(await text(ids.inside), 'Tyres');
+    // The migration tidies exactly as the server does.
+    for (const [written, id] of ids.awkward) assert.equal(await text(id), tidyCategory(written), JSON.stringify(written));
     // A count running on untidy text follows its products; one applied keeps what it said.
     const target = async (id) => (await one(c, 'SELECT target FROM stock_takes WHERE id = $1', [id])).target;
     assert.equal(await target(ids.take), 'Drivetrain › Derailleurs');

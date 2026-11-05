@@ -75,7 +75,8 @@ ALTER TABLE stock_takes ADD CONSTRAINT stock_takes_target_check
   CHECK ((kind = 'category' OR length(target) <= 60) AND (kind IN ('category', 'area')) = (btrim(target) <> '')) NOT VALID;
 
 -- The tree, from each business's text, as server/lib/categories.js tidies it: split on
--- "›", each part trimmed, empty parts and "Uncategorised" dropped, joined with " › ".
+-- "›", each part trimmed of every space trim() knows, empty parts and "Uncategorised" in
+-- any case dropped, joined with " › ".
 -- Nothing left is Uncategorised, which isn't a category. Letters keep their case: "bearings" and
 -- "Bearings" stay two, as the shop wrote them.
 DO $$
@@ -87,12 +88,14 @@ DECLARE
   parent INTEGER;
   here TEXT;
   i INTEGER;
+  -- Every character JavaScript's trim() takes, so this tidies exactly as categories.js does.
+  spaces CONSTANT TEXT := E'\t\n\u000B\f\r \u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF';
 BEGIN
   FOR business IN SELECT id FROM shops ORDER BY id LOOP
     PERFORM set_config('app.current_shop_id', business.id::text, true);
     FOR written IN SELECT DISTINCT category FROM products WHERE category <> 'Uncategorised' LOOP
-      SELECT coalesce(array_agg(btrim(part) ORDER BY n) FILTER (WHERE btrim(part) NOT IN ('', 'Uncategorised')), '{}')
-        INTO parts FROM unnest(string_to_array(written.category, '›')) WITH ORDINALITY AS u(part, n);
+      SELECT coalesce(array_agg(t ORDER BY n) FILTER (WHERE t <> '' AND lower(t) <> 'uncategorised'), '{}')
+        INTO parts FROM (SELECT btrim(part, spaces) AS t, n FROM unnest(string_to_array(written.category, '›')) WITH ORDINALITY AS u(part, n)) trimmed;
       tidy := CASE WHEN cardinality(parts) = 0 THEN 'Uncategorised' ELSE array_to_string(parts, ' › ') END;
       parent := NULL;
       FOR i IN 1 .. cardinality(parts) LOOP
