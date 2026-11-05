@@ -301,3 +301,5 @@ DELETE /api/move/files/:id
 GET /api/product-categories
 POST /api/product-categories
 PUT /api/product-categories/:id
+GET /api/stock-list
+GET /api/product-groups/:id

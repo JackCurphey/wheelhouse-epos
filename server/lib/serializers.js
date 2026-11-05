@@ -12,6 +12,10 @@ export function serializeProduct(row, costs = false) {
     barcode: row.barcode,
     name: row.name,
     category: row.category,
+    // A size or colour of a product with sizes (openspec/changes/sizes-and-colours); none, none, none otherwise.
+    groupId: row.group_id ?? null,
+    size: row.size ?? null,
+    colour: row.colour ?? null,
     price: row.price,
     cost: costs ? row.cost : null,
     // Whole pence (openspec/changes/products-in-pence). The pounds above stay for
