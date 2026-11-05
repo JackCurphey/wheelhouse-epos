@@ -12,6 +12,7 @@ import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
 import { categoryFor } from '../lib/categories.js';
+import { notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
@@ -192,6 +193,7 @@ export function register(route) {
   });
 
   route('POST', '/api/products', async (req, res) => {
+    if (await notProductEditor(req, res)) return;
     const body = await readJsonBody(req);
     const name = (body.name || '').trim();
     if (!name) return badRequest(res, 'Product name is required');
@@ -247,6 +249,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/products/:id', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -284,6 +287,7 @@ export function register(route) {
   });
 
   route('DELETE', '/api/products/:id', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -377,6 +381,7 @@ export function register(route) {
   });
 
   route('POST', '/api/products/:id/photo', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');

@@ -10,6 +10,7 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { priceTooBig } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
+import { notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, moveStock } from '../lib/stock.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
@@ -139,6 +140,7 @@ export function register(route) {
   });
 
   route('POST', '/api/catalogue-items/:id/import', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
     if (!item) return notFound(res, 'Catalogue item not found');
