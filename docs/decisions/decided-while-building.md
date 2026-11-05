@@ -2250,6 +2250,8 @@ WP-1.5's. So: slice C, WP-2.3.
 5. **On a count, a size is named by its product with sizes, with "Size M · [Colour 1]" in place of its code,** as drawn; a size alone reads "Size L", a colour alone "[Colour 2]". The count's download gains Size and Colour columns after Product. The counting page's search finds a size by its product's name, but not "jersey M" as Stock does: scanning finds it by its own barcode.
 6. **For piece 6: a size's own product name.** The old till and old stock list show each size by `products.name`; including its size and colour there would let them tell sizes apart until they're retired.
 7. **Adding the columns held products for 85 ms at 1,000,000 products,** reads included. The new list takes 541 ms at 100,000 products, today's 865 ms.
+8. **Renaming or moving a category renames a product with sizes' category too,** in the same go (the independent review). For piece 6: making a product with sizes finds or makes the categories in its path, as a product does.
+9. **The new list keeps one order, by category then name, with products with sizes among the rest** (the review). A size taken off sale counts in its product's figures only when "taken off sale" is asked for, as the old list leaves such products out.
 
 ## Decided here, for Jack to overrule
 
