@@ -2288,6 +2288,13 @@ WP-1.5's. So: slice C, WP-2.3.
 5. **A size found by a search reads "Size M · [Colour] · [barcode]"**, the drawing's "its own barcode" being its barcode; with no barcode, or no size or colour, that part is left out. It opens that size's own page, each size being a product.
 6. **When every row is a size, the count reads "1 size and colour", "2 sizes and colours"**, as drawn; otherwise "[n] products", a product with sizes counting as one.
 7. **The list reads each row's VAT rate from the server** for its margin, as a product's page does (risky: money; nothing about who sees a cost changes).
+8. **The count with a category picked reads "3 in Bearings", then "with Outer diameter 30 mm" for each filter set, joined with "and";** nothing found reads "Nothing in Bearings with Outer diameter 40 mm". The drawing's "2 bearings with an outer diameter of 30 mm" and "2 derailleurs with [n] gears" need a shop's own names made singular and lower case, which can't be done safely (as piece 8's note). A measurement searched keeps "[n] products", not the drawing's "2 bearings with 30 mm", for the same reason.
+9. **The category list opens under the pills, not hung from the pill:** on a phone the pills scroll sideways, which would cut it off. Up to eight paths containing what's typed; arrow keys and Enter, or a click, pick, as the settings box's "Sits inside" does.
+10. **While a category is picked, All isn't pressed (as drawn); Running low and Below zero narrow it; All takes it off.** ✕ takes it off too.
+11. **A text detail filters with a box, "Any", as a number does without a unit;** only number and choice filters are drawn. A filter is asked for once typing stops, as the search is.
+12. **The details filters wrap on a phone and the columns aren't shown there,** as drawn; the line under the name keeps the code and supplier, without the category, whenever one is picked.
+13. **A measurement searched shows every answered detail of the row's category on its line,** the drawing's three numbers being Bearings' all; the unit once at the end when they share one, after each otherwise, the answer equal to a number searched in bold. Without a measurement in the search, the line is as before.
+14. **A product with sizes shows "—" in a category's detail columns:** each size answers for itself, on its page (piece 10).
 
 ## Decided here, for Jack to overrule
 

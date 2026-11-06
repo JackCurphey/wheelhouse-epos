@@ -42,11 +42,14 @@ export function rowMargin(r: ListRow): number | null {
   return margin({ pricePence: r.priceLowPence, costPence: r.costLowPence, vatRateBp: r.vatRateBp });
 }
 export const rowHasCost = (r: ListRow) => (r.kind === 'group' ? r.costLowPence !== null : r.costPence !== null);
-/** The line under its name, as st-list and st-search-size draw it. */
-export function rowLine(r: ListRow): string {
+/**
+ * The line under its name, as st-list and st-search-size draw it; with a category picked, no
+ * category (st-filter-bearings: "[Supplier code] · [Supplier]").
+ */
+export function rowLine(r: ListRow, picked = false): string {
   if (r.kind === 'size') return [r.size ? `Size ${r.size}` : null, r.colour, r.barcode].filter(Boolean).join(' · ');
-  if (r.kind === 'product') return [r.sku, r.category, r.supplier].filter(Boolean).join(' · ');
-  return [r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
+  if (r.kind === 'product') return [r.sku, picked ? null : r.category, r.supplier].filter(Boolean).join(' · ');
+  return [picked ? null : r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
     r.sizesBelowZero ? `${several(r.sizesBelowZero, 'size', 'sizes')} below zero` : null,
     r.sizesRunningLow ? `${several(r.sizesRunningLow, 'size', 'sizes')} running low` : null].filter(Boolean).join(' · ');
 }

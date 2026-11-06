@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
+import { answerText, DetailFilters, detailsFor, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
 import { count, mono, productHref, rowHasCost, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
 /**
@@ -12,8 +13,10 @@ import { count, mono, productHref, rowHasCost, rowKey, rowLine, rowMargin, rowPr
  * 2 and 11; openspec/changes/stock-list): one search box, All, Running low
  * and Below zero, and every product with its stock, price and (for the
  * Owner) margin, each opening its page. A product with sizes is one row, and a
- * size searched is its own (st-search-size; stock-list-categories-sizes). Read
- * only: adding and ticking come with later pieces.
+ * size searched is its own (st-search-size; stock-list-categories-sizes). A
+ * category picked brings its details as filters and columns (st-filter-bearings),
+ * and a measurement searched shows each row's (st-search-measure). Read only:
+ * adding and ticking come with later pieces.
  */
 type Filter = 'All' | 'Running low' | 'Below zero';
 type SortKey = 'name' | 'stock' | 'price' | 'margin';
@@ -51,11 +54,24 @@ export function StockPage() {
   const [filter, setFilter] = useState<Filter>(params.get('show') === 'below-zero' ? 'Below zero' : 'All');
   const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: 'name', up: true });
   const [all, setAll] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
+  const [values, setValues] = useState<Record<number, string>>({});
+  const categories = useCategoryList().data ?? [];
+  const details = category ? detailsFor(categories, category) : [];
+  // Each detail's filter is asked for once typing settles, as the search box is; only this
+  // category's, so a category just changed never sends the last one's.
+  const settled: Record<number, string> = JSON.parse(useTyped(JSON.stringify(values)) || '{}');
+  const sent = details.filter((d) => (settled[d.id] ?? '').trim()).map((d) => [`d${d.id}`, settled[d.id].trim()]);
+  const query = new URLSearchParams([...(search ? [['search', search]] : []), ...(category ? [['category', category]] : []), ...sent]).toString();
   const list = useQuery({
-    queryKey: ['stock', search],
-    queryFn: async () => (await apiGet<{ rows: ListRow[] }>(`/api/stock-list${search ? `?${new URLSearchParams({ search })}` : ''}`)).rows,
+    queryKey: ['stock', query],
+    queryFn: async () => (await apiGet<{ rows: ListRow[] }>(`/api/stock-list${query ? `?${query}` : ''}`)).rows,
     placeholderData: keepPreviousData,
   });
+  const choose = (path: string | null) => { setCategory(path); setValues({}); setAll(false); };
+  const picker = useCategoryPicker({ all: categories, picked: category, onPick: choose });
+  const sentValues = Object.fromEntries(sent.map(([k, v]) => [Number(k.slice(1)), v]));
+  const inCategory = category ? inCategoryText(category, details, sentValues) : '';
 
   const by = SORTS[sort.key];
   const rows = (list.data ?? [])
@@ -66,9 +82,12 @@ export function StockPage() {
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
   // The sign-in can say Owner with someone else at the till: what the server sent decides.
-  const margins = owner && (list.data ?? []).some(rowHasCost);
-  const cols = isPhone ? 'grid-cols-[minmax(0,1fr)_auto]' : margins ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.7fr)]' : 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]';
-  const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); setAll(false); };
+  // Audit M12: a category's details as columns on a computer, Margin making room.
+  const columns = isPhone ? [] : details;
+  const margins = owner && columns.length === 0 && (list.data ?? []).some(rowHasCost);
+  const grid = { gridTemplateColumns: isPhone ? 'minmax(0, 1fr) auto' : ['minmax(0, 2.2fr)', ...columns.map(() => 'minmax(0, 0.7fr)'), 'minmax(0, 0.9fr)', 'minmax(0, 0.8fr)', ...(margins ? ['minmax(0, 0.7fr)'] : [])].join(' ') };
+  // All is everything: it takes a category off too.
+  const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); if (f === 'All') choose(null); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
     <span role="columnheader" aria-sort={sort.key === key ? (sort.up ? 'ascending' : 'descending') : 'none'} className={right ? 'text-right' : ''}>
       <button type="button" onClick={() => setSort({ key, up: sort.key === key ? !sort.up : true })}
@@ -78,8 +97,8 @@ export function StockPage() {
     </span>
   );
   const pill = (f: Filter) => (
-    <button key={f} type="button" aria-pressed={filter === f} onClick={() => pick(f)}
-      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${filter === f ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{f}</button>
+    <button key={f} type="button" aria-pressed={filter === f && !(f === 'All' && category)} onClick={() => pick(f)}
+      className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${filter === f && !(f === 'All' && category) ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{f}</button>
   );
 
   return (
@@ -90,21 +109,23 @@ export function StockPage() {
           placeholder="Name, barcode, supplier code — or a measurement, like “bearing 30 mm”"
           className="min-w-0 grow border-0 bg-transparent text-base text-[var(--wh-ink)] outline-none placeholder:text-[var(--wh-muted)]" />
       </label>
-      <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}</div>
-      <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (rows.length ? plural(rows) : 'No products') : ''}</p>
+      <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}{picker.pill}</div>
+      {picker.list}
+      {category ? <DetailFilters name={categories.find((c) => c.path === category)?.name ?? category} details={details} values={values} onChange={(id, v) => { setValues({ ...values, [id]: v }); setAll(false); }} /> : null}
+      <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (category ? `${rows.length} ${inCategory}` : rows.length ? plural(rows) : 'No products') : ''}</p>
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the stock. Try again in a moment.</p>
         : !list.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
         : rows.length === 0 ? (
           <div className="flex flex-col items-start gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-6">
-            <h2 className="m-0 text-lg font-bold">{search ? `Nothing matches “${search}”` : filter === 'All' ? 'No products yet' : `Nothing is ${filter.toLowerCase()}`}</h2>
+            <h2 className="m-0 text-lg font-bold">{search ? `Nothing matches “${search}”` : category ? `Nothing ${inCategory}` : filter === 'All' ? 'No products yet' : `Nothing is ${filter.toLowerCase()}`}</h2>
             {search ? <p className="m-0 text-sm text-[var(--wh-muted)]">Check the spelling, or try a supplier code or a supplier.</p> : null}
           </div>
         ) : (
           <div role="table" aria-label="Products" className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
             {isPhone ? null : (
               <div role="rowgroup">
-                <div role="row" className={`grid ${cols} items-center gap-3 px-4 pt-1`}>
-                  {head('name', 'Product')}{head('stock', 'In stock')}{head('price', 'Price', true)}{margins ? head('margin', 'Margin', true) : null}
+                <div role="row" style={grid} className="grid items-center gap-3 px-4 pt-1">
+                  {head('name', 'Product')}{columns.map((d) => <span key={d.id} role="columnheader" className="text-size-13 font-bold text-[var(--wh-muted)]">{d.name}</span>)}{head('stock', 'In stock')}{head('price', 'Price', true)}{margins ? head('margin', 'Margin', true) : null}
                 </div>
               </div>
             )}
@@ -113,17 +134,20 @@ export function StockPage() {
                 const label = (
                   <>
                     <span className="text-size-15 font-semibold underline decoration-[var(--wh-border)]">{r.name}</span>
-                    <span className="text-size-13 text-[var(--wh-muted)]">{[rowLine(r), isPhone ? rowPriceText(r) : null].filter(Boolean).join(' · ')}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{(!category && search && MeasureLine({ row: r, all: categories, search })) || rowLine(r, !!category)}{isPhone ? ` · ${rowPriceText(r)}` : ''}</span>
                   </>
                 );
                 const m = rowMargin(r);
                 return (
-                <div role="row" key={rowKey(r)} className={`grid ${cols} min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
+                <div role="row" key={rowKey(r)} style={grid} className={`grid min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
                   <span role="cell" className="min-w-0">
                     {/* A product with sizes' own page is piece 10: until then its row opens nothing. */}
                     {r.kind === 'group' ? <span className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5">{label}</span>
                       : <Link to={productHref(r.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">{label}</Link>}
                   </span>
+                  {columns.map((d) => (
+                    <span key={d.id} role="cell" className={`${mono} text-size-15`}><span className="sr-only">{`${d.name}: `}</span>{answerText(d, r.kind === 'group' ? undefined : r.details?.[d.id])}</span>
+                  ))}
                   <span role="cell" className={`flex flex-wrap items-center gap-2 ${isPhone ? 'justify-end' : ''}`}>
                     <span className="sr-only">In stock: </span><span className={`${mono} text-size-15`}>{count(r.stockQty)}</span>{r.kind === 'group' ? null : <StateTag state={rowState(r)} />}
                   </span>
