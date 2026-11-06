@@ -108,3 +108,20 @@ test('picking a category takes those inside it; a detail’s filter narrows it',
   assert.deepEqual(await search('', `&category=Drivetrain&d${d['Number of gears']}=${encodeURIComponent('[11]')}`), [p.rd]);
   assert.deepEqual(await search('', `&d${d['Outer diameter']}=40`), []);
 });
+
+test('a word of digits and letters is a measurement only where a detail has that unit; otherwise, or as well, the name', async () => {
+  const call = (path, method, body) => staffRequest(server.baseUrl, owner.cookie, path, { method, body });
+  const add = async (key, name, category = 'Uncategorised') => { p[key] = (await call('/api/products', 'POST', { name, sku: `${key}-${randomUUID().slice(0, 4)}`, category, price: 5 })).body.id; };
+  await add('tube', '[Inner tube 700c]');
+  await add('niner', '[Frame 29er]');
+  await add('light', '[Light 12v]');
+  await add('tyre', '[Tyre 28mm]');
+  assert.deepEqual(await search('700c'), [p.tube]);
+  assert.deepEqual(await search('29er'), [p.niner]);
+  assert.deepEqual(await search('12V'), [p.light]);
+  // mm is a unit here: 28mm is a 28 mm detail, or 28mm in the name.
+  assert.deepEqual(await search('28mm'), [p.tyre]);
+  await call(`/api/products/${p.b32}/details`, 'PUT', { answers: [{ detailId: d.Height, value: 28 }] });
+  assert.deepEqual(await search('28mm'), [p.b32, p.tyre].sort((a, b) => a - b));
+  assert.deepEqual(await search('28 mm'), [p.b32, p.tyre].sort((a, b) => a - b));
+});
