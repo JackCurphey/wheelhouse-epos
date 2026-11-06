@@ -5,7 +5,7 @@
 // Staff routes: they run with the shop's row-level security already bound.
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
-import { ownerOnly } from '../lib/owner-only.js';
+import { notOwnerHere } from '../lib/product-editor.js';
 import { JOIN, isNone } from '../lib/categories.js';
 import { limitLockWait } from '../lib/stock.js';
 
@@ -91,7 +91,7 @@ export function register(route) {
 
   // + Add a category (st-categories): a name, and where it sits.
   route('POST', '/api/product-categories', async (req, res) => {
-    if (await ownerOnly(req, res, CHANGE)) return;
+    if (await notOwnerHere(req, res, CHANGE)) return;
     const body = (await readJsonBody(req)) ?? {};
     const problem = nameProblem(body.name);
     if (problem) return badRequest(res, problem);
@@ -132,7 +132,7 @@ export function register(route) {
   // removed with its answers. Renaming or moving rewrites the paths inside it and its
   // products' text, which every old reader goes by.
   route('PUT', '/api/product-categories/:id', async (req, res, params) => {
-    if (await ownerOnly(req, res, CHANGE)) return;
+    if (await notOwnerHere(req, res, CHANGE)) return;
     const id = asId(Number(params.id));
     if (!id) return notFound(res, 'Category not found');
     const body = (await readJsonBody(req)) ?? {};
