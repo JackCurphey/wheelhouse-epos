@@ -6,6 +6,7 @@ import { dbExec, prepare } from '../db.js';
 import { readJsonBody, sendJson, badRequest, notFound } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
+import { notOwnerHere } from '../lib/product-editor.js';
 import { wakeBringingAcross } from '../move/bring-across.js';
 import { fixRow, leaveOutRow, lookList } from '../move/fix-row.js';
 import { helpInbox, sendHelp } from '../move/help-inbox.js';
@@ -49,10 +50,14 @@ async function refused(req, res) {
   if (await someoneElseCheckedIn(req)) { sendJson(res, 403, { error: OWNER_ONLY, code: 'owner_only' }); return true; }
   return false;
 }
+// What changes: the Owner, and the one there; an empty till or workshop computer asks for a
+// PIN, as changing a product does (product-editing, the review), since a file brings across
+// products with their prices and costs.
+const refusedToChange = (req, res) => notOwnerHere(req, res, OWNER_ONLY);
 
 // What a fix or leave-out needs, read and checked; it has answered if it returns null.
 async function readRowRequest(req, res, params) {
-  if (await refused(req, res)) return null;
+  if (await refusedToChange(req, res)) return null;
   if (!/^\d{1,9}$/.test(params.id)) { notFound(res, 'Row not found'); return null; }
   const who = await whoIsBooking(req);
   if (!who) { sendJson(res, 409, CHECK_IN_FIRST); return null; }
@@ -133,7 +138,7 @@ export function register(route) {
     upload: true,
     // Answered before a body is taken: who may send, and one at a time at a shop.
     beforeBody: async (req, res, shopId) => {
-      if (await refused(req, res)) return null;
+      if (await refusedToChange(req, res)) return null;
       if (sendingShops.has(shopId)) {
         res.setHeader('Retry-After', '2');
         sendJson(res, 429, BUSY);
@@ -167,7 +172,7 @@ export function register(route) {
 
   // Ask us to help (mv-help): what was written, the card and who's asking; nothing from the rows.
   route('POST', '/api/move/help', async (req, res, params, query, afterRelease, shopId) => {
-    if (await refused(req, res)) return;
+    if (await refusedToChange(req, res)) return;
     const inbox = helpInbox();
     if (!inbox) return sendJson(res, 503, NO_INBOX);
     const who = await whoIsBooking(req);
@@ -196,7 +201,7 @@ export function register(route) {
 
   // Choose another file: a file that couldn't be read goes from the list.
   route('DELETE', '/api/move/files/:id', async (req, res, params) => {
-    if (await refused(req, res)) return;
+    if (await refusedToChange(req, res)) return;
     const id = Number(params.id);
     if (!Number.isInteger(id)) return notFound(res, 'File not found');
     // With whatever it still holds, so nothing of it stays and nothing blocks it.

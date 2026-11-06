@@ -44,14 +44,17 @@ function groupRow(g, items, costs) {
 // a barcode or searching 'jersey M' opens that size and colour"); a size or colour named is
 // that size in each colour it comes in; otherwise a group found is the group. A measurement,
 // "30 mm" or "30mm", is found in a number detail with that unit and that value (decision 10:
-// "bearing 30 mm"); a number on its own in a name or code, or any number detail.
+// "bearing 30 mm"), or written so in a name; digits and letters with no detail of that unit
+// ("700c") only in a name; a number on its own in a name or code, or any number detail.
 function matches(p, g, conds, whole) {
   if (whole && [p.barcode, p.sku].some((v) => v && same(v, whole))) return 'exact';
   let bySize = false;
-  for (const { w, ids, measure } of conds) {
-    if (measure) { if (!ids.has(p.id)) return null; continue; }
-    if ([p.size, p.colour].some((v) => v && same(v, w))) { bySize = true; continue; }
-    if (![g?.name ?? p.name, p.sku, p.barcode, p.supplier].some((v) => has(v, w)) && !ids?.has(p.id)) return null;
+  for (const { w, also, ids } of conds) {
+    if (!also && [p.size, p.colour].some((v) => v && same(v, w))) { bySize = true; continue; }
+    // In its name, code, barcode or supplier (every word of a measurement written apart),
+    // or a detail answering it.
+    const inText = [w, ...(also ? [also] : [])].every((x) => [g?.name ?? p.name, p.sku, p.barcode, p.supplier].some((v) => has(v, x)));
+    if (!inText && !ids?.has(p.id)) return null;
   }
   return bySize ? 'size' : 'name';
 }
@@ -74,10 +77,14 @@ async function conditionsOf(words) {
   for (let i = 0; i < words.length; i += 1) {
     const m = MEASURE.exec(words[i]);
     if (!m) { conds.push({ w: words[i] }); continue; }
-    const unit = m[2] ?? (words[i + 1] && withUnit(words[i + 1]).length ? words[i + 1] : null);
-    if (unit) {
-      if (!m[2]) i += 1;
-      conds.push({ w: words[i], measure: true, ids: await answering(withUnit(unit), m[1]) });
+    // "700c", "29er", "12v": a measurement only where some detail has that unit; and
+    // either way found in a name too (the review).
+    if (m[2]) {
+      const ids = withUnit(m[2]).length ? await answering(withUnit(m[2]), m[1]) : undefined;
+      conds.push({ w: words[i], ids });
+    } else if (words[i + 1] && withUnit(words[i + 1]).length) {
+      conds.push({ w: words[i], also: words[i + 1], ids: await answering(withUnit(words[i + 1]), m[1]) });
+      i += 1;
     } else {
       conds.push({ w: words[i], ids: await answering(numbers.map((d) => d.id), m[1]) });
     }

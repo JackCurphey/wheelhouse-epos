@@ -10,7 +10,7 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { priceTooBig } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
-import { notProductEditor } from '../lib/product-editor.js';
+import { emptyComputer, notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, moveStock } from '../lib/stock.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
@@ -65,6 +65,8 @@ export function register(route) {
   });
 
   route('POST', '/api/suppliers', async (req, res) => {
+    // A supplier's words sit beside costs: at a till or workshop computer, someone checked in.
+    if (await emptyComputer(req, res)) return;
     const body = await readJsonBody(req);
     const name = (body.name || '').trim();
     if (!name) return badRequest(res, 'Supplier name is required');
@@ -83,6 +85,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/suppliers/:id', async (req, res, params) => {
+    if (await emptyComputer(req, res)) return;
     const id = Number(params.id);
     if (!(await db.prepare('SELECT id FROM suppliers WHERE id = ?').get(id))) return notFound(res, 'Supplier not found');
     const body = await readJsonBody(req);
