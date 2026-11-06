@@ -11,10 +11,12 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { categoryFor } from '../lib/categories.js';
+import { categoryFor, tidyCategory } from '../lib/categories.js';
+import { notProductEditor } from '../lib/product-editor.js';
+import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
-import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
+import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -36,7 +38,7 @@ const SAVE_LOCK_WAIT = '2s';
 // `show_online`/`active` fields - callers pass the row as loaded before and
 // after the change (a synthetic "nothing was live yet" stand-in for a
 // brand-new product).
-async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
+export async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
   const isLive = (row) => !!row.show_online && !!row.active;
   try {
     if (isLive(updatedProductRow)) {
@@ -92,20 +94,19 @@ function sentCost(value) {
 // form sends it. `price` is undefined when no pence were sent, leaving the old
 // `price` to its caller; `cost` is null when none was given; `refused` is a
 // refusal's message. Someone who can't see costs has any cost ignored, not refused.
-function sentMoney(body, costs) {
+export function sentMoney(body, costs) {
   if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
     return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
   }
-  if (body.pricePence === undefined && body.price !== undefined && priceTooBig(body.price)) {
-    return { refused: 'A price can be at most £21,474,836.47' };
-  }
+  const pounds = body.pricePence === undefined && body.price !== undefined ? poundsOf(body.price) : undefined;
+  if (pounds === null) return { refused: PRICE_IN_POUNDS };
   const costPence = costs ? body.costPence : undefined;
   const noCostPence = costPence === undefined || costPence === null || costPence === '';
   if (!noCostPence && !wholePence(costPence)) {
     return { refused: 'A cost must be a whole number of pence, up to £99,999,999.99' };
   }
   return {
-    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : undefined,
+    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : pounds,
     cost: noCostPence ? (costs ? sentCost(body.cost) : null) : penceToPounds(costPence),
   };
 }
@@ -119,7 +120,12 @@ async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
-  // A category sent is found or made (category-tree); one not sent stays as it is.
+  // A category sent is found or made (category-tree); one not sent stays as it is. A size of
+  // a product with sizes keeps that product's: it changes there, for every size (the review).
+  if (existing.group_id !== null && body.category !== undefined && tidyCategory(body.category) !== existing.category) {
+    const group = await db.prepare('SELECT name FROM product_groups WHERE id = ?').get(existing.group_id);
+    return `${existing.name} is a size of ${group.name}. Change the category on ${group.name}, and every size follows.`;
+  }
   const category = body.category !== undefined ? await categoryFor(body.category) : existing.category;
   const money = sentMoney(body, costs);
   if (money.refused) return money.refused;
@@ -187,11 +193,14 @@ export function register(route) {
     sendJson(res, 200, {
       ...serializeProduct(row, await canSeeCosts(req)),
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
+      // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
+      details: await detailsOf(row),
       history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
     });
   });
 
   route('POST', '/api/products', async (req, res) => {
+    if (await notProductEditor(req, res)) return;
     const body = await readJsonBody(req);
     const name = (body.name || '').trim();
     if (!name) return badRequest(res, 'Product name is required');
@@ -247,6 +256,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/products/:id', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -284,6 +294,7 @@ export function register(route) {
   });
 
   route('DELETE', '/api/products/:id', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -371,12 +382,43 @@ export function register(route) {
     sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
   });
 
+  // A product's answers to its details (rs-add-product, st-product's Details · Edit;
+  // openspec/changes/product-editing). The Owner only, as any change to a product. Under the
+  // product's lock, with the save's limit on waiting; reply after COMMIT.
+  route('PUT', '/api/products/:id/details', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) return notFound(res, 'Product not found');
+    const body = (await readJsonBody(req)) ?? {};
+    if (!Array.isArray(body.answers) || body.answers.length > 100) return badRequest(res, 'Send the answers as a list');
+    await db.exec('BEGIN');
+    try {
+      await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
+      const product = await db.prepare('SELECT id, category FROM products WHERE id = ? FOR UPDATE').get(id);
+      if (!product) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Product not found');
+      }
+      const refused = await saveAnswers(product, body.answers);
+      if (refused) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, refused);
+      }
+      await db.exec('COMMIT');
+      sendJson(res, 200, { details: await detailsOf(product) });
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+  });
+
   route('GET', '/api/categories', async (req, res) => {
     const rows = await db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
     sendJson(res, 200, rows.map((r) => r.category));
   });
 
   route('POST', '/api/products/:id/photo', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');

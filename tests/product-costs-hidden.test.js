@@ -132,6 +132,13 @@ function saysOrRefuses(sees, reply, what) {
   says(sees, reply, what);
 }
 const answered = (reply, what) => assert.ok(reply.status < 300, `${what} (${reply.status}): ${reply.text.slice(0, 300)}`);
+// Changing a product is for whoever can see costs (product-editing; decision 11): anyone
+// else is refused, or asked for a PIN at a till with nobody checked in, and told nothing.
+const refusedChange = (reply, what) => {
+  assert.ok([403, 409].includes(reply.status), `${what} (${reply.status}): ${reply.text.slice(0, 300)}`);
+  assert.ok(['owner_only', 'check_in_first'].includes(reply.body?.code), what);
+  says(false, reply, what);
+};
 
 for (const [who, sees, computer] of PEOPLE) {
   test(`reading: ${who} ${sees ? 'is' : 'isn’t'} sent a product’s cost`, async () => {
@@ -151,8 +158,10 @@ for (const [who, sees, computer] of PEOPLE) {
     const send = await computer();
     const id = await product({ stock: 1 });
     const saved = await send(`/api/products/${id}`, PUT({ description: '[Description]' }));
-    answered(saved, 'a save');
-    says(sees, saved, 'a save');
+    if (sees) {
+      answered(saved, 'a save');
+      says(sees, saved, 'a save');
+    } else refusedChange(saved, 'a save');
     const adjusted = await send(`/api/products/${id}/stock`, POST({ change: 1, type: 'adjustment', reason: 'found' }));
     // With nobody checked in here it asks for a PIN (stock-movements-say-who), which tells nothing.
     if (adjusted.body?.code === 'check_in_first') says(false, adjusted, 'asking for a PIN');
@@ -161,6 +170,7 @@ for (const [who, sees, computer] of PEOPLE) {
       says(sees, adjusted, 'an adjustment');
     }
     const imported = await send(`/api/catalogue-items/${await catalogueItem()}/import`, POST({ price: 28, category: 'Brakes' }));
+    if (!sees) return refusedChange(imported, 'an import');
     answered(imported, 'an import');
     says(sees, imported, 'an import');
     assert.equal(await costOf(imported.body.id), COST, 'the supplier’s price is still the cost');
@@ -207,6 +217,11 @@ for (const [who, sees, computer] of PEOPLE) {
   test(`a save: ${who} ${sees ? 'can change' : 'can’t change'} a cost, and nobody’s save without one touches it`, async () => {
     const id = await product();
     const send = await computer();
+    if (!sees) {
+      refusedChange(await send(`/api/products/${id}`, PUT({ description: '[Description]', costPence: 1999 })), 'a save');
+      assert.equal(await costOf(id), COST);
+      return;
+    }
     for (const without of [{}, { cost: null }, { cost: '' }, { cost: '   ' }, { cost: 'none' }]) {
       const saved = await send(`/api/products/${id}`, PUT({ description: '[Description]', ...without }));
       answered(saved, JSON.stringify(without));
@@ -228,6 +243,7 @@ for (const [who, sees, computer] of PEOPLE) {
     const send = await computer();
     n += 1;
     const made = await send('/api/products', POST({ name: '[Product]', sku: `[Code ${n}]`, category: 'Brakes', price: 28, cost: COST }));
+    if (!sees) return refusedChange(made, 'adding');
     assert.equal(made.status, 201, made.text);
     says(sees, made, 'the reply');
     assert.equal(await costOf(made.body.id), sees ? COST : 0);

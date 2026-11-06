@@ -8,8 +8,9 @@ import { runSync } from '../suppliers/index.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
-import { priceTooBig } from '../lib/pence.js';
+import { poundsOf } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
+import { emptyComputer, notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, moveStock } from '../lib/stock.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 
@@ -64,6 +65,8 @@ export function register(route) {
   });
 
   route('POST', '/api/suppliers', async (req, res) => {
+    // A supplier's words sit beside costs: at a till or workshop computer, someone checked in.
+    if (await emptyComputer(req, res)) return;
     const body = await readJsonBody(req);
     const name = (body.name || '').trim();
     if (!name) return badRequest(res, 'Supplier name is required');
@@ -82,6 +85,7 @@ export function register(route) {
   });
 
   route('PUT', '/api/suppliers/:id', async (req, res, params) => {
+    if (await emptyComputer(req, res)) return;
     const id = Number(params.id);
     if (!(await db.prepare('SELECT id FROM suppliers WHERE id = ?').get(id))) return notFound(res, 'Supplier not found');
     const body = await readJsonBody(req);
@@ -139,13 +143,14 @@ export function register(route) {
   });
 
   route('POST', '/api/catalogue-items/:id/import', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
     if (!item) return notFound(res, 'Catalogue item not found');
     if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
     const body = await readJsonBody(req);
-    const sellPrice = Number(body.price);
-    if (!Number.isFinite(sellPrice) || sellPrice < 0 || priceTooBig(sellPrice)) return badRequest(res, 'A valid sell price is required');
+    const sellPrice = poundsOf(body.price);
+    if (sellPrice === null) return badRequest(res, 'A valid sell price is required');
 
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
     // Starting stock needs someone to name, and has its line (stock-movements-say-who, design 6).
