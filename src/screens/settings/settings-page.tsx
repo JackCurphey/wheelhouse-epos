@@ -18,6 +18,7 @@ import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
+import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -957,6 +958,7 @@ function OwnerSettings() {
   const tills = useTillsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
+  const categories = useCategoriesSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1000,14 +1002,14 @@ function OwnerSettings() {
         ] },
       ],
     },
-    // After Workshop, as drawn; only Stock adjustments works yet
-    // (st-setting-adjust; stock-warnings-on-today). The area's words are
-    // the drawn ones up to Categories, which isn't built.
+    // After Workshop, as drawn: Stock adjustments (st-setting-adjust;
+    // stock-warnings-on-today) and Categories (st-categories; categories-screens).
     {
       key: 'stockroom', name: 'Stockroom', intro: '',
       areas: [
-        { key: 'stock', title: 'Stockroom', intro: 'Stock adjustments.', folds: [
+        { key: 'stock', title: 'Stockroom', intro: 'Stock adjustments, and each category’s details.', folds: [
           { key: 'stock-adjustments', title: 'Stock adjustments', summary: stockAdjustments, body: <StockAdjustmentsSettings /> },
+          { key: 'categories', title: 'Categories', summary: categories, body: <CategoriesSettings /> },
         ] },
       ],
     },
