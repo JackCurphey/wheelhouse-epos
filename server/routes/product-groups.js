@@ -46,8 +46,11 @@ function sizesSent(sent, costs, { adding }) {
     if (twice) return { problem: `${twice.label} is there twice` };
     const id = s.id === undefined || s.id === null ? null : Number(s.id);
     if (id !== null && !(Number.isSafeInteger(id) && id > 0 && id <= 2147483647)) return { problem: `${label} isn’t one of this product’s sizes` };
-    const money = sentMoney(s, costs);
-    if (money.refused) return { problem: money.refused };
+    const checked = sentMoney(s, costs);
+    if (checked.refused) return { problem: checked.refused };
+    // A price in pounds as a product's save takes it (products.js), within the same limit
+    // sentMoney checks; whole pence first (the review).
+    const money = { ...checked, price: checked.price ?? (s.price !== undefined ? Number(s.price) || 0 : undefined) };
     if (id === null && s.pricePence === undefined && s.price === undefined) return { problem: `Give ${label} a price` };
     const stock = s.stockQty === undefined ? 0 : s.stockQty;
     if (!Number.isInteger(stock) || Math.abs(stock) > MAX_STOCK || (id !== null && stock !== 0)) return { problem: `${label}’s starting stock is a whole number, for a new size only` };
@@ -182,6 +185,12 @@ export function register(route) {
       }
       await db.prepare('UPDATE product_groups SET name = ?, category = ?, description = ?, updated_at = now() WHERE id = ?')
         .run(now.name, now.category, body.description === undefined ? group.description : textOf(body.description) ?? '', id);
+      // Every size whose size or colour changes is moved aside first, so two swapping
+      // labels (M and L) never meet in the one-of-each index on the way (the review).
+      const relabelled = after.filter((p) => p.sent && before.some((b) => b.id === p.id && (b.size !== p.size || b.colour !== p.colour)));
+      if (relabelled.length) {
+        await db.prepare("UPDATE products SET size = '~' || id::text, colour = NULL WHERE id = ANY(?::int[])").run(relabelled.map((p) => p.id));
+      }
       for (const p of after) {
         const s = p.sent;
         await db.prepare(

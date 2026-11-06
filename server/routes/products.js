@@ -11,7 +11,7 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { categoryFor } from '../lib/categories.js';
+import { categoryFor, tidyCategory } from '../lib/categories.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
@@ -121,7 +121,12 @@ async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
-  // A category sent is found or made (category-tree); one not sent stays as it is.
+  // A category sent is found or made (category-tree); one not sent stays as it is. A size of
+  // a product with sizes keeps that product's: it changes there, for every size (the review).
+  if (existing.group_id !== null && body.category !== undefined && tidyCategory(body.category) !== existing.category) {
+    const group = await db.prepare('SELECT name FROM product_groups WHERE id = ?').get(existing.group_id);
+    return `${existing.name} is a size of ${group.name}. Change the category on ${group.name}, and every size follows.`;
+  }
   const category = body.category !== undefined ? await categoryFor(body.category) : existing.category;
   const money = sentMoney(body, costs);
   if (money.refused) return money.refused;

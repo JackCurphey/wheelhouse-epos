@@ -2,7 +2,7 @@
 
 ## 1. Who adds and changes a product (decision 11)
 
-`server/lib/product-editor.js`, one place for WP-1.1 to replace with "Can order stock": the Owner's sign-in, and nobody else checked in by PIN on it. Refused: "Only the shop’s owner can add or change products", 403 `owner_only`. It guards adding a product, saving one (its price and cost included), taking it off or back on sale, its photo, its details, bringing a supplier's item in, and making or changing a product with sizes.
+`server/lib/product-editor.js`, one place for WP-1.1 to replace with "Can order stock": the Owner's sign-in, with the Owner the one there, the same people `canSeeCosts` tells. Refused: "Only the shop’s owner can add or change products", 403 `owner_only`; someone else checked in by PIN under the Owner's sign-in is refused the same. A till or workshop computer with nobody checked in could be anyone, so it asks for a PIN (409 `check_in_first`), as changing stock there does, with or without starting stock. The tests that pinned staff saving without a cost now expect the refusal. It guards adding a product, saving one (its price and cost included), taking it off or back on sale, its photo, its details, bringing a supplier's item in, and making or changing a product with sizes.
 
 Not guarded, as decisions 5, 6 and receiving 4 say everyone may: adjusting and counting stock, and receiving a delivery.
 
@@ -33,8 +33,16 @@ Comparing `numeric` isn't leakproof, so an index on `value_number` can't be used
 - **Locks, in the one order** (piece 5): its category first (`categoryFor`, `FOR KEY SHARE`), then its sizes in id order, then the product with sizes, each `FOR UPDATE`, under the 2-second limit, so it can't deadlock with a category rename (categories, then products, then products with sizes). A race test holds a size so the save stops between its category and its sizes, renames the category meanwhile, and both go through with the sizes on the new path; with the order reversed it was told busy.
 - **The website:** after COMMIT, a size on the website is synced as a product's save does.
 
+## 4a. From the review
+
+- **A size's price in pounds** is taken as a product's save takes it: whole pence first, then pounds, within the same limit; on making, adding and saving.
+- **Swapping two sizes' labels** (M and L) in one save works: every size whose size or colour changes is moved aside to a placeholder first, as the one-of-each index checks each row as it changes.
+- **A size saved on its own** (`PUT /api/products/:id`) keeps its product with sizes' category: a different one is refused, "[Size's name] is a size of [Product]. Change the category on [Product], and every size follows." The same category, as the old app's form sends, goes through. Its name is answer 9's; nothing else on that route belongs to the product with sizes.
+- **An empty till asks for a PIN** before a Citrus Lime file is sent, Fixed or Left out, a category is added or renamed, or a supplier is added or changed: a file brings products across with prices and costs, a category rename rewrites products' text, and a supplier's words sit beside costs. Fix and Leave it out already asked, through who is fixing; sending a file didn't. A supplier needs someone checked in, not the Owner, as before.
+- **Searching "700c", "29er", "12v":** digits and letters are a measurement only where some detail has that unit; otherwise, and as well, they're found in a name.
+
 ## 5. Not built, and noted
 
-- Saving one size through `PUT /api/products/:id` can still give it a name or category other than its product's, until the product is next saved (answer 9 accepts this for the name).
+- Saving one size through `PUT /api/products/:id` can still give it a name other than its product's until the product is next saved (answer 9).
 - Matching a product's supplier to a supplier: the restock list's own piece (answer 10).
 - The screens: pieces 8 to 10.

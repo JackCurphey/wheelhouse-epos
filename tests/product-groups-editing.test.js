@@ -188,3 +188,38 @@ test('a save racing a rename of its category: both go through, and the sizes say
   assert.match(now, /^\[Renamed /);
   assert.deepEqual((await rows(g)).map((r) => r.category), [now]);
 });
+
+// ---- From the review ----
+
+test('a price in pounds is taken as a product’s is: making, adding and saving a size', async () => {
+  const pounds = (s, colour, price) => ({ ...size(s, colour), pricePence: undefined, price });
+  const made = await as(owner, '/api/product-groups', 'POST', { name: '[Pounds]', category: 'x', sizes: [pounds('M', null, 30)] });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const [m] = await rows(made.body.id);
+  assert.equal(m.price_pence, 3000, 'made at £30');
+  assert.equal((await as(owner, `/api/product-groups/${made.body.id}`, 'PUT', { sizes: [pounds('L', null, 31)] })).status, 200);
+  assert.equal((await rows(made.body.id))[1].price_pence, 3100, 'added at £31');
+  assert.equal((await as(owner, `/api/product-groups/${made.body.id}`, 'PUT', { sizes: [{ id: m.id, size: 'M', colour: null, price: 45 }] })).status, 200);
+  assert.equal((await rows(made.body.id))[0].price_pence, 4500, 'saved at £45');
+  const tooMuch = await as(owner, '/api/product-groups', 'POST', { name: '[Too much]', category: 'x', sizes: [pounds('M', null, 21474836.48)] });
+  assert.equal(tooMuch.status, 400, 'the same limit as a product’s price');
+});
+
+test('one size saved on its own keeps its product with sizes’ category, saying where to change it', async () => {
+  const g = (await as(owner, '/api/product-groups', 'POST', { name: '[Caps]', category: '[Clothing]', sizes: [size('M', null)] })).body.id;
+  const [m] = await rows(g);
+  const moved = await as(owner, `/api/products/${m.id}`, 'PUT', { category: '[Elsewhere]' });
+  assert.equal(moved.status, 400);
+  assert.equal(moved.body.error, '[Caps] M is a size of [Caps]. Change the category on [Caps], and every size follows.');
+  assert.equal((await rows(g))[0].category, '[Clothing]');
+  // The old app's form sends the category it shows: the same one goes through.
+  assert.equal((await as(owner, `/api/products/${m.id}`, 'PUT', { category: '[Clothing]', description: '[Note]' })).status, 200);
+});
+
+test('swapping two sizes’ labels in one save works: M and L', async () => {
+  const g = (await as(owner, '/api/product-groups', 'POST', { name: '[Swap]', category: 'x', sizes: [size('M', null), size('L', null)] })).body.id;
+  const [m, l] = await rows(g);
+  const res = await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ id: m.id, size: 'L', colour: null }, { id: l.id, size: 'M', colour: null }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual((await rows(g)).map((r) => [r.id, r.size, r.name]), [[m.id, 'L', '[Swap] L'], [l.id, 'M', '[Swap] M']]);
+});

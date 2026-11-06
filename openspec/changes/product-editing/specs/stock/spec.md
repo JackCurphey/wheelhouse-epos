@@ -31,3 +31,11 @@ Each size of a product with sizes SHALL be named with the product's name, its si
 #### Scenario: Renaming
 - **WHEN** Jersey is renamed
 - **THEN** every one of its sizes is renamed with it, at once
+
+#### Scenario: A size's category
+- **WHEN** one size of Jersey is saved on its own with another category
+- **THEN** it is refused, saying to change the category on Jersey
+
+#### Scenario: Swapping M and L
+- **WHEN** sizes M and L are swapped in one save
+- **THEN** both are saved, each with its new name
