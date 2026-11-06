@@ -29,7 +29,7 @@ const START = () => [
   { id: 4, name: '[Category]', parentId: null, path: '[Category]', products: 0, details: [] },
 ];
 
-async function openCategories({ start = START(), refuse = null } = {}) {
+async function openCategories({ start = START(), refuse = null, listReply = null } = {}) {
   calls = [];
   cats = start;
   let next = 50;
@@ -43,7 +43,7 @@ async function openCategories({ start = START(), refuse = null } = {}) {
     if (u.pathname === '/api/stockroom-settings') return reply(200, { adjustTodayOverPence: null });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
-    if (u.pathname === '/api/product-categories' && method === 'GET') return reply(200, { categories: cats });
+    if (u.pathname === '/api/product-categories' && method === 'GET') return reply(200, listReply ?? { categories: cats });
     if (refuse && method !== 'GET') return reply(refuse.status, { error: refuse.error });
     if (u.pathname === '/api/product-categories' && method === 'POST') {
       const parent = cats.find((c) => c.id === body.parentId);
@@ -206,6 +206,12 @@ test('a refusal is said in the server’s words, and the box stays', async () =>
   t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
   assert.equal((await box.findByRole('alert')).textContent, 'Drivetrain › Derailleurs is being counted. Apply that count first.');
   assert.ok(t.ui.getByRole('dialog'));
+});
+
+test('an answer without the categories leaves the rest of Settings working', async () => {
+  const t = await openCategories({ listReply: [] });
+  assert.ok(t.ui.getByRole('button', { name: /^Stock adjustments/ }));
+  assert.ok(t.ui.getByText('No categories yet.'));
 });
 
 test('no categories yet says so, with + Add a category', async () => {

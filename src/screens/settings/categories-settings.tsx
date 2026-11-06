@@ -24,6 +24,8 @@ type Draft = { id: number | null; name: string; kind: Kind; unit: string; choice
 
 const KEY = ['product-categories'];
 const useCategories = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<{ categories: Category[] }>('/api/product-categories') });
+// An answer without the list reads as none, so one odd answer never takes Settings down.
+const listOf = (data: { categories?: Category[] } | undefined): Category[] => (Array.isArray(data?.categories) ? data.categories : []);
 const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
 const KINDS: [Kind, string][] = [['number', 'A number with a unit'], ['choice', 'A choice from a list'], ['text', 'Text']];
 const field = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-base font-normal';
@@ -45,13 +47,13 @@ const inside = (all: Category[], c: Category) => {
   return ids;
 };
 
-/** The fold's summary, as drawn: the first two by path, "and [n] more"; or none yet. */
+/** The fold's summary, as drawn: the first two of the most particular, "and [n] more"; or none yet. */
 // "Derailleurs’", "Drivetrain’s", as the box's heading draws it.
 const whose = (name: string) => (/s$/i.test(name) ? `${name}’` : `${name}’s`);
 export function useCategoriesSummary(): string {
   const cats = useCategories();
   if (!cats.data) return '';
-  const all = cats.data.categories;
+  const all = listOf(cats.data);
   if (all.length === 0) return 'None yet';
   // The most particular ones, as drawn ("Drivetrain › Derailleurs", not Drivetrain too).
   const ends = all.filter((c) => !all.some((x) => x.parentId === c.id));
@@ -62,7 +64,7 @@ export function useCategoriesSummary(): string {
 export function CategoriesSettings() {
   const cats = useCategories();
   const [open, setOpen] = useState<Category | 'new' | null>(null);
-  const all = cats.data?.categories ?? [];
+  const all = listOf(cats.data);
   const line = (c: Category) => {
     const own = c.details.map(shortly);
     const hasInside = all.some((x) => x.parentId === c.id);
