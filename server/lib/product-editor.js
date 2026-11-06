@@ -5,7 +5,7 @@
 // it is that person, refused; a till or workshop computer with nobody checked in could be
 // anyone, so it asks for a PIN, as changing stock there does. The same people canSeeCosts
 // tells. Adjusting and counting stock, and receiving a delivery, stay with everyone.
-// Returns true when it has already answered the request with a refusal.
+// Each returns true when it has already answered the request with a refusal.
 import { ownerOnly } from './owner-only.js';
 import { sendJson } from './http.js';
 import { currentCheckin, isTheOwner } from '../routes/till-pins.js';
@@ -14,16 +14,25 @@ import { thisWorkshop } from '../till/this-workshop.js';
 
 export const PRODUCT_OWNER_ONLY = 'Only the shop’s owner can add or change products';
 
-export async function notProductEditor(req, res) {
-  if (await ownerOnly(req, res, PRODUCT_OWNER_ONLY)) return true;
+// A till or workshop computer with nobody checked in: ask for a PIN. Also for changes
+// anyone checked in may make, such as adding a supplier, whose words sit beside costs.
+export async function emptyComputer(req, res) {
+  if (await currentCheckin(req)) return false;
+  if (!(await thisTill(req)) && !(await thisWorkshop(req))) return false;
+  sendJson(res, 409, { error: 'Check in with your PIN first', code: 'check_in_first' });
+  return true;
+}
+
+// The Owner, and the one there: for products, and what rewrites them (a Citrus Lime file,
+// a category). `message` names what was refused.
+export async function notOwnerHere(req, res, message) {
+  if (await ownerOnly(req, res, message)) return true;
   const checkin = await currentCheckin(req);
   if (checkin && !(await isTheOwner(checkin))) {
-    sendJson(res, 403, { error: PRODUCT_OWNER_ONLY, code: 'owner_only' });
+    sendJson(res, 403, { error: message, code: 'owner_only' });
     return true;
   }
-  if (!checkin && ((await thisTill(req)) || (await thisWorkshop(req)))) {
-    sendJson(res, 409, { error: 'Check in with your PIN first', code: 'check_in_first' });
-    return true;
-  }
-  return false;
+  return emptyComputer(req, res);
 }
+
+export const notProductEditor = (req, res) => notOwnerHere(req, res, PRODUCT_OWNER_ONLY);
