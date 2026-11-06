@@ -89,13 +89,13 @@ export function useCategoryPicker({ all, picked, onPick }: { all: Category[]; pi
   const choose = (c: Category) => { onPick(c.path); setTyped(''); keys.reset(); };
   // ✕ takes the pill away: focus goes back to the box, not lost with it.
   const box = useRef<HTMLInputElement>(null);
-  const [back, setBack] = useState(false);
-  useEffect(() => { if (back && !picked) { box.current?.focus(); setBack(false); } }, [back, picked]);
+  const back = useRef(false);
+  useEffect(() => { if (back.current && !picked) { box.current?.focus(); back.current = false; } }, [picked]);
   if (picked) {
     return { list: null, pill: (
       <span className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full bg-[var(--wh-ink)] pl-4 text-sm font-semibold whitespace-nowrap text-[var(--wh-panel)]">
         {picked}
-        <button type="button" aria-label={`Remove the ${picked} filter`} onClick={() => { setBack(true); onPick(null); }}
+        <button type="button" aria-label={`Remove the ${picked} filter`} onClick={() => { back.current = true; onPick(null); }}
           className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-panel)]"><X aria-hidden="true" size={16} /></button>
       </span>
     ) };
