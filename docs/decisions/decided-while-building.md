@@ -2267,6 +2267,18 @@ WP-1.5's. So: slice C, WP-2.3.
 11. **A price in pounds must be a number of pounds, from nothing up** (the re-check), on a size, a plain product and a supplier's item: "abc", an empty price, true or −5 are refused, saying so. A price is never below nothing, as a price in pence already couldn't be; a refund or discount is a sale's own line. Not drawn. The old app's forms save as before.
 10. **"700c", "29er" and "12v" are found in names;** digits and letters are a measurement only where some detail has that unit, and then a name with them is found too.
 
+### 6 Nov 2026: Settings › Stockroom › Categories (WP-1.5, piece 8; `openspec/changes/categories-screens`; `st-categories`, `st-category-edit`)
+
+1. **The fold's summary names the most particular categories, the first two, then "and n more";** "None yet" with none. The drawing's "Bearings, Drivetrain › Derailleurs" skips Drivetrain for its Derailleurs.
+2. **A category with no details of its own and none from above reads "No details yet",** as the empty list's "No categories yet." does. The drawing shows only categories with details.
+3. **The box's note says "Every product in Derailleurs", not "Every derailleur",** as a shop's own category names can't be made plural safely. "Derailleurs’ own details" for a name ending in s, "Drivetrain’s" otherwise.
+4. **"+ Add a category" opens the same box, empty, titled "Add a category", with a Name field** (not-drawn pages row 18, option B). Saving makes the category, then gives it its details.
+5. **Renaming a category isn't on screen;** the box's title is its name, as drawn, and the server can rename one when a drawing shows how. Deleting one isn't drawn either.
+6. **A detail's kind can't be changed once it's added,** as the drawing shows it as words, not a choice; remove it and add another.
+7. **"Sits inside" offers up to eight paths containing what's typed, never the category itself or one inside it;** arrow keys and Enter pick, as the stock take's product search does. Empty is the top. A path typed but not picked is refused, "Pick where it sits from the list", before anything is sent.
+8. **A choice taken off goes at once, with no Undo;** Undo is drawn for a detail only. Saving is still needed, and Cancel drops it.
+9. **On a phone the box takes the whole width and scrolls inside, and a detail's row wraps,** as the other boxes do. Nothing scrolls sideways at 375 px.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
