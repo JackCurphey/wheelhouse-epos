@@ -170,7 +170,8 @@ export function register(route) {
     }
     // A category's details as columns (st-filter-bearings) and a measurement's line
     // (st-search-measure) need each row's answers: only then, for just the rows sent.
-    if (kept.category || words.some((c) => c.ids)) await withAnswers(rows);
+    // A measurement is one some detail answers: a number found only in a name isn't (the review).
+    if (kept.category || words.some((c) => c.ids?.size)) await withAnswers(rows);
     sendJson(res, 200, { rows });
   });
 

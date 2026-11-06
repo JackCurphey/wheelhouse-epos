@@ -5,8 +5,8 @@ import { Search } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
-import { answerText, DetailFilters, detailsFor, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
-import { count, mono, productHref, rowHasCost, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
+import { answerText, DetailFilters, detailsFor, filterValue, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
+import { count, mono, productHref, rowHasCost, rowIs, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
 /**
  * Stockroom › Stock (drawn as st-list in stock.mjs; stock control decisions
@@ -58,10 +58,11 @@ export function StockPage() {
   const [values, setValues] = useState<Record<number, string>>({});
   const categories = useCategoryList().data ?? [];
   const details = category ? detailsFor(categories, category) : [];
-  // Each detail's filter is asked for once typing settles, as the search box is; only this
-  // category's, so a category just changed never sends the last one's.
-  const settled: Record<number, string> = JSON.parse(useTyped(JSON.stringify(values)) || '{}');
-  const sent = details.filter((d) => (settled[d.id] ?? '').trim()).map((d) => [`d${d.id}`, settled[d.id].trim()]);
+  // Each detail's filter is asked for once typing settles, as the search box is, and only
+  // with the category it was typed for: one just changed never sends the last one's.
+  const typedFor: { category: string | null; values: Record<number, string> } = JSON.parse(useTyped(JSON.stringify({ category, values })));
+  const settled = typedFor.category === category ? typedFor.values : {};
+  const sent = details.map((d) => [d, filterValue(d, settled[d.id] ?? '')] as const).filter(([, v]) => v).map(([d, v]) => [`d${d.id}`, v]);
   const query = new URLSearchParams([...(search ? [['search', search]] : []), ...(category ? [['category', category]] : []), ...sent]).toString();
   const list = useQuery({
     queryKey: ['stock', query],
@@ -73,26 +74,29 @@ export function StockPage() {
   const sentValues = Object.fromEntries(sent.map(([k, v]) => [Number(k.slice(1)), v]));
   const inCategory = category ? inCategoryText(category, details, sentValues) : '';
 
-  const by = SORTS[sort.key];
+  // Audit M12: a category's details as columns on a computer, Margin making room; a sort
+  // by Margin with Margin gone goes back to the name.
+  const columns = isPhone ? [] : details;
+  const margins = owner && columns.length === 0 && (list.data ?? []).some(rowHasCost);
+  const sortKey: SortKey = sort.key === 'margin' && !margins ? 'name' : sort.key;
+  const sortUp = sortKey === sort.key ? sort.up : true;
+  const by = SORTS[sortKey];
   const rows = (list.data ?? [])
-    .filter((r) => filter === 'All' || rowState(r) === (filter === 'Below zero' ? 'below' : 'low'))
+    .filter((r) => filter === 'All' || rowIs(r, filter === 'Below zero' ? 'below' : 'low'))
     .sort((a, b) => {
       const [x, y] = [by(a), by(b)];
-      return (x < y ? -1 : x > y ? 1 : 0) * (sort.up ? 1 : -1);
+      return (x < y ? -1 : x > y ? 1 : 0) * (sortUp ? 1 : -1);
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
   // The sign-in can say Owner with someone else at the till: what the server sent decides.
-  // Audit M12: a category's details as columns on a computer, Margin making room.
-  const columns = isPhone ? [] : details;
-  const margins = owner && columns.length === 0 && (list.data ?? []).some(rowHasCost);
   const grid = { gridTemplateColumns: isPhone ? 'minmax(0, 1fr) auto' : ['minmax(0, 2.2fr)', ...columns.map(() => 'minmax(0, 0.7fr)'), 'minmax(0, 0.9fr)', 'minmax(0, 0.8fr)', ...(margins ? ['minmax(0, 0.7fr)'] : [])].join(' ') };
   // All is everything: it takes a category off too.
   const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); if (f === 'All') choose(null); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
-    <span role="columnheader" aria-sort={sort.key === key ? (sort.up ? 'ascending' : 'descending') : 'none'} className={right ? 'text-right' : ''}>
-      <button type="button" onClick={() => setSort({ key, up: sort.key === key ? !sort.up : true })}
+    <span role="columnheader" aria-sort={sortKey === key ? (sortUp ? 'ascending' : 'descending') : 'none'} className={right ? 'text-right' : ''}>
+      <button type="button" onClick={() => setSort({ key, up: sortKey === key ? !sortUp : true })}
         className="inline-flex min-h-11 items-center gap-1 text-size-13 font-bold text-[var(--wh-muted)]">
-        {label}{sort.key === key ? <span aria-hidden="true">{sort.up ? '▴' : '▾'}</span> : null}
+        {label}{sortKey === key ? <span aria-hidden="true">{sortUp ? '▴' : '▾'}</span> : null}
       </button>
     </span>
   );
@@ -134,7 +138,7 @@ export function StockPage() {
                 const label = (
                   <>
                     <span className="text-size-15 font-semibold underline decoration-[var(--wh-border)]">{r.name}</span>
-                    <span className="text-size-13 text-[var(--wh-muted)]">{(!category && search && MeasureLine({ row: r, all: categories, search })) || rowLine(r, !!category)}{isPhone ? ` · ${rowPriceText(r)}` : ''}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{((!category || isPhone) && search && MeasureLine({ row: r, all: categories, search })) || rowLine(r, !!category)}{isPhone ? ` · ${rowPriceText(r)}` : ''}</span>
                   </>
                 );
                 const m = rowMargin(r);

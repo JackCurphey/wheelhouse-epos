@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
@@ -34,6 +34,13 @@ export function answerText(d: Detail, value: number | string | undefined): strin
   return d.kind === 'number' && d.unit ? `${value} ${d.unit}` : String(value);
 }
 
+/** What a filter box sends: a number's own unit typed after it ("30 mm", "30mm") is the box's. */
+export function filterValue(d: Detail, typed: string): string {
+  const v = typed.trim();
+  if (d.kind !== 'number' || !d.unit) return v;
+  return v.toLowerCase().endsWith(d.unit.toLowerCase()) ? v.slice(0, v.length - d.unit.length).trim() : v;
+}
+
 /** "[n] in Bearings with Outer diameter 30 mm and …": the shop's own names, as written. */
 export function inCategoryText(path: string, details: Detail[], values: Record<number, string>): string {
   const set = details.filter((d) => (values[d.id] ?? '').trim()).map((d) => `${d.name} ${answerText(d, values[d.id].trim())}`);
@@ -51,17 +58,18 @@ export function MeasureLine({ row, all, search }: { row: ListRow; all: Category[
   if (row.kind === 'group' || !row.details) return null;
   const answers = row.details;
   const shown = detailsFor(all, row.category).filter((d) => answers[d.id] !== undefined);
-  if (shown.length === 0 || searchedNumbers(search).length === 0) return null;
+  const wanted = searchedNumbers(search);
+  const hit = (d: Detail) => d.kind === 'number' && wanted.includes(Number(answers[d.id]));
+  // Only when an answer is what was searched: a number found in a name leaves the line be.
+  if (!shown.some(hit)) return null;
   const units = new Set(shown.map((d) => (d.kind === 'number' ? d.unit : null)));
   const oneUnit = units.size === 1 && [...units][0] ? [...units][0] : null;
-  const wanted = searchedNumbers(search);
   return (
     <>
       {shown.map((d, i) => {
         const value = answers[d.id];
         const text = `${d.name} ${oneUnit ? value : answerText(d, value)}`;
-        const hit = d.kind === 'number' && wanted.includes(Number(value));
-        return <Fragment key={d.id}>{i ? ' · ' : ''}{hit ? <strong className="text-[var(--wh-ink)]">{text}</strong> : text}</Fragment>;
+        return <Fragment key={d.id}>{i ? ' · ' : ''}{hit(d) ? <strong className="text-[var(--wh-ink)]">{text}</strong> : text}</Fragment>;
       })}
       {oneUnit ? ` ${oneUnit}` : ''}
     </>
@@ -79,11 +87,15 @@ export function useCategoryPicker({ all, picked, onPick }: { all: Category[]; pi
   const matches = word ? all.filter((c) => c.path.toLowerCase().includes(word)).slice(0, 8) : [];
   const keys = useActiveOption(matches.length);
   const choose = (c: Category) => { onPick(c.path); setTyped(''); keys.reset(); };
+  // ✕ takes the pill away: focus goes back to the box, not lost with it.
+  const box = useRef<HTMLInputElement>(null);
+  const [back, setBack] = useState(false);
+  useEffect(() => { if (back && !picked) { box.current?.focus(); setBack(false); } }, [back, picked]);
   if (picked) {
     return { list: null, pill: (
       <span className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full bg-[var(--wh-ink)] pl-4 text-sm font-semibold whitespace-nowrap text-[var(--wh-panel)]">
         {picked}
-        <button type="button" aria-label={`Remove the ${picked} filter`} onClick={() => onPick(null)}
+        <button type="button" aria-label={`Remove the ${picked} filter`} onClick={() => { setBack(true); onPick(null); }}
           className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-panel)]"><X aria-hidden="true" size={16} /></button>
       </span>
     ) };
@@ -92,7 +104,7 @@ export function useCategoryPicker({ all, picked, onPick }: { all: Category[]; pi
     <span className="shrink-0">
       <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 text-[var(--wh-muted)]">
         <Search aria-hidden="true" size={15} />
-        <input role="combobox" aria-label="Category" placeholder="Category" value={typed} aria-expanded={matches.length > 0}
+        <input ref={box} role="combobox" aria-label="Category" placeholder="Category" value={typed} aria-expanded={matches.length > 0}
           aria-controls="stock-category-matches" aria-autocomplete="list"
           aria-activedescendant={keys.index >= 0 ? `stock-category-${keys.index}` : undefined}
           onChange={(e) => { setTyped(e.target.value); keys.reset(); }}

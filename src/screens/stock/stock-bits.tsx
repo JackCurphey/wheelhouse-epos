@@ -31,8 +31,9 @@ export type ListRow = ProductRow | SizeRow | GroupRow;
 const several = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export const rowKey = (r: ListRow) => (r.kind === 'group' ? `g${r.groupId}` : `${r.kind[0]}${r.id}`);
-/** A product with sizes counts as below zero, or running low, when one of its sizes is. */
-export const rowState = (r: ListRow) => (r.kind === 'group' ? (r.sizesBelowZero ? 'below' : r.sizesRunningLow ? 'low' : null) : stockState(r));
+export const rowState = (r: ProductRow | SizeRow) => stockState(r);
+/** Below zero or Running low keeps a product with sizes when one of its sizes is, either or both. */
+export const rowIs = (r: ListRow, state: 'below' | 'low') => (r.kind === 'group' ? (state === 'below' ? r.sizesBelowZero : r.sizesRunningLow) > 0 : stockState(r) === state);
 export const rowPrice = (r: ListRow) => (r.kind === 'group' ? r.priceLowPence : r.pricePence);
 export const rowPriceText = (r: ListRow) => (r.kind !== 'group' ? money(r.pricePence) : r.priceLowPence === r.priceHighPence ? money(r.priceLowPence) : `${money(r.priceLowPence)}–${money(r.priceHighPence)}`);
 /** A product with sizes has one margin only when every size has one price, cost and VAT rate. */

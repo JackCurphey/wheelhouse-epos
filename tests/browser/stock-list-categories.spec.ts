@@ -83,6 +83,10 @@ for (const [width, height, label] of [[1280, 900, 'computer'], [375, 812, 'phone
       await expect(a).toContainText('30 mm');
     } else {
       await expect(page.getByRole('columnheader')).toHaveCount(0);
+      // No columns on a phone: a measurement searched still shows each row's details on its line.
+      await search.fill('bearing 30 mm');
+      await expect(a.locator('strong')).toHaveText('Outer diameter 30');
+      await search.fill('');
     }
     expect(await sideways(page)).toBeLessThanOrEqual(0);
     if (process.env.WH_SHOTS) await page.screenshot({ path: `${process.env.WH_SHOTS}/stock-bearings-${label}.png`, fullPage: true });

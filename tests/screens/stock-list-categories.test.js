@@ -26,10 +26,12 @@ const CATEGORIES = [
   { id: 1, name: 'Bearings', parentId: null, path: 'Bearings', products: 2, details: [MM(11, 'Inner diameter'), MM(12, 'Outer diameter'), MM(13, 'Height')] },
   { id: 2, name: 'Drivetrain', parentId: null, path: 'Drivetrain', products: 1, details: [{ id: 21, name: '[Detail]', kind: 'text', unit: null, choices: [], answered: 1 }] },
   { id: 3, name: 'Derailleurs', parentId: 2, path: 'Drivetrain › Derailleurs', products: 1, details: [{ id: 31, name: 'Number of gears', kind: 'choice', unit: null, choices: ['[11]', '[12]'], answered: 1 }] },
+  { id: 5, name: '[Sealed]', parentId: 1, path: 'Bearings › [Sealed]', products: 0, details: [] },
 ];
 const row = (id, name, category, over = {}) => ({ kind: 'product', id, name, sku: '[Supplier code]', barcode: null, category, supplier: '[Supplier]', stockQty: 4, lowStockThreshold: 0, pricePence: 1000, costPence: 500, active: true, vatRateBp: 2000, ...over });
-const BEARING_A = row(1, '[Bearing A]', 'Bearings', { details: { 11: 10, 12: 30, 13: 9 } });
-const BEARING_B = row(2, '[Bearing B]', 'Bearings', { stockQty: 1, lowStockThreshold: 3, details: { 11: 12, 12: 30, 13: 8 } });
+// Costs only to give each a different margin from its name's order (A lowest, then C, then B).
+const BEARING_A = row(1, '[Bearing A]', 'Bearings', { costPence: 800, details: { 11: 10, 12: 30, 13: 9 } });
+const BEARING_B = row(2, '[Bearing B]', 'Bearings', { costPence: 100, stockQty: 1, lowStockThreshold: 3, details: { 11: 12, 12: 30, 13: 8 } });
 const BEARING_C = row(4, '[Bearing C]', 'Bearings', { details: { 11: 15, 12: 32 } });
 const DERAILLEUR = row(3, '[Rear derailleur]', 'Drivetrain › Derailleurs', { details: { 31: '[12]', 21: '[Brand]' } });
 
@@ -45,6 +47,8 @@ async function openStock() {
       const q = u.searchParams;
       const strip = (r) => { const { details, ...rest } = r; return rest; };
       if (q.get('search') === 'bearing 30 mm') return reply(200, { rows: [BEARING_A, BEARING_B] });
+      // A number found in a name: the server may still send answers; none of them is 99.
+      if (q.get('search') === 'bearing 99') return reply(200, { rows: [BEARING_A] });
       if (q.get('category') === 'Bearings') {
         const want = q.get('d12');
         return reply(200, { rows: [BEARING_A, BEARING_B, BEARING_C].filter((r) => !want || String(r.details[12]) === want) });
@@ -66,7 +70,7 @@ async function openStock() {
 async function pick(t, typed, keys) {
   const box = t.ui.getByRole('combobox', { name: 'Category' });
   t.fireEvent.change(box, { target: { value: typed } });
-  await t.ui.findByRole('option', { name: /./ });
+  await t.ui.findAllByRole('option');
   for (const k of keys) t.fireEvent.keyDown(box, { key: k });
 }
 const listCalls = () => calls.filter((c) => c.startsWith('/api/stock-list')).map((c) => decodeURIComponent(c.replace(/\+/g, ' ')));
@@ -81,7 +85,8 @@ test('the Category pill: typed, picked with the arrow keys and Enter, shown dark
   await t.ui.findByText('3 in Bearings');
   assert.ok(listCalls().some((c) => c.includes('category=Bearings')), listCalls().join('\n'));
   t.fireEvent.click(off);
-  assert.ok(t.ui.getByRole('combobox', { name: 'Category' }));
+  // Focus goes back to the box, not lost with the ✕.
+  assert.ok(document.activeElement === t.ui.getByRole('combobox', { name: 'Category' }), 'focus is in the Category box');
   assert.equal(t.ui.getByRole('button', { name: 'All' }).getAttribute('aria-pressed'), 'true');
   await t.ui.findByRole('link', { name: /\[Rear derailleur\]/ });
 });
@@ -152,4 +157,45 @@ test('Running low narrows a picked category; All takes the category off', async 
   t.fireEvent.click(t.ui.getByRole('button', { name: 'All' }));
   assert.ok(t.ui.queryByRole('button', { name: 'Remove the Bearings filter' }) === null);
   await t.ui.findByRole('link', { name: /\[Rear derailleur\]/ });
+});
+
+test('a number searched that no answer matches leaves the line as it was', async () => {
+  const t = await openStock();
+  t.fireEvent.change(t.ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: 'bearing 99' } });
+  await t.ui.findByText('1 product');
+  assert.ok(t.ui.getByRole('link', { name: /\[Bearing A\]/ }).textContent.endsWith('[Supplier code] · Bearings · [Supplier]'));
+});
+
+test('a unit typed in a number box is the box’s own: “30 mm” asks for 30', async () => {
+  const t = await openStock();
+  await pick(t, 'bear', ['ArrowDown', 'Enter']);
+  const outer = (await t.ui.findByRole('group', { name: 'Bearings details' })).querySelector('input[aria-label="Outer diameter"]');
+  t.fireEvent.change(outer, { target: { value: '30 mm' } });
+  await t.ui.findByText('2 in Bearings with Outer diameter 30 mm');
+  assert.ok(listCalls().some((c) => c.includes('d12=30') && !c.includes('d12=30 ')), listCalls().join('\n'));
+});
+
+test('sorted by Margin, then a category picked: Margin goes, and the list goes back to name order', async () => {
+  const t = await openStock();
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Margin' }));
+  const names = () => t.ui.getAllByRole('link').map((a) => a.textContent).filter((x) => x.startsWith('[Bearing')).map((x) => x.slice(0, 11));
+  assert.deepEqual(names(), ['[Bearing A]', '[Bearing C]', '[Bearing B]']);
+  await pick(t, 'bear', ['ArrowDown', 'Enter']);
+  await t.ui.findByText('3 in Bearings');
+  assert.deepEqual(names(), ['[Bearing A]', '[Bearing B]', '[Bearing C]']);
+});
+
+test('a filter set on one category is never sent with the next, even one that has the same detail', async () => {
+  const t = await openStock();
+  await pick(t, 'bear', ['ArrowDown', 'Enter']);
+  const outer = (await t.ui.findByRole('group', { name: 'Bearings details' })).querySelector('input[aria-label="Outer diameter"]');
+  t.fireEvent.change(outer, { target: { value: '30' } });
+  await t.ui.findByText('2 in Bearings with Outer diameter 30 mm');
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Remove the Bearings filter' }));
+  await pick(t, 'sealed', ['ArrowDown', 'Enter']);
+  await t.ui.findByRole('button', { name: 'Remove the Bearings › [Sealed] filter' });
+  await new Promise((r) => setTimeout(r, 450));
+  const sealed = listCalls().filter((c) => c.includes('category=Bearings › [Sealed]'));
+  assert.ok(sealed.length > 0, listCalls().join('\n'));
+  assert.ok(sealed.every((c) => !c.includes('d12')), sealed.join('\n'));
 });
