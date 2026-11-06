@@ -11,12 +11,12 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { categoryFor } from '../lib/categories.js';
+import { categoryFor, tidyCategory } from '../lib/categories.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
-import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
+import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -38,7 +38,7 @@ const SAVE_LOCK_WAIT = '2s';
 // `show_online`/`active` fields - callers pass the row as loaded before and
 // after the change (a synthetic "nothing was live yet" stand-in for a
 // brand-new product).
-async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
+export async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
   const isLive = (row) => !!row.show_online && !!row.active;
   try {
     if (isLive(updatedProductRow)) {
@@ -94,20 +94,19 @@ function sentCost(value) {
 // form sends it. `price` is undefined when no pence were sent, leaving the old
 // `price` to its caller; `cost` is null when none was given; `refused` is a
 // refusal's message. Someone who can't see costs has any cost ignored, not refused.
-function sentMoney(body, costs) {
+export function sentMoney(body, costs) {
   if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
     return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
   }
-  if (body.pricePence === undefined && body.price !== undefined && priceTooBig(body.price)) {
-    return { refused: 'A price can be at most £21,474,836.47' };
-  }
+  const pounds = body.pricePence === undefined && body.price !== undefined ? poundsOf(body.price) : undefined;
+  if (pounds === null) return { refused: PRICE_IN_POUNDS };
   const costPence = costs ? body.costPence : undefined;
   const noCostPence = costPence === undefined || costPence === null || costPence === '';
   if (!noCostPence && !wholePence(costPence)) {
     return { refused: 'A cost must be a whole number of pence, up to £99,999,999.99' };
   }
   return {
-    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : undefined,
+    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : pounds,
     cost: noCostPence ? (costs ? sentCost(body.cost) : null) : penceToPounds(costPence),
   };
 }
@@ -121,7 +120,12 @@ async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
   const barcode = body.barcode !== undefined ? String(body.barcode).trim() || null : existing.barcode;
-  // A category sent is found or made (category-tree); one not sent stays as it is.
+  // A category sent is found or made (category-tree); one not sent stays as it is. A size of
+  // a product with sizes keeps that product's: it changes there, for every size (the review).
+  if (existing.group_id !== null && body.category !== undefined && tidyCategory(body.category) !== existing.category) {
+    const group = await db.prepare('SELECT name FROM product_groups WHERE id = ?').get(existing.group_id);
+    return `${existing.name} is a size of ${group.name}. Change the category on ${group.name}, and every size follows.`;
+  }
   const category = body.category !== undefined ? await categoryFor(body.category) : existing.category;
   const money = sentMoney(body, costs);
   if (money.refused) return money.refused;

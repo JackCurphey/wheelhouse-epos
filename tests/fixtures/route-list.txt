@@ -87,9 +87,9 @@ GET /api/products
 GET /api/products/:id
 POST /api/products
 PUT /api/products/:id
-PUT /api/products/:id/details
 DELETE /api/products/:id
 POST /api/products/:id/stock
+PUT /api/products/:id/details
 GET /api/categories
 POST /api/products/:id/photo
 GET /api/workshop-jobs
@@ -304,3 +304,5 @@ POST /api/product-categories
 PUT /api/product-categories/:id
 GET /api/stock-list
 GET /api/product-groups/:id
+POST /api/product-groups
+PUT /api/product-groups/:id
