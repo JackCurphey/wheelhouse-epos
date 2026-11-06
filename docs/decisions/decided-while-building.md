@@ -2263,7 +2263,8 @@ WP-1.5's. So: slice C, WP-2.3.
 6. **Known, no code:** matching a product's supplier to a supplier is the restock list's (answer 10).
 7. **An empty till or workshop computer asks for a PIN before a Citrus Lime file is sent, Fixed or Left out, a category is added or renamed, or a supplier is added or changed** (the review, for Jack to overrule). A file brings products across with prices and costs; a category rename rewrites products' text; a supplier's words sit beside costs. A supplier still needs only someone checked in, not the Owner.
 8. **One size saved on its own can't change its category:** "[Size] is a size of [Product]. Change the category on [Product], and every size follows." Its name is answer 9's.
-9. **Swapping two sizes (M and L) in one save works; a size's price in pounds is taken as a product's.**
+9. **Swapping two sizes (M and L) in one save works, whatever the sizes are called; a size's price in pounds is taken as a product's.**
+11. **A price in pounds must be a number of pounds, from nothing up** (the re-check), on a size, a plain product and a supplier's item: "abc", an empty price, true or −5 are refused, saying so. A price is never below nothing, as a price in pence already couldn't be; a refund or discount is a sale's own line. Not drawn. The old app's forms save as before.
 10. **"700c", "29er" and "12v" are found in names;** digits and letters are a measurement only where some detail has that unit, and then a name with them is found too.
 
 ## Decided here, for Jack to overrule

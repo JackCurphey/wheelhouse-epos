@@ -223,3 +223,62 @@ test('swapping two sizes’ labels in one save works: M and L', async () => {
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual((await rows(g)).map((r) => [r.id, r.size, r.name]), [[m.id, 'L', '[Swap] L'], [l.id, 'M', '[Swap] M']]);
 });
+
+// ---- From the re-check ----
+
+test('a size can be called anything a swap might pass through, and the swap still works', async () => {
+  const g = (await as(owner, '/api/product-groups', 'POST', { name: '[Tilde]', category: 'x', sizes: [size('M', null), size('X', null)] })).body.id;
+  const [m, x] = await rows(g);
+  assert.equal((await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ id: x.id, size: `~${m.id}`, colour: null }] })).status, 200);
+  const res = await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ id: m.id, size: 'S', colour: null }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual((await rows(g)).map((r) => r.size), ['S', `~${m.id}`]);
+});
+
+const PRICE_WORDS = 'A price is a number of pounds, from nothing up to £21,474,836.47';
+
+test('a price in pounds must be a number of pounds: on a size, made, added or saved', async () => {
+  const g = (await as(owner, '/api/product-groups', 'POST', { name: '[Priced]', category: 'x', sizes: [size('M', null)] })).body.id;
+  const [m] = await rows(g);
+  for (const price of ['abc', '', null, true, -5, '12abc']) {
+    const made = await as(owner, '/api/product-groups', 'POST', { name: '[Bad]', category: 'x', sizes: [{ ...size('M', null), pricePence: undefined, price }] });
+    assert.deepEqual([made.status, made.body.error], [400, PRICE_WORDS], `made at ${JSON.stringify(price)}`);
+    const added = await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ ...size('L', null), pricePence: undefined, price }] });
+    assert.deepEqual([added.status, added.body.error], [400, PRICE_WORDS], `added at ${JSON.stringify(price)}`);
+    const saved = await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ id: m.id, size: 'M', colour: null, price }] });
+    assert.deepEqual([saved.status, saved.body.error], [400, PRICE_WORDS], `saved at ${JSON.stringify(price)}`);
+  }
+  assert.equal((await rows(g))[0].price_pence, 3000, 'nothing changed');
+  assert.equal((await as(owner, `/api/product-groups/${g}`, 'PUT', { sizes: [{ id: m.id, size: 'M', colour: null, price: '28.50' }] })).status, 200);
+  assert.equal((await rows(g))[0].price_pence, 2850, 'a number written as text is pounds too');
+});
+
+test('a plain product’s price in pounds the same: added or saved; the old app’s forms still save', async () => {
+  const stored = async (id) => (await runWithShop(owner.shop.id, () => prepare('SELECT price_pence, cost_pence FROM products WHERE id = ?').get(id)));
+  for (const price of ['abc', '', null, true, -5]) {
+    const added = await as(owner, '/api/products', 'POST', { name: '[Bad]', price });
+    assert.deepEqual([added.status, added.body.error], [400, PRICE_WORDS], `added at ${JSON.stringify(price)}`);
+  }
+  // As the old app's form sends it: a typed price and cost, then a blank cost (left out).
+  const form = { name: '[Old form]', sku: `OF-${code()}`, barcode: '', category: 'Brakes', price: 28, cost: 14, lowStockThreshold: 3, supplier: '' };
+  const made = await as(owner, '/api/products', 'POST', { ...form, stockQty: 0 });
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  assert.deepEqual(await stored(made.body.id), { price_pence: 2800, cost_pence: 1400 });
+  const { cost, ...blankCost } = form;
+  void cost;
+  assert.equal((await as(owner, `/api/products/${made.body.id}`, 'PUT', { ...blankCost, price: 29.99 })).status, 200);
+  assert.deepEqual(await stored(made.body.id), { price_pence: 2999, cost_pence: 1400 }, 'a blank cost leaves the cost');
+  for (const price of ['abc', null, true, -5]) {
+    const saved = await as(owner, `/api/products/${made.body.id}`, 'PUT', { price });
+    assert.deepEqual([saved.status, saved.body.error], [400, PRICE_WORDS], `saved at ${JSON.stringify(price)}`);
+  }
+  assert.equal((await stored(made.body.id)).price_pence, 2999);
+  // A supplier's item brought in, as the old app's import sends it.
+  const item = await runWithShop(owner.shop.id, async () => {
+    const supplier = await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES (?, 'mock_csv', '{}', now())").run(`[Supplier ${code()}]`);
+    return (await prepare("INSERT INTO supplier_catalogue_items (supplier_id, supplier_sku, name, price, stock_qty, status) VALUES (?, ?, '[Item]', 14, 0, 'new')").run(supplier.lastInsertRowid, `CI-${code()}`)).lastInsertRowid;
+  });
+  const bad = await as(owner, `/api/catalogue-items/${item}/import`, 'POST', { category: 'Brakes', price: true });
+  assert.equal(bad.status, 400);
+  assert.equal((await as(owner, `/api/catalogue-items/${item}/import`, 'POST', { category: 'Brakes', price: 28 })).status, 201);
+});

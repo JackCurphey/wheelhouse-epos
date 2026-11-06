@@ -16,7 +16,7 @@ import { notProductEditor } from '../lib/product-editor.js';
 import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
-import { MAX_PRICE_PENCE, penceToPounds, priceTooBig, wholePence } from '../lib/pence.js';
+import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -98,16 +98,15 @@ export function sentMoney(body, costs) {
   if (body.pricePence !== undefined && !(wholePence(body.pricePence) && body.pricePence <= MAX_PRICE_PENCE)) {
     return { refused: 'A price must be a whole number of pence, up to £21,474,836.47' };
   }
-  if (body.pricePence === undefined && body.price !== undefined && priceTooBig(body.price)) {
-    return { refused: 'A price can be at most £21,474,836.47' };
-  }
+  const pounds = body.pricePence === undefined && body.price !== undefined ? poundsOf(body.price) : undefined;
+  if (pounds === null) return { refused: PRICE_IN_POUNDS };
   const costPence = costs ? body.costPence : undefined;
   const noCostPence = costPence === undefined || costPence === null || costPence === '';
   if (!noCostPence && !wholePence(costPence)) {
     return { refused: 'A cost must be a whole number of pence, up to £99,999,999.99' };
   }
   return {
-    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : undefined,
+    price: body.pricePence !== undefined ? penceToPounds(body.pricePence) : pounds,
     cost: noCostPence ? (costs ? sentCost(body.cost) : null) : penceToPounds(costPence),
   };
 }
