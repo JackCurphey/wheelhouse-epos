@@ -2283,11 +2283,20 @@ WP-1.5's. So: slice C, WP-2.3.
 
 1. **A product with sizes' price reads "£30.00–£35.00" when its sizes differ, "£30.00" when they don't** (piece 5's note left how a range reads to this screen; the drawing shows one "£[price]").
 2. **A product with sizes shows a margin only when every size has one price, one cost and one VAT rate;** otherwise "—", as a product with no cost does. Its page (piece 10) has each size's.
-3. **A product with sizes' line names its sizes running low too,** "· 2 sizes running low", after the drawn "· 1 size below zero"; its row has no Below zero or Running low tag, as drawn, since the line says which. Below zero keeps it when a size is below zero, Running low when one is running low.
+3. **A product with sizes' line names its sizes running low too,** "· 2 sizes running low", after the drawn "· 1 size below zero"; its row has no Below zero or Running low tag, as drawn, since the line says which. Below zero keeps it when a size is below zero, Running low when one is running low, both when it has both (the review).
 4. **A product with sizes' row opens nothing until its page is built (piece 10).** Opening one of its sizes would show a single size as if it were the product.
 5. **A size found by a search reads "Size M · [Colour] · [barcode]"**, the drawing's "its own barcode" being its barcode; with no barcode, or no size or colour, that part is left out. It opens that size's own page, each size being a product.
 6. **When every row is a size, the count reads "1 size and colour", "2 sizes and colours"**, as drawn; otherwise "[n] products", a product with sizes counting as one.
 7. **The list reads each row's VAT rate from the server** for its margin, as a product's page does (risky: money; nothing about who sees a cost changes).
+8. **The count with a category picked reads "3 in Bearings", then "with Outer diameter 30 mm" for each filter set, joined with "and";** nothing found reads "Nothing in Bearings with Outer diameter 40 mm". The drawing's "2 bearings with an outer diameter of 30 mm" and "2 derailleurs with [n] gears" need a shop's own names made singular and lower case, which can't be done safely (as piece 8's note). A measurement searched keeps "[n] products", not the drawing's "2 bearings with 30 mm", for the same reason.
+9. **The category list opens under the pills, not hung from the pill:** on a phone the pills scroll sideways, which would cut it off. Up to eight paths containing what's typed; arrow keys and Enter, or a click, pick, as the settings box's "Sits inside" does.
+10. **While a category is picked, All isn't pressed (as drawn); Running low and Below zero narrow it; All takes it off.** ✕ takes it off too.
+11. **A text detail filters with a box, "Any", as a number does without a unit;** only number and choice filters are drawn. A filter is asked for once typing stops, as the search is.
+12. **The details filters wrap on a phone and the columns aren't shown there,** as drawn; the line under the name keeps the code and supplier, without the category, whenever one is picked.
+13. **A measurement searched shows every answered detail of the row's category on its line,** the drawing's three numbers being Bearings' all; the unit once at the end when they share one, after each otherwise, the answer equal to a number searched in bold. Only when an answer is the number searched: "shimano 105" found by its name keeps its line, and the server sends no answers for it (the review). On a phone, which has no columns, the line shows them with a category picked too.
+14. **A product with sizes shows "—" in a category's detail columns:** each size answers for itself, on its page (piece 10).
+15. **A unit typed in a number box, "30 mm" or "30mm", is the box's own unit and is dropped,** as the unit is printed after the box; another unit is sent as typed and finds nothing (the review).
+16. **Sorted by Margin, then a category picked: Margin goes, and the list goes back to name order, lowest first** (the review). A filter typed for one category is never sent with the next.
 
 ## Decided here, for Jack to overrule
 

@@ -19,7 +19,7 @@ const LIST = [
   product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', pricePence: 1500, costPence: 500, stockQty: -1 }),
 ];
 // A product with sizes, and a size searched (st-list, st-search-size; stock control decision 4).
-const JERSEY = { kind: 'group', groupId: 9, name: '[Product with sizes]', category: '[Category]', sizes: 2, colours: 2, stockQty: 5, sizesBelowZero: 1, sizesRunningLow: 0, priceLowPence: 3000, priceHighPence: 3500, costLowPence: 1000, costHighPence: 1000, active: true, vatRateBp: 2000 };
+const JERSEY = { kind: 'group', groupId: 9, name: '[Product with sizes]', category: '[Category]', sizes: 2, colours: 2, stockQty: 5, sizesBelowZero: 1, sizesRunningLow: 1, priceLowPence: 3000, priceHighPence: 3500, costLowPence: 1000, costHighPence: 1000, active: true, vatRateBp: 2000 };
 const GLOVES = { ...JERSEY, groupId: 10, name: '[Gloves]', sizes: 3, colours: 1, stockQty: 4, sizesBelowZero: 0, sizesRunningLow: 2, priceLowPence: 1200, priceHighPence: 1200, costLowPence: 500, costHighPence: 500 };
 const SIZE_M = { ...product({ id: 21, sku: '[Supplier code]', barcode: '[barcode]', name: '[Product with sizes]', pricePence: 3500, stockQty: -1 }), kind: 'size', groupId: 9, size: 'M', colour: '[Colour 1]' };
 const HISTORY = [
@@ -100,7 +100,7 @@ test('a product with sizes is one row: its sizes, colours and the size below zer
   const { ui, within } = await open('/workshop/stock', { sized: true });
   await ui.findByRole('link', { name: /Shimano brake pads/ });
   const jersey = within(ui.getByText('[Product with sizes]').closest('[role="row"]'));
-  assert.ok(jersey.getByText('[Category] · 2 sizes · 2 colours · 1 size below zero'));
+  assert.ok(jersey.getByText('[Category] · 2 sizes · 2 colours · 1 size below zero · 1 size running low'));
   assert.ok(jersey.getByText('5'));
   assert.ok(jersey.getByText('£30.00–£35.00'));
   assert.ok(jersey.queryByText('Below zero') === null, 'the line says which size; no tag on the row');
@@ -115,7 +115,7 @@ test('a product with sizes is one row: its sizes, colours and the size below zer
   assert.ok(ui.getByText('5 products'));
 });
 
-test('Below zero keeps a product with a size below zero; Running low one with a size running low', async () => {
+test('Below zero keeps a product with a size below zero; Running low one with a size running low, even with another below zero', async () => {
   const { ui, fireEvent } = await open('/workshop/stock', { sized: true });
   await ui.findByRole('link', { name: /Shimano brake pads/ });
   fireEvent.click(ui.getByRole('button', { name: 'Below zero' }));
@@ -123,7 +123,7 @@ test('Below zero keeps a product with a size below zero; Running low one with a 
   assert.ok(ui.queryByText('[Gloves]') === null);
   fireEvent.click(ui.getByRole('button', { name: 'Running low' }));
   assert.ok(ui.getByText('[Gloves]'));
-  assert.ok(ui.queryByText('[Product with sizes]') === null);
+  assert.ok(ui.getByText('[Product with sizes]'));
 });
 
 test('a size searched is its own row: its size, colour and barcode, opening that size', async () => {

@@ -11,8 +11,8 @@ Each test written first and watched failing for the right reason; each rule brok
 
 ## 2. Second pull request: categories on the list
 
-- [ ] 2.1 Screen tests: the Category pill by keyboard; details as filters and columns; the summary; a measurement's line (`tests/screens/stock-list-categories.test.js`)
-- [ ] 2.2 The pill, filters, columns and line (`src/screens/stock/stock-list-bits.tsx`, `stock-page.tsx`)
-- [ ] 2.3 Browser test: picking Bearings and an outer diameter by keyboard; a size searched; computer and phone widths (`tests/browser/stock-list.spec.ts`)
-- [ ] 2.4 Where the drawings are silent, logged in `docs/decisions/decided-while-building.md`
-- [ ] 2.5 Tick piece 9 in `openspec/changes/wp-1-5-products/tasks.md`
+- [x] 2.1 Screen tests: the Category pill by keyboard; details as filters and columns; the summary; a measurement's line (`tests/screens/stock-list-categories.test.js`)
+- [x] 2.2 The pill, filters, columns and line (`src/screens/stock/stock-list-bits.tsx`, `stock-page.tsx`)
+- [x] 2.3 Browser test: picking Bearings and an outer diameter by keyboard; a size searched; computer and phone widths (`tests/browser/stock-list-categories.spec.ts`)
+- [x] 2.4 Where the drawings are silent, logged in `docs/decisions/decided-while-building.md`
+- [x] 2.5 Tick piece 9 in `openspec/changes/wp-1-5-products/tasks.md`

@@ -31,8 +31,9 @@ export type ListRow = ProductRow | SizeRow | GroupRow;
 const several = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 export const rowKey = (r: ListRow) => (r.kind === 'group' ? `g${r.groupId}` : `${r.kind[0]}${r.id}`);
-/** A product with sizes counts as below zero, or running low, when one of its sizes is. */
-export const rowState = (r: ListRow) => (r.kind === 'group' ? (r.sizesBelowZero ? 'below' : r.sizesRunningLow ? 'low' : null) : stockState(r));
+export const rowState = (r: ProductRow | SizeRow) => stockState(r);
+/** Below zero or Running low keeps a product with sizes when one of its sizes is, either or both. */
+export const rowIs = (r: ListRow, state: 'below' | 'low') => (r.kind === 'group' ? (state === 'below' ? r.sizesBelowZero : r.sizesRunningLow) > 0 : stockState(r) === state);
 export const rowPrice = (r: ListRow) => (r.kind === 'group' ? r.priceLowPence : r.pricePence);
 export const rowPriceText = (r: ListRow) => (r.kind !== 'group' ? money(r.pricePence) : r.priceLowPence === r.priceHighPence ? money(r.priceLowPence) : `${money(r.priceLowPence)}–${money(r.priceHighPence)}`);
 /** A product with sizes has one margin only when every size has one price, cost and VAT rate. */
@@ -42,11 +43,14 @@ export function rowMargin(r: ListRow): number | null {
   return margin({ pricePence: r.priceLowPence, costPence: r.costLowPence, vatRateBp: r.vatRateBp });
 }
 export const rowHasCost = (r: ListRow) => (r.kind === 'group' ? r.costLowPence !== null : r.costPence !== null);
-/** The line under its name, as st-list and st-search-size draw it. */
-export function rowLine(r: ListRow): string {
+/**
+ * The line under its name, as st-list and st-search-size draw it; with a category picked, no
+ * category (st-filter-bearings: "[Supplier code] · [Supplier]").
+ */
+export function rowLine(r: ListRow, picked = false): string {
   if (r.kind === 'size') return [r.size ? `Size ${r.size}` : null, r.colour, r.barcode].filter(Boolean).join(' · ');
-  if (r.kind === 'product') return [r.sku, r.category, r.supplier].filter(Boolean).join(' · ');
-  return [r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
+  if (r.kind === 'product') return [r.sku, picked ? null : r.category, r.supplier].filter(Boolean).join(' · ');
+  return [picked ? null : r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
     r.sizesBelowZero ? `${several(r.sizesBelowZero, 'size', 'sizes')} below zero` : null,
     r.sizesRunningLow ? `${several(r.sizesRunningLow, 'size', 'sizes')} running low` : null].filter(Boolean).join(' · ');
 }

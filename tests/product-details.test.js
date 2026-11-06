@@ -143,4 +143,9 @@ test('the list carries each row’s answers when a category is picked or a measu
   assert.equal((await rows(`search=${encodeURIComponent('32 mm')}`)).find((r) => r.id === p.b32).details[d['Outer diameter']], 32);
   assert.ok((await rows('search=bearing')).every((r) => r.details === undefined));
   assert.ok((await rows('')).every((r) => r.details === undefined));
+  // A number found only in a name or code isn't a measurement searched (the review).
+  const chain = (await call('/api/products', 'POST', { name: '[Chain 116]', sku: `CH-${randomUUID().slice(0, 4)}`, category: 'Bearings', price: 5 })).body.id;
+  const found = await rows('search=116');
+  assert.deepEqual(found.map((r) => r.id), [chain]);
+  assert.equal(found[0].details, undefined);
 });
