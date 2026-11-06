@@ -148,6 +148,30 @@ test('a size at exactly nothing isn’t below zero, and an off-sale size counts 
   }
 });
 
+// The list's screen works out a margin as a product's page does, with its own VAT rate
+// (openspec/changes/stock-list-categories-sizes); a product with sizes has one only when
+// every size shares it.
+test('each row carries its VAT rate; a product with sizes only when its sizes share one', async () => {
+  const shop = await shopWith(async (prep) => {
+    await prep("INSERT INTO products (name, category, price, vat_rate_bp, updated_at) VALUES ('[Child seat]', '[Cat]', 1, 500, now())").run();
+    const same = (await prep("INSERT INTO product_groups (name, category) VALUES ('[Gloves]', '[Cat]') RETURNING id").get()).id;
+    await sized(prep, same, 'S', null);
+    await sized(prep, same, 'M', null);
+    const mixed = (await prep("INSERT INTO product_groups (name, category) VALUES ('[Shorts]', '[Cat]') RETURNING id").get()).id;
+    await sized(prep, mixed, 'S', null);
+    const m = (await sized(prep, mixed, 'M', null)).id;
+    await prep('UPDATE products SET vat_rate_bp = 0 WHERE id = ?').run(m);
+  });
+  try {
+    const rows = (await as(shop, '/api/stock-list')).body.rows;
+    assert.deepEqual(rows.map((r) => [r.name, r.vatRateBp]), [['[Child seat]', 500], ['[Gloves]', 2000], ['[Shorts]', null]]);
+    const sizeRow = (await as(shop, `/api/stock-list?search=${encodeURIComponent('[Shorts] M')}`)).body.rows;
+    assert.deepEqual(sizeRow.map((r) => [r.kind, r.vatRateBp]), [['size', 0]]);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
+
 test('a product with sizes sits in its category and name order with the rest', async () => {
   const shop = await shopWith(async (prep) => {
     await prep("INSERT INTO products (name, category, price, updated_at) VALUES ('[Z product]', '[Cat Z]', 1, now()), ('[A product]', '[Cat A]', 1, now()) RETURNING id").all();

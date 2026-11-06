@@ -125,3 +125,27 @@ test('a word of digits and letters is a measurement only where a detail has that
   assert.deepEqual(await search('28mm'), [p.b32, p.tyre].sort((a, b) => a - b));
   assert.deepEqual(await search('28 mm'), [p.b32, p.tyre].sort((a, b) => a - b));
 });
+
+// The list's screen (openspec/changes/stock-list-categories-sizes): a category's details as
+// columns (st-filter-bearings) and a measurement's line (st-search-measure) read each row's
+// answers. Only then: the plain list and a word search carry none.
+test('the list carries each row’s answers when a category is picked or a measurement searched, and not otherwise', async () => {
+  const call = (path, method, body) => staffRequest(server.baseUrl, owner.cookie, path, { method, body });
+  assert.equal((await answer(p.b32, [{ detailId: d['Inner diameter'], value: 10 }, { detailId: d['Outer diameter'], value: 32 }, { detailId: d.Height, value: 9 }])).status, 200);
+  assert.equal((await answer(p.rd, [{ detailId: d['Number of gears'], value: '[12]' }, { detailId: d['[Brand]'], value: '[Brand]' }])).status, 200);
+  const none = (await call('/api/products', 'POST', { name: '[Bearing C]', sku: `C-${randomUUID().slice(0, 4)}`, category: 'Bearings', price: 5 })).body.id;
+  const rows = async (q) => (await as(owner, `/api/stock-list?${q}`)).body.rows;
+  const bearings = await rows('category=Bearings');
+  assert.deepEqual(bearings.find((r) => r.id === p.b32).details, { [d['Inner diameter']]: 10, [d['Outer diameter']]: 32, [d.Height]: 9 });
+  assert.deepEqual(bearings.find((r) => r.id === none).details, {});
+  const rd = (await rows('category=Drivetrain')).find((r) => r.id === p.rd);
+  assert.deepEqual(rd.details, { [d['Number of gears']]: '[12]', [d['[Brand]']]: '[Brand]' });
+  assert.equal((await rows(`search=${encodeURIComponent('32 mm')}`)).find((r) => r.id === p.b32).details[d['Outer diameter']], 32);
+  assert.ok((await rows('search=bearing')).every((r) => r.details === undefined));
+  assert.ok((await rows('')).every((r) => r.details === undefined));
+  // A number found only in a name or code isn't a measurement searched (the review).
+  const chain = (await call('/api/products', 'POST', { name: '[Chain 116]', sku: `CH-${randomUUID().slice(0, 4)}`, category: 'Bearings', price: 5 })).body.id;
+  const found = await rows('search=116');
+  assert.deepEqual(found.map((r) => r.id), [chain]);
+  assert.equal(found[0].details, undefined);
+});
