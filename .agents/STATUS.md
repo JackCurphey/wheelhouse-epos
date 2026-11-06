@@ -146,10 +146,15 @@ here before starting it, so two people never build the same one):
   sizes, each named like "Jersey M Blue" (#622 to #624, migration 121; Jack's answers
   9 and 10). Each had an independent review and a hand-started CI run, except the
   test-only #621.
-  **Now (6 Nov):** WP-1.5 piece 7, linking the Citrus Lime import's sizes. Before the
-  first real shop: an independent memory check of #616 on a real server, a test
-  through Caddy, and a real inbox for Ask us to help. Roles and the settings store
-  (WP-1.1, 1.2) stay Mark's.
+  Piece 7, linking the Citrus Lime import's sizes, waits until Jack has seen a real
+  export (answer 11). Merged 6 Nov: Settings › Stockroom › Categories (#626, #627);
+  the stock list with sizes, colours and the Category pill, with details as filters
+  and columns (#628, #629, `/review` and a hand-started CI run).
+  **Now (6 Nov):** paused at Jack's request (weekly usage). Next is WP-1.5 piece 10,
+  a product's page with sizes, Edit, adding a product on screen and editing a price.
+  Before the first real shop: an independent memory check of #616 on a real server,
+  a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
+  store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
