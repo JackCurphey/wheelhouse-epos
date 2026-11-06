@@ -18,6 +18,7 @@ function productRow(p, costs) {
   return {
     kind: 'product', id: p.id, name: p.name, sku: p.sku, barcode: p.barcode, category: p.category, supplier: p.supplier,
     stockQty: p.stock_qty, lowStockThreshold: p.low_stock_threshold, pricePence: p.price_pence, costPence: costs ? p.cost_pence : null, active: !!p.active,
+    vatRateBp: p.vat_rate_bp,
   };
 }
 function sizeRow(p, g, costs) {
@@ -36,6 +37,8 @@ function groupRow(g, items, costs) {
     priceLowPence: Math.min(...prices), priceHighPence: Math.max(...prices),
     costLowPence: costs ? Math.min(...cost) : null, costHighPence: costs ? Math.max(...cost) : null,
     active: items.some((p) => p.active),
+    // A margin needs one rate: none when its sizes differ.
+    vatRateBp: items.every((p) => p.vat_rate_bp === items[0].vat_rate_bp) ? items[0].vat_rate_bp : null,
   };
 }
 
@@ -107,7 +110,18 @@ async function filtersOf(query) {
       sets.push(new Set((await db.prepare('SELECT product_id FROM product_details WHERE detail_id = ? AND value_text = ?').all(detail.id, text)).map((r) => r.product_id)));
     }
   }
-  return (p) => (!category || p.category === category || p.category.startsWith(`${category} › `)) && sets.every((s) => s.has(p.id));
+  const keep = (p) => (!category || p.category === category || p.category.startsWith(`${category} › `)) && sets.every((s) => s.has(p.id));
+  keep.category = category;
+  return keep;
+}
+
+// Each product and size row's answers, { detailId: value }, a number as a number.
+async function withAnswers(rows) {
+  const ids = rows.filter((r) => r.kind !== 'group').map((r) => r.id);
+  const answers = ids.length ? await db.prepare('SELECT product_id, detail_id, value_number, value_text FROM product_details WHERE product_id = ANY(?::int[])').all(ids) : [];
+  const byProduct = new Map(ids.map((id) => [id, {}]));
+  for (const a of answers) byProduct.get(a.product_id)[a.detail_id] = a.value_number === null ? a.value_text : Number(a.value_number);
+  for (const r of rows) if (r.kind !== 'group') r.details = byProduct.get(r.id);
 }
 
 export function register(route) {
@@ -154,6 +168,9 @@ export function register(route) {
       if (sized) rows.push(...found.filter((p) => matches(p, g, words, search) !== 'name').map((p) => sizeRow(p, g, costs)));
       else rows.push(groupRow(g, items, costs));
     }
+    // A category's details as columns (st-filter-bearings) and a measurement's line
+    // (st-search-measure) need each row's answers: only then, for just the rows sent.
+    if (kept.category || words.some((c) => c.ids)) await withAnswers(rows);
     sendJson(res, 200, { rows });
   });
 

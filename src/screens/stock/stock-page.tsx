@@ -5,25 +5,31 @@ import { Search } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
-import { count, margin, marginText, money, mono, productHref, stockState, StateTag, type Product } from './stock-bits.tsx';
+import { count, mono, productHref, rowHasCost, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
 /**
  * Stockroom › Stock (drawn as st-list in stock.mjs; stock control decisions
  * 2 and 11; openspec/changes/stock-list): one search box, All, Running low
  * and Below zero, and every product with its stock, price and (for the
- * Owner) margin, each opening its page. Read only: adding, ticking and the
- * category tree come with later pieces.
+ * Owner) margin, each opening its page. A product with sizes is one row, and a
+ * size searched is its own (st-search-size; stock-list-categories-sizes). Read
+ * only: adding and ticking come with later pieces.
  */
 type Filter = 'All' | 'Running low' | 'Below zero';
 type SortKey = 'name' | 'stock' | 'price' | 'margin';
 const SHOWN = 50;
-const SORTS: Record<SortKey, (p: Product) => number | string> = {
-  name: (p) => p.name.toLowerCase(),
-  stock: (p) => p.stockQty,
-  price: (p) => p.pricePence,
-  margin: (p) => margin(p) ?? -Infinity,
+const SORTS: Record<SortKey, (r: ListRow) => number | string> = {
+  name: (r) => r.name.toLowerCase(),
+  stock: (r) => r.stockQty,
+  price: rowPrice,
+  margin: (r) => rowMargin(r) ?? -Infinity,
 };
-const plural = (n: number) => (n === 1 ? '1 product' : `${n} products`);
+// Sizes found by a search are counted as sizes (st-search-size: "1 size and colour").
+const plural = (rows: ListRow[]) => {
+  const n = rows.length;
+  if (rows.every((r) => r.kind === 'size')) return n === 1 ? '1 size and colour' : `${n} sizes and colours`;
+  return n === 1 ? '1 product' : `${n} products`;
+};
 
 function useTyped(value: string) {
   const [settled, setSettled] = useState(value);
@@ -47,20 +53,20 @@ export function StockPage() {
   const [all, setAll] = useState(false);
   const list = useQuery({
     queryKey: ['stock', search],
-    queryFn: () => apiGet<Product[]>(`/api/products${search ? `?${new URLSearchParams({ search })}` : ''}`),
+    queryFn: async () => (await apiGet<{ rows: ListRow[] }>(`/api/stock-list${search ? `?${new URLSearchParams({ search })}` : ''}`)).rows,
     placeholderData: keepPreviousData,
   });
 
   const by = SORTS[sort.key];
   const rows = (list.data ?? [])
-    .filter((p) => filter === 'All' || stockState(p) === (filter === 'Below zero' ? 'below' : 'low'))
+    .filter((r) => filter === 'All' || rowState(r) === (filter === 'Below zero' ? 'below' : 'low'))
     .sort((a, b) => {
       const [x, y] = [by(a), by(b)];
       return (x < y ? -1 : x > y ? 1 : 0) * (sort.up ? 1 : -1);
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
   // The sign-in can say Owner with someone else at the till: what the server sent decides.
-  const margins = owner && (list.data ?? []).some((p) => p.costPence !== null);
+  const margins = owner && (list.data ?? []).some(rowHasCost);
   const cols = isPhone ? 'grid-cols-[minmax(0,1fr)_auto]' : margins ? 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,0.7fr)]' : 'grid-cols-[minmax(0,2.2fr)_minmax(0,0.9fr)_minmax(0,0.8fr)]';
   const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
@@ -81,11 +87,11 @@ export function StockPage() {
       <label className="flex min-h-[52px] items-center gap-2.5 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-[var(--wh-muted)]">
         <Search aria-hidden="true" size={20} />
         <input type="search" aria-label="Search stock" value={typed} onChange={(e) => { setTyped(e.target.value); setAll(false); }}
-          placeholder="Name, barcode, supplier code or supplier"
+          placeholder="Name, barcode, supplier code — or a measurement, like “bearing 30 mm”"
           className="min-w-0 grow border-0 bg-transparent text-base text-[var(--wh-ink)] outline-none placeholder:text-[var(--wh-muted)]" />
       </label>
       <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}</div>
-      <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (rows.length ? plural(rows.length) : 'No products') : ''}</p>
+      <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (rows.length ? plural(rows) : 'No products') : ''}</p>
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the stock. Try again in a moment.</p>
         : !list.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
         : rows.length === 0 ? (
@@ -103,21 +109,29 @@ export function StockPage() {
               </div>
             )}
             <div role="rowgroup">
-              {shown.map((p) => (
-                <div role="row" key={p.id} className={`grid ${cols} min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
+              {shown.map((r) => {
+                const label = (
+                  <>
+                    <span className="text-size-15 font-semibold underline decoration-[var(--wh-border)]">{r.name}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{[rowLine(r), isPhone ? rowPriceText(r) : null].filter(Boolean).join(' · ')}</span>
+                  </>
+                );
+                const m = rowMargin(r);
+                return (
+                <div role="row" key={rowKey(r)} className={`grid ${cols} min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
                   <span role="cell" className="min-w-0">
-                    <Link to={productHref(p.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">
-                      <span className="text-size-15 font-semibold underline decoration-[var(--wh-border)]">{p.name}</span>
-                      <span className="text-size-13 text-[var(--wh-muted)]">{[p.sku, p.category, p.supplier, isPhone ? money(p.pricePence) : null].filter(Boolean).join(' · ')}</span>
-                    </Link>
+                    {/* A product with sizes' own page is piece 10: until then its row opens nothing. */}
+                    {r.kind === 'group' ? <span className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5">{label}</span>
+                      : <Link to={productHref(r.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">{label}</Link>}
                   </span>
                   <span role="cell" className={`flex flex-wrap items-center gap-2 ${isPhone ? 'justify-end' : ''}`}>
-                    <span className="sr-only">In stock: </span><span className={`${mono} text-size-15`}>{count(p.stockQty)}</span><StateTag state={stockState(p)} />
+                    <span className="sr-only">In stock: </span><span className={`${mono} text-size-15`}>{count(r.stockQty)}</span>{r.kind === 'group' ? null : <StateTag state={rowState(r)} />}
                   </span>
-                  {isPhone ? null : <span role="cell" className={`${mono} text-right text-size-15`}><span className="sr-only">Price: </span>{money(p.pricePence)}</span>}
-                  {isPhone || !margins ? null : <span role="cell" className="text-right text-size-15 text-[var(--wh-muted)]"><span className="sr-only">Margin: </span>{marginText(p)}</span>}
+                  {isPhone ? null : <span role="cell" className={`${mono} text-right text-size-15`}><span className="sr-only">Price: </span>{rowPriceText(r)}</span>}
+                  {isPhone || !margins ? null : <span role="cell" className="text-right text-size-15 text-[var(--wh-muted)]"><span className="sr-only">Margin: </span>{m === null ? '—' : `${m}%`}</span>}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -18,6 +18,10 @@ const LIST = [
   product({ id: 2, sku: '[Supplier code 2]', name: '[Product running low]', pricePence: 1000, costPence: 500, stockQty: 2 }),
   product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', pricePence: 1500, costPence: 500, stockQty: -1 }),
 ];
+// A product with sizes, and a size searched (st-list, st-search-size; stock control decision 4).
+const JERSEY = { kind: 'group', groupId: 9, name: '[Product with sizes]', category: '[Category]', sizes: 2, colours: 2, stockQty: 5, sizesBelowZero: 1, sizesRunningLow: 0, priceLowPence: 3000, priceHighPence: 3500, costLowPence: 1000, costHighPence: 1000, active: true, vatRateBp: 2000 };
+const GLOVES = { ...JERSEY, groupId: 10, name: '[Gloves]', sizes: 3, colours: 1, stockQty: 4, sizesBelowZero: 0, sizesRunningLow: 2, priceLowPence: 1200, priceHighPence: 1200, costLowPence: 500, costHighPence: 500 };
+const SIZE_M = { ...product({ id: 21, sku: '[Supplier code]', barcode: '[barcode]', name: '[Product with sizes]', pricePence: 3500, stockQty: -1 }), kind: 'size', groupId: 9, size: 'M', colour: '[Colour 1]' };
 const HISTORY = [
   { id: 13, type: 'till_sale', change: -2, note: 'Till sale B1-[0000]', at: '2026-09-01T14:00:00.000Z' },
   { id: 12, type: 'adjustment', change: -1, note: 'Damaged', at: '2026-09-01T12:00:00.000Z' },
@@ -39,16 +43,20 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: HISTORY }, noCosts = false } = {}) {
+async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: HISTORY }, noCosts = false, sized = false } = {}) {
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     calls.push(String(url));
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
-    if (u.pathname === '/api/products') {
+    if (u.pathname === '/api/stock-list') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
-      return reply(200, LIST.filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q)).map((p) => (noCosts ? { ...p, costPence: null } : p)));
+      if (sized && q === '[product with sizes] m') return reply(200, { rows: [SIZE_M] });
+      const rows = [...LIST.map((p) => ({ kind: 'product', ...p })), ...(sized ? [JERSEY, GLOVES] : [])]
+        .filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q))
+        .map((p) => (noCosts ? { ...p, costPence: null, costLowPence: null, costHighPence: null } : p));
+      return reply(200, { rows });
     }
     if (u.pathname === '/api/products/1') return reply(200, { ...page, costPence: me.isOwner && !noCosts ? page.costPence : null });
     if (u.pathname === '/api/products/404') return reply(404, { error: 'Product not found' });
@@ -88,6 +96,49 @@ test('the list as drawn: search, filters, each product with its stock, price and
   assert.ok(ui.queryByRole('checkbox') === null, 'tick boxes lead only to changes: not in this piece');
 });
 
+test('a product with sizes is one row: its sizes, colours and the size below zero, its total, and its prices lowest to highest', async () => {
+  const { ui, within } = await open('/workshop/stock', { sized: true });
+  await ui.findByRole('link', { name: /Shimano brake pads/ });
+  const jersey = within(ui.getByText('[Product with sizes]').closest('[role="row"]'));
+  assert.ok(jersey.getByText('[Category] · 2 sizes · 2 colours · 1 size below zero'));
+  assert.ok(jersey.getByText('5'));
+  assert.ok(jersey.getByText('£30.00–£35.00'));
+  assert.ok(jersey.queryByText('Below zero') === null, 'the line says which size; no tag on the row');
+  // Prices differ, so no one margin.
+  assert.ok(jersey.getByText('—'));
+  assert.ok(jersey.queryByRole('link') === null, 'its page is piece 10');
+  const gloves = within(ui.getByText('[Gloves]').closest('[role="row"]'));
+  assert.ok(gloves.getByText('[Category] · 3 sizes · 1 colour · 2 sizes running low'));
+  assert.ok(gloves.getByText('£12.00'));
+  // £12.00 is £10.00 before 20% VAT; less £5.00 cost is 50% of it.
+  assert.ok(gloves.getByText('50%'));
+  assert.ok(ui.getByText('5 products'));
+});
+
+test('Below zero keeps a product with a size below zero; Running low one with a size running low', async () => {
+  const { ui, fireEvent } = await open('/workshop/stock', { sized: true });
+  await ui.findByRole('link', { name: /Shimano brake pads/ });
+  fireEvent.click(ui.getByRole('button', { name: 'Below zero' }));
+  assert.ok(ui.getByText('[Product with sizes]'));
+  assert.ok(ui.queryByText('[Gloves]') === null);
+  fireEvent.click(ui.getByRole('button', { name: 'Running low' }));
+  assert.ok(ui.getByText('[Gloves]'));
+  assert.ok(ui.queryByText('[Product with sizes]') === null);
+});
+
+test('a size searched is its own row: its size, colour and barcode, opening that size', async () => {
+  const { ui, fireEvent, within } = await open('/workshop/stock', { sized: true });
+  await ui.findByRole('link', { name: /Shimano brake pads/ });
+  assert.equal(ui.getByRole('searchbox', { name: 'Search stock' }).getAttribute('placeholder'), 'Name, barcode, supplier code — or a measurement, like “bearing 30 mm”');
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: '[Product with sizes] M' } });
+  const size = await ui.findByRole('link', { name: /Size M · \[Colour 1\] · \[barcode\]/ });
+  assert.equal(size.getAttribute('href'), '/workshop/stock/21');
+  const row = within(size.closest('[role="row"]'));
+  assert.ok(row.getByText('−1'));
+  assert.ok(row.getByText('Below zero'));
+  assert.ok(ui.getByText('1 size and colour'));
+});
+
 test('Staff see no margin on the list (stock decision 11)', async () => {
   const { ui } = await open('/workshop/stock', { me: JO });
   await ui.findByRole('link', { name: /Shimano brake pads/ });
@@ -115,7 +166,7 @@ test('searching asks the server, by what was typed', async () => {
   await ui.findByRole('link', { name: /Shimano brake pads/ });
   fireEvent.change(ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: 'B05S' } });
   await ui.findByText('1 product');
-  assert.ok(calls.some((c) => c.includes('/api/products?search=B05S')), calls.join('\n'));
+  assert.ok(calls.some((c) => c.includes('/api/stock-list?search=B05S')), calls.join('\n'));
   assert.ok(ui.queryByRole('link', { name: /\[Product running low\]/ }) === null);
 });
 

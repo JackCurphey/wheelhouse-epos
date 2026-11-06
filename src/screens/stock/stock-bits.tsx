@@ -13,6 +13,43 @@ export type Product = {
 };
 
 export const productHref = (id: number) => ROUTES['st-product'].replace(':id', String(id));
+
+/**
+ * A row of GET /api/stock-list (openspec/changes/stock-list-categories-sizes): a product, a
+ * size found by a search, or a product with sizes as one. `details` comes only with a
+ * category picked or a measurement searched.
+ */
+type Answers = { details?: Record<string, number | string> };
+export type ProductRow = Omit<Product, 'showOnline' | 'photoUrl'> & Answers & { kind: 'product' };
+export type SizeRow = Omit<Product, 'showOnline' | 'photoUrl'> & Answers & { kind: 'size'; groupId: number; size: string | null; colour: string | null };
+export type GroupRow = {
+  kind: 'group'; groupId: number; name: string; category: string; sizes: number; colours: number; stockQty: number;
+  sizesBelowZero: number; sizesRunningLow: number; priceLowPence: number; priceHighPence: number;
+  costLowPence: number | null; costHighPence: number | null; active: boolean; vatRateBp: number | null;
+};
+export type ListRow = ProductRow | SizeRow | GroupRow;
+const several = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+export const rowKey = (r: ListRow) => (r.kind === 'group' ? `g${r.groupId}` : `${r.kind[0]}${r.id}`);
+/** A product with sizes counts as below zero, or running low, when one of its sizes is. */
+export const rowState = (r: ListRow) => (r.kind === 'group' ? (r.sizesBelowZero ? 'below' : r.sizesRunningLow ? 'low' : null) : stockState(r));
+export const rowPrice = (r: ListRow) => (r.kind === 'group' ? r.priceLowPence : r.pricePence);
+export const rowPriceText = (r: ListRow) => (r.kind !== 'group' ? money(r.pricePence) : r.priceLowPence === r.priceHighPence ? money(r.priceLowPence) : `${money(r.priceLowPence)}–${money(r.priceHighPence)}`);
+/** A product with sizes has one margin only when every size has one price, cost and VAT rate. */
+export function rowMargin(r: ListRow): number | null {
+  if (r.kind !== 'group') return margin(r);
+  if (r.priceLowPence !== r.priceHighPence || r.costLowPence === null || r.costLowPence !== r.costHighPence || r.vatRateBp === null) return null;
+  return margin({ pricePence: r.priceLowPence, costPence: r.costLowPence, vatRateBp: r.vatRateBp });
+}
+export const rowHasCost = (r: ListRow) => (r.kind === 'group' ? r.costLowPence !== null : r.costPence !== null);
+/** The line under its name, as st-list and st-search-size draw it. */
+export function rowLine(r: ListRow): string {
+  if (r.kind === 'size') return [r.size ? `Size ${r.size}` : null, r.colour, r.barcode].filter(Boolean).join(' · ');
+  if (r.kind === 'product') return [r.sku, r.category, r.supplier].filter(Boolean).join(' · ');
+  return [r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
+    r.sizesBelowZero ? `${several(r.sizesBelowZero, 'size', 'sizes')} below zero` : null,
+    r.sizesRunningLow ? `${several(r.sizesRunningLow, 'size', 'sizes')} running low` : null].filter(Boolean).join(' · ');
+}
 export const mono = 'font-[family-name:var(--wh-font-mono)]';
 export const money = (pence: number) => `£${(pence / 100).toFixed(2)}`;
 // A count as drawn: a true minus sign below zero.

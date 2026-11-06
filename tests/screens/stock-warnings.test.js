@@ -51,7 +51,7 @@ async function open(path, { me = JACK, items = [ADJUSTED, BELOW], over = null, s
     if (u.pathname === '/api/needs-attention' && server.next) { const first = server.items; server.items = server.next; server.next = null; return reply(200, { items: first }); }
     if (u.pathname === '/api/stock-takes' && method === 'POST') return startStatus === 201 ? reply(201, { id: 77, kind: 'below_zero' }) : reply(startStatus, { error: 'Nothing is below zero' });
     if (u.pathname === '/api/needs-attention') return me.isOwner ? reply(200, { items: server.items }) : reply(403, { error: 'no', code: 'owner_only' });
-    if (u.pathname === '/api/products') return reply(200, [product({}), product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', stockQty: -1 })]);
+    if (u.pathname === '/api/stock-list') return reply(200, { rows: [product({}), product({ id: 3, sku: '[Supplier code 3]', name: '[Product below zero]', stockQty: -1 })].map((p) => ({ kind: 'product', ...p })) });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/workshop-jobs') return reply(200, []);

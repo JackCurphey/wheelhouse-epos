@@ -2279,6 +2279,16 @@ WP-1.5's. So: slice C, WP-2.3.
 8. **A choice taken off goes at once, with no Undo;** Undo is drawn for a detail only. Saving is still needed, and Cancel drops it.
 9. **On a phone the box takes the whole width and scrolls inside, and a detail's row wraps,** as the other boxes do. Nothing scrolls sideways at 375 px.
 
+### 6 Nov 2026: the Stock list's sizes and categories (WP-1.5, piece 9; `openspec/changes/stock-list-categories-sizes`; `st-list`, `st-search-size`, `st-filter-bearings`, `st-filter-derailleurs`, `st-search-measure`)
+
+1. **A product with sizes' price reads "£30.00–£35.00" when its sizes differ, "£30.00" when they don't** (piece 5's note left how a range reads to this screen; the drawing shows one "£[price]").
+2. **A product with sizes shows a margin only when every size has one price, one cost and one VAT rate;** otherwise "—", as a product with no cost does. Its page (piece 10) has each size's.
+3. **A product with sizes' line names its sizes running low too,** "· 2 sizes running low", after the drawn "· 1 size below zero"; its row has no Below zero or Running low tag, as drawn, since the line says which. Below zero keeps it when a size is below zero, Running low when one is running low.
+4. **A product with sizes' row opens nothing until its page is built (piece 10).** Opening one of its sizes would show a single size as if it were the product.
+5. **A size found by a search reads "Size M · [Colour] · [barcode]"**, the drawing's "its own barcode" being its barcode; with no barcode, or no size or colour, that part is left out. It opens that size's own page, each size being a product.
+6. **When every row is a size, the count reads "1 size and colour", "2 sizes and colours"**, as drawn; otherwise "[n] products", a product with sizes counting as one.
+7. **The list reads each row's VAT rate from the server** for its margin, as a product's page does (risky: money; nothing about who sees a cost changes).
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
