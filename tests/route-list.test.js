@@ -22,8 +22,8 @@ import { routesOverlap } from '../scripts/print-route-list.mjs';
 const snapshot = readFileSync(new URL('./fixtures/route-list.txt', import.meta.url), 'utf8')
   .split('\n').filter(Boolean);
 
-test('the snapshot is the 305 routes it was taken with, each once', () => {
-  assert.equal(snapshot.length, 305);
+test('the snapshot is the 308 routes it was taken with, each once', () => {
+  assert.equal(snapshot.length, 308);
   assert.equal(new Set(snapshot).size, snapshot.length);
 });
 

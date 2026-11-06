@@ -8,7 +8,7 @@ import { runSync } from '../suppliers/index.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
-import { priceTooBig } from '../lib/pence.js';
+import { poundsOf } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
 import { emptyComputer, notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, moveStock } from '../lib/stock.js';
@@ -149,8 +149,8 @@ export function register(route) {
     if (!item) return notFound(res, 'Catalogue item not found');
     if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
     const body = await readJsonBody(req);
-    const sellPrice = Number(body.price);
-    if (!Number.isFinite(sellPrice) || sellPrice < 0 || priceTooBig(sellPrice)) return badRequest(res, 'A valid sell price is required');
+    const sellPrice = poundsOf(body.price);
+    if (sellPrice === null) return badRequest(res, 'A valid sell price is required');
 
     const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
     // Starting stock needs someone to name, and has its line (stock-movements-say-who, design 6).
