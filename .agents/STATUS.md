@@ -136,10 +136,20 @@ here before starting it, so two people never build the same one):
   and a second press count once (#611, migration 116). Dropped and stalled connections
   no longer hold the database connections: bodies are read first, with deadlines and
   limits (#610, #612). Each had an independent review and a hand-started CI run.
-  **Now (5 Nov):** in review: stock per shop, with a first shop for every business
-  (#613, #614, migrations 117, 118). Being fixed: one very large no-sign-in booking
-  request can crash the server (already on main). Next is the category tree (WP-1.5
-  piece 4). Roles and the settings store (WP-1.1, 1.2) stay Mark's.
+  Merged 5-6 Nov: one very large no-sign-in request can no longer crash the server:
+  a body's values are counted before it's parsed (#616, #621). Stock per shop, with a
+  first shop for every business named after it (#613, #614, migrations 117, 118). The
+  category tree and its details, server only (#617, #618, migration 119). Sizes and
+  colours, each size its own product in a group (#619, #620, migration 120). Product
+  editing: adding and changing products, prices and costs is Owner only until "Can
+  order stock" exists (decision 11); search by measurement; making products with
+  sizes, each named like "Jersey M Blue" (#622 to #624, migration 121; Jack's answers
+  9 and 10). Each had an independent review and a hand-started CI run, except the
+  test-only #621.
+  **Now (6 Nov):** WP-1.5 piece 7, linking the Citrus Lime import's sizes. Before the
+  first real shop: an independent memory check of #616 on a real server, a test
+  through Caddy, and a real inbox for Ask us to help. Roles and the settings store
+  (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
   WorkOS: Jack's account, Staging only
   (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
