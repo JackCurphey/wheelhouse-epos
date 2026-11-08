@@ -88,7 +88,7 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
   useEffect(() => {
     if (focused.current) return;
     if (focus === 'name') nameRef.current?.focus();
-    else if (categories.isSuccess) detailsRef.current?.querySelector<HTMLElement>('input, select')?.focus();
+    else if (categories.isSuccess) (detailsRef.current?.querySelector<HTMLElement>('[id^="pb-d"]') ?? detailsRef.current?.querySelector<HTMLElement>('select'))?.focus();
     else return;
     focused.current = true;
   }, [focus, categories.isSuccess]);

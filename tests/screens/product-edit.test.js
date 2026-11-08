@@ -189,6 +189,7 @@ test('Details · Bearings shows its answers; the box saves a changed one after t
   const box = await editBox(t, 'Edit details');
   await box.findByLabelText('Outer diameter');
   assert.equal(box.getByLabelText('Outer diameter').value, '30');
+  await t.waitFor(() => assert.ok(document.activeElement === box.getByLabelText('Inner diameter'), 'Edit details lands on the first detail'));
   type(t, box, 'Inner diameter', '10');
   t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
   await t.waitFor(() => assert.equal(sent.length, 2));
