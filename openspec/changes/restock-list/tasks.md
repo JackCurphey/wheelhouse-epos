@@ -14,7 +14,7 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 - [x] 2.2 `restock-page.tsx`, its route; the hub's Restock list card; the order page's line.
 - [x] 2.3 A browser test (`tests/browser/restock.spec.ts`): the Owner opens the list from Deliveries and orders, unticks one, adds the rest to an order, at computer and phone widths.
 
-## 3. Today's line (pull request 3)
+## 3. Today's line (in pull request 2)
 
 - [x] 3.1 Tests: `restock_new` in the Owner's needs-attention with its counts, gone once the list is opened or downloaded, back when something new comes on, each person's own; the screen's line and Open.
 - [x] 3.2 `today.js` `restockNew()`; `today-page.tsx`'s line.

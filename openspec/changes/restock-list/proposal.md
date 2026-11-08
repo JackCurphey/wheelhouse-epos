@@ -17,7 +17,7 @@ Online orders that "order in" an item (the buy-online decisions' "items we can o
 
 ## Who and risk
 
-WP-2.3, Jack's side. Owner-only for now, like orders ("Only the shop's owner can order stock"), until Mark's roles. Risky: **migrations** (123) and **money and stock** (it reads stock and writes order lines). `/review` before each merge, and a hand-run CI. Pull requests, stacked: (1) the server; (2) the Restock list screen and the hub's section; (3) Today's line, then the archive.
+WP-2.3, Jack's side. Owner-only for now, like orders ("Only the shop's owner can order stock"), until Mark's roles. Risky: **migrations** (123) and **money and stock** (it reads stock and writes order lines). `/review` before each merge, and a hand-run CI. Pull requests, stacked: (1) the server; (2) the Restock list screen, the hub's section and Today's line, then the archive (Today's line was folded into the second, being 75 lines).
 
 ## Follows
 
