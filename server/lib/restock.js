@@ -85,9 +85,11 @@ async function jobNeeds() {
 // The list, and the keys of its lines for "new since last opened" (low:[product],
 // fast:[product], job:[job]:[product]).
 export async function restockList() {
-  const [sales, ordered, needs, suppliers] = await Promise.all([
-    salesByProduct(), onOrder(), jobNeeds(), prepare('SELECT id, name FROM suppliers ORDER BY name').all(),
-  ]);
+  // One after another: a request has one connection, which takes one query at a time.
+  const sales = await salesByProduct();
+  const ordered = await onOrder();
+  const needs = await jobNeeds();
+  const suppliers = await prepare('SELECT id, name FROM suppliers ORDER BY name').all();
   const fastIds = [...sales.values()]
     .filter((s) => s.sold >= FAST_AT_LEAST && s.sold >= FAST_TIMES * (s.before / USUAL_PERIODS))
     .map((s) => s.product_id);
