@@ -50,6 +50,9 @@ export const ROUTES = {
   // orders (openspec/changes/deliveries-orders).
   'rs-order': '/workshop/deliveries/new-order',
   'rs-order-ordered': '/workshop/deliveries/orders/:id',
+  // The restock list (rs-restock), from Deliveries and orders and Today; ?show=low, fast or
+  // customers picks the pill (openspec/changes/restock-list).
+  'rs-restock': '/workshop/deliveries/restock',
   // Receive a delivery (rs-receive), from the hub and an order; ?order=[id]
   // picks the order (openspec/changes/receive-delivery).
   'rs-receive': '/workshop/deliveries/receive',

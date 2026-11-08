@@ -58,7 +58,7 @@ export function OrderPage() {
         <div><Tag>{STATUS[o.status]}</Tag></div>
         <ul aria-label="Lines" className="m-0 list-none p-0">
           {o.items.map((it) => (
-            <Row key={it.id} title={it.name} sub={`${it.sku ? `${it.sku} · ` : ''}ordered ${it.qtyOrdered} · arrived ${it.qtyReceived}`}>
+            <Row key={it.id} title={it.name} sub={`${it.sku ? `${it.sku} · ` : ''}${it.forJob?.ref ? `for job ${it.forJob.ref} · ` : ''}ordered ${it.qtyOrdered} · arrived ${it.qtyReceived}`}>
               {it.notComing > 0 ? <Tag>{`${it.notComing} not coming`}</Tag> : it.outstanding <= 0 ? <Tag ok>All arrived</Tag> : <Tag>{`${it.outstanding} to come`}</Tag>}
             </Row>
           ))}

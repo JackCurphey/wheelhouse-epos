@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { RecentDeliveries } from './delivery-page.tsx';
 import { ToReturn } from './to-return.tsx';
+import { RestockSection } from './restock-page.tsx';
 import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, orderHref, stillToCome, type Order } from './deliveries-bits.tsx';
 
 /**
@@ -16,8 +17,8 @@ import { Card, ONLY_OWNER, Page, Row, STATUS, Tag, day, isOpen, linkClass, order
  * (openspec/changes/receive-delivery and receive-without-order).
  * To return to [Supplier] second, only when something's on it
  * (openspec/changes/to-return). Recent deliveries last, for everyone
- * (openspec/changes/delivery-booked-in). Products to add comes later; the
- * restock list waits for answers.
+ * (openspec/changes/delivery-booked-in). The Restock list after To return,
+ * for the Owner (openspec/changes/restock-list). Products to add comes later.
  */
 export function DeliveriesPage() {
   const session = useSession();
@@ -38,6 +39,7 @@ export function DeliveriesPage() {
       {arrived}
       {/* Second, only when something's on it (decision 10; openspec/changes/to-return). */}
       <ToReturn />
+      <RestockSection />
       <Card id="t-orders" title="Orders" action={<Link to={ROUTES['rs-order']} className={buttonVariants({ variant: 'default' })}>+ New order</Link>}>
         {orders.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the orders. Try again in a moment.</p>
           : !open ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>

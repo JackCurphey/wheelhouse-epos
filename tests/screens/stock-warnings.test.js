@@ -193,3 +193,19 @@ test('Today: no value sent (the Owner’s till with Jo checked in): the line sho
   assert.ok(!line.textContent.includes('−2 ·'), line.textContent);
   assert.ok(!line.textContent.includes('NaN'), line.textContent);
 });
+
+// New on the restock list (rs-today-restock; openspec/changes/restock-list; audit M11).
+test('new on the restock list: the drawn line with Open, which opens the list', async () => {
+  const t = await open('/workshop/today', { items: [{ kind: 'restock_new', count: 2, forJobs: 1 }] });
+  const line = await row(t, '2 new products running low, selling fast or for customers');
+  assert.ok(line.textContent.includes('Since the restock list was last opened · 1 for jobs or online orders'), line.textContent);
+  const openIt = t.within(line).getByRole('link', { name: 'Open the restock list' });
+  assert.equal(openIt.textContent, 'Open');
+  assert.equal(openIt.getAttribute('href'), '/workshop/deliveries/restock');
+});
+
+test('new on the restock list: one product says product', async () => {
+  const t = await open('/workshop/today', { items: [{ kind: 'restock_new', count: 1, forJobs: 0 }] });
+  const line = await row(t, '1 new product running low, selling fast or for customers');
+  assert.ok(line.textContent.includes('Since the restock list was last opened · 0 for jobs or online orders'), line.textContent);
+});

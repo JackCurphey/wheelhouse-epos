@@ -15,6 +15,7 @@ import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
 import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
 import { TILL_ORDER } from '../till/this-till.js';
+import { restockList, newSince } from '../lib/restock.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -87,6 +88,15 @@ async function belowZero() {
   if (!n) return [];
   const take = await prepare("SELECT id FROM stock_takes WHERE kind = 'below_zero' AND status = 'counting' ORDER BY id DESC LIMIT 1").get();
   return [{ kind: 'below_zero', count: n, takeId: take?.id ?? null }];
+}
+
+// New on the restock list since this person last opened it (rs-today-restock; receiving
+// decision 2, audit M11 and L6; openspec/changes/restock-list): how many products, and how
+// many of those for jobs. Opening the list or downloading from it clears it.
+async function restockNew(loginId) {
+  const { keys } = await restockList();
+  const { newCount, newForJobs } = await newSince(loginId, keys);
+  return newCount > 0 ? [{ kind: 'restock_new', count: newCount, forJobs: newForJobs }] : [];
 }
 
 // Adjustments worth more than the shop's amount when they were made, not yet
@@ -184,7 +194,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req)))] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id))] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision

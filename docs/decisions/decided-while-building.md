@@ -2319,6 +2319,27 @@ WP-1.5's. So: slice C, WP-2.3.
 17. **The new cost becomes both the line's and the product's,** whatever the product's cost was by then, in one go; the history line names the delivery. The same cost as the line's changes nothing. It works on a delivery of any age, as nothing said otherwise.
 18. **Stock's "+ Add a product" and receiving's "Add this product" show for the Owner's sign-in** (the review): with someone else checked in on a till, the box opens and saving says "Only the shop’s owner can add or change products", saving nothing. Neither page has anything from the server to hide them by, as a product's page has its cost; roles (WP-1.1) will settle who sees them.
 
+### 8 Nov 2026: the restock list (WP-2.3; `openspec/changes/restock-list`; `rs-restock`, `rs-restock-customers`, `rs-today-restock`, `rs-hub`)
+
+Your 27 Oct answer 2 left five details to settle when the restock list was built. Four are settled here as defaults, each one line to change in `server/lib/restock.js`; the fifth you settled on 4 Nov (answer 10).
+
+1. **Selling fast** is at least 3 sold in the last 28 days, and at least twice the product's usual: what it sold in the 24 weeks before, per 28 days. Till and online sales both count. The drawing's "Sold, last [n] days" reads 28.
+2. **The suggested count** is enough to bring a product back above its low-stock level and cover another 28 days of sales like the last: its low-stock level, plus what sold in the last 28 days, less what's in stock (after jobs take theirs) and what's already on order, at least 1. A job's line suggests what that job is short.
+3. **The basket file** is a CSV: Supplier code, Quantity, Product, Barcode, one line each. The drawing's "[the supplier’s basket-upload format] — to be checked for each supplier" reads "Downloads a CSV file: supplier code, quantity, product and barcode, a line each — check it suits each supplier’s basket upload."
+4. **Supplier by name** (your 4 Nov answer 10): a product's supplier is matched to the suppliers list ignoring capitals and spaces at either end. A name not in the list is its own group with the download but no Add to an order, saying "[Name] isn’t in your suppliers yet"; a product with no supplier is under "No supplier", last.
+5. **For customers comes from jobs only:** a part on an open job's order that the stock, then what's still to come on orders, doesn't cover (walk-through 3 M7). The stock goes to jobs by their day, then the order they were made. Finished, cancelled and not-yet-accepted jobs don't count. Online orders that "order in" an item aren't in Wheelhouse yet, so none are listed; the hub's and Today's drawn words ("or an online order is ordering in", "for jobs or online orders") are kept for when they are.
+6. **"Promised"** is the job's day in the diary, as nothing else on a job holds a promised date.
+7. **Who:** the Owner only, as orders, until roles ("Only the shop's owner can order stock"). Staff see "The restock list is for the shop’s owner for now." on its page and no Restock list section on Deliveries and orders.
+8. **Already ordered enough:** a product running low or selling fast whose stock and orders (drafts included) already cover the suggestion is left off; a job's part on an order for that job leaves For customers.
+9. **Running low includes below zero** here (it needs reordering most), though Stock lists those under Below zero.
+10. **A part taken off sale** still shows for the jobs waiting for it, never as running low or selling fast.
+11. **On All,** a product a job waits for is one line, "B05S-RX · for job WH-1042", its count the stock suggestion plus the jobs' shortfalls; Add to an order sends each job's share as a line for that job first, then the rest as one line. Running low and Selling fast show those products the same way; For customers shows one line per job.
+12. **Add to an order** adds to the supplier's newest draft order, or makes one, and opens it; the same product for the same job (or none) goes up rather than adding a line. The order's page says "for job WH-1042" on the line. Editing a draft keeps each line's job.
+13. **Ticks and counts** are kept per pill and group while the page is open; switching pills starts that pill's lines ticked at their suggested counts.
+14. **Nothing on the list:** "Nothing to reorder." (not drawn; follows Orders' empty note).
+15. **The page's title** is "Deliveries and orders" with the way back, as New order's is; the card is the drawn "Tick what to reorder".
+16. **Today's "new"** is per person: the list's lines when that person last opened it or downloaded from it; a product counts once however many reasons it's on for.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

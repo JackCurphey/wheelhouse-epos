@@ -11,6 +11,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
+import { NavIcon } from '@/staff/nav-icon.tsx';
 import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { clock, londonDay, shortDate, when } from '@/screens/diary/when.ts';
@@ -31,6 +32,7 @@ type Attention =
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'day_not_closed'; day: string; checkId: number; checkDay: string; countedByName: string; checkedAt: string; tillCode: string | null }
   | { kind: 'below_zero'; count: number; takeId: number | null }
+  | { kind: 'restock_new'; count: number; forJobs: number }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
 type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
@@ -226,6 +228,15 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${i.count} ${i.count === 1 ? 'product' : 'products'} below zero`}
           sub={phone ? <>{sub}<span className="mt-1 flex text-[var(--wh-ink)]">{acts}</span></> : sub}
           right={phone ? null : acts} />
+      );
+    }
+    // rs-today-restock: new on the restock list since it was last opened (audit M11).
+    if (i.kind === 'restock_new') {
+      return (
+        <Line key="restock-new" lead={<span aria-hidden="true" className="inline-flex text-[var(--wh-ink)]"><NavIcon name="purchasing" size={18} /></span>}
+          title={`${i.count} new ${i.count === 1 ? 'product' : 'products'} running low, selling fast or for customers`}
+          sub={`Since the restock list was last opened · ${i.forJobs} for jobs or online orders`}
+          right={<Link to={ROUTES['rs-restock']} aria-label="Open the restock list" className={linkButton(touch)}>Open</Link>} />
       );
     }
     // st-today-adjust: the product's name opens its page (audit M8).
