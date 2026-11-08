@@ -28,4 +28,4 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 
 - [x] 5.1 Tests: the Owner's change moves the line, the product's cost and its history together; the same cost changes nothing; Jo is refused; a line of another delivery, or one that isn't there, is not found; another business's delivery can't be reached.
 - [x] 5.2 `PUT /api/deliveries/booked-in/:id/lines/:lineId/cost`; the delivery page's Change cost and its box.
-- [x] 5.3 Log every gap in Jack's section of `decided-while-building.md`; `/opsx:archive` as the last commit.
+- [ ] 5.3 Log every gap in Jack's section of `decided-while-building.md`; `/opsx:archive` as the last commit.
