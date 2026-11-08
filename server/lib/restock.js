@@ -92,10 +92,11 @@ export async function restockList() {
     .filter((s) => s.sold >= FAST_AT_LEAST && s.sold >= FAST_TIMES * (s.before / USUAL_PERIODS))
     .map((s) => s.product_id);
   const products = await prepare(
-    `SELECT id, name, sku, barcode, stock_qty, low_stock_threshold, supplier FROM products
-     WHERE active = 1 AND ((low_stock_threshold > 0 AND stock_qty <= low_stock_threshold) OR id = ANY(?::int[]))
+    `SELECT id, name, sku, barcode, stock_qty, low_stock_threshold, supplier, active FROM products
+     WHERE (active = 1 AND ((low_stock_threshold > 0 AND stock_qty <= low_stock_threshold) OR id = ANY(?::int[])))
+        OR id = ANY(?::int[])
      ORDER BY name, id`
-  ).all([...new Set([...fastIds, ...needs.keys()])]);
+  ).all(fastIds, [...needs.keys()]);
 
   const fastSet = new Set(fastIds);
   const supplierByName = new Map(suppliers.map((s) => [nameKey(s.name), s]));
@@ -103,22 +104,29 @@ export async function restockList() {
   const keys = [];
   for (const p of products) {
     const sold = sales.get(p.id)?.sold ?? 0;
-    // The stock goes to jobs in turn; what it doesn't cover is each job's shortfall, less
-    // what's still to come on an order for that job.
+    // The stock goes to jobs in turn, then what's still to come on orders not for a job; what
+    // neither covers is each job's shortfall, less what's to come on an order for that job.
     let free = Math.max(p.stock_qty, 0);
+    let coming = ordered.plain.get(p.id) ?? 0;
     let covered = 0;
     const jobs = [];
     for (const n of needs.get(p.id) ?? []) {
-      const take = Math.min(free, n.qty);
+      let short = Math.max(0, n.qty - (ordered.forJob.get(`${n.job_id}:${p.id}`) ?? 0));
+      const take = Math.min(free, short);
       free -= take;
       covered += take;
-      const short = n.qty - take - (ordered.forJob.get(`${n.job_id}:${p.id}`) ?? 0);
+      short -= take;
+      const fromOrder = Math.min(coming, short);
+      coming -= fromOrder;
+      short -= fromOrder;
       if (short > 0) jobs.push({ jobId: n.job_id, ref: n.reference ?? null, customer: n.customer ?? null, promised: n.job_date, qty: short });
     }
-    let low = p.low_stock_threshold > 0 && p.stock_qty <= p.low_stock_threshold;
-    let fast = fastSet.has(p.id);
-    // The shop's own stock is what's left once the jobs take theirs, so nothing counts twice.
-    const rule = p.low_stock_threshold + sold - (p.stock_qty - covered) - (ordered.plain.get(p.id) ?? 0);
+    // An off-sale product is listed only for the jobs still waiting for it.
+    let low = p.active === 1 && p.low_stock_threshold > 0 && p.stock_qty <= p.low_stock_threshold;
+    let fast = p.active === 1 && fastSet.has(p.id);
+    // The shop's own stock and orders are what's left once the jobs take theirs, so nothing
+    // counts twice.
+    const rule = p.low_stock_threshold + sold - (p.stock_qty - covered) - coming;
     // Already ordered enough: not low or fast here.
     if (rule <= 0) { low = false; fast = false; }
     if (!low && !fast && jobs.length === 0) continue;

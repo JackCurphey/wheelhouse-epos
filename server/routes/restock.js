@@ -25,7 +25,7 @@ async function downloadLines(lines) {
     if (!Number.isInteger(productId) || !Number.isInteger(qty) || qty <= 0) throw new ValidationError(BAD_LINE);
     if (qty > MAX_QTY) throw new ValidationError(`A line can order at most ${MAX_QTY}`);
     const p = await db.prepare('SELECT name, sku, barcode FROM products WHERE id = ?').get(productId);
-    if (!p) throw new ValidationError(`Product ${productId} not found or inactive`);
+    if (!p) throw new ValidationError(`Product ${productId} not found`);
     out.push({ ...p, qty });
   }
   return out;
@@ -67,9 +67,13 @@ export function register(route) {
       throw err;
     }
     await markSeen(ctx.login.id, (await restockList()).keys);
+    // The shop's own day, not the server's (UTC) one.
+    const day = (await db.prepare(
+      "SELECT to_char(now() AT TIME ZONE COALESCE((SELECT time_zone FROM workshop_settings LIMIT 1), 'Europe/London'), 'YYYY-MM-DD') AS d"
+    ).get()).d;
     res.writeHead(200, {
       'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': `attachment; filename="restock-${fileSlug(body.supplier)}-${nowIso().slice(0, 10)}.csv"`,
+      'content-disposition': `attachment; filename="restock-${fileSlug(body.supplier)}-${day}.csv"`,
     });
     res.end(csvOf([['Supplier code', 'Quantity', 'Product', 'Barcode'], ...lines.map((l) => [l.sku ?? '', l.qty, l.name, l.barcode ?? ''])]));
   });

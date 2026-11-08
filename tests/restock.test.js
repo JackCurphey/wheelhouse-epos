@@ -178,6 +178,23 @@ test('a job and a low product together: stock the job takes isn’t counted twic
   assert.deepEqual(l.jobs, []);
 });
 
+test('a job’s part already coming on a plain order line isn’t asked for again', async () => {
+  const pads = await product({ stock: 0, low: 0 });
+  await job({ lines: [[pads.id, 1]] });
+  const order = await asOwner('/api/purchase-orders', { method: 'POST', body: { supplierId, items: [{ productId: pads.id, qty: 5 }] } });
+  assert.equal(order.status, 201, JSON.stringify(order.body));
+  assert.equal(lineFor(await list(), pads.id), undefined, 'the 5 coming cover the job');
+});
+
+test('a job waiting for a part taken off sale still shows it', async () => {
+  const gone = await product({ stock: 0, low: 3, active: 0 });
+  const j = await job({ lines: [[gone.id, 2]] });
+  const l = lineFor(await list(), gone.id);
+  assert.ok(l, 'still on For customers');
+  assert.equal(l.low, false, 'off sale: not low');
+  assert.deepEqual(l.jobs.map((x) => [x.jobId, x.qty]), [[j.id, 2]]);
+});
+
 test('suppliers matched by name, ignoring capitals and spaces; an unknown name its own group; none under No supplier', async () => {
   const a = await product({ supplier: '  [supplier] ', stock: 0 });
   const b = await product({ supplier: '[Supplier 9]', stock: 0 });
