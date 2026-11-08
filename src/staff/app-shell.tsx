@@ -21,6 +21,7 @@ import { PrivacyRequestsPage } from '@/screens/customers/privacy-requests.tsx';
 import { StockPage } from '@/screens/stock/stock-page.tsx';
 import { MovePage } from '@/screens/moving/move-page.tsx';
 import { ProductPage } from '@/screens/stock/product-page.tsx';
+import { SizesPage } from '@/screens/stock/sizes-page.tsx';
 import { YourSettingsPage } from '@/screens/your-settings/your-settings-page.tsx';
 import { DeliveriesPage } from '@/screens/deliveries/deliveries-page.tsx';
 import { NewOrderPage } from '@/screens/deliveries/new-order.tsx';
@@ -48,10 +49,10 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, moving: MovePage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-privacy': PrivacyRequestsPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'rs-delivery': DeliveryPage, 'rs-booked': DeliveryBookedPage, 'eod-count': CloseTheDayPage, 'till-setup': TillSetupPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, moving: MovePage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-privacy': PrivacyRequestsPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, 'st-product-sizes': SizesPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-receive': ReceivePage, 'rs-delivery': DeliveryPage, 'rs-booked': DeliveryBookedPage, 'eod-count': CloseTheDayPage, 'till-setup': TillSetupPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-privacy', 'cs-bike', 'st-product', 'rs-order', 'rs-order-ordered', 'rs-receive', 'rs-delivery', 'rs-booked', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-privacy', 'cs-bike', 'st-product', 'st-product-sizes', 'rs-order', 'rs-order-ordered', 'rs-receive', 'rs-delivery', 'rs-booked', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 

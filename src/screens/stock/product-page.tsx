@@ -24,11 +24,13 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * (openspec/changes/product-page-sizes, design 2). Sending to another shop comes
  * with its own piece, and a stock bike's frame numbers aren't recorded yet.
  */
-type Move = { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
+// A size's line names its size and colour (st-product-sizes).
+type Which = { size?: string | null; colour?: string | null };
+type Move = Which & { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
 // A price or cost change, sent to the Owner only (openspec/changes/product-page-sizes, design 1).
-type PriceChange = { id: string; type: 'price_change'; field: 'price' | 'cost'; was: number; now: number; who: string | null; at: string; delivery: { id: number; supplierName: string | null } | null };
-type Line = Move | PriceChange;
-type ShopStock = { id: number; name: string; qty: number; here: boolean };
+type PriceChange = Which & { id: string; type: 'price_change'; field: 'price' | 'cost'; was: number; now: number; who: string | null; at: string; delivery: { id: number; supplierName: string | null } | null };
+export type Line = Move | PriceChange;
+export type ShopStock = { id: number; name: string; qty: number; here: boolean };
 type Answered = Detail & { from: string; value: number | string | null };
 type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[] };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
@@ -51,11 +53,12 @@ const isPrice = (m: Line): m is PriceChange => m.type === 'price_change';
 const lineWhat = (m: Line) => (isPrice(m)
   ? `${m.field === 'price' ? 'Price changed' : 'Cost changed'} · ${money(m.was)} → ${money(m.now)}`
   : [WHAT[m.type]?.[0] ?? 'Stock changed', m.reason ? REASON_LABEL[m.reason] : null].filter(Boolean).join(' · '));
-const lineDetail = (m: Line) => (isPrice(m)
+const sizeText = (m: Line) => [m.size ? `Size ${m.size}` : null, m.colour].filter(Boolean).join(' · ') || null;
+const lineDetail = (m: Line) => [sizeText(m), ...(isPrice(m)
   ? [m.delivery ? `delivery from ${m.delivery.supplierName ?? 'a supplier'}` : null, m.who, when(m.at)]
-  : [m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)]).filter(Boolean).join(' · ');
+  : [m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)])].filter(Boolean).join(' · ');
 
-function Box({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
+export function Box({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4 max-md:px-3.5 max-md:py-3.5">
       <div className="flex items-center justify-between gap-3"><h3 id={id} className="m-0 text-base font-bold">{title}</h3>{action}</div>
@@ -63,12 +66,47 @@ function Box({ id, title, action, children }: { id: string; title: string; actio
     </section>
   );
 }
-const kv = (k: string, v: React.ReactNode) => (
+export const kv = (k: string, v: React.ReactNode) => (
   <div className="flex min-h-8 items-center justify-between gap-3 text-size-15">
     <span className="text-[var(--wh-muted)]">{k}</span>
     <span className="inline-flex items-center gap-2">{v}</span>
   </div>
 );
+
+/** One history, newest first, with its filter (st-product); a size's line says which size (st-product-sizes). */
+export function StockHistory({ history }: { history: Line[] }) {
+  const [show, setShow] = useState<Show>('Everything');
+  const moves = history.filter((m) => show === 'Everything' || WHAT[m.type]?.[1] === show);
+  // Price changes only when there are some: staff are sent none (st-product-staff).
+  const shows = history.some(isPrice) ? SHOWS : SHOWS.filter((s) => s !== 'Price changes');
+  const pill = (s: Show) => (
+    <button key={s} type="button" role="radio" aria-checked={show === s} onClick={() => setShow(s)}
+      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${show === s ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{s}</button>
+  );
+  return (
+    <section aria-labelledby="h-history" className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4 max-md:px-3.5 max-md:py-3.5">
+      <h3 id="h-history" className="m-0 text-base font-bold">Stock history</h3>
+      {history.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing has changed its stock yet.</p> : (
+        <>
+          <RadioPillGroup aria-label="Show" className="flex flex-wrap gap-2">{shows.map(pill)}</RadioPillGroup>
+          {moves.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing here yet.</p> : (
+            <ul aria-labelledby="h-history" className="m-0 list-none p-0">
+              {moves.map((m) => (
+                <li key={m.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 border-t border-[var(--wh-border)] py-1.5 max-md:grid-cols-[minmax(0,1fr)_auto]">
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-size-15 font-semibold">{lineWhat(m)}</span>
+                    <span className="text-size-13 text-[var(--wh-muted)]">{lineDetail(m)}</span>
+                  </span>
+                  <span className={`${mono} text-right text-size-15 font-bold`}>{isPrice(m) ? '' : change(m.change)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
 
 export function ProductPage() {
   const id = Number(useParams().id ?? '');
@@ -76,7 +114,6 @@ export function ProductPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const isPhone = useMedia('(max-width: 767px)');
-  const [show, setShow] = useState<Show>('Everything');
   const [adjusting, setAdjusting] = useState(false);
   const [editing, setEditing] = useState<'name' | 'details' | null>(null);
   // Who may edit is who the server sends a cost to (canSeeCosts, product-editor.js): the Owner's
@@ -91,13 +128,6 @@ export function ProductPage() {
   const here = p.stockAtShops.find((s) => s.here);
   const canEdit = owner && p.costPence !== null;
   const codes = [p.sku, p.category, p.supplier, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(' · ');
-  const moves = p.history.filter((m) => show === 'Everything' || WHAT[m.type]?.[1] === show);
-  // Price changes only when there are some: staff are sent none (st-product-staff).
-  const shows = p.history.some(isPrice) ? SHOWS : SHOWS.filter((s) => s !== 'Price changes');
-  const pill = (s: Show) => (
-    <button key={s} type="button" role="radio" aria-checked={show === s} onClick={() => setShow(s)}
-      className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${show === s ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{s}</button>
-  );
   return (
     <div className="flex flex-col gap-3.5">
       <Link to={ROUTES.stock} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Stock</Link>
@@ -140,27 +170,7 @@ export function ProductPage() {
             {owner ? kv('Show on website', p.showOnline ? `On · as ${p.category}` : 'Off') : null}
           </Box>
         </div>
-        <section aria-labelledby="h-history" className="flex min-w-0 flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4 max-md:px-3.5 max-md:py-3.5">
-          <h3 id="h-history" className="m-0 text-base font-bold">Stock history</h3>
-          {p.history.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing has changed its stock yet.</p> : (
-            <>
-              <RadioPillGroup aria-label="Show" className="flex flex-wrap gap-2">{shows.map(pill)}</RadioPillGroup>
-              {moves.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing here yet.</p> : (
-                <ul aria-labelledby="h-history" className="m-0 list-none p-0">
-                  {moves.map((m) => (
-                    <li key={m.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 border-t border-[var(--wh-border)] py-1.5 max-md:grid-cols-[minmax(0,1fr)_auto]">
-                      <span className="flex min-w-0 flex-col">
-                        <span className="text-size-15 font-semibold">{lineWhat(m)}</span>
-                        <span className="text-size-13 text-[var(--wh-muted)]">{lineDetail(m)}</span>
-                      </span>
-                      <span className={`${mono} text-right text-size-15 font-bold`}>{isPrice(m) ? '' : change(m.change)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </section>
+        <StockHistory history={p.history} />
       </div>
       {editing ? (
         <ProductBox product={p} title="Edit product" subtitle={[p.name, p.sku].filter(Boolean).join(' · ')} saveLabel="Save" focus={editing}

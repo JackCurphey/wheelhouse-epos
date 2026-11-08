@@ -106,7 +106,8 @@ test('a product with sizes is one row: its sizes, colours and the size below zer
   assert.ok(jersey.queryByText('Below zero') === null, 'the line says which size; no tag on the row');
   // Prices differ, so no one margin.
   assert.ok(jersey.getByText('—'));
-  assert.ok(jersey.queryByRole('link') === null, 'its page is piece 10');
+  // Its own page (product-page-sizes, design 3).
+  assert.equal(jersey.getByRole('link').getAttribute('href'), '/workshop/stock/sizes/9');
   const gloves = within(ui.getByText('[Gloves]').closest('[role="row"]'));
   assert.ok(gloves.getByText('[Category] · 3 sizes · 1 colour · 2 sizes running low'));
   assert.ok(gloves.getByText('£12.00'));

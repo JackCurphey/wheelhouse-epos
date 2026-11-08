@@ -43,6 +43,9 @@ export const ROUTES = {
   'cs-bike': '/workshop/bikes/:id',
   // A product's page (st-product), from Stock (openspec/changes/stock-list).
   'st-product': '/workshop/stock/:id',
+  // A product with sizes' page (st-product-sizes), from its Stock row
+  // (openspec/changes/product-page-sizes).
+  'st-product-sizes': '/workshop/stock/sizes/:id',
   // New order (rs-order) and an order (rs-order-ordered), from Deliveries and
   // orders (openspec/changes/deliveries-orders).
   'rs-order': '/workshop/deliveries/new-order',

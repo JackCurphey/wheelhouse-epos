@@ -16,8 +16,8 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 
 ## 3. A product with sizes' page (pull request 3)
 
-- [ ] 3.1 Tests: `GET /api/product-groups/:id` gains stock at each shop, its sizes' history with size and colour, price changes for the Owner only; the screen's grid, a cell opening its size, below zero warned, Add a size or colour sending one new size, Edit sending name and category; the list's row opening the page.
-- [ ] 3.2 The server's additions; `sizes-page.tsx`; its route; the list's row as a link.
+- [x] 3.1 Tests: `GET /api/product-groups/:id` gains stock at each shop, its sizes' history with size and colour, price changes for the Owner only; the screen's grid, a cell opening its size, below zero warned, Add a size or colour sending one new size, Edit sending name and category; the list's row opening the page.
+- [x] 3.2 The server's additions; `sizes-page.tsx`; its route; the list's row as a link.
 
 ## 4. Adding a product (pull request 4)
 

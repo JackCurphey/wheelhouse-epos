@@ -16,8 +16,8 @@ import { mono, type Product } from './stock-bits.tsx';
  */
 export type Answer = { id: number; value: number | string | null };
 export type Editing = Product & { details?: Answer[] };
-const NONE = 'Uncategorised';
-const field = 'min-h-11 w-full min-w-0 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';
+export const NONE = 'Uncategorised';
+export const field = 'min-h-11 w-full min-w-0 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';
 const label = 'text-sm font-semibold';
 // "28", "28.5", "£28.00": pounds to whole pence, or null when it isn't money.
 export function pence(text: string): number | null {
@@ -26,10 +26,10 @@ export function pence(text: string): number | null {
   const [whole, part = ''] = t.split('.');
   return Number(whole) * 100 + Number(part.padEnd(2, '0'));
 }
-const pounds = (p: number | null | undefined) => (p === null || p === undefined ? '' : (p / 100).toFixed(2));
+export const pounds = (p: number | null | undefined) => (p === null || p === undefined ? '' : (p / 100).toFixed(2));
 const words = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t save the product. Try again in a moment.');
 
-function Field({ id, name, value, onChange, unit, mono: isMono, inputRef }: {
+export function Field({ id, name, value, onChange, unit, mono: isMono, inputRef }: {
   id: string; name: string; value: string; onChange: (v: string) => void; unit?: string | null; mono?: boolean; inputRef?: React.Ref<HTMLInputElement>;
 }) {
   return (

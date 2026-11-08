@@ -2307,6 +2307,11 @@ WP-1.5's. So: slice C, WP-2.3.
 5. **Money is typed in pounds, "28", "28.5" or "£28.00", and sent as whole pence.** Save is greyed with why until the name, a price and the low-stock level make sense. A blank cost on Edit leaves the cost as it is, as the server already does; the box says so.
 6. **The product saves first, then its details,** so a new category's details are the ones saved. Only details typed or changed are sent. If the details are refused, the box stays open with the server's words and the product's own changes are already saved.
 7. **The Details box reads "Details · [Category]" with the category's full path,** "—" for a detail with no answer, and shows only when the category has details.
+8. **A product with sizes' page has no Adjust stock or Send to another shop in its In stock box,** though `summary()` draws them on every product page: a product with sizes has no stock of its own, and the grid's note says to open a size to adjust it. Its In stock box lists each shop's total of its sizes, with no low-stock level, as each size has its own.
+9. **Its Edit changes the name and category only;** each size's price, barcode and code are edited on that size's own page, which is a product. Not drawn.
+10. **"+ Add a size or colour" asks for Size, Colour, Barcode, Supplier code, Cost, Price (the first size's to start) and Starting stock,** sent as one new size. Not drawn; it follows the product box.
+11. **A grid with no colours has one row headed "—"; one with no sizes has one column headed "Stock".** A size and colour that doesn't exist is an empty cell. Price and Cost read lowest to highest, and the margin shows only when every size has one price, one cost and one VAT rate, as the list's row does.
+12. **Each history line on it says its size and colour first,** "Size M · [Colour 1] · Jo Taylor · [date and time]", as drawn; the drawing's "Till B1" and "4 sizes" for a delivery need records the history doesn't keep yet.
 
 ## Decided here, for Jack to overrule
 
