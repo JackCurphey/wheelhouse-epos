@@ -291,6 +291,24 @@ test('new since last opened: counted per person, cleared by seen and by a downlo
   assert.equal((await list()).newCount, 0);
 });
 
+test('Today: new on the restock list until it’s opened, and again when something new comes on', async () => {
+  const restockNew = async () => {
+    const res = await asOwner('/api/needs-attention');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    return res.body.items.filter((i) => i.kind === 'restock_new');
+  };
+  await asOwner('/api/restock/seen', { method: 'POST', body: {} });
+  assert.deepEqual(await restockNew(), []);
+  await product({ stock: 0 });
+  const forJob = await product({ stock: 0, low: 0 });
+  await job({ lines: [[forJob.id, 1]] });
+  assert.deepEqual(await restockNew(), [{ kind: 'restock_new', count: 2, forJobs: 1 }]);
+  await asOwner('/api/restock/seen', { method: 'POST', body: {} });
+  assert.deepEqual(await restockNew(), []);
+  await product({ stock: 1 });
+  assert.deepEqual(await restockNew(), [{ kind: 'restock_new', count: 1, forJobs: 0 }]);
+});
+
 test('only the Owner: Jo is refused on every route', async () => {
   const pads = await product({ stock: 0 });
   for (const [path, options] of [
