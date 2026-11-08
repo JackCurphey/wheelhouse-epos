@@ -307,3 +307,7 @@ GET /api/stock-list
 GET /api/product-groups/:id
 POST /api/product-groups
 PUT /api/product-groups/:id
+GET /api/restock
+POST /api/restock/seen
+POST /api/restock/download
+POST /api/restock/add-to-order

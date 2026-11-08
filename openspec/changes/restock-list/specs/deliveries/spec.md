@@ -23,7 +23,7 @@ A product SHALL be "selling fast" when at least 3 were sold in the last 28 days 
 - **THEN** it is not selling fast
 
 ### Requirement: The Reorder count is suggested
-For a product running low or selling fast, the Reorder count SHALL start at enough to bring it back above its low-stock level and cover another 28 days of sales like the last: its low-stock level, plus what sold in the last 28 days, less what is in stock (after jobs take what they need) and what is already on order, and at least 1. For a job's line it SHALL start at how many that job is short. The count SHALL be typed or stepped with − and +, and never below 1.
+For a product running low or selling fast, the Reorder count SHALL start at enough to bring it back above its low-stock level and cover another 28 days of sales like the last: its low-stock level, plus what sold in the last 28 days, less what is in stock (after jobs take what they need) and what is already on order, and at least 1. For a job's line it SHALL start at how many that job is short. A product running low or selling fast whose stock and orders already cover that count SHALL be left off. The count SHALL be typed or stepped with − and +, and never below 1.
 
 #### Scenario: Pads running low
 - **WHEN** the pads' low-stock level is 3, 2 are in stock, 4 sold in the last 28 days and none are on order
