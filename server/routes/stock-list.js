@@ -6,6 +6,9 @@
 import { dbExec, prepare } from '../db.js';
 import { notFound, sendJson } from '../lib/http.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
+import { newestFirst, priceChangesOf } from '../lib/price-changes.js';
+import { oldestSite } from '../lib/stock.js';
+import { siteHere } from './purchase-orders.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -184,10 +187,35 @@ export function register(route) {
     if (!g) return notFound(res, 'Product not found');
     const costs = await canSeeCosts(req);
     const items = await db.prepare('SELECT * FROM products WHERE group_id = ? ORDER BY id').all(id);
+    const ids = items.map((p) => p.id);
+    // Its page (product-page-sizes, design 3): each shop's total of its sizes, as a product's
+    // page has its own, and one history for all its sizes, each line saying which.
+    const shops = await db.prepare(
+      `SELECT s.id, s.name, COALESCE(SUM(ps.qty), 0)::int AS qty FROM sites s
+         LEFT JOIN product_stock ps ON ps.site_id = s.id AND ps.product_id = ANY(?::int[]) GROUP BY s.id, s.name ORDER BY s.id`
+    ).all(ids);
+    const here = (await siteHere(req)) ?? await oldestSite();
+    const moves = await db.prepare(
+      `SELECT m.id, m.product_id, m.type, m.change_qty, m.note, m.reason, COALESCE(m.who_name, l.name) AS who, m.created_at
+         FROM stock_movements m LEFT JOIN logins l ON l.id = m.login_id
+        WHERE m.product_id = ANY(?::int[]) ORDER BY m.created_at DESC, m.id DESC LIMIT 200`
+    ).all(ids);
+    const which = (productId) => {
+      const p = items.find((x) => x.id === productId);
+      return { size: p?.size ?? null, colour: p?.colour ?? null };
+    };
+    const rates = distinct(items.map((p) => (p.vat_rate_bp === null ? null : String(p.vat_rate_bp))));
     sendJson(res, 200, {
       id: g.id, name: g.name, category: g.category, description: g.description, photoUrl: g.photo_url,
       sizes: distinct(items.map((p) => p.size)), colours: distinct(items.map((p) => p.colour)),
       items: items.map((p) => ({ ...productRow(p, costs), size: p.size, colour: p.colour })),
+      // One VAT rate when every size shares it, for a margin; none otherwise.
+      vatRateBp: rates.length === 1 && items.every((p) => p.vat_rate_bp !== null) ? Number(rates[0]) : null,
+      stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
+      history: newestFirst([
+        ...moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at, ...which(m.product_id) })),
+        ...(await priceChangesOf(ids, costs)).map((c) => ({ ...c, ...which(c.productId) })),
+      ]),
     });
   });
 }

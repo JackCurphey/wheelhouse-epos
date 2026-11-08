@@ -13,6 +13,7 @@ export type Product = {
 };
 
 export const productHref = (id: number) => ROUTES['st-product'].replace(':id', String(id));
+export const sizesHref = (groupId: number) => ROUTES['st-product-sizes'].replace(':id', String(groupId));
 
 /**
  * A row of GET /api/stock-list (openspec/changes/stock-list-categories-sizes): a product, a

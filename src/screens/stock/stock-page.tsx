@@ -6,7 +6,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { answerText, DetailFilters, detailsFor, filterValue, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
-import { count, mono, productHref, rowHasCost, rowIs, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
+import { count, mono, productHref, sizesHref, rowHasCost, rowIs, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
 /**
  * Stockroom › Stock (drawn as st-list in stock.mjs; stock control decisions
@@ -145,9 +145,8 @@ export function StockPage() {
                 return (
                 <div role="row" key={rowKey(r)} style={grid} className={`grid min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
                   <span role="cell" className="min-w-0">
-                    {/* A product with sizes' own page is piece 10: until then its row opens nothing. */}
-                    {r.kind === 'group' ? <span className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5">{label}</span>
-                      : <Link to={productHref(r.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">{label}</Link>}
+                    {/* A product with sizes opens its own page (product-page-sizes, design 3). */}
+                    <Link to={r.kind === 'group' ? sizesHref(r.groupId) : productHref(r.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">{label}</Link>
                   </span>
                   {columns.map((d) => (
                     <span key={d.id} role="cell" className={`${mono} text-size-15`}><span className="sr-only">{`${d.name}: `}</span>{answerText(d, r.kind === 'group' ? undefined : r.details?.[d.id])}</span>
