@@ -166,7 +166,8 @@ const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.j
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.
 const withoutComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-const GUARD = /ownerOnly\(req, res[,)]|login\.is_owner/;
+// notProductEditor is ownerOnly with the Owner the one there (product-editing, design 1).
+const GUARD = /ownerOnly\(req, res[,)]|login\.is_owner|notProductEditor\(req, res\)/;
 
 function unguardedRoutes(source, file) {
   const code = withoutComments(source);
