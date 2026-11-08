@@ -196,3 +196,9 @@ test('Details · Bearings shows its answers; the box saves a changed one after t
   assert.equal(sent[0].path, '/api/products/1');
   assert.deepEqual(sent[1], { path: '/api/products/1/details', body: { answers: [{ detailId: 51, value: '10' }] } });
 });
+
+test('the Owner’s sign-in sent no cost (someone else checked in) gets no Edit (the review)', async () => {
+  const { ui } = await openEdit({ product: { ...PADS, costPence: null } });
+  ui.getByRole('button', { name: 'Adjust stock' });
+  assert.ok(ui.queryByRole('button', { name: 'Edit' }) === null);
+});
