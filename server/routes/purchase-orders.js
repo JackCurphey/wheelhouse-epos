@@ -14,6 +14,9 @@ import { canSeeCosts } from '../lib/can-see-costs.js';
 import { readRequestKey } from '../booking-request-key.js';
 import { thisTill } from '../till/this-till.js';
 import { currentCheckin, ownAccountHere } from './till-pins.js';
+import { notProductEditor } from '../lib/product-editor.js';
+import { recordPriceChanges } from '../lib/price-changes.js';
+import { penceToPounds, wholePence } from '../lib/pence.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -732,5 +735,48 @@ export function register(route) {
     };
     if (costs) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
     sendJson(res, 200, body);
+  });
+
+  // Cost went up? Change it (openspec/changes/product-page-sizes, design 5; receiving's 3 Oct
+  // later change, walk-through 3 M3): a booked-in line's cost, and the product's with it, its
+  // history naming the delivery. The Owner's until roles, as changing a product's cost is. The
+  // product is locked first, then the line, under the save's 2-second limit.
+  route('PUT', '/api/deliveries/booked-in/:id/lines/:lineId/cost', async (req, res, params) => {
+    if (await notProductEditor(req, res)) return;
+    const id = Number(params.id);
+    const lineId = Number(params.lineId);
+    const known = (n) => Number.isInteger(n) && n >= 1 && n <= MAX_DB_INT;
+    if (!known(id) || !known(lineId)) return notFound(res, 'Delivery not found');
+    const body = (await readJsonBody(req)) ?? {};
+    if (!wholePence(body.costPence)) return badRequest(res, 'A cost must be a whole number of pence, up to £99,999,999.99');
+    const found = await db.prepare('SELECT product_id FROM delivery_lines WHERE id = ? AND delivery_id = ?').get(lineId, id);
+    if (!found) return notFound(res, 'Delivery not found');
+    const who = await whoIsBooking(req);
+    await db.exec('BEGIN');
+    try {
+      await db.prepare("SET LOCAL lock_timeout = '2s'").run();
+      const before = await db.prepare('SELECT * FROM products WHERE id = ? FOR UPDATE').get(found.product_id);
+      const line = await db.prepare('SELECT id, unit_cost FROM delivery_lines WHERE id = ? AND delivery_id = ? FOR UPDATE').get(lineId, id);
+      if (!before || !line) {
+        await db.exec('ROLLBACK');
+        return notFound(res, 'Delivery not found');
+      }
+      // The same cost as the line's changes nothing (design 5).
+      if (Math.round(Number(line.unit_cost) * 100) === body.costPence) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 200, { lineId, unitCost: penceToPounds(body.costPence) });
+      }
+      const cost = penceToPounds(body.costPence);
+      await db.prepare('UPDATE delivery_lines SET unit_cost = ? WHERE id = ?').run(cost, lineId);
+      await db.prepare('UPDATE products SET cost = ?, updated_at = ? WHERE id = ?').run(cost, nowIso(), before.id);
+      const after = await db.prepare('SELECT * FROM products WHERE id = ?').get(before.id);
+      await recordPriceChanges(before, after, who, { deliveryId: id });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      if (err.code === '55P03') return sendJson(res, 503, { error: 'Wheelhouse is busy with this product just now. Try again in a moment.', code: 'busy' });
+      throw err;
+    }
+    sendJson(res, 200, { lineId, unitCost: penceToPounds(body.costPence) });
   });
 }
