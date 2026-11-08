@@ -21,8 +21,8 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 
 ## 4. Adding a product (pull request 4)
 
-- [ ] 4.1 Screen tests: "+ Add a product" for the Owner, not staff; "+ Add “[typed]” as a product" filling the name; adding opens its page; on receiving, an unknown barcode offers the Owner Add this product, and Add and count 1 puts it on the delivery as 1; staff are told as before.
-- [ ] 4.2 Stock's buttons and the receiving box.
+- [x] 4.1 Screen tests: "+ Add a product" for the Owner, not staff; "+ Add “[typed]” as a product" filling the name; adding opens its page; on receiving, an unknown barcode offers the Owner Add this product, and Add and count 1 puts it on the delivery as 1; staff are told as before.
+- [x] 4.2 Stock's buttons and the receiving box.
 
 ## 5. Cost went up? Change it (pull request 5; money)
 

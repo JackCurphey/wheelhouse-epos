@@ -2312,6 +2312,9 @@ WP-1.5's. So: slice C, WP-2.3.
 10. **"+ Add a size or colour" asks for Size, Colour, Barcode, Supplier code, Cost, Price (the first size's to start) and Starting stock,** sent as one new size. Not drawn; it follows the product box.
 11. **A grid with no colours has one row headed "—"; one with no sizes has one column headed "Stock".** A size and colour that doesn't exist is an empty cell. Price and Cost read lowest to highest, and the margin shows only when every size has one price, one cost and one VAT rate, as the list's row does.
 12. **Each history line on it says its size and colour first,** "Size M · [Colour 1] · Jo Taylor · [date and time]", as drawn; the drawing's "Till B1" and "4 sizes" for a delivery need records the history doesn't keep yet.
+13. **Adding a product uses the Edit box, empty, titled "Add a product" with Add;** it adds no starting stock (stock comes in through receiving, a count or Adjust stock), and its page opens once added. The low-stock level starts at 3, as the server's own default.
+14. **A new shop's empty list says "Add your first product, or bring everything over from Citrus Lime (Office › Moving from Citrus Lime)." with "+ Add a product" and "Bring them from Citrus Lime", for the Owner,** as `st-list-new` draws; staff see "No products yet" only, as Moving is the Owner's.
+15. **Receiving: the Owner scanning a barcode Wheelhouse doesn't know gets "Add this product" at once,** as `rs-add-product` draws it over the scan; the line "Nothing in Wheelhouse has the barcode [barcode]" still shows behind it. "Add and count 1" adds the product with no stock and puts 1 on the delivery, so Book in counts it, as any scan. Cancel leaves it off. Staff are told as before; the left-for list (`rs-add-left`) is its own work.
 
 ## Decided here, for Jack to overrule
 

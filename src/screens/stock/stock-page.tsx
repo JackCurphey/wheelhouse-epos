@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { apiGet } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
+import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/staff/routes.ts';
+import { ProductBox } from './product-box.tsx';
 import { answerText, DetailFilters, detailsFor, filterValue, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
 import { count, mono, productHref, sizesHref, rowHasCost, rowIs, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
@@ -15,8 +18,9 @@ import { count, mono, productHref, sizesHref, rowHasCost, rowIs, rowKey, rowLine
  * Owner) margin, each opening its page. A product with sizes is one row, and a
  * size searched is its own (st-search-size; stock-list-categories-sizes). A
  * category picked brings its details as filters and columns (st-filter-bearings),
- * and a measurement searched shows each row's (st-search-measure). Read only:
- * adding and ticking come with later pieces.
+ * and a measurement searched shows each row's (st-search-measure). The Owner adds a
+ * product (st-list, st-list-none, st-list-new; openspec/changes/product-page-sizes,
+ * design 4); ticking comes with its own piece.
  */
 type Filter = 'All' | 'Running low' | 'Below zero';
 type SortKey = 'name' | 'stock' | 'price' | 'margin';
@@ -47,6 +51,9 @@ export function StockPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const isPhone = useMedia('(max-width: 767px)');
+  const navigate = useNavigate();
+  // The box, with the name typed when nothing matched (st-list-none); null when shut.
+  const [adding, setAdding] = useState<{ name?: string } | null>(null);
   const [typed, setTyped] = useState('');
   const search = useTyped(typed);
   // Today's See them opens Stock with Below zero picked (st-today-below; stock-warnings-on-today design 8).
@@ -107,12 +114,16 @@ export function StockPage() {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <label className="flex min-h-[52px] items-center gap-2.5 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-[var(--wh-muted)]">
+      <div className="flex items-center gap-2.5">
+      <label className="flex min-h-[52px] min-w-0 grow items-center gap-2.5 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-[var(--wh-muted)]">
         <Search aria-hidden="true" size={20} />
         <input type="search" aria-label="Search stock" value={typed} onChange={(e) => { setTyped(e.target.value); setAll(false); }}
           placeholder="Name, barcode, supplier code — or a measurement, like “bearing 30 mm”"
           className="min-w-0 grow border-0 bg-transparent text-base text-[var(--wh-ink)] outline-none placeholder:text-[var(--wh-muted)]" />
       </label>
+      {/* st-list: beside the search for the Owner, not on a phone. */}
+      {owner && !isPhone ? <Button className="shrink-0" onClick={() => setAdding({})}>+ Add a product</Button> : null}
+      </div>
       <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}{picker.pill}</div>
       {picker.list}
       {category ? <DetailFilters name={categories.find((c) => c.path === category)?.name ?? category} details={details} values={values} onChange={(id, v) => { setValues({ ...values, [id]: v }); setAll(false); }} /> : null}
@@ -123,6 +134,16 @@ export function StockPage() {
           <div className="flex flex-col items-start gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-6">
             <h2 className="m-0 text-lg font-bold">{search ? `Nothing matches “${search}”` : category ? `Nothing ${inCategory}` : filter === 'All' ? 'No products yet' : `Nothing is ${filter.toLowerCase()}`}</h2>
             {search ? <p className="m-0 text-sm text-[var(--wh-muted)]">Check the spelling, or try a supplier code or a supplier.</p> : null}
+            {search && owner ? <Button onClick={() => setAdding({ name: search })}>{`+ Add “${search}” as a product`}</Button> : null}
+            {!search && !category && filter === 'All' && owner ? (
+              <>
+                <p className="m-0 text-sm text-[var(--wh-muted)]">Add your first product, or bring everything over from Citrus Lime (Office › Moving from Citrus Lime).</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="primary" onClick={() => setAdding({})}>+ Add a product</Button>
+                  <Link to={ROUTES.moving} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 text-sm font-semibold text-[var(--wh-ink)] no-underline">Bring them from Citrus Lime</Link>
+                </div>
+              </>
+            ) : null}
           </div>
         ) : (
           <div role="table" aria-label="Products" className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
@@ -164,6 +185,10 @@ export function StockPage() {
         )}
       {!all && rows.length > SHOWN ? (
         <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${rows.length})`}</button>
+      ) : null}
+      {adding ? (
+        <ProductBox title="Add a product" saveLabel="Add" start={adding} onClose={() => setAdding(null)}
+          onSaved={(p) => { setAdding(null); navigate(productHref(p.id)); }} />
       ) : null}
     </div>
   );

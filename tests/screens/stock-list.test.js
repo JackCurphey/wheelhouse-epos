@@ -92,7 +92,8 @@ test('the list as drawn: search, filters, each product with its stock, price and
   const below = within(ui.getByRole('link', { name: /\[Product below zero\]/ }).closest('[role="row"]'));
   assert.ok(below.getByText('Below zero'));
   assert.ok(below.getByText('−1'));
-  assert.ok(ui.queryByRole('button', { name: /Add a product/ }) === null, 'adding is a change: not in this piece');
+  // The Owner adds a product (product-page-sizes, design 4).
+  assert.ok(ui.getByRole('button', { name: '+ Add a product' }));
   assert.ok(ui.queryByRole('checkbox') === null, 'tick boxes lead only to changes: not in this piece');
 });
 

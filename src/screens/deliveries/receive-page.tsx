@@ -9,6 +9,8 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { ROUTES } from '@/staff/routes.ts';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { ProductBox } from '@/screens/stock/product-box.tsx';
 import { Back, Card, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
 import { Count, useSearch } from './new-order.tsx';
 
@@ -64,6 +66,11 @@ export function ReceivePage() {
   const [text, setText] = useState('');
   const [scanned, setScanned] = useState<Scanned[]>([]);
   const [said, setSaid] = useState('');
+  // A barcode Wheelhouse doesn't know, for the Owner to add (rs-add-product;
+  // openspec/changes/product-page-sizes, design 4). Staff are told, as before.
+  const session = useSession();
+  const owner = session.status === 'signed-in' && session.user.isOwner;
+  const [unknown, setUnknown] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // One key for the life of the scanned list, so Try again after a lost reply
@@ -168,7 +175,7 @@ export function ReceivePage() {
     const exact = found.find((p) => [p.barcode, p.sku].some((v) => v && v.toLowerCase() === lc));
     const one = exact ?? (found.length === 1 ? found[0] : undefined);
     if (one) take(one);
-    else if (found.length === 0) { setText(''); setSaid(`Nothing in Wheelhouse has the barcode ${code}`); }
+    else if (found.length === 0) { setText(''); setSaid(`Nothing in Wheelhouse has the barcode ${code}`); if (owner) setUnknown(code); }
   }
 
   const setQty = (key: string, qty: number) => setScanned((ss) => ss.map((s) => (s.key === key && qty >= Math.max(1, setAside(s)) ? { ...s, qty } : s)));
@@ -204,6 +211,11 @@ export function ReceivePage() {
 
   const marked = marking === null ? null : scannedOf(marking);
   const saidLine = <p role="status" className="m-0 min-h-5 text-sm text-[var(--wh-muted)]">{said}</p>;
+  // Added with that barcode and no stock; it goes on the delivery as 1, as a scan would.
+  const addBox = unknown ? (
+    <ProductBox title="Add this product" subtitle={`Barcode ${unknown} · not in Wheelhouse yet`} saveLabel="Add and count 1" start={{ barcode: unknown }}
+      onClose={() => setUnknown(null)} onSaved={(p) => { setUnknown(null); take(p); }} />
+  ) : null;
   const failed = orders.isError || suppliers.isError;
   return (
     <Page>
@@ -241,7 +253,7 @@ export function ReceivePage() {
                   </ul>
                 ) : null}
               </div>
-              {saidLine}
+              {saidLine}{addBox}
               {scanned.length > 0 ? (
                 <ul aria-label="Scanned" className="m-0 list-none p-0">
                   {scanned.map((s) => {
