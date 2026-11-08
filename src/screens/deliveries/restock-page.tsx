@@ -237,7 +237,8 @@ export function RestockPage() {
 /** Deliveries and orders' Restock list section (rs-hub; audit M1: after To return, before Orders). */
 export function RestockSection() {
   const list = useRestock(true);
-  const n = (k: keyof Restock['counts']) => list.data?.counts[k] ?? 0;
+  // An answer without counts (an older server, a stand-in) reads as none, never a broken page.
+  const n = (k: keyof Restock['counts']) => list.data?.counts?.[k] ?? 0;
   const products = (k: keyof Restock['counts']) => `${n(k)} ${n(k) === 1 ? 'product' : 'products'}`;
   const row = (title: string, sub: string, show: Show, label: string) => (
     <Row title={title} sub={list.data ? sub : 'Loading…'}>
