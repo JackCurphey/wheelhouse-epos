@@ -198,6 +198,8 @@ export function SizesPage() {
   const prices = g.items.map((i) => i.pricePence);
   const costs = g.items.map((i) => i.costPence).filter((c): c is number => c !== null);
   const showCost = owner && costs.length > 0;
+  // Who may change it is who the server sends a cost to, as on a product's page (the review).
+  const canEdit = showCost;
   // One margin only when every size has one price, one cost and one VAT rate (as the list's row).
   const one = new Set(prices).size === 1 && costs.length === g.items.length && new Set(costs).size === 1;
   const m = one && g.items.length ? margin({ pricePence: prices[0], costPence: costs[0], vatRateBp: g.vatRateBp }) : null;
@@ -209,7 +211,7 @@ export function SizesPage() {
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-col items-start gap-1.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4">
             <span className="text-size-13 text-[var(--wh-muted)]">{codes}</span>
-            {owner ? <Button onClick={() => setOpen('edit')}>Edit</Button> : null}
+            {canEdit ? <Button onClick={() => setOpen('edit')}>Edit</Button> : null}
           </div>
           <Box id="h-in-stock" title="In stock">
             {g.stockAtShops.map((s) => <Fragment key={s.id}>{kv(s.name, <span className={mono}>{count(s.qty)}</span>)}</Fragment>)}
@@ -223,7 +225,7 @@ export function SizesPage() {
         </div>
         <div className="flex min-w-0 flex-col gap-3">
           <Box id="h-sizes" title="Sizes and colours"
-            action={owner ? <button type="button" onClick={() => setOpen('add')} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">+ Add a size or colour</button> : null}>
+            action={canEdit ? <button type="button" onClick={() => setOpen('add')} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">+ Add a size or colour</button> : null}>
             <Grid group={g} />
             <p className="m-0 text-size-13 text-[var(--wh-muted)]">Each size and colour has its own barcode. Open one to see its history or adjust it. 0 means none in stock; a size below zero needs counting.</p>
           </Box>

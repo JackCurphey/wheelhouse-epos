@@ -111,3 +111,16 @@ test('Jo sees the grid and history, with no Edit and no adding', async () => {
   assert.ok(ui.queryByRole('button', { name: 'Edit' }) === null);
   assert.ok(ui.queryByRole('button', { name: '+ Add a size or colour' }) === null);
 });
+
+test('the Owner’s sign-in sent no costs (someone else checked in) gets no Edit and no adding', async () => {
+  const saved = ITEMS.map((i) => i.costPence);
+  ITEMS.forEach((i) => { i.costPence = null; });
+  try {
+    const { ui } = await open();
+    ui.getByRole('table', { name: 'Stock by size and colour' });
+    assert.ok(ui.queryByRole('button', { name: 'Edit' }) === null);
+    assert.ok(ui.queryByRole('button', { name: '+ Add a size or colour' }) === null);
+  } finally {
+    ITEMS.forEach((i, n) => { i.costPence = saved[n]; });
+  }
+});
