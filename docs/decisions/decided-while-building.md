@@ -2302,6 +2302,11 @@ WP-1.5's. So: slice C, WP-2.3.
 
 1. **Every price and cost change is kept, one at a time as well as in bulk:** "Price changed · £28.00 → £[price]" and "Cost changed · £[cost] → £[cost]", with who and when, and "delivery from [Supplier]" when a delivery changed it. Decision 7 says bulk changes go in the history; a single change is drawn the same way, and walk-through 3 M3 asks for a cost change in it. Adding a product records none: its first price is no change.
 2. **Staff are sent no price or cost changes,** as `st-product-staff` draws Jo's history without the price change line; a cost is a cost. The Owner sees both. The Price changes pill shows only when the history has one, so staff don't get a pill that always shows nothing.
+3. **Edit opens one box, titled "Edit product", with the product's name and code under it;** the Edit box isn't drawn, so it takes `rs-add-product`'s fields (Name and Supplier code; Cost, Price, Low-stock level; Category and its details) and adds Barcode and Supplier, which the page shows and nothing else could change. The Details box's Edit opens the same box at the details. Photo, Show on website, VAT and taking it off sale aren't in it; the old app still does photo and off sale.
+4. **Category is a list to pick from, as `rs-add-product` draws it,** with "No category" first; a category the product has that's no longer in Settings stays in the list.
+5. **Money is typed in pounds, "28", "28.5" or "£28.00", and sent as whole pence.** Save is greyed with why until the name, a price and the low-stock level make sense. A blank cost on Edit leaves the cost as it is, as the server already does; the box says so.
+6. **The product saves first, then its details,** so a new category's details are the ones saved. Only details typed or changed are sent. If the details are refused, the box stays open with the server's words and the product's own changes are already saved.
+7. **The Details box reads "Details · [Category]" with the category's full path,** "—" for a detail with no answer, and shows only when the category has details.
 
 ## Decided here, for Jack to overrule
 
