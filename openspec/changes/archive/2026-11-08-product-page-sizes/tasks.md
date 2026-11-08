@@ -21,11 +21,11 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 
 ## 4. Adding a product (pull request 4)
 
-- [ ] 4.1 Screen tests: "+ Add a product" for the Owner, not staff; "+ Add “[typed]” as a product" filling the name; adding opens its page; on receiving, an unknown barcode offers the Owner Add this product, and Add and count 1 puts it on the delivery as 1; staff are told as before.
-- [ ] 4.2 Stock's buttons and the receiving box.
+- [x] 4.1 Screen tests: "+ Add a product" for the Owner, not staff; "+ Add “[typed]” as a product" filling the name; adding opens its page; on receiving, an unknown barcode offers the Owner Add this product, and Add and count 1 puts it on the delivery as 1; staff are told as before.
+- [x] 4.2 Stock's buttons and the receiving box.
 
 ## 5. Cost went up? Change it (pull request 5; money)
 
-- [ ] 5.1 Tests: the Owner's change moves the line, the product's cost and its history together; the same cost changes nothing; Jo is refused; a line of another delivery, or one that isn't there, is not found; another business's delivery can't be reached.
-- [ ] 5.2 `PUT /api/deliveries/booked-in/:id/lines/:lineId/cost`; the delivery page's Change cost and its box.
-- [ ] 5.3 Log every gap in Jack's section of `decided-while-building.md`; `/opsx:archive` as the last commit.
+- [x] 5.1 Tests: the Owner's change moves the line, the product's cost and its history together; the same cost changes nothing; Jo is refused; a line of another delivery, or one that isn't there, is not found; another business's delivery can't be reached.
+- [x] 5.2 `PUT /api/deliveries/booked-in/:id/lines/:lineId/cost`; the delivery page's Change cost and its box.
+- [x] 5.3 Log every gap in Jack's section of `decided-while-building.md`; `/opsx:archive` as the last commit.

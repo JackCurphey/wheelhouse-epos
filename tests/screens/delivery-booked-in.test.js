@@ -157,7 +157,8 @@ test('a delivery’s page, as the Owner: lines with costs, the booked-in cost, w
   const items = within(ui.getByRole('list', { name: 'Items in this delivery' })).getAllByRole('listitem');
   assert.ok(items[0].textContent.includes('Shimano brake pads'));
   assert.ok(items[0].textContent.includes('B05S-RX · 2 × £28.00'), items[0].textContent);
-  assert.ok(items[0].textContent.endsWith('£56.00'), items[0].textContent);
+  // Then the Owner's Change cost (product-page-sizes, design 5).
+  assert.ok(items[0].textContent.endsWith('£56.00Change cost'), items[0].textContent);
   assert.ok(items[1].textContent.includes('1 × £1.10'), items[1].textContent);
   assert.ok(ui.getByText('Booked-in cost, before VAT'));
   assert.ok(ui.getByText('£57.10'));

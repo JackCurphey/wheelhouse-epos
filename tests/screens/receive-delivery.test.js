@@ -45,6 +45,9 @@ async function open(path, { me = OWNER, orders = ORDERS, suppliers = SUPPLIERS, 
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, me);
+    // Adding an unknown barcode's product (product-page-sizes, design 4).
+    if (u.pathname === '/api/products' && method === 'POST') return reply(201, { id: 14, sku: body.sku || null, barcode: body.barcode, name: body.name, pricePence: body.pricePence, costPence: null, category: body.category });
+    if (u.pathname === '/api/product-categories') return reply(200, { categories: [] });
     if (u.pathname === '/api/products') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
       return reply(200, [PADS, TUBE, OTHER].filter((p) => [p.name, p.sku, p.barcode].some((v) => v && v.toLowerCase().includes(q))));
@@ -538,4 +541,30 @@ test('a line whose order was all received elsewhere becomes “not on an order�
   fireEvent.click(ui.getByRole('button', { name: 'Book in 1 items' }));
   await ui.findByRole('heading', { level: 2, name: 'Booked in' });
   assert.deepEqual(receives()[0].body, { supplierId: 2, items: [{ productId: 12, qty: 1 }], problems: [{ productId: 12, kind:'damaged', qty: 1, note: '' }] });
+});
+
+// ---- An unknown barcode, added by the Owner (openspec/changes/product-page-sizes, design 4; rs-add-product) ----
+
+test('the Owner scanning a barcode Wheelhouse doesn’t know gets Add this product, and Add and count 1 puts it on as 1', async () => {
+  const r = await receivePage();
+  await scan(r, '9999');
+  const box = r.within(await r.ui.findByRole('dialog', { name: 'Add this product' }));
+  assert.ok(box.getByText('Barcode 9999 · not in Wheelhouse yet'));
+  assert.equal(box.getByLabelText('Barcode').value, '9999');
+  r.fireEvent.change(box.getByLabelText('Name'), { target: { value: '[Bearing]' } });
+  r.fireEvent.change(box.getByLabelText('Price'), { target: { value: '5' } });
+  r.fireEvent.click(box.getByRole('button', { name: 'Add and count 1' }));
+  const scanned = r.within(await r.ui.findByRole('list', { name: 'Scanned' }));
+  assert.ok(scanned.getAllByRole('listitem')[0].textContent.includes('[Bearing]'));
+  const added = calls.find((c) => c.url.endsWith('/api/products') && c.method === 'POST');
+  assert.deepEqual([added.body.name, added.body.barcode, added.body.pricePence], ['[Bearing]', '9999', 500]);
+  assert.equal('stockQty' in added.body, false, 'no stock until it is booked in');
+  assert.ok(r.ui.queryByRole('dialog') === null);
+});
+
+test('staff scanning a barcode Wheelhouse doesn’t know are told, with no box', async () => {
+  const r = await receivePage({ me: JO });
+  await scan(r, '9999');
+  await r.waitFor(() => assert.ok(said(r.ui, r.within).textContent.includes('Nothing in Wheelhouse has the barcode 9999')));
+  assert.ok(r.ui.queryByRole('dialog') === null);
 });

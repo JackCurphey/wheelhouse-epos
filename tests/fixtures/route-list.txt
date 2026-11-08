@@ -17,6 +17,7 @@ POST /api/deliveries/to-return/:id/returned
 POST /api/deliveries/receive
 GET /api/deliveries
 GET /api/deliveries/booked-in/:id
+PUT /api/deliveries/booked-in/:id/lines/:lineId/cost
 GET /api/shop-details
 PUT /api/shop-details
 GET /api/label-settings

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
-import { ApiError, apiGet } from '@/lib/api/client.ts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { Field, pence } from '@/screens/stock/product-box.tsx';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
@@ -14,8 +16,9 @@ import { PrintLabels } from './delivery-labels.tsx';
  * receiving.mjs; audit M10; walk-through 3 M4), a delivery's page (rs-delivery,
  * rs-delivery-staff; audit H4 and M12) and Recent deliveries on the hub.
  * Print labels is on the booked-in page (openspec/changes/delivery-labels).
- * Costs come from the server only for the Owner, until roles. The invoice
- * check, a job waiting for a part and Cost went up? come later.
+ * Costs come from the server only for the Owner, until roles; the Owner can
+ * change a line's cost (Cost went up? Change it; openspec/changes/product-page-sizes,
+ * design 5). The invoice check and a job waiting for a part come later.
  */
 type Kind = 'damaged' | 'wrong_item';
 type Summary = { id: number; supplierName: string | null; items: number; bookedInAt: string; bookedBy: string | null };
@@ -33,6 +36,62 @@ const count = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`;
 const named = (d: Summary) => `${d.supplierName ?? 'Delivery'} · ${count(d.items)}`;
 const bookedLine = (d: Summary) => `Booked in ${day(d.bookedInAt)}${d.bookedBy ? ` by ${d.bookedBy}` : ''}`;
 const deliveryHref = (id: number) => ROUTES['rs-delivery'].replace(':id', String(id));
+type Line = Delivery['lines'][number];
+
+/**
+ * Cost went up? Change it (receiving's 3 Oct later change, walk-through 3 M3; follows
+ * rs-invoice-cost's box): the line's new cost, typed in pounds and sent in whole pence; the
+ * product's cost and its history follow on the server.
+ */
+function ChangeCost({ delivery, line, onClose }: { delivery: Delivery; line: Line; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [typed, setTyped] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const costPence = pence(typed);
+  const why = costPence === null ? 'Type the new cost in pounds, like 14.00' : null;
+  async function save() {
+    if (why || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiMutate(`/api/deliveries/booked-in/${delivery.id}/lines/${line.id}/cost`, { costPence }, { method: 'PUT' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['deliveries', delivery.id] }),
+        queryClient.invalidateQueries({ queryKey: ['product', line.productId] }),
+        queryClient.invalidateQueries({ queryKey: ['stock'] }),
+      ]);
+      onClose();
+    } catch (err) {
+      setError(serverSaid(err) ? err.message : 'Wheelhouse couldn’t change the cost. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="cost-title" className="md:max-w-[560px]">
+      <DialogHeader className="flex-col items-start gap-1">
+        <DialogTitle id="cost-title">Cost went up? Change it</DialogTitle>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">{[line.name, line.sku].filter(Boolean).join(' · ')}</p>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        <Field id="cost-new" name="New cost" value={typed} onChange={setTyped} mono />
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">
+          Was <span className={mono}>{money(line.unitCost ?? 0)}</span>. It changes from now on — margins and stock value use it. The product’s history says “Cost changed · delivery from {delivery.supplierName ?? 'a supplier'}”.
+        </p>
+        {error ? <p role="alert" className="m-0 text-sm">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="items-start justify-between">
+        <Button onClick={onClose}>Cancel</Button>
+        <span className="flex flex-col items-end gap-1">
+          <Button variant="primary" aria-disabled={why || busy ? true : undefined} aria-describedby={why ? 'cost-why' : undefined}
+            className={why ? 'opacity-45' : undefined} onClick={save}>Change cost</Button>
+          {why ? <span id="cost-why" className="text-size-13 text-[var(--wh-muted)]">{why}</span> : null}
+        </span>
+      </DialogFooter>
+    </Dialog>
+  );
+}
 
 function useDelivery() {
   const id = Number(useParams().id ?? '');
@@ -107,8 +166,10 @@ export function DeliveryBookedPage() {
 /** A booked-in delivery (rs-delivery, rs-delivery-staff): costs only for who can order stock (audit M12). */
 export function DeliveryPage() {
   const { delivery: d, failed, gone } = useDelivery();
+  const [changingId, setChangingId] = useState<number | null>(null);
   if (!d) return <Waiting failed={failed} gone={gone} />;
   const costs = d.bookedCost !== undefined;
+  const changing = d.lines.find((l) => l.id === changingId);
   return (
     <Page>
       <Back />
@@ -119,6 +180,8 @@ export function DeliveryPage() {
             {d.lines.map((l) => (
               <Row key={l.id} title={l.name} sub={`${l.sku ? `${l.sku} · ` : ''}${l.qty}${l.unitCost !== undefined ? ` × ${money(l.unitCost)}` : ''}`}>
                 {l.lineCost !== undefined ? <span className={mono}>{money(l.lineCost)}</span> : null}
+                {/* A line's cost is sent only to who may change it (canSeeCosts). */}
+                {l.unitCost !== undefined ? <Button aria-label={`Change the cost of ${l.name}`} onClick={() => setChangingId(l.id)}>Change cost</Button> : null}
               </Row>
             ))}
           </ul>
@@ -143,6 +206,7 @@ export function DeliveryPage() {
         ) : null}
       </Card>
       {costs ? null : <p className="m-0 text-sm text-[var(--wh-muted)]">Costs are for people who can order stock.</p>}
+      {changing ? <ChangeCost delivery={d} line={changing} onClose={() => setChangingId(null)} /> : null}
     </Page>
   );
 }
