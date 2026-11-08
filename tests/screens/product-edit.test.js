@@ -1,4 +1,4 @@
-// A product's page: its price and cost changes in the history (openspec/changes/product-page-sizes,
+// A product's page: Edit, its details, and its price and cost changes in the history (openspec/changes/product-page-sizes,
 // design 1; st-product draws "Price changed · £28.00 → £[price]" and a Price changes pill).
 // Shimano brake pads B05S-RX £28.00, Jack Lewis and Jo Taylor as drawn; the rest bracketed,
 // or a number only the test needs.
@@ -72,4 +72,133 @@ test('no Price changes pill when the history has none, as Jo is sent', async () 
   const { ui } = await open({ me: JO, history: [SOLD] });
   ui.getByRole('radio', { name: 'Sold' });
   assert.ok(ui.queryByRole('radio', { name: 'Price changes' }) === null);
+});
+
+// Edit and the Details box (design 2; st-product draws Edit for the Owner, none for staff, and
+// "Details · [Category]" with its own Edit). Bearings with Inner diameter, Outer diameter and
+// Height in mm, as rs-add-product draws them.
+const BEARINGS = { id: 5, name: 'Bearings', parentId: null, path: 'Bearings', details: [
+  { id: 51, name: 'Inner diameter', kind: 'number', unit: 'mm', choices: [] },
+  { id: 52, name: 'Outer diameter', kind: 'number', unit: 'mm', choices: [] },
+  { id: 53, name: 'Height', kind: 'number', unit: 'mm', choices: [] },
+] };
+const BEARING = { ...PADS, name: '[Bearing]', category: 'Bearings', details: [
+  { id: 51, name: 'Inner diameter', kind: 'number', unit: 'mm', choices: [], from: 'Bearings', value: null },
+  { id: 52, name: 'Outer diameter', kind: 'number', unit: 'mm', choices: [], from: 'Bearings', value: 30 },
+  { id: 53, name: 'Height', kind: 'number', unit: 'mm', choices: [], from: 'Bearings', value: null },
+] };
+let sent;
+async function openEdit({ me = OWNER, product = PADS, refuse = null } = {}) {
+  sent = [];
+  let page = { ...product, stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: [] };
+  globalThis.fetch = async (url, init = {}) => {
+    const answer = (status, b) => ({ status, ok: status < 300, json: async () => b });
+    const u = new URL(url, 'http://localhost');
+    if (u.pathname === '/api/auth/me') return answer(200, me);
+    if (u.pathname === '/api/product-categories') return answer(200, { categories: [BEARINGS] });
+    if (init.method === 'PUT') {
+      const body = JSON.parse(init.body);
+      sent.push({ path: u.pathname, body });
+      if (refuse) return answer(refuse.status, refuse.body);
+      if (u.pathname === '/api/products/1') page = { ...page, ...body };
+      return answer(200, page);
+    }
+    if (u.pathname === '/api/products/1') return answer(200, page);
+    if (u.pathname.startsWith('/api/')) return answer(200, []);
+    return answer(404, { error: 'Not found' });
+  };
+  uninstall = installDom('http://localhost/workshop/stock/1');
+  rendered = true;
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
+  const rtl = await import('@testing-library/react');
+  const { createElement } = await import('react');
+  shell = await importFresh(SHELL);
+  const ui = rtl.render(createElement(shell.AppShell));
+  await ui.findByRole('heading', { level: 2, name: product.name });
+  return { ...rtl, ui };
+}
+async function editBox(t, name = 'Edit') {
+  t.fireEvent.click(t.ui.getByRole('button', { name }));
+  return t.within(await t.ui.findByRole('dialog'));
+}
+const type = (t, box, label, value) => t.fireEvent.change(box.getByLabelText(label), { target: { value } });
+
+test('Edit is the Owner’s: staff see Adjust stock and no Edit', async () => {
+  const { ui } = await openEdit({ me: JO });
+  ui.getByRole('button', { name: 'Adjust stock' });
+  assert.ok(ui.queryByRole('button', { name: 'Edit' }) === null);
+});
+
+test('Edit opens the box filled in, money in pounds', async () => {
+  const t = await openEdit();
+  const box = await editBox(t);
+  assert.equal(box.getByLabelText('Name').value, 'Shimano brake pads');
+  assert.equal(box.getByLabelText('Supplier code').value, 'B05S-RX');
+  assert.equal(box.getByLabelText('Price').value, '28.00');
+  assert.equal(box.getByLabelText('Cost').value, '14.00');
+  assert.equal(box.getByLabelText('Low-stock level').value, '3');
+});
+
+test('a new price is sent in whole pence, and the page shows it', async () => {
+  const t = await openEdit();
+  const box = await editBox(t);
+  type(t, box, 'Price', '30');
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(sent.length, 1));
+  assert.equal(sent[0].path, '/api/products/1');
+  assert.equal(sent[0].body.pricePence, 3000);
+  assert.equal(sent[0].body.costPence, 1400);
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  await t.ui.findByText('£30.00');
+});
+
+test('a blank cost isn’t sent, so the cost stays', async () => {
+  const t = await openEdit();
+  const box = await editBox(t);
+  type(t, box, 'Cost', '');
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(sent.length, 1));
+  assert.equal('costPence' in sent[0].body, false);
+});
+
+test('a price that isn’t money greys Save and says why', async () => {
+  const t = await openEdit();
+  const box = await editBox(t);
+  type(t, box, 'Price', 'abc');
+  const save = box.getByRole('button', { name: 'Save' });
+  assert.equal(save.getAttribute('aria-disabled'), 'true');
+  assert.equal(document.getElementById(save.getAttribute('aria-describedby')).textContent, 'Type a price in pounds, like 28.00');
+  t.fireEvent.click(save);
+  assert.equal(sent.length, 0);
+});
+
+test('the server’s words stay in the box', async () => {
+  const t = await openEdit({ refuse: { status: 400, body: { error: 'Barcode "[barcode]" is already in use' } } });
+  const box = await editBox(t);
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Barcode "[barcode]" is already in use');
+  assert.ok(t.ui.queryByRole('dialog') !== null);
+});
+
+test('Details · Bearings shows its answers; the box saves a changed one after the product', async () => {
+  const t = await openEdit({ product: BEARING });
+  const details = t.within(t.ui.getByRole('region', { name: 'Details · Bearings' }));
+  assert.ok(details.getByText('30 mm'));
+  assert.equal(details.getAllByText('—').length, 2);
+  const box = await editBox(t, 'Edit details');
+  await box.findByLabelText('Outer diameter');
+  assert.equal(box.getByLabelText('Outer diameter').value, '30');
+  await t.waitFor(() => assert.ok(document.activeElement === box.getByLabelText('Inner diameter'), 'Edit details lands on the first detail'));
+  type(t, box, 'Inner diameter', '10');
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(sent.length, 2));
+  assert.equal(sent[0].path, '/api/products/1');
+  assert.deepEqual(sent[1], { path: '/api/products/1/details', body: { answers: [{ detailId: 51, value: '10' }] } });
+});
+
+test('the Owner’s sign-in sent no cost (someone else checked in) gets no Edit (the review)', async () => {
+  const { ui } = await openEdit({ product: { ...PADS, costPence: null } });
+  ui.getByRole('button', { name: 'Adjust stock' });
+  assert.ok(ui.queryByRole('button', { name: 'Edit' }) === null);
 });

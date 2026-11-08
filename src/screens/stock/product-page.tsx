@@ -9,6 +9,8 @@ import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button';
 import { AdjustStock, REASON_LABEL } from './adjust-stock.tsx';
+import { ProductBox } from './product-box.tsx';
+import { answerText, type Detail } from './stock-list-bits.tsx';
 import { count, marginText, money, mono, stockState, StateTag, type Product } from './stock-bits.tsx';
 
 /**
@@ -18,15 +20,17 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * then Price (and for the Owner, cost and margin); on the right one stock
  * history, newest first, each line with its reason and who where recorded.
  * Anyone with the page can Adjust stock (st-adjust; openspec/changes/adjust-stock);
- * Edit and sending to another shop come with later pieces, and a stock
- * bike's frame numbers aren't recorded yet.
+ * the Owner can Edit it, and its details, in the product box
+ * (openspec/changes/product-page-sizes, design 2). Sending to another shop comes
+ * with its own piece, and a stock bike's frame numbers aren't recorded yet.
  */
 type Move = { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
 // A price or cost change, sent to the Owner only (openspec/changes/product-page-sizes, design 1).
 type PriceChange = { id: string; type: 'price_change'; field: 'price' | 'cost'; was: number; now: number; who: string | null; at: string; delivery: { id: number; supplierName: string | null } | null };
 type Line = Move | PriceChange;
 type ShopStock = { id: number; name: string; qty: number; here: boolean };
-type Page = Product & { stockAtShops: ShopStock[]; history: Line[] };
+type Answered = Detail & { from: string; value: number | string | null };
+type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[] };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
 const WHAT: Record<string, [string, Show | null]> = {
   sale: ['Sold', 'Sold'],
@@ -51,10 +55,10 @@ const lineDetail = (m: Line) => (isPrice(m)
   ? [m.delivery ? `delivery from ${m.delivery.supplierName ?? 'a supplier'}` : null, m.who, when(m.at)]
   : [m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)]).filter(Boolean).join(' · ');
 
-function Box({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Box({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4 max-md:px-3.5 max-md:py-3.5">
-      <h3 id={id} className="m-0 text-base font-bold">{title}</h3>
+      <div className="flex items-center justify-between gap-3"><h3 id={id} className="m-0 text-base font-bold">{title}</h3>{action}</div>
       {children}
     </section>
   );
@@ -74,6 +78,9 @@ export function ProductPage() {
   const isPhone = useMedia('(max-width: 767px)');
   const [show, setShow] = useState<Show>('Everything');
   const [adjusting, setAdjusting] = useState(false);
+  const [editing, setEditing] = useState<'name' | 'details' | null>(null);
+  // Who may edit is who the server sends a cost to (canSeeCosts, product-editor.js): the Owner's
+  // sign-in with someone else checked in is that person (the review).
   const product = useQuery({ queryKey: ['product', id], queryFn: () => apiGet<Page>(`/api/products/${id}`), retry: false, enabled: known });
   if (!known || product.isError) {
     return <p role="alert" className="m-0 text-sm">{!known || (product.error instanceof ApiError && product.error.status === 404) ? 'Product not found' : 'Wheelhouse couldn’t load this product. Try again in a moment.'}</p>;
@@ -82,6 +89,7 @@ export function ProductPage() {
   if (!p) return <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>;
   // The shop this computer changes stock at (openspec/changes/stock-per-shop, design 7).
   const here = p.stockAtShops.find((s) => s.here);
+  const canEdit = owner && p.costPence !== null;
   const codes = [p.sku, p.category, p.supplier, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(' · ');
   const moves = p.history.filter((m) => show === 'Everything' || WHAT[m.type]?.[1] === show);
   // Price changes only when there are some: staff are sent none (st-product-staff).
@@ -99,10 +107,14 @@ export function ProductPage() {
       </div>
       <div className={`grid items-start gap-3.5 ${isPhone ? 'grid-cols-1' : 'grid-cols-[minmax(0,380px)_minmax(0,1fr)]'}`}>
         <div className="flex min-w-0 flex-col gap-3">
-          {codes || p.photoUrl ? (
+          {codes || p.photoUrl || canEdit ? (
             <div className="flex items-center gap-3.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4">
               {p.photoUrl ? <img src={p.photoUrl} alt="" className="size-[72px] shrink-0 rounded-lg object-cover" /> : null}
-              <span className="min-w-0 text-size-13 text-[var(--wh-muted)]">{codes}</span>
+              <span className="flex min-w-0 flex-col items-start gap-1.5">
+                <span className="text-size-13 text-[var(--wh-muted)]">{codes}</span>
+                {/* Edit is the Owner's, as drawn (stock control decision 11). */}
+                {canEdit ? <Button onClick={() => setEditing('name')}>Edit</Button> : null}
+              </span>
             </div>
           ) : null}
           <Box id="h-in-stock" title="In stock">
@@ -114,6 +126,12 @@ export function ProductPage() {
             {/* Anyone with the Stock page adjusts (2026-10-26-day-answers.md section 11). */}
             <div className="flex flex-wrap gap-2 pt-1"><Button onClick={() => setAdjusting(true)}>Adjust stock</Button></div>
           </Box>
+          {p.details?.length ? (
+            <Box id="h-details" title={`Details · ${p.category}`}
+              action={canEdit ? <button type="button" aria-label="Edit details" onClick={() => setEditing('details')} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Edit</button> : null}>
+              {p.details.map((d) => <Fragment key={d.id}>{kv(d.name, <span className={d.kind === 'number' ? mono : undefined}>{answerText(d, d.value ?? undefined)}</span>)}</Fragment>)}
+            </Box>
+          ) : null}
           <Box id="h-price" title={owner && p.costPence !== null ? 'Price and cost' : 'Price'}>
             {kv('Price', <span className={mono}>{money(p.pricePence)}</span>)}
             {owner && p.costPence !== null ? kv('Cost', <span className={mono}>{money(p.costPence)}</span>) : null}
@@ -144,6 +162,10 @@ export function ProductPage() {
           )}
         </section>
       </div>
+      {editing ? (
+        <ProductBox product={p} title="Edit product" subtitle={[p.name, p.sku].filter(Boolean).join(' · ')} saveLabel="Save" focus={editing}
+          onSaved={() => setEditing(null)} onClose={() => setEditing(null)} />
+      ) : null}
       {adjusting && here ? <AdjustStock product={p} shopName={here.name} now={here.qty} onClose={() => setAdjusting(false)} /> : null}
     </div>
   );

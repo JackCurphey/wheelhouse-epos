@@ -10,9 +10,9 @@ Each pull request: tests first, each watched failing for the right reason; `npm 
 
 ## 2. A product's page: Edit and details (pull request 2; money)
 
-- [ ] 2.1 Screen tests: Edit for the Owner only; the box filled; a price typed in pounds sent in pence; a cost left blank not sent; the category's details shown and saved after the product; the server's words kept in the box; the Details box with its answers.
-- [ ] 2.2 `product-box.tsx` and the page's Edit and Details · [Category].
-- [ ] 2.3 A browser test: the Owner changes the brake pads' price and sees it, and its history line.
+- [x] 2.1 Screen tests: Edit for the Owner only; the box filled; a price typed in pounds sent in pence; a cost left blank not sent; the category's details shown and saved after the product; the server's words kept in the box; the Details box with its answers.
+- [x] 2.2 `product-box.tsx` and the page's Edit and Details · [Category].
+- [x] 2.3 A browser test: the Owner changes the brake pads' price and sees it, and its history line.
 
 ## 3. A product with sizes' page (pull request 3)
 

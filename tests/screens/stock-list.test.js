@@ -214,7 +214,9 @@ test('a product’s page as drawn for the Owner: stock first, price and cost, hi
   assert.match(lines[1], /^Adjusted.*Damaged.*−1$/);
   assert.match(lines[2], /^Received.*\+6$/);
   // Adjust stock came with openspec/changes/adjust-stock (tests/screens/adjust-stock.test.js).
-  for (const b of ['Edit', 'Send to another shop']) assert.ok(ui.queryByRole('button', { name: b }) === null, `${b} changes things: not in this piece`);
+  // Edit is the Owner's (product-page-sizes); sending stock is its own piece.
+  assert.ok(ui.getByRole('button', { name: 'Edit' }));
+  assert.ok(ui.queryByRole('button', { name: 'Send to another shop' }) === null, 'Send to another shop: not built yet');
 });
 
 test('Staff see Price and VAT, and no cost or margin (st-product-staff)', async () => {
