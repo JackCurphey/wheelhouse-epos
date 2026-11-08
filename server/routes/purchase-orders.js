@@ -67,6 +67,8 @@ function serializePurchaseOrder(row, items, costs) {
           qtyReceived: it.qty_received,
           outstanding: closed ? 0 : outstanding(it),
           notComing: closed ? Math.max(0, outstanding(it)) : 0,
+          // The job a line is for, from the restock list's Add to an order (restock-list).
+          ...(it.workshop_job_id ? { forJob: { id: it.workshop_job_id, ref: it.job_ref ?? null } } : {}),
           ...(costs ? { unitCost: it.unit_cost } : {}),
         }))
       : undefined,
@@ -86,8 +88,10 @@ async function loadPurchaseOrderItems(id) {
     `SELECT poi.*,
             COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
                       WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
-                        AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside
-     FROM purchase_order_items poi WHERE poi.purchase_order_id = ? ORDER BY poi.id`
+                        AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside,
+            w.reference AS job_ref
+     FROM purchase_order_items poi LEFT JOIN workshop_jobs w ON w.id = poi.workshop_job_id
+     WHERE poi.purchase_order_id = ? ORDER BY poi.id`
   ).all(id);
 }
 const outstanding = (it) => it.qty_ordered - it.qty_received - (it.qty_set_aside ?? 0);
@@ -97,7 +101,7 @@ const outstanding = (it) => it.qty_ordered - it.qty_received - (it.qty_set_aside
 // The most a line can order, and the most a unit cost can be: the
 // NUMERIC(10,2) column's largest. Past these the database answered 500
 // (review of 26 Oct).
-const MAX_QTY = 100000;
+export const MAX_QTY = 100000;
 const MAX_UNIT_COST = 99999999.99;
 
 // What each line costs. Someone who can't see costs isn't told it and doesn't
@@ -105,7 +109,7 @@ const MAX_UNIT_COST = 99999999.99;
 // (`unitCost` missing, null or blank) takes one too, never £0: the cost already on
 // that draft's line (`onDraft`, product id to cost), else the product's
 // (openspec/changes/product-costs-hidden).
-async function loadPoLineItems(items, costs, onDraft = new Map()) {
+export async function loadPoLineItems(items, costs, onDraft = new Map()) {
   const loaded = [];
   for (const it of items) {
     const productId = Number(it.productId);
@@ -122,9 +126,33 @@ async function loadPoLineItems(items, costs, onDraft = new Map()) {
     if (unitCost > MAX_UNIT_COST) throw new ValidationError('A unit cost can be at most £99,999,999.99');
     const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
-    loaded.push({ product, qty, unitCost: given ? unitCost : onDraft.get(product.id) ?? product.cost });
+    loaded.push({ product, qty, unitCost: given ? unitCost : onDraft.get(product.id) ?? product.cost, forJobId: it.forJobId });
   }
   return loaded;
+}
+
+// Replacing a draft's lines keeps the job each was for (restock-list, design 4): an item may
+// say its job (forJobId, a job of this business, or null for none); one that doesn't takes the
+// job of the draft's earlier line for the same product, in turn, so an edit that knows nothing
+// of jobs (the old app) doesn't drop them.
+async function keepLineJobs(loaded, before) {
+  const earlier = new Map();
+  for (const l of before) {
+    if (!earlier.has(l.product_id)) earlier.set(l.product_id, []);
+    earlier.get(l.product_id).push(l.workshop_job_id);
+  }
+  const out = [];
+  for (const l of loaded) {
+    let jobId;
+    if (l.forJobId === undefined) jobId = earlier.get(l.product.id)?.shift() ?? null;
+    else if (l.forJobId === null) jobId = null;
+    else {
+      jobId = Number(l.forJobId);
+      if (!Number.isInteger(jobId) || !(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(jobId))) throw new ValidationError('Job not found');
+    }
+    out.push({ ...l, jobId });
+  }
+  return out;
 }
 
 // New order keeps its rule that an order can't go without its costs (a draft
@@ -457,8 +485,9 @@ export function register(route) {
           return badRequest(res, 'A purchase order must include at least one item');
         }
         try {
-          const lines = await db.prepare('SELECT product_id, unit_cost FROM purchase_order_items WHERE purchase_order_id = ?').all(id);
+          const lines = await db.prepare('SELECT product_id, unit_cost, workshop_job_id FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(id);
           loaded = await loadPoLineItems(items, costs, new Map(lines.map((l) => [l.product_id, l.unit_cost])));
+          loaded = await keepLineJobs(loaded, lines);
         } catch (err) {
           if (!(err instanceof ValidationError)) throw err;
           await db.exec('ROLLBACK');
@@ -471,11 +500,11 @@ export function register(route) {
       ).run(supplierId, reference, notes, nowIso(), id);
       if (loaded) {
         await db.prepare('DELETE FROM purchase_order_items WHERE purchase_order_id = ?').run(id);
-        for (const { product, qty, unitCost } of loaded) {
+        for (const { product, qty, unitCost, jobId } of loaded) {
           await db.prepare(
-            `INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered, unit_cost)
-             VALUES (?, ?, ?, ?, ?, ?)`
-          ).run(id, product.id, product.name, product.sku, qty, unitCost);
+            `INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered, unit_cost, workshop_job_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).run(id, product.id, product.name, product.sku, qty, unitCost, jobId);
         }
       }
       await db.exec('COMMIT');
