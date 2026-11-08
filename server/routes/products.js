@@ -17,6 +17,7 @@ import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
+import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -190,12 +191,17 @@ export function register(route) {
          LEFT JOIN product_stock ps ON ps.site_id = s.id AND ps.product_id = ? ORDER BY s.id`
     ).all(id);
     const here = (await siteHere(req)) ?? await oldestSite();
+    const costs = await canSeeCosts(req);
     sendJson(res, 200, {
-      ...serializeProduct(row, await canSeeCosts(req)),
+      ...serializeProduct(row, costs),
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
       // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
       details: await detailsOf(row),
-      history: moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
+      // Its price and cost changes among them, for the Owner only (product-page-sizes, design 1).
+      history: newestFirst([
+        ...moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
+        ...await priceChangesOf([id], costs),
+      ]),
     });
   });
 
@@ -281,6 +287,12 @@ export function register(route) {
       if (refused) {
         await db.exec('ROLLBACK');
         return badRequest(res, refused);
+      }
+      // A price or cost that changed goes into its history, with who (product-page-sizes, design 1).
+      // Only a save sent one can change either.
+      if (['price', 'pricePence', 'cost', 'costPence'].some((k) => body[k] !== undefined)) {
+        const written = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+        await recordPriceChanges(locked, written, await whoIsBooking(req));
       }
       await db.exec('COMMIT');
     } catch (err) {
