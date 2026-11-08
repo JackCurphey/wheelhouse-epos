@@ -116,6 +116,8 @@ export function ProductPage() {
   const isPhone = useMedia('(max-width: 767px)');
   const [adjusting, setAdjusting] = useState(false);
   const [editing, setEditing] = useState<'name' | 'details' | null>(null);
+  // Who may edit is who the server sends a cost to (canSeeCosts, product-editor.js): the Owner's
+  // sign-in with someone else checked in is that person (the review).
   const product = useQuery({ queryKey: ['product', id], queryFn: () => apiGet<Page>(`/api/products/${id}`), retry: false, enabled: known });
   if (!known || product.isError) {
     return <p role="alert" className="m-0 text-sm">{!known || (product.error instanceof ApiError && product.error.status === 404) ? 'Product not found' : 'Wheelhouse couldn’t load this product. Try again in a moment.'}</p>;
@@ -124,6 +126,7 @@ export function ProductPage() {
   if (!p) return <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>;
   // The shop this computer changes stock at (openspec/changes/stock-per-shop, design 7).
   const here = p.stockAtShops.find((s) => s.here);
+  const canEdit = owner && p.costPence !== null;
   const codes = [p.sku, p.category, p.supplier, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(' · ');
   return (
     <div className="flex flex-col gap-3.5">
@@ -134,13 +137,13 @@ export function ProductPage() {
       </div>
       <div className={`grid items-start gap-3.5 ${isPhone ? 'grid-cols-1' : 'grid-cols-[minmax(0,380px)_minmax(0,1fr)]'}`}>
         <div className="flex min-w-0 flex-col gap-3">
-          {codes || p.photoUrl || owner ? (
+          {codes || p.photoUrl || canEdit ? (
             <div className="flex items-center gap-3.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-4">
               {p.photoUrl ? <img src={p.photoUrl} alt="" className="size-[72px] shrink-0 rounded-lg object-cover" /> : null}
               <span className="flex min-w-0 flex-col items-start gap-1.5">
                 <span className="text-size-13 text-[var(--wh-muted)]">{codes}</span>
                 {/* Edit is the Owner's, as drawn (stock control decision 11). */}
-                {owner ? <Button onClick={() => setEditing('name')}>Edit</Button> : null}
+                {canEdit ? <Button onClick={() => setEditing('name')}>Edit</Button> : null}
               </span>
             </div>
           ) : null}
@@ -155,7 +158,7 @@ export function ProductPage() {
           </Box>
           {p.details?.length ? (
             <Box id="h-details" title={`Details · ${p.category}`}
-              action={owner ? <button type="button" aria-label="Edit details" onClick={() => setEditing('details')} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Edit</button> : null}>
+              action={canEdit ? <button type="button" aria-label="Edit details" onClick={() => setEditing('details')} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Edit</button> : null}>
               {p.details.map((d) => <Fragment key={d.id}>{kv(d.name, <span className={d.kind === 'number' ? mono : undefined}>{answerText(d, d.value ?? undefined)}</span>)}</Fragment>)}
             </Box>
           ) : null}

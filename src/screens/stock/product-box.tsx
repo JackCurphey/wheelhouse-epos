@@ -120,6 +120,8 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
         ? await apiMutate<Product>(`/api/products/${id}`, body, { method: 'PUT' })
         : await apiMutate<Product>('/api/products', body);
       setMade(saved);
+      // Shown as saved at once, even if its details are refused next (the review).
+      void queryClient.invalidateQueries({ queryKey: ['stock'] });
       const changed = details.filter((d) => (answers[d.id] ?? '') !== (was[d.id] ?? ''));
       if (changed.length) {
         await apiMutate(`/api/products/${saved.id}/details`, { answers: changed.map((d) => ({ detailId: d.id, value: (answers[d.id] ?? '').trim() })) }, { method: 'PUT' });
