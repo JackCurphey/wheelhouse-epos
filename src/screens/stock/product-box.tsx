@@ -82,9 +82,15 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
+  // Once only: Name at once; the details when the categories have loaded and drawn them, so the
+  // cursor is never pulled away from what someone is already typing.
+  const focused = useRef(false);
   useEffect(() => {
-    if (focus === 'details') detailsRef.current?.querySelector<HTMLElement>('input, select')?.focus();
-    else nameRef.current?.focus();
+    if (focused.current) return;
+    if (focus === 'name') nameRef.current?.focus();
+    else if (categories.isSuccess) detailsRef.current?.querySelector<HTMLElement>('input, select')?.focus();
+    else return;
+    focused.current = true;
   }, [focus, categories.isSuccess]);
 
   const details = category === NONE ? [] : detailsFor(all, category);
