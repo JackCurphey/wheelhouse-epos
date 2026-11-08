@@ -90,3 +90,10 @@ test('another business never sees or reaches the changes', async () => {
   assert.deepEqual(await changes(other, p.id), []);
   assert.equal((await as(other, `/api/products/${p.id}`)).status, 404);
 });
+
+test('a cost below nothing still saves, and its change is kept (the review)', async () => {
+  const p = await pads();
+  const res = await as(owner, `/api/products/${p.id}`, 'PUT', { cost: -5 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual((await changes(owner, p.id)).map((c) => [c.field, Number(c.was_pence), Number(c.now_pence)]), [['cost', 1400, -500]]);
+});

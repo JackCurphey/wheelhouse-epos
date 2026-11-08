@@ -9,8 +9,10 @@ CREATE TABLE IF NOT EXISTS product_price_changes (
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
   product_id INTEGER NOT NULL,
   field TEXT NOT NULL CHECK (field IN ('price', 'cost')),
-  was_pence BIGINT NOT NULL CHECK (was_pence >= 0),
-  now_pence BIGINT NOT NULL CHECK (now_pence >= 0),
+  -- As it was and became, never refused: an old product's cost can be below nothing, and a
+  -- save the product took must not fail on its history (the review).
+  was_pence BIGINT NOT NULL,
+  now_pence BIGINT NOT NULL,
   login_id INTEGER REFERENCES logins(id) ON DELETE SET NULL,
   -- Kept as it was, so a person removed later is still named (as a stock line's who_name).
   who_name TEXT,
@@ -27,3 +29,6 @@ DROP POLICY IF EXISTS product_price_changes_shop_isolation ON product_price_chan
 CREATE POLICY product_price_changes_shop_isolation ON product_price_changes
   USING (shop_id = current_setting('app.current_shop_id')::int)
   WITH CHECK (shop_id = current_setting('app.current_shop_id')::int);
+-- A database that ran this file's first version refused a change below nothing; drop those checks.
+ALTER TABLE product_price_changes DROP CONSTRAINT IF EXISTS product_price_changes_was_pence_check;
+ALTER TABLE product_price_changes DROP CONSTRAINT IF EXISTS product_price_changes_now_pence_check;

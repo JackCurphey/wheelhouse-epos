@@ -289,8 +289,11 @@ export function register(route) {
         return badRequest(res, refused);
       }
       // A price or cost that changed goes into its history, with who (product-page-sizes, design 1).
-      const written = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-      await recordPriceChanges(locked, written, await whoIsBooking(req));
+      // Only a save sent one can change either.
+      if (['price', 'pricePence', 'cost', 'costPence'].some((k) => body[k] !== undefined)) {
+        const written = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+        await recordPriceChanges(locked, written, await whoIsBooking(req));
+      }
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});

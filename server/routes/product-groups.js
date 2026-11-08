@@ -203,8 +203,12 @@ export function register(route) {
           s?.lowStockThreshold ?? p.low_stock_threshold, s?.active ?? p.active, p.id);
       }
       // Each size whose price or cost changed: its history says so (product-page-sizes, design 1).
-      const changer = await whoIsBooking(req);
-      for (const was of before) await recordPriceChanges(was, await db.prepare('SELECT * FROM products WHERE id = ?').get(was.id), changer);
+      // Read back in one go, and only when a size was sent.
+      if (sent.sizes.some((s) => s.id !== null)) {
+        const changer = await whoIsBooking(req);
+        const written = await db.prepare('SELECT * FROM products WHERE group_id = ?').all(id);
+        for (const was of before) await recordPriceChanges(was, written.find((w) => w.id === was.id), changer);
+      }
       for (const s of sent.sizes.filter((x) => x.id === null)) await addSize(now, s, who);
       await db.exec('COMMIT');
     } catch (err) {

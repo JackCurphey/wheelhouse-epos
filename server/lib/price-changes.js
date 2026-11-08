@@ -19,12 +19,12 @@ export async function recordPriceChanges(before, after, who, { deliveryId = null
 }
 
 // The newest 200 changes of these products, as history lines; [] for someone who can't see costs.
-// Each says the delivery's supplier when a delivery changed it.
+// Each says the delivery's supplier, by the name the delivery kept, when a delivery changed it.
 export async function priceChangesOf(productIds, costs) {
   if (!costs || productIds.length === 0) return [];
   const rows = await prepare(
     `SELECT c.id, c.product_id, c.field, c.was_pence, c.now_pence, COALESCE(c.who_name, l.name) AS who, c.created_at,
-            c.delivery_id, COALESCE(sp.name, d.supplier_name) AS supplier
+            c.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier
        FROM product_price_changes c
        LEFT JOIN logins l ON l.id = c.login_id
        LEFT JOIN deliveries d ON d.id = c.delivery_id
