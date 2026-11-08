@@ -77,7 +77,7 @@ function Tick({ label, checked, onChange }: { label: string; checked: boolean; o
   );
 }
 
-function SupplierGroup({ group, show }: { group: RestockGroup; show: Show }) {
+function SupplierGroup({ group, show, index }: { group: RestockGroup; show: Show; index: number }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const rows = rowsFor(group, show);
@@ -89,7 +89,8 @@ function SupplierGroup({ group, show }: { group: RestockGroup; show: Show }) {
 
   const ticked = rows.filter((r) => !off.has(r.key));
   const allTicked = ticked.length === rows.length;
-  const id = `g-${group.supplier.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  // By place, so two suppliers whose names read alike never share a heading.
+  const id = `restock-group-${index}`;
   const toggle = (key: string) => setOff((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
   const toggleAll = () => setOff(allTicked ? new Set(rows.map((r) => r.key)) : new Set());
   const fail = (err: unknown, what: string) => setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : `Wheelhouse couldn’t ${what}. Try again in a moment.`);
@@ -121,7 +122,13 @@ function SupplierGroup({ group, show }: { group: RestockGroup; show: Show }) {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ supplier: group.supplier, lines: [...lines].map(([productId, qty]) => ({ productId, qty })) }),
       });
-      if (!res.ok) throw new Error(`restock download: ${res.status}`);
+      if (!res.ok) {
+        // The server's own words for a refusal (a product gone since the list loaded).
+        const words = res.status < 500 ? await res.json().then((b: { error?: unknown }) => (typeof b?.error === 'string' ? b.error : null), () => null) : null;
+        setProblem(words ?? 'Wheelhouse couldn’t make the file. Try again in a moment.');
+        setBusy(false);
+        return;
+      }
       const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'restock.csv';
       const url = URL.createObjectURL(await res.blob());
       const link = document.createElement('a');
@@ -185,9 +192,11 @@ function SupplierGroup({ group, show }: { group: RestockGroup; show: Show }) {
 export function RestockPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
-  const [params] = useSearchParams();
+  // The pill lives in the address (?show=), so a See the list link picks it even with the page open.
+  const [params, setParams] = useSearchParams();
   const asked = params.get('show');
-  const [show, setShow] = useState<Show>(PILLS.some((p) => p.value === asked) ? (asked as Show) : 'all');
+  const show: Show = PILLS.some((p) => p.value === asked) ? (asked as Show) : 'all';
+  const setShow = (v: Show) => setParams(v === 'all' ? {} : { show: v }, { replace: true });
   const list = useRestock(owner);
   const queryClient = useQueryClient();
   // Opening the list clears Today's restock line (audit M11): said once the list is open.
@@ -215,7 +224,7 @@ export function RestockPage() {
                 <span /><span>Product</span><span>In stock</span><span>{`Sold, last ${list.data.days} days`}</span><span className="w-[140px]">Reorder</span>
               </div>
               {/* A group's ticks and counts are its own, kept while the pill changes (keyed by pill). */}
-              {groups.map((g) => <SupplierGroup key={`${show}:${g.supplierId ?? g.supplier}`} group={g} show={show} />)}
+              {groups.map((g, i) => <SupplierGroup key={`${show}:${g.supplierId ?? g.supplier}`} group={g} show={show} index={i} />)}
               {show === 'customers' ? <p className="m-0 text-sm text-[var(--wh-muted)]">“Add to an order” keeps who each line is for on the order line — “for job WH-1042”.</p> : null}
             </>
           )}

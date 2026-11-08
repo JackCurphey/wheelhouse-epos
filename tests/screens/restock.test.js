@@ -185,3 +185,14 @@ test('Jo’s Deliveries and orders has no Restock list', async () => {
   await screen.findByRole('heading', { name: 'A delivery arrived?' });
   assert.ok(screen.queryByRole('region', { name: 'Restock list' }) === null);
 });
+
+test('a refused download shows the server’s words', async () => {
+  const { screen, fireEvent, within } = await open('/workshop/deliveries/restock');
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init) => (String(url).endsWith('/api/restock/download')
+    ? { status: 400, ok: false, headers: { get: () => null }, json: async () => ({ error: 'Product 11 not found' }) }
+    : real(url, init));
+  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  fireEvent.click(within(g).getByRole('button', { name: 'Download for [Supplier]’s basket' }));
+  assert.equal((await within(g).findByRole('alert')).textContent, 'Product 11 not found');
+});
