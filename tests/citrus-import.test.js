@@ -122,7 +122,9 @@ test('the same file again changes nothing, and what was changed in Wheelhouse st
   const after2 = await productBy(pads[4]);
   assert.deepEqual({ price: Number(after2.price), category: after2.category, qty: after2.stock_qty }, { price: 30, category: 'Brakes', qty: 6 });
   assert.deepEqual(counts(await fileIn(res.body.id)), num({ rowsSame: 1 }), 'left alone isn\'t counted as brought across');
-  assert.equal((await staff(`/api/products/${p.id}`)).body.history.length, 1);
+  // One stock line, and the price changed by hand (product-page-sizes): the file added neither.
+  const history = (await staff(`/api/products/${p.id}`)).body.history;
+  assert.deepEqual(history.map((h) => h.type).sort(), ['intake', 'price_change'], JSON.stringify(history));
 });
 
 test('rows that don\'t fit wait with their reason, and the rest come across', async () => {
