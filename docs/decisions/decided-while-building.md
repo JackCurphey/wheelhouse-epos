@@ -2298,6 +2298,11 @@ WP-1.5's. So: slice C, WP-2.3.
 15. **A unit typed in a number box, "30 mm" or "30mm", is the box's own unit and is dropped,** as the unit is printed after the box; another unit is sent as typed and finds nothing (the review).
 16. **Sorted by Margin, then a category picked: Margin goes, and the list goes back to name order, lowest first** (the review). A filter typed for one category is never sent with the next.
 
+### 8 Nov 2026: a product's page, Edit, a product with sizes' page, adding a product and price changes (WP-1.5, piece 10; `openspec/changes/product-page-sizes`; `st-product`, `st-product-staff`, `st-product-sizes`, `st-list-none`, `st-list-new`, `rs-add-product`, `rs-delivery`)
+
+1. **Every price and cost change is kept, one at a time as well as in bulk:** "Price changed · £28.00 → £[price]" and "Cost changed · £[cost] → £[cost]", with who and when, and "delivery from [Supplier]" when a delivery changed it. Decision 7 says bulk changes go in the history; a single change is drawn the same way, and walk-through 3 M3 asks for a cost change in it. Adding a product records none: its first price is no change.
+2. **Staff are sent no price or cost changes,** as `st-product-staff` draws Jo's history without the price change line; a cost is a cost. The Owner sees both. The Price changes pill shows only when the history has one, so staff don't get a pill that always shows nothing.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

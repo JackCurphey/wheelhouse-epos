@@ -22,9 +22,12 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * bike's frame numbers aren't recorded yet.
  */
 type Move = { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
+// A price or cost change, sent to the Owner only (openspec/changes/product-page-sizes, design 1).
+type PriceChange = { id: string; type: 'price_change'; field: 'price' | 'cost'; was: number; now: number; who: string | null; at: string; delivery: { id: number; supplierName: string | null } | null };
+type Line = Move | PriceChange;
 type ShopStock = { id: number; name: string; qty: number; here: boolean };
-type Page = Product & { stockAtShops: ShopStock[]; history: Move[] };
-type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted';
+type Page = Product & { stockAtShops: ShopStock[]; history: Line[] };
+type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
 const WHAT: Record<string, [string, Show | null]> = {
   sale: ['Sold', 'Sold'],
   till_sale: ['Sold', 'Sold'],
@@ -35,9 +38,18 @@ const WHAT: Record<string, [string, Show | null]> = {
   // A stock take applied, and undone (openspec/changes/stock-take).
   count: ['Counted', 'Counted and adjusted'],
   count_undone: ['Count undone', 'Counted and adjusted'],
+  price_change: ['Price changed', 'Price changes'],
 };
-const SHOWS: Show[] = ['Everything', 'Sold', 'Received', 'Counted and adjusted'];
+const SHOWS: Show[] = ['Everything', 'Sold', 'Received', 'Counted and adjusted', 'Price changes'];
 const change = (n: number) => (n > 0 ? `+${n}` : count(n));
+const isPrice = (m: Line): m is PriceChange => m.type === 'price_change';
+// "Price changed · £28.00 → £[price]" as st-product draws it; a cost's the same, for the Owner.
+const lineWhat = (m: Line) => (isPrice(m)
+  ? `${m.field === 'price' ? 'Price changed' : 'Cost changed'} · ${money(m.was)} → ${money(m.now)}`
+  : [WHAT[m.type]?.[0] ?? 'Stock changed', m.reason ? REASON_LABEL[m.reason] : null].filter(Boolean).join(' · '));
+const lineDetail = (m: Line) => (isPrice(m)
+  ? [m.delivery ? `delivery from ${m.delivery.supplierName ?? 'a supplier'}` : null, m.who, when(m.at)]
+  : [m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)]).filter(Boolean).join(' · ');
 
 function Box({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
@@ -72,6 +84,8 @@ export function ProductPage() {
   const here = p.stockAtShops.find((s) => s.here);
   const codes = [p.sku, p.category, p.supplier, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(' · ');
   const moves = p.history.filter((m) => show === 'Everything' || WHAT[m.type]?.[1] === show);
+  // Price changes only when there are some: staff are sent none (st-product-staff).
+  const shows = p.history.some(isPrice) ? SHOWS : SHOWS.filter((s) => s !== 'Price changes');
   const pill = (s: Show) => (
     <button key={s} type="button" role="radio" aria-checked={show === s} onClick={() => setShow(s)}
       className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${show === s ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{s}</button>
@@ -112,16 +126,16 @@ export function ProductPage() {
           <h3 id="h-history" className="m-0 text-base font-bold">Stock history</h3>
           {p.history.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing has changed its stock yet.</p> : (
             <>
-              <RadioPillGroup aria-label="Show" className="flex flex-wrap gap-2">{SHOWS.map(pill)}</RadioPillGroup>
+              <RadioPillGroup aria-label="Show" className="flex flex-wrap gap-2">{shows.map(pill)}</RadioPillGroup>
               {moves.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing here yet.</p> : (
                 <ul aria-labelledby="h-history" className="m-0 list-none p-0">
                   {moves.map((m) => (
                     <li key={m.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 border-t border-[var(--wh-border)] py-1.5 max-md:grid-cols-[minmax(0,1fr)_auto]">
                       <span className="flex min-w-0 flex-col">
-                        <span className="text-size-15 font-semibold">{[WHAT[m.type]?.[0] ?? 'Stock changed', m.reason ? REASON_LABEL[m.reason] : null].filter(Boolean).join(' · ')}</span>
-                        <span className="text-size-13 text-[var(--wh-muted)]">{[m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)].filter(Boolean).join(' · ')}</span>
+                        <span className="text-size-15 font-semibold">{lineWhat(m)}</span>
+                        <span className="text-size-13 text-[var(--wh-muted)]">{lineDetail(m)}</span>
                       </span>
-                      <span className={`${mono} text-right text-size-15 font-bold`}>{change(m.change)}</span>
+                      <span className={`${mono} text-right text-size-15 font-bold`}>{isPrice(m) ? '' : change(m.change)}</span>
                     </li>
                   ))}
                 </ul>

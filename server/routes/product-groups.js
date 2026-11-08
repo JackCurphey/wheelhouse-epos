@@ -12,6 +12,7 @@ import { canSeeCosts } from '../lib/can-see-costs.js';
 import { categoryFor } from '../lib/categories.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { moveStock } from '../lib/stock.js';
+import { recordPriceChanges } from '../lib/price-changes.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
 import { sentMoney, syncProductWithShopifyIfNeeded } from './products.js';
 
@@ -201,6 +202,9 @@ export function register(route) {
           s?.money.price ?? p.price, s?.money.cost ?? p.cost,
           s?.lowStockThreshold ?? p.low_stock_threshold, s?.active ?? p.active, p.id);
       }
+      // Each size whose price or cost changed: its history says so (product-page-sizes, design 1).
+      const changer = await whoIsBooking(req);
+      for (const was of before) await recordPriceChanges(was, await db.prepare('SELECT * FROM products WHERE id = ?').get(was.id), changer);
       for (const s of sent.sizes.filter((x) => x.id === null)) await addSize(now, s, who);
       await db.exec('COMMIT');
     } catch (err) {
