@@ -2370,6 +2370,11 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 12. **Stock's line for a bike** reads "[Category] · [n] bikes, each by frame number", in place of its code and supplier, as `st-list` draws it.
 13. **A bike with sizes** (a product with sizes in a bikes category): each size is a product, so each is asked for its frames as it's booked in, and each size's own page lists them; the product with sizes' page and its row on Stock don't show frames yet.
 
+### 9 Nov 2026: an unknown barcode searched on Stock (WP-2.1; `openspec/changes/stock-unknown-barcode`; `st-list-unknown`)
+
+1. **What reads as a barcode:** a search of only digits, 8 to 14 of them (the lengths shop barcodes come in), that matches nothing. Anything else that matches nothing still says "Nothing matches “[what was typed]”".
+2. **Staff** see the heading and "Only the shop’s owner can add products for now." in place of the drawn note and Add this product, since adding products is the Owner's (stock control decision 11). Add this product opens the box titled "Add this product", "Barcode [barcode] · not in Wheelhouse yet", as receiving's does.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
