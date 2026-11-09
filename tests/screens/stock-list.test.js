@@ -94,7 +94,8 @@ test('the list as drawn: search, filters, each product with its stock, price and
   assert.ok(below.getByText('−1'));
   // The Owner adds a product (product-page-sizes, design 4).
   assert.ok(ui.getByRole('button', { name: '+ Add a product' }));
-  assert.ok(ui.queryByRole('checkbox') === null, 'tick boxes lead only to changes: not in this piece');
+  // The Owner's tick boxes (st-list-ticked; bulk-price-change, design 4).
+  assert.ok(ui.getByRole('checkbox', { name: 'Tick all 3 shown' }));
 });
 
 test('a product with sizes is one row: its sizes, colours and the size below zero, its total, and its prices lowest to highest', async () => {

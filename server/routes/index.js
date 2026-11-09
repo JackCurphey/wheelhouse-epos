@@ -35,6 +35,7 @@ import * as productCategories from './product-categories.js';
 import * as stockList from './stock-list.js';
 import * as productGroups from './product-groups.js';
 import * as restock from './restock.js';
+import * as bulkPrices from './bulk-prices.js';
 import * as stockFrames from './stock-frames.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, stockFrames];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames];
