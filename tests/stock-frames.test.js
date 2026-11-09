@@ -182,3 +182,15 @@ test('the old app’s receive route still books a bike in, with no frames', asyn
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(await stockOf(b), 1);
 });
+
+test('a bike on an order books in with its frames, and a set-aside one isn’t recorded', async () => {
+  const b = await bike();
+  const made = await asOwner('/api/purchase-orders', { method: 'POST', body: { supplierId, items: [{ productId: b, qty: 3, unitCost: 14 }] } });
+  const ordered = await asOwner(`/api/purchase-orders/${made.body.id}/mark-ordered`, { method: 'POST', body: {} });
+  const itemId = ordered.body.items[0].id;
+  const frames = [frame(), frame()];
+  const res = await deliver({ supplierId, items: [{ productId: b, itemId, qty: 2, frames }], problems: [{ itemId, kind: 'damaged', qty: 1, note: '' }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(await stockOf(b), 2);
+  assert.deepEqual((await framesOf(b)).map((r) => r.frame_number), frames);
+});

@@ -17,7 +17,7 @@ import { currentCheckin, ownAccountHere } from './till-pins.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { recordPriceChanges } from '../lib/price-changes.js';
 import { penceToPounds, wholePence } from '../lib/pence.js';
-import { alreadyInStock, frameInStock, frameKey, isBike, MAX_FRAME } from '../lib/bikes.js';
+import { alreadyInStock, frameInStock, frameKey, framesInStock, isBike, MAX_FRAME } from '../lib/bikes.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -304,8 +304,9 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
   // A bike's frame numbers, one per bike booked in, none in stock already (openspec/changes/
   // frame-numbers, design 3). Only the receive route asks: the old app's sends none.
   const inDelivery = new Set();
+  const named = new Map((await db.prepare('SELECT id, name, category FROM products WHERE id = ANY(?::int[])').all(items.map((x) => x.productId))).map((p) => [p.id, p]));
   for (const x of items) {
-    const product = await db.prepare('SELECT name, category FROM products WHERE id = ?').get(x.productId);
+    const product = named.get(x.productId);
     if (!isBike(product.category)) {
       if (x.frames?.length) return refuse('Only a bike has frame numbers');
       continue;
@@ -315,10 +316,10 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     for (const f of x.frames) {
       if (inDelivery.has(frameKey(f))) return refuse(`Frame ${f} is in this delivery twice`);
       inDelivery.add(frameKey(f));
-      const found = await frameInStock(f);
-      if (found) return refuse(alreadyInStock(found));
     }
   }
+  const [found] = inDelivery.size ? await framesInStock([...inDelivery]) : [];
+  if (found) return refuse(alreadyInStock(found));
 
   const arrived = items.length > 0 || problems.some((p) => p.kind !== 'missing');
   const deliverySupplierId = supplier?.id ?? orders.get(orderIds[0])?.supplier_id ?? null;
