@@ -11,8 +11,9 @@ import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ProductBox } from '@/screens/stock/product-box.tsx';
-import { Back, Card, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
+import { Back, Card, mono, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
 import { Count, useSearch } from './new-order.tsx';
+import { FrameNumber } from './frame-number.tsx';
 
 /**
  * Receive a delivery (rs-receive, rs-problem in receiving.mjs; receiving
@@ -21,15 +22,19 @@ import { Count, useSearch } from './new-order.tsx';
  * item (each scan adds one, a count can be typed), mark anything wrong, then
  * Book in. A product still to come on the supplier's orders counts against
  * its line; any other is "not on an order". Open to everyone. Book in lands
- * on Delivery booked in (openspec/changes/delivery-booked-in). Frame numbers,
- * a job waiting for a part and Add this product come later.
+ * on Delivery booked in (openspec/changes/delivery-booked-in). A bike asks for its
+ * frame number before it counts (rs-frame, rs-frame-dup, rs-receive-marked;
+ * openspec/changes/frame-numbers, design 5). A job waiting for a part comes later.
  */
-type Product = { id: number; sku: string | null; barcode: string | null; name: string };
+type Product = { id: number; sku: string | null; barcode: string | null; name: string; isBike?: boolean };
 type Supplier = { id: number; name: string };
 type Kind = 'damaged' | 'wrong_item' | 'missing';
 type Problem = { kind: Kind; qty: number; note: string };
 // A scanned line: on an order (`itemId`) or not on an order.
-type Scanned = { key: string; itemId?: number; productId: number; name: string; sku: string | null; qty: number; problems: Problem[] };
+// A bike's line keeps its frames, one per bike scanned, in the order scanned.
+type Scanned = { key: string; itemId?: number; productId: number; name: string; sku: string | null; qty: number; problems: Problem[]; frames?: string[] };
+// A bike waiting for its frame number: the line it will count on.
+type Framing = { key: string; line: Omit<Scanned, 'key' | 'qty' | 'problems'>; n: number };
 type Booked = { booked: number; orders: Order[]; deliveryId: number };
 
 const KINDS: { value: Kind; label: string }[] = [
@@ -49,6 +54,9 @@ const PILLS = 3;
 // Damaged and wrong items are set aside; missing ones never arrived.
 const setAside = (s: Scanned) => s.problems.filter((p) => p.kind !== 'missing').reduce((n, p) => n + p.qty, 0);
 const missing = (s: Scanned) => s.problems.filter((p) => p.kind === 'missing').reduce((n, p) => n + p.qty, 0);
+// The frames booked in, and the last ones scanned as the ones set aside (frame-numbers, design 3).
+const keptFrames = (s: Scanned) => (s.frames ?? []).slice(0, s.qty - setAside(s));
+const frameText = (s: Scanned) => (s.frames ?? []).map((f, i) => `Frame ${f}${i >= s.qty - setAside(s) ? ', set aside' : ''}`).join(' · ');
 const problemText = (p: Problem) => (p.kind === 'missing' ? `Missing · ${p.qty}` : `${label(p.kind)} · ${p.qty}, set aside`);
 
 export function ReceivePage() {
@@ -79,6 +87,7 @@ export function ReceivePage() {
   const [requestKey, setRequestKey] = useState(newRequestKey);
   const [keySent, setKeySent] = useState(false);
   const [marking, setMarking] = useState<string | null>(null);
+  const [framing, setFraming] = useState<Framing | null>(null);
   const matches = useSearch(text);
 
   const awaiting = (orders.data ?? []).filter((o) => AWAITING.includes(o.status));
@@ -134,8 +143,15 @@ export function ReceivePage() {
     setProblem(null);
   }
 
-  function add(key: string, s: Omit<Scanned, 'key' | 'qty' | 'problems'>) {
-    setScanned((ss) => (ss.some((x) => x.key === key) ? ss.map((x) => (x.key === key ? { ...x, qty: x.qty + 1 } : x)) : [...ss, { key, ...s, qty: 1, problems: [] }]));
+  function add(key: string, s: Omit<Scanned, 'key' | 'qty' | 'problems'>, frame?: string) {
+    const more = (x: Scanned) => ({ ...x, qty: x.qty + 1, ...(frame ? { frames: [...(x.frames ?? []), frame] } : {}) });
+    setScanned((ss) => (ss.some((x) => x.key === key) ? ss.map((x) => (x.key === key ? more(x) : x)) : [...ss, { key, ...s, qty: 1, problems: [], ...(frame ? { frames: [frame] } : {}) }]));
+  }
+  // A bike counts once its frame number is given (rs-frame).
+  function count(key: string, line: Framing['line'], name: string, isBike = false) {
+    if (!isBike) { add(key, line); setSaid(`Added ${name} · 1`); return; }
+    const n = scanned.filter((s) => s.productId === line.productId).reduce((t, s) => t + s.qty, 0) + 1;
+    setFraming({ key, line, n });
   }
 
   function take(p: Product) {
@@ -144,8 +160,7 @@ export function ReceivePage() {
     const lines = orderLines.filter((it) => it.productId === p.id);
     if (lines.length === 0) {
       // Not on any order still to come from this supplier: booked in as it is.
-      add(`p${p.id}`, { productId: p.id, name: p.name, sku: p.sku });
-      setSaid(`Added ${p.name} · 1`);
+      count(`p${p.id}`, { productId: p.id, name: p.name, sku: p.sku }, p.name, p.isBike);
       return;
     }
     const counted = (it: OrderItem) => { const s = scannedOf(`i${it.id}`); return s ? s.qty + missing(s) : 0; };
@@ -155,8 +170,7 @@ export function ReceivePage() {
       setSaid(`All ${all} ${p.name} still to come are counted`);
       return;
     }
-    add(`i${line.id}`, { itemId: line.id, productId: p.id, name: line.name, sku: line.sku });
-    setSaid(`Added ${p.name} · 1`);
+    count(`i${line.id}`, { itemId: line.id, productId: p.id, name: line.name, sku: line.sku }, p.name, p.isBike);
   }
 
   // A scanner types the code and presses Enter at once, so Enter looks it up
@@ -178,7 +192,9 @@ export function ReceivePage() {
     else if (found.length === 0) { setText(''); setSaid(`Nothing in Wheelhouse has the barcode ${code}`); if (owner) setUnknown(code); }
   }
 
-  const setQty = (key: string, qty: number) => setScanned((ss) => ss.map((s) => (s.key === key && qty >= Math.max(1, setAside(s)) ? { ...s, qty } : s)));
+  // A bike's count goes up only by scanning one; down takes off the last frame scanned.
+  const setQty = (key: string, qty: number) => setScanned((ss) => ss.map((s) => (s.key === key && qty >= Math.max(1, setAside(s)) && !(s.frames && qty > s.qty)
+    ? { ...s, qty, ...(s.frames ? { frames: s.frames.slice(0, qty) } : {}) } : s)));
   const remove = (key: string) => setScanned((ss) => ss.filter((s) => s.key !== key || s.problems.length > 0));
   const toBook = scanned.reduce((n, s) => n + s.qty - setAside(s), 0);
   const asideAll = scanned.reduce((n, s) => n + setAside(s), 0);
@@ -192,7 +208,7 @@ export function ReceivePage() {
         requestKey,
         supplierId: supplierId === null ? null : Number(supplierId),
         items: scanned.filter((s) => s.qty - setAside(s) > 0)
-          .map((s) => (s.itemId !== undefined ? { productId: s.productId, itemId: s.itemId, qty: s.qty - setAside(s) } : { productId: s.productId, qty: s.qty - setAside(s) })),
+          .map((s) => ({ productId: s.productId, ...(s.itemId !== undefined ? { itemId: s.itemId } : {}), qty: s.qty - setAside(s), ...(s.frames ? { frames: keptFrames(s) } : {}) })),
         problems: scanned.flatMap((s) => s.problems.map((p) => (s.itemId !== undefined ? { itemId: s.itemId, ...p } : { productId: s.productId, ...p }))),
       });
       for (const next of done.orders) queryClient.setQueryData(['purchase-order', next.id], next);
@@ -260,9 +276,9 @@ export function ReceivePage() {
                     const it = lineOf(s.itemId);
                     return (
                       <Row key={s.key} title={s.name}
-                        sub={<>{`${s.sku ? `${s.sku} · ` : ''}${it ? `on your order: ${it.outstanding}` : 'not on an order'}`}{s.problems.map((p) => <strong key={p.kind} className="text-[var(--wh-warn-ink)]">{` · ${problemText(p)}`}</strong>)}</>}>
+                        sub={<>{`${s.sku ? `${s.sku} · ` : ''}${it ? `on your order: ${it.outstanding}` : 'not on an order'}`}{s.frames ? <span className={mono}>{` · ${frameText(s)}`}</span> : null}{s.problems.map((p) => <strong key={p.kind} className="text-[var(--wh-warn-ink)]">{` · ${problemText(p)}`}</strong>)}{s.frames ? <span className="block">Scan each bike for its frame number</span> : null}</>}>
                         <span className="inline-flex flex-wrap items-center gap-2">
-                          <Count name={s.name} value={s.qty} max={it ? it.outstanding - missing(s) : undefined} onChange={(n) => setQty(s.key, n)} onBelowOne={() => remove(s.key)} />
+                          <Count name={s.name} value={s.qty} max={s.frames ? s.qty : it ? it.outstanding - missing(s) : undefined} onChange={(n) => setQty(s.key, n)} onBelowOne={() => remove(s.key)} />
                           <button type="button" aria-label={`Problem with ${s.name}`} onClick={() => setMarking(s.key)}
                             className="inline-flex min-h-11 min-w-11 items-center justify-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Problem?</button>
                         </span>
@@ -280,6 +296,10 @@ export function ReceivePage() {
             </>
           )}
       </Card>
+      {framing ? (
+        <FrameNumber bike={framing.line.name} n={framing.n} taken={scanned.flatMap((s) => s.frames ?? [])} onCancel={() => setFraming(null)}
+          onCount={(frame) => { add(framing.key, framing.line, frame); setSaid(`Added ${framing.line.name} · frame ${frame}`); setFraming(null); }} />
+      ) : null}
       {marked ? (
         <SomethingWrong key={marked.key} line={lineOf(marked.itemId)} scanned={marked}
           onCancel={() => setMarking(null)}
@@ -317,7 +337,7 @@ function offOrder(ss: Scanned[], open: Map<number, number>): Scanned[] {
       if (j < 0) problems.push(p);
       else problems[j] = { ...problems[j], qty: problems[j].qty + p.qty, note: problems[j].note || p.note };
     }
-    out[i] = { ...same, qty: same.qty + moved.qty, problems };
+    out[i] = { ...same, qty: same.qty + moved.qty, problems, ...(same.frames || moved.frames ? { frames: [...(same.frames ?? []), ...(moved.frames ?? [])] } : {}) };
   }
   return out;
 }

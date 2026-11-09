@@ -18,6 +18,7 @@ import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
+import { isBike } from '../lib/bikes.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -179,8 +180,11 @@ export function register(route) {
     const moves = await db
       // The newest 200: a fast seller's whole history would be thousands of rows (review 2).
       .prepare(
-        `SELECT m.id, m.type, m.change_qty, m.note, m.reason, COALESCE(m.who_name, l.name) AS who, m.created_at
+        `SELECT m.id, m.type, m.change_qty, m.note, m.reason, COALESCE(m.who_name, l.name) AS who, m.created_at,
+                m.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier,
+                (SELECT count(*)::int FROM stock_frames f WHERE f.stock_movement_id = m.id) AS frames
          FROM stock_movements m LEFT JOIN logins l ON l.id = m.login_id
+         LEFT JOIN deliveries d ON d.id = m.delivery_id LEFT JOIN suppliers sp ON sp.id = d.supplier_id
          WHERE m.product_id = ? ORDER BY m.created_at DESC, m.id DESC LIMIT 200`
       )
       .all(id);
@@ -192,14 +196,25 @@ export function register(route) {
     ).all(id);
     const here = (await siteHere(req)) ?? await oldestSite();
     const costs = await canSeeCosts(req);
+    // A bike's frames: in stock first, then held, then sold, newest first in each (st-product-bike;
+    // openspec/changes/frame-numbers, design 4).
+    const frames = isBike(row.category) ? (await db.prepare(
+      `SELECT f.id, f.frame_number, f.state, f.received_at, f.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier
+         FROM stock_frames f LEFT JOIN deliveries d ON d.id = f.delivery_id LEFT JOIN suppliers sp ON sp.id = d.supplier_id
+        WHERE f.product_id = ?
+        ORDER BY CASE f.state WHEN 'in_stock' THEN 0 WHEN 'held' THEN 1 ELSE 2 END, f.received_at DESC, f.id DESC LIMIT 500`
+    ).all(id)).map((f) => ({ id: f.id, frameNumber: f.frame_number, state: f.state, bookedInAt: f.received_at, deliveryId: f.delivery_id, supplierName: f.supplier ?? null })) : undefined;
     sendJson(res, 200, {
       ...serializeProduct(row, costs),
+      frames,
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
       // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
       details: await detailsOf(row),
       // Its price and cost changes among them, for the Owner only (product-page-sizes, design 1).
       history: newestFirst([
-        ...moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at })),
+        // A received line says its delivery, by the name the delivery kept, and how many frames came in on it.
+        ...moves.map((m) => ({ id: m.id, type: m.type, change: m.change_qty, reason: m.reason, note: m.note || '', who: m.who, at: m.created_at,
+          delivery: m.delivery_id === null ? null : { id: m.delivery_id, supplierName: m.supplier ?? null }, frames: m.frames })),
         ...await priceChangesOf([id], costs),
       ]),
     });
