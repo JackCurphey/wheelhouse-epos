@@ -193,3 +193,19 @@ test('the Owner undoes a change from the history with a reason; Jo can’t', asy
   assert.ok(await ui.findByText('Store credit change undone'));
   assert.ok(ui.getByText('−£15.00'));
 });
+
+test('the Owner can undo only a change made by hand, never one the till made', async () => {
+  const spent = { ...ADDED, id: 32, change: 'spent', changePence: -500, reason: null };
+  const { ui } = await openMaya({ items: [spent, ADDED] });
+  await ui.findByText('Store credit spent');
+  assert.ok(ui.getByRole('button', { name: 'Undo Store credit added' }));
+  assert.ok(ui.queryByRole('button', { name: 'Undo Store credit spent' }) === null);
+});
+
+test('Ways to pay says so when it can’t load, rather than showing both off', async () => {
+  const { ui, fireEvent } = await render('http://localhost/workshop/settings?room=front-desk', (path, method, body, reply) => (path === '/api/payment-settings' ? reply(403, { error: 'x' }) : null));
+  const fold = await ui.findByRole('button', { name: /^Ways to pay/ });
+  if (fold.getAttribute('aria-expanded') !== 'true') fireEvent.click(fold);
+  assert.ok(await ui.findByText('Wheelhouse couldn’t load the ways to pay. Try again in a moment.'));
+  assert.ok(ui.queryByRole('switch', { name: 'Store credit' }) === null);
+});
