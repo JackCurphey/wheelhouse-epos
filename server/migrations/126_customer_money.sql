@@ -50,8 +50,9 @@ CREATE TABLE IF NOT EXISTS account_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_account_entries_customer ON account_entries (shop_id, customer_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_account_entries_undoes ON account_entries (undoes_entry_id) WHERE undoes_entry_id IS NOT NULL;
--- What was owed from before Wheelhouse is entered once per customer (Jack's answer 5).
-CREATE UNIQUE INDEX IF NOT EXISTS idx_account_entries_opening ON account_entries (customer_id) WHERE kind = 'opening';
+-- What was owed from before Wheelhouse is entered once per customer (Jack's answer 5), checked
+-- under the customer's lock rather than by a unique index: a merge can bring two together.
+DROP INDEX IF EXISTS idx_account_entries_opening;
 ALTER TABLE account_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_entries FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS account_entries_shop_isolation ON account_entries;
