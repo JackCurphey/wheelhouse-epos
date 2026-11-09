@@ -58,3 +58,23 @@ test('no warning with no store credit', async () => {
   const box = within(await ui.findByRole('dialog', { name: 'Ask us to delete your account' }));
   assert.ok(box.queryByRole('note') === null);
 });
+
+// Owing on account holds the deletion back, as a bike in the workshop does (question 16).
+test('asking to delete while owing says it waits until what she owes is paid', async () => {
+  const { ui, within } = await open({ ...ME, storeCredit: null, owed: 3500 });
+  (await ui.findByRole('button', { name: 'Ask us to delete your account' })).click();
+  const box = within(await ui.findByRole('dialog', { name: 'Ask us to delete your account' }));
+  assert.ok(box.getByText('We’ll delete your account once what you owe the shop is paid.'));
+  assert.ok(box.getByText('Owed on account'));
+  assert.ok(box.getByText('£35.00'));
+  assert.ok(box.getByText('Call [shop phone] if you need to talk it through.'));
+  assert.ok(box.queryByText('This can’t be undone.') === null);
+});
+
+test('nothing owed, the pop-up is as before', async () => {
+  const { ui, within } = await open({ ...ME, storeCredit: null, owed: 0 });
+  (await ui.findByRole('button', { name: 'Ask us to delete your account' })).click();
+  const box = within(await ui.findByRole('dialog', { name: 'Ask us to delete your account' }));
+  assert.ok(box.getByText('This can’t be undone.'));
+  assert.ok(box.queryByText('Owed on account') === null);
+});

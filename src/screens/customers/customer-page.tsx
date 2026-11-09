@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TriangleAlert } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
@@ -14,6 +15,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { CompanyInvoice, CompanyNames, Field, OnOff, WHO, companyProblem, initials, type Who } from './customers-page.tsx';
 import { SaleDialog } from './sale-dialog.tsx';
 import { CreditDialog, UndoEntryDialog } from './credit-dialog.tsx';
+import { AccountDialog, entryWords, type Entry } from './account-dialog.tsx';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { penceText } from '@/lib/cash-count.ts';
 
@@ -33,7 +35,7 @@ type Customer = {
   // An open request to delete their account (ac-customer-delete; openspec/changes/delete-account).
   deletionRequest?: { askedOn: string; dueBy: string; source: 'account' | 'shop'; inTheWay: InTheWay[] } | null;
   // Its money, with only the ways to pay switched on (finish-customers design 4), in pence.
-  money?: { storeCreditOn: boolean; accountsOn: boolean; credit?: number };
+  money?: { storeCreditOn: boolean; accountsOn: boolean; credit?: number; owed?: number; hasAccount?: boolean; overBy?: number };
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
@@ -42,7 +44,8 @@ export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
-  | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string };
+  | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string }
+  | { kind: 'account'; id: number; change: 'bank_transfer' | 'undo'; changePence: number; reference: string | null; receivedOn: string | null; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
 const SHOWN = 8;
@@ -128,6 +131,20 @@ export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSal
         </span>
         <span className={`text-size-15 ${mono}`}>{signed(item.changePence)}</span>
         {undoable ? <button type="button" aria-label={`Undo ${what}`} onClick={() => onUndo(item)} className="min-h-11 px-2 text-sm font-semibold underline">Undo</button> : null}
+      </li>
+    );
+  }
+  if (item.kind === 'account') {
+    // A bank transfer, or the Owner's undoing of one, in the statement's words (design 4).
+    const what = item.change === 'bank_transfer' ? entryWords({ kind: 'bank_transfer', reference: item.reference } as Entry) : 'Bank transfer undone';
+    return (
+      <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
+        {tag('Account')}
+        <span className="flex min-w-0 grow flex-col gap-0.5">
+          <span className="text-size-15 font-semibold">{what}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.receivedOn ? `${item.receivedOn}T12:00:00Z` : item.at), item.reason, item.by ? `by ${item.by}` : null, item.undone ? 'undone' : null].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className={`text-size-15 ${mono}`}>{signed(item.changePence)}</span>
       </li>
     );
   }
@@ -404,6 +421,19 @@ function Duplicates({ me }: { me: Customer & { createdAt?: string } }) {
   );
 }
 
+// "Owes [£]" beside the name, in the warning colour when over the limit (customer service
+// decision 12; cs-page, cs-page-over). Only while accounts are on and something is owed.
+function OwesChip({ money }: { money?: Customer['money'] }) {
+  if (!money?.accountsOn || !money.owed || money.owed <= 0) return null;
+  const over = (money.overBy ?? 0) > 0;
+  return (
+    <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-size-13 font-bold ${over ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]'}`}>
+      {over ? <TriangleAlert aria-hidden="true" className="size-3.5" /> : null}
+      {over ? `Over the limit by ${penceText(money.overBy ?? 0)}` : `Owes ${penceText(money.owed)}`}
+    </span>
+  );
+}
+
 export function CustomerPage() {
   // A customer's number from the address; anything else is no such customer.
   const id = Number(useParams().id ?? '');
@@ -414,6 +444,7 @@ export function CustomerPage() {
   const [editing, setEditing] = useState(false);
   const [addingBike, setAddingBike] = useState(false);
   const [crediting, setCrediting] = useState(false);
+  const [accounting, setAccounting] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
   if (!known || customer.isError) {
     return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{!known || (customer.error instanceof ApiError && customer.error.status === 404) ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
@@ -427,7 +458,10 @@ export function CustomerPage() {
       <div className="flex flex-wrap items-center gap-4">
         <span aria-hidden="true" className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-size-17 font-bold">{initials(c.name)}</span>
         <span className="flex grow flex-col gap-[3px]">
-          <h2 className="m-0 text-size-22 font-bold">{c.name}</h2>
+          <span className="flex flex-wrap items-center gap-2.5">
+            <h2 className="m-0 text-size-22 font-bold">{c.name}</h2>
+            <OwesChip money={c.money} />
+          </span>
           <span className="text-sm text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
         </span>
         <Link to={newJobHref(c.id)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--wh-on-brand)] no-underline">New job</Link>
@@ -472,6 +506,13 @@ export function CustomerPage() {
             ) : <p className="m-0 border-t border-[var(--wh-border)] py-2.5 text-sm text-[var(--wh-muted)]">{bikes.data ? 'No bikes yet.' : 'Loading…'}</p>}
           </Section>
           <Section id="h-glance" title="At a glance">
+            {/* Only while Customer accounts is on (customer service decision 6); the whole row opens it (cs-account). */}
+            {c.money?.accountsOn ? (
+              <button type="button" onClick={() => setAccounting(true)} className="flex min-h-[52px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
+                <span className="text-size-15 font-semibold underline">Owes on account</span>
+                <span className={`text-size-15 ${mono}`}>{penceText(c.money.owed ?? 0)}</span>
+              </button>
+            ) : null}
             {/* Only while Store credit is on (cs-page-off; customer service decision 6); the whole row opens it (cs-credit). */}
             {c.money?.storeCreditOn ? (
               <button type="button" onClick={() => setCrediting(true)} className="flex min-h-[52px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
@@ -489,6 +530,7 @@ export function CustomerPage() {
       </div>
       {editing ? <EditCustomer customer={c} onClose={() => setEditing(false)} /> : null}
       {addingBike ? <AddBike customerId={c.id} onClose={() => setAddingBike(false)} /> : null}
+      {accounting ? <AccountDialog customerId={c.id} name={c.name} isCompany={c.isCompany} onClose={() => setAccounting(false)} /> : null}
       {crediting ? <CreditDialog customerId={c.id} name={c.name} credit={c.money?.credit ?? 0} onClose={() => setCrediting(false)} /> : null}
     </div>
   );

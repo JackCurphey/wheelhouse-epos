@@ -41,6 +41,8 @@ type Me = {
   shopPhone?: string | null; deletion?: Deletion | null;
   // Pence, or null while the shop has store credit off (finish-customers design 8).
   storeCredit?: number | null;
+  // What she owes on account, in pence; her deletion waits until it's paid (question 16).
+  owed?: number;
 };
 type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
 type Repair = {
@@ -301,6 +303,8 @@ function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: s
   const [error, setError] = React.useState<string | null>(null);
   const [sent, setSent] = React.useState<Deletion | null>(null);
   const note = 'text-sm text-[var(--wh-muted)]';
+  // Owing on account holds it back, as a bike with the shop does (question 16).
+  const owes = (me.owed ?? 0) > 0;
 
   async function ask() {
     setBusy(true);
@@ -332,10 +336,11 @@ function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: s
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="del-title" className="md:max-w-[520px]">
       <DialogHeader><DialogTitle id="del-title">Ask us to delete your account</DialogTitle></DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        {bike ? (
+        {bike || owes ? (
           <>
-            <p className="m-0 text-size-15 leading-normal">We’ll delete your account once your bike has been collected.</p>
-            <Row k="Bike with us" v={[bike.bikeLabel, bike.reference].filter(Boolean).join(' · ')} />
+            <p className="m-0 text-size-15 leading-normal">{`We’ll delete your account once ${[bike ? 'your bike has been collected' : null, owes ? 'what you owe the shop is paid' : null].filter(Boolean).join(' and ')}.`}</p>
+            {bike ? <Row k="Bike with us" v={[bike.bikeLabel, bike.reference].filter(Boolean).join(' · ')} /> : null}
+            {owes ? <Row k="Owed on account" v={penceText(me.owed ?? 0)} /> : null}
             <p className={`m-0 ${note}`}>{`Call ${me.shopPhone || 'the shop'} if you need to talk it through.`}</p>
           </>
         ) : (

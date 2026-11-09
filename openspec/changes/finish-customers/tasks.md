@@ -23,9 +23,9 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 4. Accounts, screens, and money owed holding a deletion back (pull request 4; money, customer accounts)
 
-- [ ] 4.1 Tests: the Owes chip and "Over her limit by [£]"; At a glance's line only when on; the `cs-account` pop-up's words without "Take a payment at the till" (question 20), the limit read-only for Staff, "Give [name] an account" and "Owed from before Wheelhouse" for the Owner only; `cs-transfer` filled with what's owed, part payment, the refusals; Email the statement and its no-email words; the privacy row "Still in the way: owes on account [£ owed]" with Delete held back and the server's refusal; the website delete pop-up's line when she owes (question 16). Verify: red before 4.2.
-- [ ] 4.2 `account-dialog.tsx`, `transfer-dialog.tsx`, the chip in `customer-page.tsx`; money owed in `server/privacy-requests.js`' in-the-way check across merged records; the portal's delete pop-up line. Verify: 4.1 passes; the existing "bike still in" tests still pass.
-- [ ] 4.3 Browser test: the Owner gives Maya an account, enters what she owed before Wheelhouse, Jo records a transfer of part of it, the statement shows both. Verify: `npm run test:browser`.
+- [x] 4.1 Tests: the Owes chip and "Over her limit by [£]"; At a glance's line only when on; the `cs-account` pop-up's words without "Take a payment at the till" (question 20), the limit read-only for Staff, "Give [name] an account" and "Owed from before Wheelhouse" for the Owner only; `cs-transfer` filled with what's owed, part payment, the refusals; Email the statement and its no-email words; the privacy row "Still in the way: owes on account [£ owed]" with Delete held back and the server's refusal; the website delete pop-up's line when she owes (question 16). Verify: red before 4.2.
+- [x] 4.2 `account-dialog.tsx`, `transfer-dialog.tsx`, the chip in `customer-page.tsx`; money owed in `server/privacy-requests.js`' in-the-way check across merged records; the portal's delete pop-up line. Verify: 4.1 passes; the existing "bike still in" tests still pass.
+- [x] 4.3 Browser test: the Owner gives Maya an account, enters what she owed before Wheelhouse, Jo records a transfer of part of it, the statement shows both. Verify: `npm run test:browser`.
 
 ## 5. Bike warranties, server (pull request 5; migration)
 
