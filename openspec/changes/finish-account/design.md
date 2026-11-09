@@ -16,7 +16,7 @@ What exists today (checked 9 Nov against main at `daa38577`):
 - **Privacy requests** (`server/privacy-requests.js`, migration 108/109): Owner-only list; an open deletion has `asked_at` and a "finish by" date a month on (`DUE_BY`), which the account already shows.
 - **Booking terms** are the closest built pattern for a shop's own legal words: Settings "Booking terms", the shop's own text (up to 20,000 characters) or Wheelhouse's standard terms, read by `GET /api/portal/:shopSlug/terms`.
 - **Bikes and warranties** are `finish-customers`' (Jack, 9 Nov): a product is a bike when its category is ticked "Bikes" or "E-bikes" in Settings › Stockroom › Categories, and "E-bikes" adds the Electronics line. This change adds no bike or warranty rule of its own.
-- Latest migration on disk: 125. `finish-customers` takes the next two at build time.
+- Latest migration on disk: 126 (`126_customer_money.sql`, store credit, merged 9 Nov as #645). `finish-customers` takes one more (bike warranties); this change takes the next free number after it.
 
 ## Goals / Non-Goals
 
@@ -73,7 +73,7 @@ Settings › Shop details gains "Privacy notice", built as Booking terms is: "Ad
 
 ### 8. One migration
 
-`1NN_account_links.sql` (the next free number at build time, after `finish-customers`' two): `reminder_book_codes` (§ 4), `customer_logins.pending_email TEXT NULL` and `pending_email_at TIMESTAMPTZ NULL` (§ 6), `shops.privacy_notice TEXT NULL` (§ 7). Additive and safe to run twice.
+`1NN_account_links.sql` (the next free number at build time, after `finish-customers`' bike warranties migration): `reminder_book_codes` (§ 4), `customer_logins.pending_email TEXT NULL` and `pending_email_at TIMESTAMPTZ NULL` (§ 6), `shops.privacy_notice TEXT NULL` (§ 7). Additive and safe to run twice.
 
 ### 9. The build board
 
