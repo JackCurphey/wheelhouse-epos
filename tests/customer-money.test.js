@@ -387,3 +387,14 @@ test('another business’s customer and account entries are a 404', async () => 
   assert.equal((await post(asOther, `/api/customers/${id}/account/transfers`, { pence: 100, receivedOn: '2026-09-01' })).status, 404);
   assert.equal((await post(asOther, `/api/account-entries/${entry.id}/undo`, { reason: 'x' })).status, 404);
 });
+
+test('a mistyped opening amount, undone by the Owner, can be entered again', async () => {
+  const id = await owing(12000);
+  const first = (await account(id)).statement.find((e) => e.kind === 'opening');
+  assert.equal((await post(asOwner, `/api/account-entries/${first.id}/undo`, { reason: '[reason]' })).status, 201);
+  assert.equal((await account(id)).hasOpening, false);
+  const again = await opening(id, 1200);
+  assert.equal(again.status, 201, JSON.stringify(again.body));
+  assert.equal(await owed(id), 1200);
+  assert.equal((await opening(id, 500)).status, 409, 'still only one that stands');
+});

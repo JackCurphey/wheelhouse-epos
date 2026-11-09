@@ -60,7 +60,7 @@ async function accountOf(customerId, settings) {
   const c = await db.prepare('SELECT account_limit_pence, account_opened_at FROM customers WHERE id = ?').get(customerId);
   const figures = await accountFigures(customerId, settings);
   const statement = await accountEntries(customerId);
-  return { ...figures, ownLimit: c.account_limit_pence ?? null, openedAt: c.account_opened_at ? new Date(c.account_opened_at).toISOString() : null, hasOpening: statement.some((e) => e.kind === 'opening'), statement };
+  return { ...figures, ownLimit: c.account_limit_pence ?? null, openedAt: c.account_opened_at ? new Date(c.account_opened_at).toISOString() : null, hasOpening: statement.some((e) => e.kind === 'opening' && !e.undone), statement };
 }
 
 export function register(route) {
@@ -228,7 +228,8 @@ export function register(route) {
       if (customer.deleted_at) return [409, { error: DELETED, code: 'deleted' }];
       if (!settings.accounts_on) return [409, { error: ACCOUNTS_OFF, code: 'off' }];
       if (!customer.account_opened_at) return [409, { error: `Give ${customer.name} an account first.`, code: 'no_account' }];
-      if (await db.prepare("SELECT 1 FROM account_entries WHERE customer_id = ? AND kind = 'opening'").get(id)) {
+      // One that stands: an opening the Owner undid (mistyped) can be entered again.
+      if (await db.prepare("SELECT 1 FROM account_entries o WHERE o.customer_id = ? AND o.kind = 'opening' AND NOT EXISTS (SELECT 1 FROM account_entries u WHERE u.undoes_entry_id = o.id)").get(id)) {
         return [409, { error: 'What was owed before Wheelhouse has already been entered.', code: 'already' }];
       }
       const entry = await writeAccountEntry(id, { changePence: body.pence, kind: 'opening' }, who);
