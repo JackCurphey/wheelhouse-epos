@@ -30,6 +30,8 @@ type SortKey = 'name' | 'stock' | 'price' | 'margin';
 const SHOWN = 50;
 // What a bulk change, or its Undo, said (st-prices-done).
 type Done = { text: string; batchId: number | null };
+// A search that reads as a barcode: only digits, 8 to 14 of them (st-list-unknown).
+const isBarcode = (text: string) => /^\d{8,14}$/.test(text);
 const several = (n: number) => `${n} ${n === 1 ? 'product' : 'products'}`;
 const SORTS: Record<SortKey, (r: ListRow) => number | string> = {
   name: (r) => r.name.toLowerCase(),
@@ -59,7 +61,7 @@ export function StockPage() {
   const isPhone = useMedia('(max-width: 767px)');
   const navigate = useNavigate();
   // The box, with the name typed when nothing matched (st-list-none); null when shut.
-  const [adding, setAdding] = useState<{ name?: string } | null>(null);
+  const [adding, setAdding] = useState<{ name?: string; barcode?: string } | null>(null);
   const queryClient = useQueryClient();
   // Ticked rows by rowKey, kept through searches and filters (st-list-ticked).
   const [ticked, setTicked] = useState<Map<string, ListRow>>(new Map());
@@ -173,7 +175,18 @@ export function StockPage() {
       ) : null}
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the stock. Try again in a moment.</p>
         : !list.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
-        : rows.length === 0 ? (
+        : rows.length === 0 && isBarcode(search) && list.data.length === 0 ? (
+          // An unknown barcode (st-list-unknown; openspec/changes/stock-unknown-barcode). Adding is the Owner's.
+          <div className="flex flex-col items-start gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-6">
+            <h2 className="m-0 text-lg font-bold">Barcode <span className={mono}>{search}</span> isn’t in Wheelhouse yet</h2>
+            {owner ? (
+              <>
+                <p className="m-0 text-sm text-[var(--wh-muted)]">Add it now, with its category and details — or look it up in a supplier’s catalogue.</p>
+                <Button onClick={() => setAdding({ barcode: search })}>Add this product</Button>
+              </>
+            ) : <p className="m-0 text-sm text-[var(--wh-muted)]">Only the shop’s owner can add products for now.</p>}
+          </div>
+        ) : rows.length === 0 ? (
           <div className="flex flex-col items-start gap-2.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-6">
             <h2 className="m-0 text-lg font-bold">{search ? `Nothing matches “${search}”` : category ? `Nothing ${inCategory}` : filter === 'All' ? 'No products yet' : `Nothing is ${filter.toLowerCase()}`}</h2>
             {search ? <p className="m-0 text-sm text-[var(--wh-muted)]">Check the spelling, or try a supplier code or a supplier.</p> : null}
@@ -233,7 +246,7 @@ export function StockPage() {
       ) : null}
       {changing ? <ChangePrices rows={[...ticked.values()]} onClose={() => setChanging(false)} onChanged={changed} /> : null}
       {adding ? (
-        <ProductBox title="Add a product" saveLabel="Add" start={adding} onClose={() => setAdding(null)}
+        <ProductBox title={adding.barcode ? 'Add this product' : 'Add a product'} subtitle={adding.barcode ? `Barcode ${adding.barcode} · not in Wheelhouse yet` : undefined} saveLabel="Add" start={adding} onClose={() => setAdding(null)}
           onSaved={(p) => { setAdding(null); navigate(productHref(p.id)); }} />
       ) : null}
     </div>

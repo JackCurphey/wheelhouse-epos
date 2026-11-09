@@ -89,3 +89,35 @@ test('a new shop: + Add a product and Bring them from Citrus Lime', async () => 
   assert.ok(card.getByRole('button', { name: '+ Add a product' }));
   assert.ok(card.getByRole('link', { name: 'Bring them from Citrus Lime' }));
 });
+
+// An unknown barcode searched on Stock (openspec/changes/stock-unknown-barcode; st-list-unknown;
+// stock control decision 11, audit L1). The digits are a stand-in barcode, not a real product's.
+const UNKNOWN = '0000000000017';
+test('an unknown barcode: the Owner is told and Add this product fills the barcode in', async () => {
+  const t = await open();
+  await t.ui.findByText('Shimano brake pads');
+  t.fireEvent.change(t.ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: UNKNOWN } });
+  const heading = await t.ui.findByRole('heading', { name: `Barcode ${UNKNOWN} isn’t in Wheelhouse yet` }, { timeout: 3000 });
+  const card = t.within(heading.parentElement);
+  assert.ok(card.getByText('Add it now, with its category and details — or look it up in a supplier’s catalogue.'));
+  t.fireEvent.click(card.getByRole('button', { name: 'Add this product' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Add this product' }));
+  assert.equal(box.getByLabelText('Barcode').value, UNKNOWN);
+});
+
+test('an unknown barcode for Jo: told only the owner adds products, no button', async () => {
+  const t = await open({ me: JO });
+  await t.ui.findByText('Shimano brake pads');
+  t.fireEvent.change(t.ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: UNKNOWN } });
+  const heading = await t.ui.findByRole('heading', { name: `Barcode ${UNKNOWN} isn’t in Wheelhouse yet` }, { timeout: 3000 });
+  const card = t.within(heading.parentElement);
+  assert.ok(card.getByText('Only the shop’s owner can add products for now.'));
+  assert.ok(card.queryByRole('button') === null);
+});
+
+test('a search of a few digits that matches nothing is just nothing matching', async () => {
+  const t = await open();
+  await t.ui.findByText('Shimano brake pads');
+  t.fireEvent.change(t.ui.getByRole('searchbox', { name: 'Search stock' }), { target: { value: '1234' } });
+  assert.ok(await t.ui.findByRole('heading', { name: 'Nothing matches “1234”' }, { timeout: 3000 }));
+});

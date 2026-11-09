@@ -2354,6 +2354,11 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 10. **Undo** puts back every price the change made that is still as it left it, and leaves alone any changed since, saying "Prices put back · [n] products · [n] changed since, left as they are" (not drawn). It works once, and the server allows it at any time; the screen offers it until the next change or until the page is left.
 11. **The message after** reads "Prices changed · [n] products", [n] counting each size that changed as one.
 
+### 9 Nov 2026: an unknown barcode searched on Stock (WP-2.1; `openspec/changes/stock-unknown-barcode`; `st-list-unknown`)
+
+1. **What reads as a barcode:** a search of only digits, 8 to 14 of them (the lengths shop barcodes come in), that matches nothing. Anything else that matches nothing still says "Nothing matches “[what was typed]”".
+2. **Staff** see the heading and "Only the shop’s owner can add products for now." in place of the drawn note and Add this product, since adding products is the Owner's (stock control decision 11). Add this product opens the box titled "Add this product", "Barcode [barcode] · not in Wheelhouse yet", as receiving's does.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
