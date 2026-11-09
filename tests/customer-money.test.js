@@ -227,3 +227,163 @@ test('her website account carries her store credit while it is on, and none whil
   assert.equal((await me(cookie)).storeCredit, null);
   await switches({ storeCreditOn: true });
 });
+
+// ---------- Accounts (group 3; cs-account, cs-transfer; Jack's 9 Nov answers 2 and 5) ----------
+
+const account = async (id, as = asOwner) => {
+  const res = await as(`/api/customers/${id}/account`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  return res.body;
+};
+const openAccount = (id, as = asOwner) => post(as, `/api/customers/${id}/account/open`, {});
+const opening = (id, pence, as = asOwner) => post(as, `/api/customers/${id}/account/opening`, { pence });
+const transfer = (id, body, as = asJo) => post(as, `/api/customers/${id}/account/transfers`, { receivedOn: '2026-09-01', reference: '[reference]', ...body });
+const owed = async (id) => (await asOwner(`/api/customers/${id}`)).body.money.owed;
+async function owing(pence, name = 'Maya Patel') {
+  await switches({ accountsOn: true, accountLimitPence: 25000 });
+  const id = await maya(name);
+  assert.equal((await openAccount(id)).status, 200);
+  if (pence) assert.equal((await opening(id, pence)).status, 201);
+  return id;
+}
+
+test('only the Owner gives a customer an account, at the shop’s limit; with accounts on', async () => {
+  await switches({ accountsOn: true, accountLimitPence: 25000 });
+  const id = await maya();
+  assert.deepEqual((await asJo(`/api/customers/${id}`)).body.money, { storeCreditOn: true, accountsOn: true, credit: 0, owed: 0, hasAccount: false, limit: 25000, shopLimit: 25000, overBy: 0 });
+  const refused = await openAccount(id, asJo);
+  assert.equal(refused.status, 403);
+  assert.equal(refused.body.error, 'Only the shop’s owner can give someone an account');
+  assert.equal((await openAccount(id)).status, 200);
+  assert.equal((await openAccount(id)).status, 409, 'once');
+  const a = await account(id, asJo);
+  assert.deepEqual([a.hasAccount, a.owed, a.limit, a.ownLimit, a.shopLimit, a.statement], [true, 0, 25000, null, 25000, []]);
+  await switches({ storeCreditOn: true, accountsOn: false });
+  assert.equal((await openAccount(await maya())).status, 409, 'not while switched off');
+  assert.deepEqual((await asJo(`/api/customers/${id}`)).body.money, { storeCreditOn: true, accountsOn: false, credit: 0 });
+});
+
+test('a customer’s own limit, back to the shop’s, the Owner’s only; the shop’s changing leaves it', async () => {
+  const id = await owing(0);
+  assert.equal((await put(asJo, `/api/customers/${id}/account/limit`, { pence: 50000 })).status, 403);
+  assert.equal((await put(asOwner, `/api/customers/${id}/account/limit`, { pence: -1 })).status, 400);
+  assert.equal((await put(asOwner, `/api/customers/${id}/account/limit`, { pence: 50000 })).status, 200);
+  await switches({ accountLimitPence: 30000 });
+  let a = await account(id);
+  assert.deepEqual([a.limit, a.ownLimit, a.shopLimit], [50000, 50000, 30000]);
+  assert.equal((await put(asOwner, `/api/customers/${id}/account/limit`, { pence: null })).status, 200);
+  a = await account(id);
+  assert.deepEqual([a.limit, a.ownLimit], [30000, null]);
+  await switches({ accountLimitPence: 25000 });
+});
+
+test('what was owed before Wheelhouse, entered once by the Owner, starts the statement', async () => {
+  const id = await owing(0);
+  assert.equal((await opening(id, 12000, asJo)).status, 403);
+  assert.equal((await opening(id, 0)).status, 400);
+  assert.equal((await opening(id, 12000)).status, 201);
+  const again = await opening(id, 500);
+  assert.equal(again.status, 409);
+  const a = await account(id);
+  assert.equal(a.owed, 12000);
+  assert.deepEqual(a.statement.map((e) => [e.kind, e.changePence, e.by]), [['opening', 12000, 'Jack Lewis']]);
+  const noAccount = await maya();
+  assert.equal((await opening(noAccount, 500)).status, 409, 'only once given an account');
+});
+
+test('a bank transfer: part or all of what is owed, never more, never in the future; the statement newest first', async () => {
+  const id = await owing(12000);
+  const part = await transfer(id, { pence: 2000 });
+  assert.equal(part.status, 201, JSON.stringify(part.body));
+  assert.equal(part.body.owed, 10000);
+  const tooMuch = await transfer(id, { pence: 10001 });
+  assert.deepEqual([tooMuch.status, tooMuch.body.error], [409, 'Maya Patel owes only £100.00']);
+  assert.equal((await transfer(id, { pence: 100, receivedOn: '2026-09-02' })).status, 400, 'not after today');
+  assert.equal((await transfer(id, { pence: 100, receivedOn: 'yesterday' })).status, 400);
+  assert.equal((await transfer(id, { pence: 1.5 })).status, 400);
+  assert.equal((await transfer(id, { pence: 10000, reference: 'x'.repeat(101) })).status, 400);
+  assert.equal((await transfer(id, { pence: 10000, receivedOn: '2026-08-30' })).status, 201);
+  assert.equal(await owed(id), 0);
+  const a = await account(id);
+  assert.deepEqual(a.statement.map((e) => [e.kind, e.changePence, e.reference, e.receivedOn]), [
+    ['bank_transfer', -10000, '[reference]', '2026-08-30'],
+    ['bank_transfer', -2000, '[reference]', '2026-09-01'],
+    ['opening', 12000, null, null],
+  ]);
+  // In the customer's history too, as a transfer.
+  const rows = (await asJo(`/api/customers/${id}/history`)).body.items.filter((i) => i.kind === 'account');
+  assert.deepEqual(rows.map((r) => [r.change, r.changePence, r.reference]), [['bank_transfer', -10000, '[reference]'], ['bank_transfer', -2000, '[reference]']]);
+});
+
+test('the Owner undoes a transfer recorded twice, both staying on the statement', async () => {
+  const id = await owing(5000);
+  await transfer(id, { pence: 1000 });
+  const twice = (await transfer(id, { pence: 1000 })).body.entry;
+  assert.equal((await post(asJo, `/api/account-entries/${twice.id}/undo`, { reason: '[reason]' })).status, 403);
+  const undone = await post(asOwner, `/api/account-entries/${twice.id}/undo`, { reason: '[reason]' });
+  assert.equal(undone.status, 201, JSON.stringify(undone.body));
+  assert.equal(undone.body.owed, 4000);
+  assert.equal((await post(asOwner, `/api/account-entries/${twice.id}/undo`, { reason: '[reason]' })).status, 409);
+  const a = await account(id);
+  assert.deepEqual(a.statement.map((e) => [e.kind, e.changePence, e.undone]), [['undo', 1000, false], ['bank_transfer', -1000, true], ['bank_transfer', -1000, false], ['opening', 5000, false]]);
+});
+
+test('over the limit: overBy says how much', async () => {
+  const id = await owing(30000);
+  const m = (await asOwner(`/api/customers/${id}`)).body.money;
+  assert.deepEqual([m.owed, m.limit, m.overBy], [30000, 25000, 5000]);
+});
+
+test('Email the statement: to the company’s invoice address or their email, none without one, five an hour', async () => {
+  const id = await owing(12000);
+  const sent = await post(asJo, `/api/customers/${id}/account/email-statement`, {});
+  assert.equal(sent.status, 200, JSON.stringify(sent.body));
+  assert.equal(sent.body.to, 'maya@example.test');
+  const msg = await runWithShop(owner.shop.id, () => prepare('SELECT template_key, channel, to_address, subject, body FROM customer_messages WHERE id = ?').get(sent.body.id));
+  assert.deepEqual([msg.template_key, msg.channel, msg.to_address], ['statement', 'email', 'maya@example.test']);
+  assert.match(msg.subject, /Your account with North Street Cycles/);
+  assert.match(msg.body, /Owed from before Wheelhouse/);
+  assert.match(msg.body, /You owe £120\.00/);
+  for (let i = 0; i < 4; i += 1) assert.equal((await post(asJo, `/api/customers/${id}/account/email-statement`, {})).status, 200);
+  assert.equal((await post(asJo, `/api/customers/${id}/account/email-statement`, {})).status, 429);
+
+  const club = (await post(asOwner, '/api/customers', { name: '[Club name]', isCompany: true, contactName: '[name]', email: 'club@example.test', invoiceEmail: 'invoices@example.test' })).body.id;
+  await openAccount(club);
+  assert.equal((await post(asJo, `/api/customers/${club}/account/email-statement`, {})).body.to, 'invoices@example.test');
+  const none = (await post(asOwner, '/api/customers', { name: '[name]', phone: '07700 900000' })).body.id;
+  await openAccount(none);
+  const noEmail = await post(asJo, `/api/customers/${none}/account/email-statement`, {});
+  assert.deepEqual([noEmail.status, noEmail.body.code], [409, 'no_email']);
+});
+
+test('Customer accounts can’t be switched off while anyone owes', async () => {
+  const id = await owing(4500);
+  const refused = await switches({ accountsOn: false });
+  assert.equal(refused.status, 409);
+  assert.match(refused.body.error, /owe/);
+  await transfer(id, { pence: 4500 });
+  // Every other customer in this shop who still owes is paid off too, then it switches off.
+  const left = await runWithShop(owner.shop.id, () => prepare('SELECT customer_id, sum(change_pence)::int AS s FROM account_entries GROUP BY customer_id HAVING sum(change_pence) > 0').all());
+  for (const r of left) assert.equal((await transfer(r.customer_id, { pence: r.s })).status, 201);
+  assert.equal((await switches({ accountsOn: false })).status, 200);
+  await switches({ accountsOn: true });
+});
+
+test('merging moves money owed to the record kept', async () => {
+  const kept = await owing(1000, 'Maya Patel');
+  const gone = await owing(2500, 'Maya P.');
+  const merged = await post(asOwner, `/api/customers/${kept}/merge`, { otherId: gone, keep: {} });
+  assert.equal(merged.status, 200);
+  assert.equal(await owed(kept), 3500);
+  assert.equal((await post(asOwner, `/api/customer-merges/${merged.body.id}/undo`, {})).status, 200);
+  assert.equal(await owed(kept), 1000);
+  assert.equal(await owed(gone), 2500);
+});
+
+test('another business’s customer and account entries are a 404', async () => {
+  const id = await owing(1000);
+  const entry = (await transfer(id, { pence: 100 })).body.entry;
+  assert.equal((await asOther(`/api/customers/${id}/account`)).status, 404);
+  assert.equal((await post(asOther, `/api/customers/${id}/account/transfers`, { pence: 100, receivedOn: '2026-09-01' })).status, 404);
+  assert.equal((await post(asOther, `/api/account-entries/${entry.id}/undo`, { reason: 'x' })).status, 404);
+});
