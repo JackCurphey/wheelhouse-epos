@@ -158,8 +158,8 @@ function LimitRow({ customerId, first, account, owner, onSaved }: { customerId: 
       if (!read || 'invalid' in read) { setProblem(AMOUNT_WORDS); return; }
       pence = read.pence;
     }
-    if (pence === account.ownLimit) return;
     setProblem(null);
+    if (pence === account.ownLimit) return;
     try {
       await apiMutate(`/api/customers/${customerId}/account/limit`, { pence }, { method: 'PUT' });
       await onSaved();
