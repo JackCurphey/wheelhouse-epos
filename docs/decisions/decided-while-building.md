@@ -2381,6 +2381,13 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 2. **Bike warranties live in Settings › Stockroom,** a fold after Categories, each brand's lines in its own box, the Owner's to change. *Pattern:* Settings › Stockroom › Categories (piece 8).
 3. **"E-bike" is a yes/no** on a product and on a customer's bike, since nothing marked one before and the Electronics line needs it.
 
+### 9 Nov 2026: the plan for finishing the account (WP-4.5; `openspec/changes/finish-account`; Jack's 9 Nov account answers 1 and 3)
+
+1. **The receipt email's "See it in your account" waits for step C.** Staff email receipts only for sales recorded without a receipt number, and your answer 1 keeps those receipts closed on the account until step C, so the button would lead nowhere. It comes with step C. *Pattern:* your 26 Oct choice that the text receipt waits for step C.
+2. **The old address is told when a customer changes their email:** one email, "Your email address has changed — [shop]", naming the new address with its middle hidden and the shop's phone to call if it wasn't them. Nothing built tells a customer about a change to their account. *Pattern:* the receipt email's plain frame, and the delete pop-up's "call [shop phone]".
+3. **Devices already signed in stay signed in** after an email change: a sign-in belongs to the account, not the address.
+4. **An email used by another account or another customer here can't be taken**, refused before a code is sent: "That email is already used for another account at [shop]. Ask [shop] to help." *Why:* a customer's own email decides which record a first sign-in joins.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
