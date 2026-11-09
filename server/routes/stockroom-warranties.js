@@ -79,6 +79,8 @@ export function register(route) {
     const body = (await readJsonBody(req)) ?? {};
     const lines = body.lines === null ? { lines: [] } : linesSent(body.lines);
     if (lines.problem) return badRequest(res, lines.problem);
+    // An empty list would read back as its brand's lines, so it's refused rather than saved as that.
+    if (body.lines !== null && lines.lines.length === 0) return badRequest(res, 'Choose at least one line, or use the brand’s lines');
     if (!id) return notFound(res, 'Product not found');
     return inTransaction(res, async () => {
       const product = await prepare('SELECT id, brand, category FROM products WHERE id = ? FOR UPDATE').get(id);
