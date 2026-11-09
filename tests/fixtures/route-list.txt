@@ -291,6 +291,8 @@ POST /api/stock-takes/:id/apply
 POST /api/stock-takes/:id/undo
 GET /api/stock-takes/:id/download
 GET /api/privacy-requests
+POST /api/privacy-requests
+POST /api/privacy-requests/:id/copy
 GET /api/privacy-requests/open-count
 POST /api/privacy-requests/:id/delete
 GET /api/move
