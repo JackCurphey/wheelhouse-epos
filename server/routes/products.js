@@ -28,7 +28,7 @@ const REASONS_DOWN = ['damaged', 'lost_stolen', 'used_workshop', 'faulty_return'
 const REASONS_UP = ['found', 'other'];
 const MAX_CHANGE = 100000;
 const MAX_NOTE = 500;
-const SAVE_LOCK_WAIT = '2s';
+export const SAVE_LOCK_WAIT = '2s';
 
 // A product is only fit to be live on Shopify when it's BOTH marked to show
 // online AND active - `show_online` alone isn't enough, since a deactivated

@@ -311,3 +311,6 @@ GET /api/restock
 POST /api/restock/seen
 POST /api/restock/download
 POST /api/restock/add-to-order
+POST /api/stock/prices/preview
+POST /api/stock/prices
+POST /api/stock/prices/:id/undo
