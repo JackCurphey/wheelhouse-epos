@@ -106,15 +106,15 @@ export async function sendHeldNow(id) {
 
 /**
  * An email to the address given, for one sale's receipt (openspec/changes/receipt-email
- * design 1): not the customer's chosen way, and with no customer when the sale
+ * design 1), or a customer's statement (`templateKey` 'statement', finish-customers design 5): not the customer's chosen way, and with no customer when the sale
  * has none. Due at once; the timer sends it through the email sender, pretend
  * for now. Inside the shop's runWithShop. Returns the message's id.
  */
-export async function sendEmailTo({ to, subject, body, saleId, customerId = null, loginId = null }) {
+export async function sendEmailTo({ to, subject, body, saleId = null, customerId = null, loginId = null, templateKey = 'receipt' }) {
   const { id } = await prepare(
     `INSERT INTO customer_messages (customer_id, sale_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
-     VALUES (?, ?, ?, 'queued', 'intended', 'email', 'receipt', ?, ?, ?, ?) RETURNING id`
-  ).get(customerId, saleId, body, subject, to, new Date().toISOString(), loginId);
+     VALUES (?, ?, ?, 'queued', 'intended', 'email', ?, ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, saleId, body, templateKey, subject, to, new Date().toISOString(), loginId);
   return id;
 }
 
@@ -342,7 +342,7 @@ export function serializeMessage(row) {
     direction: row.direction ?? 'outbound',
     key: row.template_key ?? null,
     // A receipt isn't one of the automatic messages (openspec/changes/receipt-email).
-    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : row.template_key === 'own_message' ? 'Your own message' : 'Message'),
+    name: TEMPLATES[row.template_key]?.name ?? (row.template_key === 'receipt' ? 'Receipt' : row.template_key === 'statement' ? 'Statement' : row.template_key === 'own_message' ? 'Your own message' : 'Message'),
     channel: row.channel ?? 'sms',
     to: row.to_address ?? null,
     subject: row.subject ?? null,

@@ -47,7 +47,71 @@ export const owedOf = async (customerId) => Number((await prepare(
 export async function moneyFor(customerId, settings) {
   const money = { storeCreditOn: settings.store_credit_on, accountsOn: settings.accounts_on };
   if (settings.store_credit_on) money.credit = await creditOf(customerId);
+  if (settings.accounts_on) Object.assign(money, await accountFigures(customerId, settings));
   return money;
+}
+
+/**
+ * What a customer owes on account and the most they can owe (cs-account, cs-page-over): their
+ * own limit, else the shop's; overBy is how far over it they are, 0 within it or with no limit.
+ */
+export async function accountFigures(customerId, settings) {
+  const c = await prepare('SELECT account_opened_at, account_limit_pence FROM customers WHERE id = ?').get(customerId);
+  const owed = await owedOf(customerId);
+  const shopLimit = settings.account_limit_pence ?? null;
+  const limit = c?.account_limit_pence ?? shopLimit;
+  return { owed, hasAccount: Boolean(c?.account_opened_at), limit, shopLimit, overBy: limit !== null && owed > limit ? owed - limit : 0 };
+}
+
+/** A customer's account entries, newest first (the statement, question 12). */
+export async function accountEntries(customerId) {
+  const rows = await prepare(
+    `SELECT e.id, e.change_pence, e.kind, e.reference, to_char(e.received_on, 'YYYY-MM-DD') AS received_on, e.sale_id, e.till_sale_id,
+            e.reason, e.who_name, e.created_at, e.undoes_entry_id,
+            EXISTS (SELECT 1 FROM account_entries u WHERE u.undoes_entry_id = e.id) AS undone,
+            (SELECT k.kind FROM account_entries k WHERE k.id = e.undoes_entry_id) AS undoes_kind
+       FROM account_entries e WHERE e.customer_id = ? ORDER BY e.created_at DESC, e.id DESC`
+  ).all(customerId);
+  return rows.map(serializeAccountEntry);
+}
+export const serializeAccountEntry = (r) => ({
+  id: r.id,
+  kind: r.kind,
+  changePence: r.change_pence,
+  reference: r.reference ?? null,
+  receivedOn: r.received_on ?? null,
+  saleId: r.sale_id ?? null,
+  tillSaleId: r.till_sale_id ?? null,
+  reason: r.reason ?? null,
+  by: r.who_name ?? null,
+  at: new Date(r.created_at).toISOString(),
+  undoesEntryId: r.undoes_entry_id ?? null,
+  undoesKind: r.undoes_kind ?? null,
+  undone: Boolean(r.undone),
+});
+
+/** Writes one account entry; the caller has locked the customer and checked what's owed. */
+export async function writeAccountEntry(customerId, { changePence, kind, reference = null, receivedOn = null, reason = null, undoesEntryId = null }, who = {}) {
+  const { id } = await prepare(
+    `INSERT INTO account_entries (customer_id, change_pence, kind, reference, received_on, reason, undoes_entry_id, login_id, who_name)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+  ).get(customerId, changePence, kind, reference, receivedOn, reason, undoesEntryId, who.loginId ?? null, who.name ?? null);
+  return (await accountEntries(customerId)).find((e) => e.id === id);
+}
+
+/** The history's transfer rows (design 4): bank transfers and their undoings. */
+export async function accountHistory(customerId) {
+  return (await accountEntries(customerId))
+    .filter((e) => e.kind === 'bank_transfer' || (e.kind === 'undo' && e.undoesKind === 'bank_transfer'))
+    .map((e) => ({ kind: 'account', id: e.id, change: e.kind, changePence: e.changePence, reference: e.reference, receivedOn: e.receivedOn, reason: e.reason, by: e.by, undone: e.undone, at: e.at }));
+}
+
+/** How many customers owe on account, and how much in all (question 11). */
+export async function owingInAll() {
+  const r = await prepare(
+    'SELECT count(*)::int AS n, COALESCE(sum(s), 0)::bigint AS total FROM (SELECT sum(change_pence) AS s FROM account_entries GROUP BY customer_id HAVING sum(change_pence) > 0) t'
+  ).get();
+  return { customers: r.n, pence: Number(r.total) };
 }
 
 /** A customer's store credit entries, newest first, each saying whether it was undone. */

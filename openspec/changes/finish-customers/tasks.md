@@ -18,8 +18,8 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 3. Accounts, server (pull request 3; money)
 
-- [ ] 3.1 Tests: giving an account (Owner only); the limit, the customer's own, back to the shop's, Owner-only; "Owed from before Wheelhouse" once, Owner-only; a transfer with amount, date arrived (not in the future) and reference, refused over what's owed (question 14); the statement newest first; Owner's undo; the email queued to the company's invoice address or their email, none without one, at most 5 an hour; over-limit `overBy`; Customer accounts refused off while anyone owes (question 11); **a day closed with a transfer recorded has the same takings, card, cash and other as without it**; merging moves money owed. Verify: red before 3.2.
-- [ ] 3.2 The account half of `customer-money.js` and its routes; `server/messaging/statement-email.js` (template `statement`). Verify: 3.1 passes and `close-the-day.js` is unchanged in the diff.
+- [x] 3.1 Tests: giving an account (Owner only); the limit, the customer's own, back to the shop's, Owner-only; "Owed from before Wheelhouse" once, Owner-only; a transfer with amount, date arrived (not in the future) and reference, refused over what's owed (question 14); the statement newest first; Owner's undo; the email queued to the company's invoice address or their email, none without one, at most 5 an hour; over-limit `overBy`; Customer accounts refused off while anyone owes (question 11); **a day closed with a transfer recorded has the same takings, card, cash and other as without it**; merging moves money owed. Verify: red before 3.2.
+- [x] 3.2 The account half of `customer-money.js` and its routes; `server/messaging/statement-email.js` (template `statement`). Verify: 3.1 passes and `close-the-day.js` is unchanged in the diff.
 
 ## 4. Accounts, screens, and money owed holding a deletion back (pull request 4; money, customer accounts)
 

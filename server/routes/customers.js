@@ -13,7 +13,7 @@ import { TEMPLATES } from '../messaging/templates.js';
 import { shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { deletionOnPage } from '../privacy-requests.js';
-import { creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
+import { accountHistory, creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -379,9 +379,13 @@ export function register(route) {
         WHERE customer_id = ? AND coalesce(direction, 'outbound') = 'outbound' AND intent_state <> 'undone'`
     ).all(id);
     // Store credit changes while Store credit is on (finish-customers design 4).
-    const credit = (await paymentSettings()).store_credit_on ? await creditHistory(id) : [];
+    const settings = await paymentSettings();
+    const credit = settings.store_credit_on ? await creditHistory(id) : [];
+    // Bank transfers while Customer accounts is on (design 4).
+    const transfers = settings.accounts_on ? await accountHistory(id) : [];
     const items = [
       ...credit,
+      ...transfers,
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
         bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
@@ -389,7 +393,7 @@ export function register(route) {
         at: iso(j.at),
       })),
       ...sales.map((x) => ({ kind: 'sale', source: x.source, id: x.id, receiptNumber: x.receipt_number ?? null, total: Number(x.total_pence) / 100, what: x.what ?? '', at: iso(x.created_at) })),
-      ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
+      ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : m.template_key === 'statement' ? 'Statement' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
     ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
     sendJson(res, 200, { items });
   });
