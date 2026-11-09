@@ -82,3 +82,33 @@ export async function dataCopyFiles({ customerId, email, zone, history }) {
       ...(c.said_yes_at ? [['Said yes to reminders', `${c.said_yes_at}, ${YES_VIA[c.reminders_said_yes_via] ?? ''}`.replace(/, $/, '')]] : [])]) },
   ];
 }
+
+/**
+ * The shop's own notes on a customer and each of their bikes, the file the fuller copy adds
+ * (finish-customers design 7; Jack's 30 Oct answer 1: the account's instant copy leaves them out).
+ */
+export async function shopNotesFile(customerId) {
+  const c = await prepare('SELECT notes FROM customers WHERE id = ?').get(customerId);
+  const bikes = await prepare(
+    `SELECT NULLIF(trim(concat_ws(' ', make, model)), '') AS bike, notes FROM customer_bikes
+      WHERE customer_id = ? AND active = 1 AND coalesce(btrim(notes), '') <> '' ORDER BY id`
+  ).all(customerId);
+  const rows = [['About', 'The shop’s note']];
+  if (c.notes?.trim()) rows.push(['You', c.notes]);
+  for (const b of bikes) rows.push([b.bike ?? 'Your bike', b.notes]);
+  return { name: 'shop-notes.csv', content: csvOf(rows) };
+}
+
+/**
+ * The copy as an email (finish-customers design 7; Jack's 9 Nov answer 6). Plain text, as every
+ * message: messages carry no attachments yet, so each spreadsheet is written out under its name.
+ */
+export function copyEmail({ shopName, files }) {
+  return {
+    subject: `Your data from ${shopName}`,
+    body: [
+      `Here is a copy of what ${shopName} holds about you, as you asked. Each part below is a spreadsheet: copy it into a file with the name shown to open it in a spreadsheet.`,
+      ...files.map((f) => `${f.name}\n${f.content}`),
+    ].join('\n\n'),
+  };
+}

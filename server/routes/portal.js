@@ -693,7 +693,7 @@ const contactOf = (customer) => ({
 // purchases from both sales records: the account's history, and the copy of
 // their data (your-data-copy design 3).
 const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-async function repairsAndPurchases(customerId) {
+export async function repairsAndPurchases(customerId) {
   const zone = await shopZone();
   const jobs = await db.prepare(
     `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
