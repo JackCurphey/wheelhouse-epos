@@ -9,7 +9,7 @@ import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { whoIsBooking } from './purchase-orders.js';
 import { SAVE_LOCK_WAIT } from './products.js';
-import { shopToday } from '../clock.js';
+import { isDay, shopToday } from '../clock.js';
 import { sendEmailTo } from '../messaging/engine.js';
 import { statementEmail } from '../messaging/statement-email.js';
 import {
@@ -53,7 +53,6 @@ const STATEMENTS_PER_HOUR = 5;
 const ACCOUNTS_OFF = 'Customer accounts are switched off in Settings › Payments.';
 const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
 // A real calendar day written YYYY-MM-DD.
-const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
 
 // The customer's account as the Account pop-up shows it (cs-account).
 async function accountOf(customerId, settings) {

@@ -253,11 +253,14 @@ async function deleteOnce(requestId) {
           .run(wipedTitle(j.order_title, j.customer_description), wipedNotes(j.order_note, said), j.order_id);
       }
     }
-    // Answer 3.2: their bikes stay as bare rows, for the kept jobs.
+    // Answer 3.2: their bikes stay as bare rows, for the kept jobs, with nothing of when they
+    // were bought here or their warranty (finish-customers, design 6).
     await prepare(
-      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', citrus_ref = NULL, active = 0, updated_at = now()
+      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', citrus_ref = NULL, active = 0,
+              bought_here_on = NULL, is_ebike = false, warranty_brand = NULL, warranty_product_id = NULL, updated_at = now()
         WHERE customer_id = ANY(?::int[])`
     ).run(ids);
+    await prepare('DELETE FROM bike_warranty_lines l USING customer_bikes b WHERE b.id = l.customer_bike_id AND b.customer_id = ANY(?::int[])').run(ids);
     // Answer 3.1: the records stay, with nothing that identifies them.
     await prepare(
       `UPDATE customers SET name = '', email = '', phone = '', notes = '', address = NULL, postcode = NULL,

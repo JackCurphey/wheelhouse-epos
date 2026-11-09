@@ -13,6 +13,7 @@ import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
+import { bikesWithWarranty } from '../lib/bike-warranty.js';
 import { currentCustomerSession, setCustomerSessionCookie } from '../lib/session.js';
 import { clientIp } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
@@ -1114,7 +1115,9 @@ export function register(route) {
         GROUP BY w.bike_id`
     ).all(ctx.login.customer_id, LIVE_BOOKING_STATES);
     const dueFor = new Map(due.map((d) => [d.bike_id, d.day]));
-    sendJson(res, 200, rows.map((r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
+    // Each bike's warranty, as the customer page shows it (finish-customers, design 6; ac-account).
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    sendJson(res, 200, await bikesWithWarranty(rows, shopToday(zone), (r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
   });
 
   route('POST', '/api/portal/:shopSlug/bikes', async (req, res, params) => {

@@ -7,10 +7,12 @@
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { serializeBike } from '../lib/serializers.js';
+import { bikesWithWarranty, dayOf, writeBikeLines } from '../lib/bike-warranty.js';
+import { shopZone } from '../privacy-requests.js';
 import { ALL_SALES_SELECT, serializeAnySale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
-import { shopToday } from '../clock.js';
+import { isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { deletionOnPage } from '../privacy-requests.js';
 import { accountHistory, creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
@@ -463,6 +465,28 @@ export function register(route) {
 
   // ---------- Customer bikes ----------
 
+  // Edit bike's Bought here on, Brand, Model and E-bike (finish-customers, design 6; Jack, 9 Nov,
+  // answer 4): each as sent or as it is; { on, brand, productId, isEbike } or { problem }.
+  const WARRANTY_FIELDS = ['boughtHereOn', 'warrantyBrand', 'warrantyProductId', 'isEbike'];
+  async function boughtHereSent(body, current) {
+    let on = current.bought_here_on ? dayOf(current.bought_here_on) : null;
+    if (body.boughtHereOn !== undefined) {
+      on = body.boughtHereOn || null;
+      if (on !== null && !isDay(on)) return { problem: 'Give the day it was bought here' };
+      if (on !== null && on > shopToday(await shopZone())) return { problem: 'Bought here on can’t be in the future' };
+    }
+    const brand = body.warrantyBrand !== undefined ? (String(body.warrantyBrand ?? '').trim() || null) : current.warranty_brand;
+    if (brand && brand.length > 60) return { problem: 'A brand can be up to 60 characters' };
+    let productId = current.warranty_product_id;
+    if (body.warrantyProductId !== undefined) {
+      productId = body.warrantyProductId ?? null;
+      if (productId !== null && !(Number.isSafeInteger(productId) && productId > 0 && productId <= 2147483647
+        && await db.prepare('SELECT 1 FROM products WHERE id = ?').get(productId))) return { problem: 'That model isn’t one of the shop’s products' };
+    }
+    const isEbike = body.isEbike !== undefined ? Boolean(body.isEbike) : current.is_ebike;
+    return { on, brand, productId, isEbike };
+  }
+
   route('GET', '/api/customers/:id/bikes', async (req, res, params, query) => {
     const customerId = Number(params.id);
     const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
@@ -472,7 +496,7 @@ export function register(route) {
     if (query.get('all') !== '1') sql += ' AND active = 1';
     sql += ' ORDER BY make, model';
     const rows = await db.prepare(sql).all(...args);
-    sendJson(res, 200, rows.map(serializeBike));
+    sendJson(res, 200, await bikesWithWarranty(rows, shopToday(await shopZone()), serializeBike));
   });
 
   route('POST', '/api/customers/:id/bikes', async (req, res, params) => {
@@ -544,11 +568,19 @@ export function register(route) {
       const serialNumber = body.serialNumber !== undefined ? String(body.serialNumber).trim() : current.serial_number;
       const notes = body.notes !== undefined ? String(body.notes).trim() : current.notes;
       const active = body.active !== undefined ? (body.active ? 1 : 0) : current.active;
+      const bought = await boughtHereSent(body, current);
+      if (bought.problem) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, bought.problem);
+      }
 
       await db.prepare(
-        `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?, updated_at = ?
+        `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?,
+                bought_here_on = ?, warranty_brand = ?, warranty_product_id = ?, is_ebike = ?, updated_at = ?
          WHERE id = ?`
-      ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
+      ).run(make, model, colour, serialNumber, notes, active, bought.on, bought.brand, bought.productId, bought.isEbike, nowIso(), id);
+      // Its lines worked out again from what it is now, only when one of those changed (design 6).
+      if (WARRANTY_FIELDS.some((k) => body[k] !== undefined)) await writeBikeLines(id);
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
@@ -585,8 +617,9 @@ export function register(route) {
               ${JOB_MOMENT} AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.bike_id = ? ORDER BY at DESC, w.id DESC`
     ).all(zone, id);
+    const [withWarranty] = await bikesWithWarranty([bike], today, serializeBike);
     sendJson(res, 200, {
-      ...serializeBike(bike),
+      ...withWarranty,
       customer: { id: bike.customer_id, name: bike.customer_name, phone: bike.customer_phone || null },
       jobs: jobs.map((j) => ({
         id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,

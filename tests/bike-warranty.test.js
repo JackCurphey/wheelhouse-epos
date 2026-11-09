@@ -1,4 +1,5 @@
 // Bike warranties (openspec/changes/finish-customers, design 6; Jack's 9 Nov answers 3 and 4,
+// questions 15 and 19; the server's clock is pinned to 1 Sep 2026,
 // and option 3 of the bike question): the Owner lists brands in Settings › Stockroom, each with
 // Frame, Components and Electronics lines of whole years or Lifetime; a product holds a brand,
 // matched to the list by name ignoring capitals and spaces at either end, is an e-bike by its
@@ -8,7 +9,8 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
+import { bikeSoldTo, monthsTo, yearsOn } from '../server/lib/bike-warranty.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -155,4 +157,135 @@ test('a model’s own lines replace its brand’s, set by the Owner and put back
 
   // Another business's product isn't found.
   assert.equal((await own(cube.id, lines(1), asOther)).status, 404);
+});
+
+// A bike sold through Wheelhouse (bikeSoldTo; not called from any sale until the till's half).
+const deliver = (body) => asJo('/api/deliveries/receive', { method: 'POST', body });
+const frame = () => `[frame ${randomUUID().slice(0, 8)}]`;
+let supplierId;
+let maya;
+async function bookedIn(productId, frames) {
+  if (!supplierId) supplierId = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now())").run()).lastInsertRowid);
+  const res = await deliver({ supplierId, items: [{ productId, qty: frames.length, frames }] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  return runWithShop(owner.shop.id, async () => Promise.all(frames.map(async (f) => (await prepare('SELECT id FROM stock_frames WHERE frame_number = ?').get(f)).id)));
+}
+const sell = (frameId, soldOn = '2026-08-01', customerId = maya.id) => runWithShop(owner.shop.id, async () => {
+  await dbExec('BEGIN');
+  try {
+    const out = await bikeSoldTo(customerId, frameId, soldOn);
+    await dbExec('COMMIT');
+    return out;
+  } catch (err) {
+    await dbExec('ROLLBACK');
+    throw err;
+  }
+});
+const bikeLines = (bikeId) => runWithShop(owner.shop.id, async () => (await prepare("SELECT part, to_char(ends_on, 'YYYY-MM-DD') AS ends_on FROM bike_warranty_lines WHERE customer_bike_id = ? ORDER BY array_position(ARRAY['frame','components','electronics'], part)").all(bikeId)).map((l) => [l.part, l.ends_on]));
+
+test('bikeSoldTo: a frame booked in becomes Maya’s bike, bought here, with Trek’s lines from that day', async () => {
+  maya = (await asOwner('/api/customers', { method: 'POST', body: { name: 'Maya Patel' } })).body;
+  const trek = await product({ name: 'Trek Domane AL 3', category: 'Bikes', brand: 'Trek' });
+  const [f1, f2] = [frame(), frame()];
+  const [frame1, frame2] = await bookedIn(trek.id, [f1, f2]);
+
+  const sold = await sell(frame1);
+  assert.ok(sold.bikeId, JSON.stringify(sold));
+  const bike = await runWithShop(owner.shop.id, () => prepare("SELECT customer_id, make, model, serial_number, to_char(bought_here_on, 'YYYY-MM-DD') AS bought, is_ebike, warranty_brand, warranty_product_id FROM customer_bikes WHERE id = ?").get(sold.bikeId));
+  assert.deepEqual(bike, { customer_id: maya.id, make: 'Trek', model: 'Trek Domane AL 3', serial_number: f1, bought: '2026-08-01', is_ebike: false, warranty_brand: 'Trek', warranty_product_id: trek.id });
+  const f = await runWithShop(owner.shop.id, () => prepare('SELECT state, customer_id, customer_bike_id, sold_at IS NOT NULL AS sold FROM stock_frames WHERE id = ?').get(frame1));
+  assert.deepEqual(f, { state: 'sold', customer_id: maya.id, customer_bike_id: sold.bikeId, sold: true });
+  assert.deepEqual(await bikeLines(sold.bikeId), [['frame', null], ['components', '2028-08-01']], 'no Electronics: not an e-bike');
+
+  // Her bike already in Wheelhouse with that frame number, typed differently, is reused.
+  const hers = (await asJo(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', serialNumber: f2.toUpperCase().replace(" ", "  ") } })).body;
+  assert.equal((await sell(frame2)).bikeId, hers.id);
+  assert.deepEqual(await bikeLines(hers.id), [['frame', null], ['components', '2028-08-01']]);
+
+  // A frame already sold, or another business's, isn't sold again.
+  assert.match((await sell(frame1)).error, /sold/);
+  const theirs = await runWithShop(other.shop.id, async () => (await prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES ('[sku]', '[Bike]', 'Bikes', 1, 1, 0, now()) RETURNING id").get()).id);
+  const theirFrame = await runWithShop(other.shop.id, async () => (await prepare("INSERT INTO stock_frames (product_id, frame_number, frame_key) VALUES (?, '[frame]', '[FRAME]') RETURNING id").get(theirs)).id);
+  assert.match((await sell(theirFrame)).error, /not found/i);
+});
+
+test('an e-bike adds Electronics; Cube’s frame runs ten years; a sold bike keeps its lines when Trek’s change', async () => {
+  const ebike = await product({ name: '[Trek e-bike]', category: 'Bikes › E-bikes', brand: 'Trek' });
+  const cube = await product({ name: '[Cube model]', category: 'Bikes', brand: 'cube' });
+  const [e1] = await bookedIn(ebike.id, [frame()]);
+  const [c1] = await bookedIn(cube.id, [frame()]);
+  const e = await sell(e1);
+  assert.deepEqual(await bikeLines(e.bikeId), [['frame', null], ['components', '2028-08-01'], ['electronics', '2028-08-01']]);
+  assert.equal((await runWithShop(owner.shop.id, () => prepare('SELECT is_ebike FROM customer_bikes WHERE id = ?').get(e.bikeId))).is_ebike, true);
+  const c = await sell(c1, '2026-02-28');
+  assert.deepEqual(await bikeLines(c.bikeId), [['frame', '2036-02-28'], ['components', '2028-02-28']]);
+
+  const trekId = (await asOwner('/api/bike-warranties')).body.brands.find((b) => b.brand === 'Trek').id;
+  await asOwner(`/api/bike-warranties/${trekId}`, { method: 'PUT', body: { brand: 'Trek', lines: lines(LIFETIME, 3, 2) } });
+  assert.deepEqual(await bikeLines(e.bikeId), [['frame', null], ['components', '2028-08-01'], ['electronics', '2028-08-01']], 'unchanged');
+  const [e2] = await bookedIn(ebike.id, [frame()]);
+  assert.deepEqual((await bikeLines((await sell(e2)).bikeId))[1], ['components', '2029-08-01'], 'sold after: three years');
+  await asOwner(`/api/bike-warranties/${trekId}`, { method: 'PUT', body: { brand: 'Trek', lines: lines(LIFETIME, 2, 2) } });
+});
+
+test('Edit’s Bought here on: a brand and e-bike write the lines, changing rewrites them, clearing removes them, never in the future', async () => {
+  const bike = (await asJo(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'Domane AL 3' } })).body;
+  const edit = (body) => asJo(`/api/bikes/${bike.id}`, { method: 'PUT', body });
+  const warrantyOf = async () => (await asJo(`/api/bikes/${bike.id}`)).body.warranty;
+  assert.equal(await warrantyOf(), null, 'a bike from elsewhere');
+  assert.equal((await asJo(`/api/customers/${maya.id}/bikes`)).body.find((b) => b.id === bike.id).warranty, null);
+
+  let res = await edit({ boughtHereOn: '2026-01-15', warrantyBrand: ' trek ' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const expected = { boughtHereOn: '2026-01-15', brand: 'Trek', running: true, endedOn: null, lines: [
+    { part: 'frame', endsOn: null, monthsLeft: null, ended: false },
+    { part: 'components', endsOn: '2028-01-15', monthsLeft: 16, ended: false },
+  ] };
+  assert.deepEqual(await warrantyOf(), expected);
+  assert.deepEqual((await asJo(`/api/customers/${maya.id}/bikes`)).body.find((b) => b.id === bike.id).warranty, expected, 'the customer page’s Bikes too');
+  assert.equal((await edit({ colour: '[Colour]' })).status, 200);
+  assert.deepEqual(await warrantyOf(), expected, 'a save without them leaves the lines');
+
+  res = await edit({ isEbike: true });
+  assert.deepEqual((await warrantyOf()).lines.map((l) => l.part), ['frame', 'components', 'electronics']);
+  // A model with its own lines: those, not Trek's.
+  const model = await product({ name: '[Trek model]', category: 'Bikes', brand: 'Trek' });
+  await asOwner(`/api/products/${model.id}/warranty`, { method: 'PUT', body: { lines: lines(5) } });
+  await edit({ warrantyProductId: model.id, isEbike: false });
+  assert.deepEqual((await warrantyOf()).lines, [{ part: 'frame', endsOn: '2031-01-15', monthsLeft: 52, ended: false }]);
+  assert.equal((await edit({ warrantyProductId: 999999 })).status, 400);
+
+  // Under a month left; a line ended; every line ended; a brand not listed.
+  await edit({ warrantyProductId: null, boughtHereOn: '2024-09-20' });
+  assert.deepEqual((await warrantyOf()).lines[1], { part: 'components', endsOn: '2026-09-20', monthsLeft: 0, ended: false });
+  await edit({ boughtHereOn: '2024-08-15' });
+  const ended = await warrantyOf();
+  assert.deepEqual([ended.running, ended.lines[1]], [true, { part: 'components', endsOn: '2026-08-15', monthsLeft: null, ended: true }]);
+  await asOwner('/api/bike-warranties', { method: 'POST', body: { brand: '[Short brand]', lines: lines(1, 1) } });
+  await edit({ warrantyBrand: '[Short brand]', boughtHereOn: '2024-01-10' });
+  assert.deepEqual(await warrantyOf(), { boughtHereOn: '2024-01-10', brand: '[Short brand]', running: false, endedOn: '2025-01-10', lines: [
+    { part: 'frame', endsOn: '2025-01-10', monthsLeft: null, ended: true }, { part: 'components', endsOn: '2025-01-10', monthsLeft: null, ended: true },
+  ] });
+  await edit({ warrantyBrand: '[Brand not listed]' });
+  assert.deepEqual(await warrantyOf(), { boughtHereOn: '2024-01-10', brand: null, running: false, endedOn: null, lines: [] });
+
+  // Not a sensible date; cleared.
+  for (const day of ['2026-09-02', '2026-02-30', 'yesterday']) {
+    res = await edit({ boughtHereOn: day });
+    assert.equal(res.status, 400, day);
+  }
+  assert.equal((await edit({ boughtHereOn: '2026-09-02' })).body.error, 'Bought here on can’t be in the future');
+  await edit({ boughtHereOn: null });
+  assert.equal(await warrantyOf(), null);
+  assert.deepEqual(await bikeLines(bike.id), []);
+});
+
+test('months left are whole calendar months, rounded down; years on keeps the day, 29 Feb becoming the 28th', () => {
+  assert.equal(monthsTo('2026-09-15', '2028-01-15'), 16);
+  assert.equal(monthsTo('2026-09-15', '2028-01-14'), 15);
+  assert.equal(monthsTo('2026-09-15', '2026-10-14'), 0, 'less than a month left');
+  assert.equal(monthsTo('2026-09-30', '2026-10-31'), 1);
+  assert.equal(yearsOn('2026-08-01', 2), '2028-08-01');
+  assert.equal(yearsOn('2024-02-29', 1), '2025-02-28');
+  assert.equal(yearsOn('2024-02-29', 4), '2028-02-29');
 });

@@ -166,7 +166,8 @@ test('deleting Maya’s details: what identifies her goes, her sales and jobs st
   const files = {};
   const ids = await inShop(async () => {
     await prepare("UPDATE customers SET notes = '[Shop’s note]', address = '[Address]', postcode = '[Postcode]', is_company = true, contact_name = '[Contact]', vat_number = '[VAT]', invoice_email = '[invoice email]', update_channel = 'sms', service_reminders = true, reminders_said_yes_at = now(), reminders_said_yes_via = 'booking', marketing_permission = true WHERE id = ?").run(maya.id);
-    await prepare("UPDATE customer_bikes SET serial_number = '[Frame]', notes = '[Bike note]' WHERE id = ?").run(bike.id);
+    await prepare("UPDATE customer_bikes SET serial_number = '[Frame]', notes = '[Bike note]', bought_here_on = '2026-01-15', is_ebike = true, warranty_brand = 'Trek' WHERE id = ?").run(bike.id);
+    await prepare("INSERT INTO bike_warranty_lines (customer_bike_id, part, ends_on) VALUES (?, 'components', '2028-01-15')").run(bike.id);
     await prepare('UPDATE workshop_jobs SET bike_id = ? WHERE id = ?').run(bike.id, job.id);
     const jo2 = (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Jo Taylor', 1) RETURNING id").get()).id;
     const sale = (await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id) VALUES (now(), 12, 12, 'Cash', 12, ?, ?) RETURNING id").get(maya.id, jo2)).id;
@@ -200,6 +201,7 @@ test('deleting Maya’s details: what identifies her goes, her sales and jobs st
   const gone = await inShop(async () => ({
     customers: await prepare('SELECT * FROM customers WHERE id = ANY(?::int[]) ORDER BY id').all([maya.id, twin.id]),
     bike: await prepare('SELECT * FROM customer_bikes WHERE id = ?').get(bike.id),
+    bikeLines: await prepare('SELECT id FROM bike_warranty_lines WHERE customer_bike_id = ?').all(bike.id),
     job: await prepare('SELECT id, customer_id, bike_id, notes FROM workshop_jobs WHERE id = ?').get(job.id),
     sale: await prepare('SELECT customer_id, total FROM sales WHERE id = ?').get(ids.sale),
     notes: await prepare('SELECT id FROM job_notes WHERE id = ANY(?::int[])').all([ids.note, ids.jobNote]),
@@ -219,6 +221,8 @@ test('deleting Maya’s details: what identifies her goes, her sales and jobs st
     assert.ok(c.deleted_at instanceof Date);
   }
   assert.deepEqual([gone.bike.make, gone.bike.model, gone.bike.colour, gone.bike.serial_number, gone.bike.notes, gone.bike.active], ['', '', '', '', '', 0]);
+  // Bought here, and its warranty, go with her too (finish-customers, design 6).
+  assert.deepEqual([gone.bike.bought_here_on, gone.bike.is_ebike, gone.bike.warranty_brand, gone.bike.warranty_product_id, gone.bikeLines], [null, false, null, null, []]);
   assert.deepEqual(gone.job, { id: job.id, customer_id: maya.id, bike_id: bike.id, notes: '[Shop’s workshop note]' }, 'the job and the shop’s own note stay');
   assert.deepEqual([gone.sale.customer_id, Number(gone.sale.total)], [maya.id, 12], 'the sale stays whole');
   assert.deepEqual(gone.notes, []);
