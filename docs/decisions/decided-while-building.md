@@ -2354,6 +2354,22 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 10. **Undo** puts back every price the change made that is still as it left it, and leaves alone any changed since, saying "Prices put back · [n] products · [n] changed since, left as they are" (not drawn). It works once, and the server allows it at any time; the screen offers it until the next change or until the page is left.
 11. **The message after** reads "Prices changed · [n] products", [n] counting each size that changed as one.
 
+### 9 Nov 2026: bike frame numbers on stock (WP-2.1; `openspec/changes/frame-numbers`; `rs-frame`, `rs-frame-dup`, `rs-receive-marked`, `st-product-bike`, `st-list`)
+
+1. **Which products are bikes:** a product whose category, or a category it sits in, ends in the word "bike" or "bikes" ("Bikes", "Road bikes", "Bikes › E-bikes", "Kids’ bikes"). "Bike parts" and "Bike lights" aren't, and nor is a name where bikes isn't the last word, such as "Bikes and frames". Nothing in the drawings or decisions says how Wheelhouse knows a product is a bike; a switch on the product would change Edit's drawing, so this needs no new screen. One line to change in `server/lib/bikes.js`.
+2. **Scanned or typed:** a scanner types the frame and presses Enter, so Enter counts the bike, as "Count this bike" does; Wheelhouse can't tell a scan from typing.
+3. **A frame already in this delivery** says "This frame number is already in this delivery." (not drawn; follows `rs-frame-dup`'s alert).
+4. **Frames are compared** without capitals or spaces, and kept as scanned or typed, trimmed, up to 60 characters. A frame that has been sold can come in again (a bike back from a customer).
+5. **A bike's count** goes up only by scanning one, with "Scan each bike for its frame number" under its line; stepping it down takes off the last frame scanned.
+6. **A bike set aside** (damaged or wrong): the last frames scanned are the ones set aside, shown on the line as "Frame [frame number], set aside", and aren't recorded in stock.
+7. **If the in-stock check can't be reached,** the bike still counts; booking in checks every frame again and refuses one already in stock. Frames come off a line only from the end (the drawing has no way to remove one frame), so a frame refused in the middle means stepping back to it and scanning the later bikes again; rare, as the box checks each frame first.
+8. **The old app's receive route** books bikes in without frames: it's a placeholder to delete.
+9. **Until the till picks which bike it sells** (`till-serial`, WP-3.1), a bike sold at the till, adjusted down or counted short keeps its frame listed In stock. When a bike's page lists more frames in stock than it has, it says "The till doesn’t pick a bike’s frame yet, so a bike sold or adjusted may still be listed here." (not drawn).
+10. **Held and Sold frames** show their tag only; who it's held for or sold to, and the warranty date, come with Cycle to Work and the till, which are what set them.
+11. **Every received line** in a product's history now names its delivery: "Received · delivery from [Supplier]" (on an order) or "Booked in · delivery from [Supplier]" (not on one), opening the delivery, as `st-product-bike` draws it. A bike's line says "[n] frame numbers" in place of the note.
+12. **Stock's line for a bike** reads "[Category] · [n] bikes, each by frame number", in place of its code and supplier, as `st-list` draws it.
+13. **A bike with sizes** (a product with sizes in a bikes category): each size is a product, so each is asked for its frames as it's booked in, and each size's own page lists them; the product with sizes' page and its row on Stock don't show frames yet.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
