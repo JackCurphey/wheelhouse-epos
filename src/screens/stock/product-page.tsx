@@ -13,6 +13,7 @@ import { ProductBox } from './product-box.tsx';
 import { answerText, type Detail } from './stock-list-bits.tsx';
 import { count, marginText, money, mono, stockState, StateTag, type Product } from './stock-bits.tsx';
 import { dateText } from '@/screens/deliveries/frame-number.tsx';
+import { BrandWarranty, type Warranty } from './product-warranty.tsx';
 
 /**
  * A product's page (drawn as st-product, st-product-staff and st-product-bike
@@ -36,7 +37,7 @@ export type Line = Move | PriceChange;
 export type ShopStock = { id: number; name: string; qty: number; here: boolean };
 type Answered = Detail & { from: string; value: number | string | null };
 type Frame = { id: number; frameNumber: string; state: 'in_stock' | 'held' | 'sold'; bookedInAt: string; deliveryId: number | null; supplierName: string | null };
-type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[]; isBike?: boolean; frames?: Frame[] };
+type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[]; isBike?: boolean; frames?: Frame[]; isEbike?: boolean; warranty?: Warranty };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
 const WHAT: Record<string, [string, Show | null]> = {
   sale: ['Sold', 'Sold'],
@@ -201,6 +202,8 @@ export function ProductPage() {
               {p.details.map((d) => <Fragment key={d.id}>{kv(d.name, <span className={d.kind === 'number' ? mono : undefined}>{answerText(d, d.value ?? undefined)}</span>)}</Fragment>)}
             </Box>
           ) : null}
+          {/* A bike's brand and warranty (finish-customers, design 6; not drawn, logged). */}
+          {p.isBike ? <BrandWarranty p={p} owner={owner} /> : null}
           <Box id="h-price" title={owner && p.costPence !== null ? 'Price and cost' : 'Price'}>
             {kv('Price', <span className={mono}>{money(p.pricePence)}</span>)}
             {owner && p.costPence !== null ? kv('Cost', <span className={mono}>{money(p.costPence)}</span>) : null}

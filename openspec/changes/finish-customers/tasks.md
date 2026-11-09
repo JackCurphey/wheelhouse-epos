@@ -37,6 +37,8 @@ Split to stay under about 600 lines (Jack's 9 Nov bike answer): 5.0 the category
 
 ## 6. Bike warranties, screens (pull request 6)
 
+Split to stay under about 600 lines: 6a the Categories box's bike mark, the Bike warranties fold and a bike's product page; 6b the bike page, the customer page's Bikes, the account and the browser test. Settings is the Owner's (Jack's 19 Oct decision), so Staff have no read-only Bike warranties; they see the lines on product and bike pages (decided-while-building, Jack's section, 9).
+
 - [ ] 6.1 Screen tests: Settings › Stockroom's Bike warranties fold, adding Trek and Cube with their lines, read-only for Staff; the product page's Brand, E-bike and "Warranty: Frame lifetime · Components 2 years" or "this model's own", and setting a model's own lines; the bike's Warranty block and the customer page's Bikes row in the drawn wording with each line (question 19); Edit bike's Bought here on, Brand starting at the one matching its Make, Model and E-bike; the account's line. Verify: red before 6.2.
 - [ ] 6.2 The Bike warranties fold; `product-page.tsx` and its Edit box; `bike-page.tsx` (remove the "waits" comment at line 17) and its Edit; `customer-page.tsx`'s Bikes; `src/screens/book/account.tsx`. Log where Bike warranties lives (Settings › Stockroom, after Categories) in Jack's section of `decided-while-building.md`. Verify: 6.1 passes.
 - [ ] 6.3 Browser test: the Owner adds Trek's lines, Jo records that Maya's Trek was bought here on a date, and her page shows each line, at computer and phone widths. Verify: `npm run test:browser`.

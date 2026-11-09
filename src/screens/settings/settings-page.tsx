@@ -20,6 +20,7 @@ import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
 import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
+import { BikeWarrantiesSettings, useBikeWarrantiesSummary } from './bike-warranties-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -961,6 +962,7 @@ function OwnerSettings() {
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
+  const bikeWarranties = useBikeWarrantiesSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1013,6 +1015,8 @@ function OwnerSettings() {
         { key: 'stock', title: 'Stockroom', intro: 'Stock adjustments, and each category’s details.', folds: [
           { key: 'stock-adjustments', title: 'Stock adjustments', summary: stockAdjustments, body: <StockAdjustmentsSettings /> },
           { key: 'categories', title: 'Categories', summary: categories, body: <CategoriesSettings /> },
+          // Not drawn: after Categories, in its pattern (finish-customers, design 6; logged).
+          { key: 'bike-warranties', title: 'Bike warranties', summary: bikeWarranties, body: <BikeWarrantiesSettings /> },
         ] },
       ],
     },
