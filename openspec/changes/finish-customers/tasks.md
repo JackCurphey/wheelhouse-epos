@@ -45,7 +45,9 @@ Split to stay under about 600 lines: 6a the Categories box's bike mark, the Bike
 
 ## 7. Privacy requests: log one, send the copy (pull request 7; customer accounts)
 
-- [ ] 7.1 Tests: `POST /api/privacy-requests` Owner-only, a day asked not after today, how they asked (question 7), due one month on, Overdue at once for an old one, a second open one of the same kind refused; the copy with the shop's notes added, downloaded or emailed, marking it done; no email offers download only; store credit shown on a deletion row and written off as `lost_on_deletion`, with no name, in the same step as the deletion. Verify: red before 7.2.
+Split to stay under about 600 lines: 7a the server (logging, the copy, credit lost on deletion); 7b the screens and the browser test. The emailed copy is plain text with each spreadsheet written out (decided-while-building, Jack's section, 11).
+
+- [x] 7.1 Tests: `POST /api/privacy-requests` Owner-only, a day asked not after today, how they asked (question 7), due one month on, Overdue at once for an old one, a second open one of the same kind refused; the copy with the shop's notes added, downloaded or emailed, marking it done; no email offers download only; store credit shown on a deletion row and written off as `lost_on_deletion`, with no name, in the same step as the deletion. Verify: red before 7.2.
 - [ ] 7.2 The routes; the fuller copy in `server/customer-data-copy.js`; `log-request-dialog.tsx` and Send the copy in `privacy-requests.tsx`; remove the comment at `privacy-requests.tsx:17`. Verify: 7.1 passes.
 - [ ] 7.3 Browser test: the Owner logs Maya's request made in person and sends her the copy. Verify: `npm run test:browser`.
 
