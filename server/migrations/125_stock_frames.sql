@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS stock_frames (
 -- No frame in stock (or held) twice in a business; two deliveries booking it at once can't both win.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_frames_in_stock ON stock_frames (shop_id, frame_key) WHERE state <> 'sold';
 CREATE INDEX IF NOT EXISTS idx_stock_frames_product ON stock_frames (shop_id, product_id, state);
+-- A product's history counts the frames that came in on each received line.
+CREATE INDEX IF NOT EXISTS idx_stock_frames_movement ON stock_frames (stock_movement_id) WHERE stock_movement_id IS NOT NULL;
 ALTER TABLE stock_frames ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_frames FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS stock_frames_shop_isolation ON stock_frames;
