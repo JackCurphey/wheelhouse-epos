@@ -165,6 +165,11 @@ test('the Owner changes Most Maya can owe as he leaves the box; empty is the sho
   r.fireEvent.blur(limit);
   assert.ok(await box.findByText('Pounds and pence, like 5.00'));
   assert.equal(writes().length, 1);
+  // Put back to what's saved (the shop's, as the pretend server still says): nothing is sent, and the refusal goes (review).
+  r.fireEvent.change(limit, { target: { value: '' } });
+  r.fireEvent.blur(limit);
+  await r.waitFor(() => assert.ok(box.queryByText('Pounds and pence, like 5.00') === null));
+  assert.equal(writes().length, 1);
 });
 
 test('Record a bank transfer starts at everything owed; Jo records part of it; refusals show in the pop-up', async () => {

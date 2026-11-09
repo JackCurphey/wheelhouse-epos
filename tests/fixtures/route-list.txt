@@ -327,3 +327,7 @@ POST /api/customers/:id/account/opening
 POST /api/customers/:id/account/transfers
 POST /api/account-entries/:id/undo
 POST /api/customers/:id/account/email-statement
+GET /api/bike-warranties
+POST /api/bike-warranties
+PUT /api/bike-warranties/:id
+PUT /api/products/:id/warranty
