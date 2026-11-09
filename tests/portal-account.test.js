@@ -319,3 +319,19 @@ test('how we contact you: an earlier yes keeps when and where it was given', asy
   assert.equal(r.via, 'account', 'a new yes after both were off is the account’s');
   assert.ok(r.at.getTime() > Date.parse('2026-09-02T00:00:00Z'));
 });
+
+// The account's bikes carry their warranty, as the customer page's do (finish-customers, design
+// 6; ac-account); a bike from elsewhere carries none. The server's clock is pinned to 1 Sep 2026.
+test('Maya’s Trek bought here shows its warranty lines on her account', async () => {
+  assert.equal((await staff('/api/bike-warranties', { method: 'POST', body: { brand: 'Trek', lines: [{ part: 'frame', years: null }, { part: 'components', years: 2 }] } })).status, 201);
+  const elsewhere = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: '[Make]', model: '[Model]' } })).body;
+  assert.equal((await staff(`/api/bikes/${mayaBike.id}`, { method: 'PUT', body: { boughtHereOn: '2026-01-15', warrantyBrand: 'Trek' } })).status, 200);
+  const bikes = (await portal('/bikes')).body;
+  assert.deepEqual(bikes.find((b) => b.id === mayaBike.id).warranty, { boughtHereOn: '2026-01-15', brand: 'Trek', running: true, endedOn: null, lines: [
+    { part: 'frame', endsOn: null, monthsLeft: null, ended: false },
+    { part: 'components', endsOn: '2028-01-15', monthsLeft: 16, ended: false },
+  ] });
+  assert.equal(bikes.find((b) => b.id === elsewhere.id).warranty, null);
+  await staff(`/api/bikes/${mayaBike.id}`, { method: 'PUT', body: { boughtHereOn: null } });
+  await staff(`/api/bikes/${elsewhere.id}`, { method: 'DELETE' });
+});

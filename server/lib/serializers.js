@@ -6,6 +6,7 @@
 // Without it the cost is null, which nothing stored can be (the column is NOT
 // NULL, no cost recorded being 0), so a screen can tell it wasn't told.
 import { bikeKindOf } from './bikes.js';
+import { dayOf } from './bike-warranty.js';
 
 // `kinds` is bikeKinds(), the business's bike categories.
 export function serializeProduct(row, costs = false, kinds = new Map()) {
@@ -54,6 +55,11 @@ export function serializeBike(row) {
     colour: row.colour,
     serialNumber: row.serial_number,
     notes: row.notes,
+    // Bought here, and what its warranty was worked out from (finish-customers, design 6).
+    boughtHereOn: row.bought_here_on ? dayOf(row.bought_here_on) : null,
+    isEbike: !!row.is_ebike,
+    warrantyBrand: row.warranty_brand ?? null,
+    warrantyProductId: row.warranty_product_id ?? null,
     active: !!row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
