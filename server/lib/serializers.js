@@ -5,7 +5,7 @@
 // `costs`: canSeeCosts(req), the one check (openspec/changes/product-costs-hidden).
 // Without it the cost is null, which nothing stored can be (the column is NOT
 // NULL, no cost recorded being 0), so a screen can tell it wasn't told.
-import { isBike } from './bikes.js';
+import { bikeKindOf } from './bikes.js';
 
 // `kinds` is bikeKinds(), the business's bike categories.
 export function serializeProduct(row, costs = false, kinds = new Map()) {
@@ -38,7 +38,10 @@ export function serializeProduct(row, costs = false, kinds = new Map()) {
     // before VAT on Stock (openspec/changes/stock-list).
     vatRateBp: row.vat_rate_bp ?? null,
     // Asked for its frame number when it's booked in (openspec/changes/frame-numbers, design 1).
-    isBike: isBike(row.category, kinds),
+    isBike: bikeKindOf(row.category, kinds) !== null,
+    // Its brand, as typed (finish-customers, design 6), and an e-bike by its category's mark.
+    brand: row.brand ?? null,
+    isEbike: bikeKindOf(row.category, kinds) === 'ebikes',
   };
 }
 

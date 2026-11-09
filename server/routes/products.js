@@ -19,6 +19,7 @@ import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
 import { bikeKinds, isBike } from '../lib/bikes.js';
+import { productWarranty } from '../lib/warranties.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -119,6 +120,14 @@ export function sentMoney(body, costs) {
 // or nothing once written; a refused write leaves the transaction to roll back.
 // `costs`: canSeeCosts(req). Someone who can't see the cost can't change it,
 // and a save with no cost leaves it as it is.
+// A brand as typed (finish-customers, design 6): trimmed, empty is none, too long undefined.
+const BRAND_TOO_LONG = 'A brand can be up to 60 characters';
+function brandOf(sent) {
+  const brand = typeof sent === 'string' ? sent.trim() : '';
+  if (brand.length > 60) return undefined;
+  return brand || null;
+}
+
 async function saveProduct(id, existing, body, costs) {
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   const sku = body.sku !== undefined ? String(body.sku).trim() || null : existing.sku;
@@ -137,6 +146,8 @@ async function saveProduct(id, existing, body, costs) {
   const lowStockThreshold =
     body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
   const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
+  const brand = body.brand !== undefined ? brandOf(body.brand) : existing.brand;
+  if (brand === undefined) return BRAND_TOO_LONG;
   const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
   const showOnline = body.showOnline !== undefined ? Boolean(body.showOnline) : existing.show_online;
   const description = body.description !== undefined ? String(body.description).trim() : existing.description;
@@ -146,9 +157,9 @@ async function saveProduct(id, existing, body, costs) {
 
   try {
     await db.prepare(
-      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
+      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, brand = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
        WHERE id = ?`
-    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
+    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, brand, active, showOnline, description, photoUrl, nowIso(), id);
   } catch (err) {
     if (err.code === '23505') {
       return err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`;
@@ -209,6 +220,8 @@ export function register(route) {
     sendJson(res, 200, {
       ...serializeProduct(row, costs, kinds),
       frames,
+      // The warranty it gets: its own lines or its listed brand's (finish-customers, design 6).
+      warranty: await productWarranty(row, kinds),
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
       // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
       details: await detailsOf(row),
@@ -240,6 +253,8 @@ export function register(route) {
       ? Math.trunc(Number(body.lowStockThreshold))
       : 3;
     const supplier = (body.supplier || '').trim();
+    const brand = brandOf(body.brand);
+    if (brand === undefined) return badRequest(res, BRAND_TOO_LONG);
     const showOnline = Boolean(body.showOnline);
     const description = (body.description || '').trim();
     const photoUrl = body.photoUrl || null;
@@ -257,10 +272,10 @@ export function register(route) {
         const category = await categoryFor(body.category);
         info = await db
           .prepare(
-            `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, brand, show_online, description, photo_url, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
-          .run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, showOnline, description, photoUrl, nowIso());
+          .run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, brand, showOnline, description, photoUrl, nowIso());
         if (stockQty !== 0) await moveStock([{ productId: info.lastInsertRowid, change: stockQty, type: 'intake', note: 'Initial stock' }], who);
         await db.exec('COMMIT');
       } catch (err) {
