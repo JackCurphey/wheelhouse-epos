@@ -141,6 +141,9 @@ test('a model’s own lines replace its brand’s, set by the Owner and put back
   const own = (id, l, as = asOwner) => as(`/api/products/${id}/warranty`, { method: 'PUT', body: { lines: l } });
   assert.equal((await own(cube.id, lines(LIFETIME, 2), asJo)).status, 403);
   assert.equal((await own(cube.id, lines(0))).status, 400);
+  // No lines at all would read as "use the brand's", so it's refused, not saved as that (review).
+  const none = await own(cube.id, []);
+  assert.deepEqual([none.status, none.body.error], [400, 'Choose at least one line, or use the brand’s lines']);
   const set = await own(cube.id, lines(LIFETIME, 2));
   assert.equal(set.status, 200, JSON.stringify(set.body));
   assert.deepEqual(set.body.warranty, { own: true, brand: 'Cube', lines: [{ part: 'frame', years: null }, { part: 'components', years: 2 }] });
