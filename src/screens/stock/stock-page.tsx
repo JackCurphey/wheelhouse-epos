@@ -115,12 +115,14 @@ export function StockPage() {
   const refresh = () => Promise.all([queryClient.invalidateQueries({ queryKey: ['stock'] }), queryClient.invalidateQueries({ queryKey: ['product'] })]);
   const changed = (c: Changed) => { setChanging(false); setTicked(new Map()); setDone({ text: `Prices changed · ${several(c.changed)}`, batchId: c.batchId }); refresh(); };
   async function undo(batchId: number) {
+    // Undo goes at once, so a second press can't send it again (the review).
+    setDone((d) => (d ? { ...d, batchId: null } : d));
     try {
       const u = await apiMutate<{ undone: number; leftAlone: number }>(`/api/stock/prices/${batchId}/undo`, {});
       setDone({ text: [`Prices put back · ${several(u.undone)}`, u.leftAlone ? `${u.leftAlone} changed since, left as they are` : null].filter(Boolean).join(' · '), batchId: null });
       refresh();
     } catch (err) {
-      setDone({ text: err instanceof ApiError && err.status < 500 ? err.message : 'Wheelhouse couldn’t put the prices back. Try again in a moment.', batchId: null });
+      setDone({ text: err instanceof ApiError && err.status !== 500 ? err.message : 'Wheelhouse couldn’t put the prices back. Try again in a moment.', batchId: null });
     }
   }
   // The sign-in can say Owner with someone else at the till: what the server sent decides.

@@ -185,3 +185,15 @@ test('on a phone each product stacks: Now → New, then Margin', async () => {
   assert.match(pads.textContent, /Margin 46%\s*→\s*52%/);
   assert.ok(d.queryByRole('table') === null);
 });
+
+test('two quick presses of Change send it once', async () => {
+  const rtl = await open();
+  const { ui } = rtl;
+  const d = rtl.within(await openDialog(rtl, ui));
+  rtl.fireEvent.change(d.getByRole('textbox', { name: 'Percentage change' }), { target: { value: '10' } });
+  const change = await d.findByRole('button', { name: 'Change 2 prices' });
+  rtl.fireEvent.click(change);
+  rtl.fireEvent.click(change);
+  await ui.findByText('Prices changed · 2 products');
+  assert.equal(sent.filter((s) => s.path === '/api/stock/prices').length, 1);
+});

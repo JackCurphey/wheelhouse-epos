@@ -24,7 +24,8 @@ const ENDINGS: [Ending, string][] = [['leave', 'Leave as they are'], ['99', '.99
 const pillClass = (on: boolean) =>
   `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${on ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--input)] bg-[var(--wh-panel)]'}`;
 const field = 'min-h-11 rounded-md border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 text-size-15 text-[var(--wh-ink)]';
-const words = (err: unknown) => (err instanceof ApiError && err.status < 500 ? err.message : 'Wheelhouse couldn’t change the prices. Try again in a moment.');
+// The server's own words, "busy" included; a fault is said plainly.
+const words = (err: unknown) => (err instanceof ApiError && err.status !== 500 ? err.message : 'Wheelhouse couldn’t change the prices. Try again in a moment.');
 
 // "+10", "10", "−5" or "12.5": a number to two places, or null.
 function figure(text: string): number | null {
@@ -54,6 +55,7 @@ export function ChangePrices({ rows, onClose, onChanged }: { rows: ListRow[]; on
   const [valueText, setValueText] = useState('');
   const [ending, setEnding] = useState<Ending>('99');
   const [typed, setTyped] = useState<Record<number, string>>({});
+  // Busy until the answer: a second press must not send the change twice (+10% twice).
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const ids = {
