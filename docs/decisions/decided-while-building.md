@@ -2381,6 +2381,10 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 2. **Bike warranties live in Settings › Stockroom,** a fold after Categories, each brand's lines in its own box, the Owner's to change. *Pattern:* Settings › Stockroom › Categories (piece 8).
 3. **"E-bike" is a yes/no** on a product and on a customer's bike, since nothing marked one before and the Electronics line needs it.
 
+### 9 Nov 2026: finishing Customers, built (WP-3.2; `openspec/changes/finish-customers`; `cs-credit`, `cs-account`, `cs-transfer`, `set-pay-ways`)
+
+1. **A merge can't be undone once the money that came with it is used.** Merging moves store credit and money owed to the record kept, and Undo moves them back (question 13). If some of that credit has been spent since, or a transfer has paid off what came across, moving it back would leave the kept record below nothing, which store credit never may be. Undo then says "Some of the store credit or money owed that came with this merge has been used or paid since, so it can't be undone." and nothing moves. *Pattern:* Undo's other refusals ("A later merge into this record needs undoing first.").
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
