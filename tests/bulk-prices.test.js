@@ -232,3 +232,23 @@ test('a change with one product held by something else answers busy after its 2 
   assert.equal(await priceOf(a.id), 2800);
   assert.equal((await linesOf(a.id)).length, 0);
 });
+
+test('at a till with nobody checked in it asks for a PIN, and nothing changes', async () => {
+  const pads = await product();
+  const jar = new Map();
+  const send = async (path, method = 'GET', body) => {
+    const cookie = [owner.cookie, ...[...jar].map(([k, v]) => `${k}=${v}`)].join('; ');
+    const res = await fetch(`${server.baseUrl}${path}`, { method, headers: { cookie, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    for (const line of res.headers.getSetCookie()) { const [pair] = line.split(';'); const at = pair.indexOf('='); jar.set(pair.slice(0, at), pair.slice(at + 1)); }
+    const text = await res.text();
+    return { status: res.status, body: text ? JSON.parse(text) : null };
+  };
+  const site = (await asOwner('/api/sites')).body[0];
+  assert.equal((await send('/api/till-setup', 'POST', { siteId: site.id, number: 7 })).status, 201);
+  const body = { productIds: [pads.id], how: 'percent', value: 10, ending: '99' };
+  for (const path of ['/api/stock/prices/preview', '/api/stock/prices']) {
+    const res = await send(path, 'POST', body);
+    assert.deepEqual([res.status, res.body.code], [409, 'check_in_first'], path);
+  }
+  assert.equal(await priceOf(pads.id), 2800);
+});

@@ -3,19 +3,17 @@
 // routes under the dispatcher's /api/ branch, with the shop's row-level security bound, so
 // another business's products and changes are never found. The Owner's, the one there, as
 // editing a product is, until roles bring "Can order stock".
-import { prepare, dbExec } from '../db.js';
+import { prepare, dbExec, runWithShop } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { newPrices } from '../lib/bulk-prices.js';
 import { recordPriceChanges } from '../lib/price-changes.js';
 import { penceToPounds } from '../lib/pence.js';
 import { whoIsBooking } from './purchase-orders.js';
-import { syncProductWithShopifyIfNeeded } from './products.js';
+import { SAVE_LOCK_WAIT, syncProductWithShopifyIfNeeded } from './products.js';
 
 const db = { prepare, exec: dbExec };
 const MOST = 2000;
-// As a product's save waits (products-in-pence, design 4).
-const LOCK_WAIT = '2s';
 const BUSY = { error: 'Wheelhouse is busy with one of these products just now. Try again in a moment.', code: 'busy' };
 const COLUMNS = 'id, name, sku, size, colour, price_pence, cost_pence, vat_rate_bp';
 
@@ -41,18 +39,22 @@ function productsOf([productIds, groupIds], lock = false) {
 
 const preview = (rows, worked) => worked.map((w, i) => ({ ...w, name: rows[i].name, sku: rows[i].sku, size: rows[i].size, colour: rows[i].colour }));
 
-// After the commit, as a product's save does: the network never waits inside the lock.
-async function pushToShopify(changed) {
-  for (const { before } of changed) {
-    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(before.id);
-    await syncProductWithShopifyIfNeeded(before, row);
-  }
+// Each changed product to Shopify, as a product's save does, but once the answer is sent and
+// the request's connection is back (the review): many products mean many calls, and the screen
+// must hear the change was made, not time out and send it again. A price change never changes
+// whether a product is live, so the row as it is now stands for before and after.
+function pushAfterAnswer(afterRelease, shopId, ids) {
+  if (ids.length === 0) return;
+  afterRelease.push(() => runWithShop(shopId, async () => {
+    const rows = await db.prepare('SELECT * FROM products WHERE id = ANY(?::int[])').all(ids);
+    for (const row of rows) await syncProductWithShopifyIfNeeded(row, row);
+  }).catch((err) => console.error('Bulk price Shopify sync failed', err)));
 }
 
 async function inLockedTransaction(res, fn) {
   await db.exec('BEGIN');
   try {
-    await db.prepare(`SET LOCAL lock_timeout = '${LOCK_WAIT}'`).run();
+    await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
     const out = await fn();
     if (out.refused) {
       await db.exec('ROLLBACK');
@@ -84,7 +86,7 @@ export function register(route) {
   });
 
   // screens: st-prices, st-prices-done
-  route('POST', '/api/stock/prices', async (req, res) => {
+  route('POST', '/api/stock/prices', async (req, res, params, query, afterRelease, shopId) => {
     if (await notProductEditor(req, res)) return;
     const body = await readJsonBody(req);
     const who = await whoIsBooking(req);
@@ -103,12 +105,12 @@ export function register(route) {
       return { batchId, changed };
     });
     if (!done) return;
-    await pushToShopify(done.changed);
+    pushAfterAnswer(afterRelease, shopId, done.changed.map((c) => c.before.id));
     sendJson(res, 200, { batchId: done.batchId, changed: done.changed.length });
   });
 
   // screens: st-prices-done
-  route('POST', '/api/stock/prices/:id/undo', async (req, res, params) => {
+  route('POST', '/api/stock/prices/:id/undo', async (req, res, params, query, afterRelease, shopId) => {
     if (await notProductEditor(req, res)) return;
     const id = Number(params.id);
     if (!Number.isSafeInteger(id) || id <= 0) return notFound(res, 'Price change not found');
@@ -119,10 +121,11 @@ export function register(route) {
       if (batch.undone_at) return { refused: [409, 'These prices have already been put back'] };
       const lines = await db.prepare("SELECT product_id, was_pence, now_pence FROM product_price_changes WHERE batch_id = ? AND field = 'price'").all(id);
       const rows = await db.prepare(`SELECT ${COLUMNS} FROM products WHERE id = ANY(?::int[]) ORDER BY id FOR UPDATE`).all(lines.map((l) => l.product_id));
+      const lineOf = new Map(lines.map((l) => [l.product_id, l]));
       const changed = [];
       let leftAlone = 0;
       for (const before of rows) {
-        const line = lines.find((l) => l.product_id === before.id);
+        const line = lineOf.get(before.id);
         // A price changed since is someone's later decision: it stays.
         if (Number(before.price_pence) !== Number(line.now_pence)) { leftAlone += 1; continue; }
         const was = Number(line.was_pence);
@@ -134,7 +137,7 @@ export function register(route) {
       return { changed, leftAlone };
     });
     if (!done) return;
-    await pushToShopify(done.changed);
+    pushAfterAnswer(afterRelease, shopId, done.changed.map((c) => c.before.id));
     sendJson(res, 200, { undone: done.changed.length, leftAlone: done.leftAlone });
   });
 }
