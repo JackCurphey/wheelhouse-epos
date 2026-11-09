@@ -30,7 +30,7 @@ All three the Owner's, the one there (`notProductEditor`, as editing a product),
 
 - A tick box at the start of each row, labelled "Tick [name]", 44 by 44; on a computer the header has "Tick all [n] shown", ticking (or unticking) every row shown. Ticks are kept by row (a product, a size found by a search, or a product with sizes) and stay through searches, filters and categories.
 - With one or more ticked, a bar under the count: "[n] ticked", Untick all, and Change prices.
-- Tick boxes and the bar show to whoever can change prices, the Owner, as the server decides (`canSeeCosts`, which the list already uses for Margin), since Change prices is the bar's only button until Print labels and Send to another shop are built.
+- Tick boxes and the bar show to whoever can change prices, the Owner, by the rule Edit on a product's page follows: the Owner's sign-in, and the server sending costs (`canSeeCosts`), so Jo checked in at the Owner's till sees none. Change prices is the bar's only button until Print labels and Send to another shop are built.
 
 ## 5. Change prices (`change-prices.tsx`; `st-prices`, `st-prices-done`)
 
