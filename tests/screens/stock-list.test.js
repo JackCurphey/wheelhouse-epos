@@ -43,7 +43,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: HISTORY }, noCosts = false, sized = false } = {}) {
+async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: HISTORY }, noCosts = false, sized = false, extra = [] } = {}) {
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     calls.push(String(url));
@@ -53,7 +53,7 @@ async function open(path, { me = OWNER, page = { ...product({}), stockAtShops: [
     if (u.pathname === '/api/stock-list') {
       const q = (u.searchParams.get('search') ?? '').toLowerCase();
       if (sized && q === '[product with sizes] m') return reply(200, { rows: [SIZE_M] });
-      const rows = [...LIST.map((p) => ({ kind: 'product', ...p })), ...(sized ? [JERSEY, GLOVES] : [])]
+      const rows = [...LIST.map((p) => ({ kind: 'product', ...p })), ...(sized ? [JERSEY, GLOVES] : []), ...extra]
         .filter((p) => !q || `${p.name} ${p.sku} ${p.supplier}`.toLowerCase().includes(q))
         .map((p) => (noCosts ? { ...p, costPence: null, costLowPence: null, costHighPence: null } : p));
       return reply(200, { rows });
@@ -266,4 +266,51 @@ test('no costs sent under the Owner’s sign-in: a product’s page has no Cost 
   assert.ok(price.queryByText('Cost') === null);
   assert.ok(price.queryByText('Margin') === null);
   assert.ok(ui.queryByText('£0.00') === null);
+});
+
+// A bike's page and line (openspec/changes/frame-numbers, design 5; st-product-bike, st-list;
+// stock control decision 3). The Trek Domane AL 3 as drawn; frame numbers are placeholders.
+const TREK = product({ id: 1, sku: '[Supplier code]', barcode: null, name: 'Trek Domane AL 3', category: 'Bikes', supplier: '[Supplier]', pricePence: 50000, costPence: 30000, stockQty: 2, lowStockThreshold: 0, isBike: true });
+const FRAMES = [
+  { id: 2, frameNumber: '[frame 2]', state: 'in_stock', bookedInAt: '2026-09-01T10:00:00.000Z', deliveryId: 77, supplierName: '[Supplier]' },
+  { id: 1, frameNumber: '[frame 1]', state: 'in_stock', bookedInAt: '2026-09-01T10:00:00.000Z', deliveryId: 77, supplierName: '[Supplier]' },
+];
+const BIKE_HISTORY = [{ id: 21, type: 'intake', change: 2, note: 'Delivery from [Supplier], not on an order', who: 'Jo Taylor', at: '2026-09-01T10:00:00.000Z', delivery: { id: 77, supplierName: '[Supplier]' }, frames: 2 }];
+const bikePage = (over = {}) => ({ ...TREK, stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 2, here: true }], history: BIKE_HISTORY, frames: FRAMES, ...over });
+
+test('a bike’s page lists each frame number, in stock and booked in from its supplier, and its received line opens the delivery', async () => {
+  const { ui, within } = await open('/workshop/stock/1', { page: bikePage() });
+  const box = within(await ui.findByRole('region', { name: 'Bikes by frame number' }));
+  const rows = box.getAllByRole('listitem').map((li) => li.textContent);
+  assert.deepEqual(rows, ['Frame [frame 2]Booked in 1 Sep 2026 from [Supplier]In stock', 'Frame [frame 1]Booked in 1 Sep 2026 from [Supplier]In stock']);
+  assert.ok(box.queryByText(/still be listed/) === null, 'no note while the frames and the stock agree');
+  const history = within(ui.getByRole('region', { name: 'Stock history' }));
+  const received = history.getByRole('link', { name: 'Booked in · delivery from [Supplier]' });
+  assert.equal(received.getAttribute('href'), '/workshop/deliveries/delivery/77');
+  assert.match(history.getAllByRole('listitem')[0].textContent, /2 frame numbers · Jo Taylor/);
+});
+
+test('a bike with none booked in says how frames are recorded', async () => {
+  const { ui } = await open('/workshop/stock/1', { page: bikePage({ frames: [], history: [] }) });
+  assert.ok(await ui.findByText('No bikes in stock yet. Each bike’s frame number is recorded when it’s booked in.'));
+});
+
+test('more frames in stock than bikes says why', async () => {
+  const { ui } = await open('/workshop/stock/1', { page: bikePage({ stockQty: 1, stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 1, here: true }] }) });
+  assert.ok(await ui.findByText('The till doesn’t pick a bike’s frame yet, so a bike sold or adjusted may still be listed here.'));
+});
+
+test('a part’s received line names its delivery too, and a product that isn’t a bike has no frames box', async () => {
+  const { ui, within } = await open('/workshop/stock/1', { page: { ...product({}), stockAtShops: [{ id: 7, name: 'North Street Cycles', qty: 6, here: true }], history: [{ id: 11, type: 'po_receipt', change: 6, note: 'Booked in from PO #[n]', who: 'Jack Lewis', at: '2026-09-01T09:00:00.000Z', delivery: { id: 78, supplierName: '[Supplier]' }, frames: 0 }] } });
+  await ui.findByRole('heading', { level: 2, name: 'Shimano brake pads' });
+  assert.ok(ui.queryByRole('region', { name: 'Bikes by frame number' }) === null);
+  const line = within(ui.getByRole('region', { name: 'Stock history' })).getAllByRole('listitem')[0];
+  assert.ok(within(line).getByRole('link', { name: 'Received · delivery from [Supplier]' }));
+  assert.match(line.textContent, /Booked in from PO #\[n\] · Jack Lewis/);
+});
+
+test('Stock: a bike’s line says how many bikes, each by frame number', async () => {
+  const { ui } = await open('/workshop/stock', { extra: [{ kind: 'product', ...TREK, framesInStock: 2 }] });
+  const link = await ui.findByRole('link', { name: /Trek Domane AL 3/ });
+  assert.match(link.textContent, /Bikes · 2 bikes, each by frame number/);
 });

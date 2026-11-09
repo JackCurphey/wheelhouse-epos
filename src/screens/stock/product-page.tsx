@@ -12,6 +12,7 @@ import { AdjustStock, REASON_LABEL } from './adjust-stock.tsx';
 import { ProductBox } from './product-box.tsx';
 import { answerText, type Detail } from './stock-list-bits.tsx';
 import { count, marginText, money, mono, stockState, StateTag, type Product } from './stock-bits.tsx';
+import { dateText } from '@/screens/deliveries/frame-number.tsx';
 
 /**
  * A product's page (drawn as st-product, st-product-staff and st-product-bike
@@ -22,17 +23,20 @@ import { count, marginText, money, mono, stockState, StateTag, type Product } fr
  * Anyone with the page can Adjust stock (st-adjust; openspec/changes/adjust-stock);
  * the Owner can Edit it, and its details, in the product box
  * (openspec/changes/product-page-sizes, design 2). Sending to another shop comes
- * with its own piece, and a stock bike's frame numbers aren't recorded yet.
+ * with its own piece. A bike lists its frame numbers first, each booked in from its delivery
+ * (st-product-bike; openspec/changes/frame-numbers, design 5).
  */
 // A size's line names its size and colour (st-product-sizes).
 type Which = { size?: string | null; colour?: string | null };
-type Move = Which & { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string };
+// A received line names its delivery, and for a bike how many frames came in on it (frame-numbers, design 4).
+type Move = Which & { id: number; type: string; change: number; reason: string | null; note: string; who: string | null; at: string; delivery?: { id: number; supplierName: string | null } | null; frames?: number };
 // A price or cost change, sent to the Owner only (openspec/changes/product-page-sizes, design 1).
 type PriceChange = Which & { id: string; type: 'price_change'; field: 'price' | 'cost'; was: number; now: number; who: string | null; at: string; delivery: { id: number; supplierName: string | null } | null };
 export type Line = Move | PriceChange;
 export type ShopStock = { id: number; name: string; qty: number; here: boolean };
 type Answered = Detail & { from: string; value: number | string | null };
-type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[] };
+type Frame = { id: number; frameNumber: string; state: 'in_stock' | 'held' | 'sold'; bookedInAt: string; deliveryId: number | null; supplierName: string | null };
+type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[]; isBike?: boolean; frames?: Frame[] };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
 const WHAT: Record<string, [string, Show | null]> = {
   sale: ['Sold', 'Sold'],
@@ -56,7 +60,38 @@ const lineWhat = (m: Line) => (isPrice(m)
 const sizeText = (m: Line) => [m.size ? `Size ${m.size}` : null, m.colour].filter(Boolean).join(' · ') || null;
 const lineDetail = (m: Line) => [sizeText(m), ...(isPrice(m)
   ? [m.delivery ? `delivery from ${m.delivery.supplierName ?? 'a supplier'}` : null, m.who, when(m.at)]
-  : [m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)])].filter(Boolean).join(' · ');
+  : [m.frames ? `${m.frames} ${m.frames === 1 ? 'frame number' : 'frame numbers'}` : m.reason && m.note ? `Note: ${m.note}` : m.note, m.who && m.type === 'count' ? `applied by ${m.who}` : m.who, when(m.at)])].filter(Boolean).join(' · ');
+// "Received · delivery from [Supplier]", opening the delivery (st-product-bike's history).
+const fromDelivery = (m: Line) => (!isPrice(m) && m.delivery && ['po_receipt', 'intake'].includes(m.type) ? m.delivery : null);
+const FRAME_TAG: Record<Frame['state'], [string, string]> = {
+  in_stock: ['In stock', 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'],
+  held: ['Held', 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]'],
+  sold: ['Sold', 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]'],
+};
+
+/** Bikes by frame number (st-product-bike): each frame, its state, and the delivery it came in on. */
+function BikeFrames({ frames, stock }: { frames: Frame[]; stock: number }) {
+  const inStock = frames.filter((f) => f.state === 'in_stock').length;
+  return (
+    <Box id="h-frames" title="Bikes by frame number">
+      {frames.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">No bikes in stock yet. Each bike’s frame number is recorded when it’s booked in.</p> : (
+        <ul aria-labelledby="h-frames" className="m-0 list-none p-0">
+          {frames.map((f) => (
+            <li key={f.id} className="flex min-h-14 flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-2">
+              <span className="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
+                <span className="text-size-15 font-semibold">Frame <span className={mono}>{f.frameNumber}</span></span>
+                <span className="text-size-13 text-[var(--wh-muted)]">{`Booked in ${dateText(f.bookedInAt)}${f.supplierName ? ` from ${f.supplierName}` : ''}`}</span>
+              </span>
+              <span className={`inline-flex min-h-[26px] items-center rounded-full px-2.5 text-xs font-bold whitespace-nowrap ${FRAME_TAG[f.state][1]}`}>{FRAME_TAG[f.state][0]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* Until the till picks which bike it sells (till-serial), a sale or an adjustment leaves its frame here. */}
+      {inStock > stock ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">The till doesn’t pick a bike’s frame yet, so a bike sold or adjusted may still be listed here.</p> : null}
+    </Box>
+  );
+}
 
 export function Box({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -94,7 +129,11 @@ export function StockHistory({ history }: { history: Line[] }) {
               {moves.map((m) => (
                 <li key={m.id} className="grid min-h-14 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 border-t border-[var(--wh-border)] py-1.5 max-md:grid-cols-[minmax(0,1fr)_auto]">
                   <span className="flex min-w-0 flex-col">
-                    <span className="text-size-15 font-semibold">{lineWhat(m)}</span>
+                    {fromDelivery(m) ? (
+                      <Link to={ROUTES['rs-delivery'].replace(':id', String(fromDelivery(m)!.id))} className="text-size-15 font-semibold text-[var(--wh-ink)]">
+                        {`${WHAT[m.type][0]} · delivery from ${fromDelivery(m)!.supplierName ?? 'a supplier'}`}
+                      </Link>
+                    ) : <span className="text-size-15 font-semibold">{lineWhat(m)}</span>}
                     <span className="text-size-13 text-[var(--wh-muted)]">{lineDetail(m)}</span>
                   </span>
                   <span className={`${mono} text-right text-size-15 font-bold`}>{isPrice(m) ? '' : change(m.change)}</span>
@@ -170,7 +209,10 @@ export function ProductPage() {
             {owner ? kv('Show on website', p.showOnline ? `On · as ${p.category}` : 'Off') : null}
           </Box>
         </div>
-        <StockHistory history={p.history} />
+        <div className="flex min-w-0 flex-col gap-3">
+          {p.isBike && p.frames ? <BikeFrames frames={p.frames} stock={p.stockQty} /> : null}
+          <StockHistory history={p.history} />
+        </div>
       </div>
       {editing ? (
         <ProductBox product={p} title="Edit product" subtitle={[p.name, p.sku].filter(Boolean).join(' · ')} saveLabel="Save" focus={editing}

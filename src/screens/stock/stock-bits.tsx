@@ -21,7 +21,8 @@ export const sizesHref = (groupId: number) => ROUTES['st-product-sizes'].replace
  * category picked or a measurement searched.
  */
 type Answers = { details?: Record<string, number | string> };
-export type ProductRow = Omit<Product, 'showOnline' | 'photoUrl'> & Answers & { kind: 'product' };
+// A bike's frames in stock (st-list: "[n] bikes, each by frame number"; frame-numbers, design 4).
+export type ProductRow = Omit<Product, 'showOnline' | 'photoUrl'> & Answers & { kind: 'product'; framesInStock?: number };
 export type SizeRow = Omit<Product, 'showOnline' | 'photoUrl'> & Answers & { kind: 'size'; groupId: number; size: string | null; colour: string | null };
 export type GroupRow = {
   kind: 'group'; groupId: number; name: string; category: string; sizes: number; colours: number; stockQty: number;
@@ -50,6 +51,7 @@ export const rowHasCost = (r: ListRow) => (r.kind === 'group' ? r.costLowPence !
  */
 export function rowLine(r: ListRow, picked = false): string {
   if (r.kind === 'size') return [r.size ? `Size ${r.size}` : null, r.colour, r.barcode].filter(Boolean).join(' · ');
+  if (r.kind === 'product' && r.framesInStock !== undefined) return [picked ? null : r.category, `${r.framesInStock} ${r.framesInStock === 1 ? 'bike' : 'bikes'}, each by frame number`].filter(Boolean).join(' · ');
   if (r.kind === 'product') return [r.sku, picked ? null : r.category, r.supplier].filter(Boolean).join(' · ');
   return [picked ? null : r.category, several(r.sizes, 'size', 'sizes'), several(r.colours, 'colour', 'colours'),
     r.sizesBelowZero ? `${several(r.sizesBelowZero, 'size', 'sizes')} below zero` : null,
