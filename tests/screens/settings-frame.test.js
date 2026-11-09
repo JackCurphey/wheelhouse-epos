@@ -105,7 +105,7 @@ test('Workshop: Online booking and Mechanics, each summed up', async () => {
 test('on a phone, Settings opens on the rooms, each with what’s in it; a room has ‹ Settings back', async () => {
   const first = await openSettings();
   const list = first.within(first.ui.getByRole('navigation', { name: 'Settings rooms' }));
-  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories', 'OfficeShop details, opening hours']);
+  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories, bike warranties', 'OfficeShop details, opening hours']);
   first.cleanup();
   shell?.queryClient.clear();
   uninstall?.();

@@ -18,7 +18,9 @@ import { useActiveOption } from '@/screens/stock-take/stock-take-bits.ts';
  */
 type Kind = 'number' | 'choice' | 'text';
 type Detail = { id: number; name: string; kind: Kind; unit: string | null; choices: string[]; answered: number };
-type Category = { id: number; name: string; parentId: number | null; path: string; products: number; details: Detail[] };
+// bikeKind: its own bike mark, or null to follow the category it sits in (Jack's 9 Nov answer, option 3).
+type BikeKind = 'bikes' | 'ebikes' | null;
+type Category = { id: number; name: string; parentId: number | null; path: string; products: number; details: Detail[]; bikeKind?: BikeKind };
 // A detail in the box: kept (with its id), new (none), or removed until Save.
 type Draft = { id: number | null; name: string; kind: Kind; unit: string; choices: string[]; answered: number; removed: boolean; typing: string };
 
@@ -114,6 +116,7 @@ function CategoryBox({ all, start, onOpen, onClose }: { all: Category[]; start: 
   const [typedParent, setTypedParent] = useState(parentOf?.path ?? '');
   const [drafts, setDrafts] = useState<Draft[]>((start?.details ?? []).map((d) => ({ ...d, unit: d.unit ?? '', removed: false, typing: '' })));
   const [adding, setAdding] = useState<{ name: string; kind: Kind; unit: string; choices: string[]; typing: string }>({ name: '', kind: 'number', unit: '', choices: [], typing: '' });
+  const [bikeKind, setBikeKind] = useState<BikeKind>(start?.bikeKind ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,6 +127,10 @@ function CategoryBox({ all, start, onOpen, onClose }: { all: Category[]; start: 
   const keys = useActiveOption(matches.length);
   const pick = (c: Category) => { setParent(c); setTypedParent(c.path); keys.reset(); };
   const fromAbove = start || parent ? [...(parent ? [...above(all, parent), parent] : [])].filter((a) => a.details.length > 0) : [];
+  // The nearest marked category it sits in, which an unmarked one follows.
+  let markedAbove: Category | null = parent;
+  for (let up = 0; markedAbove && !markedAbove.bikeKind && up < 100; up += 1) markedAbove = all.find((c) => c.id === markedAbove?.parentId) ?? null;
+  const BIKE_PILLS: [BikeKind, string][] = [[null, markedAbove ? `As ${markedAbove.name}` : 'No'], ['bikes', 'Bikes'], ['ebikes', 'E-bikes']];
   const title = start ? start.name : 'Add a category';
   const label = start?.name ?? (name.trim() || 'this category');
   const removing = drafts.filter((d) => d.removed && d.id !== null);
@@ -160,7 +167,9 @@ function CategoryBox({ all, start, onOpen, onClose }: { all: Category[]; start: 
     try {
       let id = start?.id;
       if (!id) id = (await apiMutate<Category>('/api/product-categories', { name: name.trim(), parentId: sitsIn?.id ?? null })).id;
-      if (start || details.length) await apiMutate(`/api/product-categories/${id}`, { parentId: sitsIn?.id ?? null, details }, { method: 'PUT' });
+      // The mark only when it changed, so it never undoes someone else's.
+      const marked = bikeKind !== (start?.bikeKind ?? null) ? { bikeKind } : {};
+      if (start || details.length || bikeKind) await apiMutate(`/api/product-categories/${id}`, { parentId: sitsIn?.id ?? null, details, ...marked }, { method: 'PUT' });
       await queryClient.invalidateQueries({ queryKey: KEY });
       onClose();
     } catch (err) {
@@ -204,6 +213,18 @@ function CategoryBox({ all, start, onOpen, onClose }: { all: Category[]; start: 
               ))}
             </ul>
           ) : null}
+        </div>
+        {/* The bike mark (Jack's 9 Nov answer, option 3), in Kind of answer's pills. */}
+        <div className="flex flex-col gap-1.5">
+          <span id="cat-bikes" className="text-sm font-semibold">Bikes</span>
+          <RadioPillGroup aria-labelledby="cat-bikes" className="flex flex-wrap gap-2">
+            {BIKE_PILLS.map(([k, w]) => {
+              const on = bikeKind === k;
+              return <button key={w} type="button" role="radio" aria-checked={on} onClick={() => setBikeKind(k)}
+                className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap ${on ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{w}</button>;
+            })}
+          </RadioPillGroup>
+          <span className="text-size-13 text-[var(--wh-muted)]">Bikes ask for each frame number when they’re booked in. E-bikes also get the Electronics warranty line.</span>
         </div>
         {fromAbove.map((a) => (
           <div key={a.id} className="flex flex-wrap items-center justify-between gap-2.5">

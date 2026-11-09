@@ -10,6 +10,8 @@ export type Product = {
   id: number; sku: string | null; barcode: string | null; name: string; category: string;
   pricePence: number; costPence: number | null; stockQty: number; lowStockThreshold: number; supplier: string | null;
   active: boolean; showOnline: boolean; photoUrl: string | null; vatRateBp: number | null;
+  // Its brand, as typed (finish-customers, design 6).
+  brand?: string | null;
 };
 
 export const productHref = (id: number) => ROUTES['st-product'].replace(':id', String(id));
