@@ -78,15 +78,15 @@ test('the customer shows only the money switched on', async () => {
 test('staff add and take store credit with a reason, in pence; the balance is the sum', async () => {
   await switches({ storeCreditOn: true });
   const id = await maya();
-  const added = await give(id, 1500, 'Bike part returned without a receipt');
+  const added = await give(id, 1500, '[reason 1]');
   assert.equal(added.status, 201, JSON.stringify(added.body));
   assert.equal(added.body.credit, 1500);
-  assert.equal((await take(id, 400, 'Spent by phone')).body.credit, 1100);
+  assert.equal((await take(id, 400, '[reason 2]')).body.credit, 1100);
   assert.equal(await credit(id), 1100);
   const entries = (await asJo(`/api/customers/${id}/store-credit`)).body;
   assert.deepEqual(entries.entries.map((e) => [e.kind, e.changePence, e.reason, e.by]), [
-    ['taken', -400, 'Spent by phone', 'Jo Taylor'],
-    ['added', 1500, 'Bike part returned without a receipt', 'Jo Taylor'],
+    ['taken', -400, '[reason 2]', 'Jo Taylor'],
+    ['added', 1500, '[reason 1]', 'Jo Taylor'],
   ]);
   assert.equal(entries.credit, 1100);
 });
@@ -130,28 +130,28 @@ test('the Owner undoes a change with a reason, kept as its own entry; staff canâ
   const id = await maya();
   await give(id, 800);
   const wrong = (await give(id, 2000)).body.entry;
-  assert.equal((await post(asJo, `/api/store-credit-entries/${wrong.id}/undo`, { reason: 'Typed wrong' })).status, 403);
+  assert.equal((await post(asJo, `/api/store-credit-entries/${wrong.id}/undo`, { reason: '[reason]' })).status, 403);
   assert.equal((await post(asOwner, `/api/store-credit-entries/${wrong.id}/undo`, { reason: '' })).status, 400);
-  const undone = await post(asOwner, `/api/store-credit-entries/${wrong.id}/undo`, { reason: 'Typed wrong' });
+  const undone = await post(asOwner, `/api/store-credit-entries/${wrong.id}/undo`, { reason: '[reason]' });
   assert.equal(undone.status, 201, JSON.stringify(undone.body));
   assert.equal(undone.body.credit, 800);
-  assert.equal((await post(asOwner, `/api/store-credit-entries/${wrong.id}/undo`, { reason: 'Again' })).status, 409, 'once only');
+  assert.equal((await post(asOwner, `/api/store-credit-entries/${wrong.id}/undo`, { reason: '[reason]' })).status, 409, 'once only');
   const entries = (await asOwner(`/api/customers/${id}/store-credit`)).body.entries;
   assert.deepEqual(entries.map((e) => [e.kind, e.changePence, e.undone]), [['undo', -2000, false], ['added', 2000, true], ['added', 800, false]]);
   // Undoing an addition she has since spent would take her below zero.
   const spentLater = (await give(id, 500)).body.entry;
   await take(id, 1300);
-  const below = await post(asOwner, `/api/store-credit-entries/${spentLater.id}/undo`, { reason: 'Typed wrong' });
+  const below = await post(asOwner, `/api/store-credit-entries/${spentLater.id}/undo`, { reason: '[reason]' });
   assert.equal(below.status, 409);
 });
 
 test('store credit rows in the customerâ€™s history', async () => {
   await switches({ storeCreditOn: true });
   const id = await maya();
-  await give(id, 1500, 'Goodwill');
-  await take(id, 500, 'Spent by phone');
+  await give(id, 1500, '[reason 1]');
+  await take(id, 500, '[reason 2]');
   const items = (await asJo(`/api/customers/${id}/history`)).body.items.filter((i) => i.kind === 'store_credit');
-  assert.deepEqual(items.map((i) => [i.change, i.changePence, i.reason, i.by]), [['taken', -500, 'Spent by phone', 'Jo Taylor'], ['added', 1500, 'Goodwill', 'Jo Taylor']]);
+  assert.deepEqual(items.map((i) => [i.change, i.changePence, i.reason, i.by]), [['taken', -500, '[reason 2]', 'Jo Taylor'], ['added', 1500, '[reason 1]', 'Jo Taylor']]);
   await switches({ storeCreditOn: false });
   assert.equal((await asJo(`/api/customers/${id}/history`)).body.items.filter((i) => i.kind === 'store_credit').length, 0, 'hidden while off');
   await switches({ storeCreditOn: true });
