@@ -6,12 +6,14 @@ import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { currentSession } from '../lib/session.js';
 import { UK_NUMBER_SQL, ukNumber } from './customers.js';
+import { creditOf, owedOf } from '../lib/customer-money.js';
 
 const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
 // A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
 // A row from a Citrus Lime file about them moves too, so deleting the kept record still finds it (citrus-import-fix, design 19).
-const MOVED = ['move_rows', 'customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests'];
+const MOVED = ['move_rows', 'customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests', 'store_credit_entries', 'account_entries'];
+// Store credit and money owed move too, and back on Undo (finish-customers, question 13).
 // The fields that may differ, and the columns each takes.
 // A company's details travel with its name (company customers' review 1).
 const FIELDS = { name: ['name', 'is_company', 'contact_name', 'vat_number', 'invoice_email'], phone: ['phone'], email: ['email'], address: ['address', 'postcode'], notes: ['notes'] };
@@ -51,6 +53,8 @@ const lockMoveFiles = async () => {
 };
 const BUSY_CODES = new Set(['55P03', '40P01']);
 const BUSY = { error: 'Wheelhouse is busy with this shop’s files just now. Try again in a moment.', code: 'busy' };
+
+const belowNothing = async (customerId) => (await creditOf(customerId)) < 0 || (await owedOf(customerId)) < 0;
 
 const validId = (v) => Number.isInteger(v) && v > 0 && v <= 2_147_483_647;
 
@@ -287,6 +291,13 @@ export function register(route) {
       for (const table of MOVED) {
         const ids = moved.rows?.[table] ?? [];
         if (ids.length) await prepare(`UPDATE ${table} SET customer_id = ? WHERE customer_id = ? AND id = ANY(?::int[])`).run(m.other_id, m.kept_id, ids);
+      }
+      // Store credit spent, or money owed paid, since the merge out of what came with it
+      // would leave the kept record below nothing, so it stays merged (finish-customers,
+      // decided while building).
+      if (await belowNothing(m.kept_id)) {
+        await dbExec('ROLLBACK');
+        return sendJson(res, 409, { error: 'Some of the store credit or money owed that came with this merge has been used or paid since, so it can’t be undone.', code: 'money_used' });
       }
       if (moved.logins?.length) await prepare('UPDATE customer_logins SET customer_id = ? WHERE shop_id = ? AND customer_id = ? AND id = ANY(?::int[])').run(m.other_id, shopId, m.kept_id, moved.logins);
       if (moved.matched?.length) await prepare('UPDATE till_attention SET matched_customer_id = ? WHERE matched_customer_id = ? AND id = ANY(?::int[])').run(m.other_id, m.kept_id, moved.matched);

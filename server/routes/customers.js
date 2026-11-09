@@ -13,6 +13,7 @@ import { TEMPLATES } from '../messaging/templates.js';
 import { shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { deletionOnPage } from '../privacy-requests.js';
+import { creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -337,7 +338,9 @@ export function register(route) {
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!row) return notFound(res, 'Customer not found');
     // An open request to delete their account, for the page's line (ac-customer-delete).
-    sendJson(res, 200, { ...serializeCustomer(row, await groupsForCustomer(row.id)), deletionRequest: await deletionOnPage(row.id) });
+    // Its money, with only the ways to pay switched on (finish-customers design 4).
+    const money = await moneyFor(row.id, await paymentSettings());
+    sendJson(res, 200, { ...serializeCustomer(row, await groupsForCustomer(row.id)), deletionRequest: await deletionOnPage(row.id), money });
   });
 
   // A customer's page: one history of their jobs, sales and messages, newest
@@ -375,7 +378,10 @@ export function register(route) {
       `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
         WHERE customer_id = ? AND coalesce(direction, 'outbound') = 'outbound' AND intent_state <> 'undone'`
     ).all(id);
+    // Store credit changes while Store credit is on (finish-customers design 4).
+    const credit = (await paymentSettings()).store_credit_on ? await creditHistory(id) : [];
     const items = [
+      ...credit,
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
         bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
