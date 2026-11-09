@@ -11,6 +11,7 @@ import { pounds } from './money.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { STAGE_TEXT } from './pending-rules.ts';
 import type { BookingStage } from './pending-query.ts';
+import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -30,7 +31,8 @@ import type { BookingStage } from './pending-query.ts';
  * ac-account-delete-cancelled).
  * Store credit's card while the shop has it on, and the delete pop-up's warning
  * that it will be lost (finish-customers design 8; ac-account, ac-delete).
- * Not built yet, so not shown: the warranty line, a purchase's
+ * Each bike bought here shows its warranty (finish-customers design 6).
+ * Not built yet, so not shown: a purchase’s
  * receipt, and the privacy notice.
  */
 // An open request to delete the account: the shop's days it was asked and will be done by.
@@ -44,7 +46,7 @@ type Me = {
   // What she owes on account, in pence; her deletion waits until it's paid (question 16).
   owed?: number;
 };
-type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
+type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null; warranty?: BikeWarranty | null };
 type Repair = {
   kind: 'repair'; jobId: number; reference: string; title: string; bikeLabel: string | null; bikeId: number | null;
   stage: BookingStage; workStarted: boolean; jobDate: string; totalPence: number | null; at: string;
@@ -398,6 +400,13 @@ function BikesCard({ bikes, items, bookLink, shopSlug, reminders }: { bikes: Bik
         return (
           <div key={b.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] pt-2.5">
             <span className="text-base font-bold">{[[b.make, b.model].filter(Boolean).join(' '), b.colour].filter(Boolean).join(' · ')}</span>
+            {/* Bought here and its warranty, as drawn on ac-account, each line under it (finish-customers, design 6). */}
+            {b.warranty ? (
+              <span className="flex flex-col gap-0.5">
+                <span className={`text-size-13 font-semibold ${b.warranty.running ? 'text-[var(--wh-status-complete-ink)]' : 'text-[var(--wh-muted)]'}`}>{['Bought here', warrantyState(b.warranty)?.replace(/^U/, 'u').replace(/^W/, 'w')].filter(Boolean).join(' · ')}</span>
+                {b.warranty.running ? <span className="text-size-13 text-[var(--wh-muted)]">{b.warranty.lines.map(lineText).join(' · ')}</span> : null}
+              </span>
+            ) : null}
             {/* "next service due [date]", only while reminders are on (audit L10; next-service-due design 3). */}
             {(() => {
               const due = reminders && b.nextServiceDue ? `next service due ${longDate(b.nextServiceDue)}` : null;

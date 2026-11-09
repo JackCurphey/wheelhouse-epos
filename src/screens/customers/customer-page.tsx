@@ -18,6 +18,7 @@ import { CreditDialog, UndoEntryDialog } from './credit-dialog.tsx';
 import { AccountDialog, entryWords, type Entry } from './account-dialog.tsx';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { penceText } from '@/lib/cash-count.ts';
+import { dayYear, warrantyText, type BikeWarranty } from '@/lib/warranty-words.ts';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
@@ -39,7 +40,7 @@ type Customer = {
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
-type Bike = { id: number; make: string | null; model: string | null; colour?: string | null };
+type Bike = { id: number; make: string | null; model: string | null; colour?: string | null; warranty?: BikeWarranty | null };
 export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
@@ -498,7 +499,9 @@ export function CustomerPage() {
                     {/* Each bike opens its own page (bike-page; mockup/links/j07.mjs:142). */}
                     <Link to={ROUTES['cs-bike'].replace(':id', String(b.id))} className="flex flex-col gap-1 py-2.5 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
                       <span className="text-size-15 font-semibold underline">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
-                      {b.colour ? <span className="text-size-13 text-[var(--wh-muted)]">{b.colour}</span> : null}
+                      {b.colour || b.warranty ? <span className="text-size-13 text-[var(--wh-muted)]">{[b.colour, b.warranty ? `bought here ${dayYear(b.warranty.boughtHereOn)}` : null].filter(Boolean).join(' · ')}</span> : null}
+                      {/* As drawn on cs-page, with each line (finish-customers, design 6; question 19). */}
+                      {warrantyText(b.warranty) ? <span className={`inline-flex items-center gap-1 self-start rounded-full px-2.5 py-0.5 text-size-13 font-bold ${b.warranty?.running ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>{warrantyText(b.warranty)}</span> : null}
                     </Link>
                   </li>
                 ))}

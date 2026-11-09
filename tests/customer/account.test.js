@@ -307,3 +307,23 @@ test('a change after the sign-in ran out says to sign in again', async () => {
   fireEvent.click(box.getByRole('switch', { name: 'Offers and news' }));
   assert.equal((await box.findByRole('alert')).textContent, 'Please sign in again to change this.');
 });
+
+// The account's bikes show their warranty (ac-account, account.mjs:60-75; finish-customers,
+// design 6): "Bought here · under warranty" with each line under it, or that it has ended.
+test('a bike bought here shows Bought here · under warranty and its lines; ended; none for a bike from elsewhere', async () => {
+  const LINE = (part, endsOn, monthsLeft = null, ended = false) => ({ part, endsOn, monthsLeft, ended });
+  const { within: w } = await import('@testing-library/react');
+  const { ui } = await open({ history: [], bikes: [
+    { ...BIKES[0], warranty: { boughtHereOn: '2026-01-15', brand: 'Trek', running: true, endedOn: null, lines: [LINE('frame', null), LINE('components', '2028-01-15', 16)] } },
+    { id: 8, make: 'Cube', model: '[Model]', colour: null, warranty: { boughtHereOn: '2024-01-10', brand: 'Cube', running: false, endedOn: '2025-01-10', lines: [LINE('frame', '2025-01-10', null, true)] } },
+    { id: 9, make: '[Make]', model: '[Model]', colour: null, warranty: { boughtHereOn: '2026-02-01', brand: null, running: false, endedOn: null, lines: [] } },
+    { id: 10, make: 'Brompton', model: 'C Line', colour: null, warranty: null },
+  ] });
+  const bikes = w(await ui.findByRole('region', { name: 'Your bikes' }));
+  await bikes.findByText('Trek Domane AL 3 · Green');
+  assert.ok(bikes.getByText('Bought here · under warranty'));
+  assert.ok(bikes.getByText('Frame: lifetime · Components: until 15 Jan 2028, 16 months left'));
+  assert.ok(bikes.getByText('Bought here · warranty ended 10 Jan 2025'));
+  assert.equal(bikes.getAllByText('Bought here').length, 1, 'a brand with no lines: bought here only');
+  assert.equal(bikes.getAllByText(/^Bought here/).length, 3, 'nothing for the Brompton from elsewhere');
+});

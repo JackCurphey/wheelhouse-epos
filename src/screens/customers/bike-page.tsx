@@ -8,21 +8,27 @@ import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { Field } from './customers-page.tsx';
 import { HistoryRow, Section, type Item } from './customer-page.tsx';
+import { useBikeWarranties } from '@/screens/settings/bike-warranties-settings.tsx';
+import { dayYear, lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
 
 /**
  * A bike's own page (openspec/changes/bike-page; drawn as cs-bike,
  * customer.mjs:150-183; Jack's answer of 15 Oct, not-drawn pages #7 and #8),
  * laid out as a customer's page is: back to the owner, the bike's name with
  * "[Customer]’s bike" and New job; Details with Edit and Belongs to on the
- * left, its jobs on the right. The Warranty block waits until a bike can be
- * bought here (nothing records it yet, so no made-up date).
+ * left, its jobs on the right. A bike bought here has the drawn Warranty block
+ * between them, with each of its lines (openspec/changes/finish-customers, design 6).
  */
 type Job = Omit<Extract<Item, { kind: 'job' }>, 'kind'>;
 type Bike = {
   id: number; make: string; model: string; colour: string; serialNumber: string; notes: string; active: boolean;
   customer: { id: number; name: string; phone: string | null };
   jobs: Job[];
+  // Bought here, what its lines were worked out from, and the lines (finish-customers, design 6).
+  boughtHereOn?: string | null; warrantyBrand?: string | null; warrantyProductId?: number | null; isEbike?: boolean;
+  warranty?: BikeWarranty | null;
 };
+const brandKey = (s: string | null | undefined) => String(s ?? '').trim().toLowerCase();
 const SHOWN = 8;
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 const nameOf = (b: { make: string; model: string }) => [b.make, b.model].filter(Boolean).join(' ') || 'A bike';
@@ -73,7 +79,23 @@ export function BikePage() {
               </div>
             ) : null}
           </Section>
-          <Section id="h-belongs" title="Belongs to">
+          {b.warranty ? (
+            // As drawn on cs-bike: Bought here, then the warranty, each line under it (question 19).
+            <Section id="h-bike-warranty" title="Warranty">
+              {fact('Bought here', dayYear(b.warranty.boughtHereOn))}
+              {warrantyState(b.warranty) ? (
+                <div className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] py-2">
+                  <span className={`inline-flex min-h-7 items-center self-start rounded-full px-2.5 text-size-13 font-bold ${b.warranty.running ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>{warrantyState(b.warranty)}</span>
+                  {b.warranty.running ? (
+                    <ul aria-label="Warranty lines" className="m-0 flex list-none flex-col gap-1 p-0">
+                      {b.warranty.lines.map((l) => <li key={l.part} className="text-sm">{lineText(l)}</li>)}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+            </Section>
+          ) : null}
+                    <Section id="h-belongs" title="Belongs to">
             <Link to={owner} className="flex min-h-11 items-center justify-between gap-3 border-t border-[var(--wh-border)] py-2 text-[var(--wh-ink)] no-underline">
               <span className="text-size-15 font-semibold underline">{b.customer.name}</span>
               {b.customer.phone ? <span className={`text-sm ${mono}`}>{b.customer.phone}</span> : null}
@@ -105,6 +127,17 @@ export function BikePage() {
 function EditBike({ bike, onClose }: { bike: Bike; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ make: bike.make, model: bike.model, colour: bike.colour, serialNumber: bike.serialNumber, notes: bike.notes });
+  // Bought here on, and what its warranty comes from (Jack's 9 Nov answer 4): the brand starts at
+  // the one matching its Make, the model is a product of that brand, E-bike follows the model.
+  const [bought, setBought] = useState(bike.boughtHereOn ?? '');
+  const [brandPick, setBrandPick] = useState<string | null | undefined>(bike.boughtHereOn ? bike.warrantyBrand ?? null : undefined);
+  const [productId, setProductId] = useState<number | null>(bike.warrantyProductId ?? null);
+  const [ebike, setEbike] = useState(!!bike.isEbike);
+  const brands = useBikeWarranties();
+  const products = useQuery({ queryKey: ['products-with-brands'], queryFn: () => apiGet<{ id: number; name: string; brand?: string | null; isEbike?: boolean }[]>('/api/products'), enabled: !!bought });
+  const listed = brands.data?.brands ?? [];
+  const brand = brandPick !== undefined ? brandPick : listed.find((x) => brandKey(x.brand) === brandKey(form.make))?.brand ?? null;
+  const models = (products.data ?? []).filter((p) => brand && brandKey(p.brand) === brandKey(brand));
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -112,7 +145,11 @@ function EditBike({ bike, onClose }: { bike: Bike; onClose: () => void }) {
     setProblem(null);
     setBusy(true);
     try {
-      await apiMutate(`/api/bikes/${bike.id}`, form, { method: 'PUT' });
+      // Its warranty's fields only when one changed, so other edits leave its lines alone.
+      const now = bought ? { boughtHereOn: bought, warrantyBrand: brand, warrantyProductId: productId, isEbike: ebike } : { boughtHereOn: null, warrantyBrand: null, warrantyProductId: null, isEbike: false };
+      const was = { boughtHereOn: bike.boughtHereOn ?? null, warrantyBrand: bike.warrantyBrand ?? null, warrantyProductId: bike.warrantyProductId ?? null, isEbike: !!bike.isEbike };
+      const changed = (Object.keys(now) as (keyof typeof now)[]).some((k) => now[k] !== was[k]);
+      await apiMutate(`/api/bikes/${bike.id}`, changed ? { ...form, ...now } : form, { method: 'PUT' });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bike', bike.id] }),
         queryClient.invalidateQueries({ queryKey: ['customer-bikes', bike.customer.id] }),
@@ -142,6 +179,34 @@ function EditBike({ bike, onClose }: { bike: Bike; onClose: () => void }) {
           <Field id="bike-frame" label="Frame number" value={form.serialNumber} onChange={set('serialNumber')} />
         </div>
         <Field id="bike-note" label="Note" value={form.notes} onChange={set('notes')} />
+        <Field id="bike-bought" label="Bought here on" type="date" value={bought} onChange={setBought} />
+        {bought ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="flex min-w-0 flex-col gap-1 text-size-15 font-semibold">
+              Brand
+              <select value={brand ?? ''} onChange={(e) => { setBrandPick(e.target.value || null); setProductId(null); }}
+                className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15 font-normal">
+                <option value="">None</option>
+                {listed.map((x) => <option key={x.id} value={x.brand}>{x.brand}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 text-size-15 font-semibold">
+              Model in Stock
+              <select value={productId ?? ''} onChange={(e) => {
+                const picked = models.find((m) => m.id === Number(e.target.value));
+                setProductId(picked ? picked.id : null);
+                if (picked) setEbike(!!picked.isEbike);
+              }} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15 font-normal">
+                <option value="">Not chosen</option>
+                {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-size-15 font-semibold">
+              <input type="checkbox" checked={ebike} onChange={(e) => setEbike(e.target.checked)} className="size-5" />
+              E-bike
+            </label>
+          </div>
+        ) : null}
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
       </DialogBody>
       <DialogFooter>
