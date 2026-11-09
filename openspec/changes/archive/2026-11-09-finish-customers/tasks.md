@@ -53,7 +53,7 @@ Split to stay under about 600 lines: 7a the server (logging, the copy, credit lo
 
 ## 8. Before the last merge
 
-- [ ] 8.1 Walk the built piece against every requirement in this change's specs and the drawings (`cs-credit`, `cs-account`, `cs-transfer`, `cs-page`, `cs-page-over`, `cs-page-off`, `cs-bike`, `cs-privacy`, `set-pay-ways`, `ac-account`, `ac-delete`) and Jack's 9 Nov answers; say in the last pull request which are met, dropped or changed. Verify: the list is in the pull request description.
+- [x] 8.1 Walk the built piece against every requirement in this change's specs and the drawings (`cs-credit`, `cs-account`, `cs-transfer`, `cs-page`, `cs-page-over`, `cs-page-off`, `cs-bike`, `cs-privacy`, `set-pay-ways`, `ac-account`, `ac-delete`) and Jack's 9 Nov answers; say in the last pull request which are met, dropped or changed. Verify: the list is in the pull request description.
 
 ## Workflow follow-up
 

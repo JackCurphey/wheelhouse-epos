@@ -20,8 +20,8 @@ Settings › Stockroom SHALL have a "Bike warranties" section where the Owner li
 - **THEN** it is refused as already listed, capitals ignored
 
 #### Scenario: Not the Owner
-- **WHEN** Jo Taylor (Staff) opens Bike warranties
-- **THEN** she sees them but can't change them, and the server refuses a change from her
+- **WHEN** Jo Taylor (Staff) wants to see or change a brand's lines
+- **THEN** Settings is the Owner's (Jack's 19 Oct decision), so she sees the lines on a bike's product page and bike page instead, and the server refuses a change from her
 
 ### Requirement: A category is marked Bikes or E-bikes
 In Settings › Stockroom › Categories the Owner SHALL be able to mark a category "Bikes" or "E-bikes", or leave it unmarked (Jack, 9 Nov, his answer to the bike question, option 3). A product SHALL be a bike when its category, or the nearest marked category it sits in, is marked; "E-bikes" SHALL count as bikes and SHALL make the product an e-bike. A category's name SHALL NOT decide it. Migration 127 SHALL mark "Bikes" every existing category whose name ends in the word bike or bikes, in each business that has marked none, so nothing that worked before stops working.
