@@ -13,6 +13,9 @@ import { DeletionLine, type InTheWay } from './privacy-requests.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { CompanyInvoice, CompanyNames, Field, OnOff, WHO, companyProblem, initials, type Who } from './customers-page.tsx';
 import { SaleDialog } from './sale-dialog.tsx';
+import { CreditDialog, UndoEntryDialog } from './credit-dialog.tsx';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { penceText } from '@/lib/cash-count.ts';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
@@ -29,6 +32,8 @@ type Customer = {
   groups: { id: number; name: string; discountPercent: number }[];
   // An open request to delete their account (ac-customer-delete; openspec/changes/delete-account).
   deletionRequest?: { askedOn: string; dueBy: string; source: 'account' | 'shop'; inTheWay: InTheWay[] } | null;
+  // Its money, with only the ways to pay switched on (finish-customers design 4), in pence.
+  money?: { storeCreditOn: boolean; accountsOn: boolean; credit?: number };
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
@@ -36,7 +41,8 @@ type Bike = { id: number; make: string | null; model: string | null; colour?: st
 export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
-  | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string };
+  | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
+  | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
 const SHOWN = 8;
@@ -68,7 +74,15 @@ function Stage({ j }: { j: Extract<Item, { kind: 'job' }> }) {
   return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${tone}`}>{label}</span>;
 }
 
-export function HistoryRow({ item, onOpenSale }: { item: Item; onOpenSale?: (sale: Extract<Item, { kind: 'sale' }>) => void }) {
+// A store credit change's words (cs-page's history: "Store credit added").
+const CREDIT_WORDS: Record<string, string> = {
+  added: 'Store credit added', taken: 'Store credit taken away', undo: 'Store credit change undone', lost_on_deletion: 'Store credit lost when their details were deleted',
+  earned: 'Store credit earned', spent: 'Store credit spent', refund: 'Store credit given on a refund',
+};
+// "+£15.00" or "−£4.00", the drawing's signs.
+export const signed = (pence: number) => `${pence < 0 ? '−' : '+'}${penceText(Math.abs(pence))}`;
+
+export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSale?: (sale: Extract<Item, { kind: 'sale' }>) => void; onUndo?: (entry: Extract<Item, { kind: 'store_credit' }>) => void }) {
   const tag = (t: string) => <span className="w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   if (item.kind === 'job') {
     const when = [item.jobDate ? shortDay(item.jobDate) : null, item.mechanicName].filter(Boolean).join(' · ');
@@ -101,6 +115,21 @@ export function HistoryRow({ item, onOpenSale }: { item: Item; onOpenSale?: (sal
       </li>
     );
   }
+  if (item.kind === 'store_credit') {
+    const what = CREDIT_WORDS[item.change] ?? 'Store credit changed';
+    const undoable = onUndo && !item.undone && !['undo', 'lost_on_deletion'].includes(item.change);
+    return (
+      <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
+        {tag('Credit')}
+        <span className="flex min-w-0 grow flex-col gap-0.5">
+          <span className="text-size-15 font-semibold">{what}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.reason, item.by ? `by ${item.by}` : null, item.undone ? 'undone' : null].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className={`text-size-15 ${mono}`}>{signed(item.changePence)}</span>
+        {undoable ? <button type="button" aria-label={`Undo ${what}`} onClick={() => onUndo(item)} className="min-h-11 px-2 text-sm font-semibold underline">Undo</button> : null}
+      </li>
+    );
+  }
   return (
     <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
       {tag(item.channel === 'email' ? 'Email' : 'Text')}
@@ -117,6 +146,10 @@ function History({ id }: { id: number }) {
   const [filter, setFilter] = useState<Filter>('Everything');
   const [all, setAll] = useState(false);
   const [sale, setSale] = useState<Extract<Item, { kind: 'sale' }> | null>(null);
+  const [undoing, setUndoing] = useState<Extract<Item, { kind: 'store_credit' }> | null>(null);
+  // The Owner puts a mistaken change right (design question 14).
+  const session = useSession();
+  const onUndo = session.status === 'signed-in' && session.user.isOwner ? setUndoing : undefined;
   const items = (history.data?.items ?? []).filter((i) => !KIND[filter] || i.kind === KIND[filter]);
   // What's open now is always shown, however much came since (review); the rest eight at a time.
   const open = items.filter((i) => i.kind === 'job' && i.open);
@@ -146,14 +179,15 @@ function History({ id }: { id: number }) {
           </div>
         ) : (
           <div className="flex flex-col">
-            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
-            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
+            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} onUndo={onUndo} />)}</ul></> : null}
+            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} onUndo={onUndo} />)}</ul></> : null}
             {!all && open.length + earlier.length < items.length ? (
               <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${items.length})`}</button>
             ) : null}
           </div>
         )}
       {sale ? <SaleDialog id={sale.id} source={sale.source} receiptNumber={sale.receiptNumber} onClose={() => setSale(null)} /> : null}
+      {undoing ? <UndoEntryDialog url={`/api/store-credit-entries/${undoing.id}/undo`} invalidate={[['customer', id], ['customer-history', id]]} onClose={() => setUndoing(null)} /> : null}
     </section>
   );
 }
@@ -378,6 +412,7 @@ export function CustomerPage() {
   const bikes = useQuery({ queryKey: ['customer-bikes', id], queryFn: () => apiGet<Bike[]>(`/api/customers/${id}/bikes`), enabled: known });
   const [editing, setEditing] = useState(false);
   const [addingBike, setAddingBike] = useState(false);
+  const [crediting, setCrediting] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
   if (!known || customer.isError) {
     return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{!known || (customer.error instanceof ApiError && customer.error.status === 404) ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
@@ -436,6 +471,13 @@ export function CustomerPage() {
             ) : <p className="m-0 border-t border-[var(--wh-border)] py-2.5 text-sm text-[var(--wh-muted)]">{bikes.data ? 'No bikes yet.' : 'Loading…'}</p>}
           </Section>
           <Section id="h-glance" title="At a glance">
+            {/* Only while Store credit is on (cs-page-off; customer service decision 6); the whole row opens it (cs-credit). */}
+            {c.money?.storeCreditOn ? (
+              <button type="button" onClick={() => setCrediting(true)} className="flex min-h-[52px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
+                <span className="text-size-15 font-semibold underline">Store credit</span>
+                <span className={`text-size-15 ${mono}`}>{penceText(c.money.credit ?? 0)}</span>
+              </button>
+            ) : null}
             <div className="flex min-h-[52px] items-center justify-between gap-3 border-t border-[var(--wh-border)]">
               <span className="text-size-15 font-semibold">Happy to hear about offers</span>
               <span className={`text-sm font-semibold ${c.marketingPermission ? '' : 'text-[var(--wh-muted)]'}`}>{c.marketingPermission ? 'On' : 'Off'}</span>
@@ -446,6 +488,7 @@ export function CustomerPage() {
       </div>
       {editing ? <EditCustomer customer={c} onClose={() => setEditing(false)} /> : null}
       {addingBike ? <AddBike customerId={c.id} onClose={() => setAddingBike(false)} /> : null}
+      {crediting ? <CreditDialog customerId={c.id} name={c.name} credit={c.money?.credit ?? 0} onClose={() => setCrediting(false)} /> : null}
     </div>
   );
 }

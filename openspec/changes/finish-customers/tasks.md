@@ -12,9 +12,9 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 2. Store credit and Ways to pay, screens (pull request 2; customer accounts)
 
-- [ ] 2.1 Screen tests (`tests/screens/customer-money.test.js`): Ways to pay's two rows, read-only for Staff; At a glance's Store credit line only when on; the `cs-credit` pop-up's words, Add credit and Take some away, the refusals shown in the pop-up, the new balance and history row after; the website account's Store credit card when on and not when off; the delete pop-up's "will be lost" line. Verify: red before 2.2.
-- [ ] 2.2 The Ways to pay section on the Payments page; `credit-dialog.tsx`; At a glance and history rows in `customer-page.tsx`; the account's card and delete line in `src/screens/book/account.tsx` and the portal's answer (`server/routes/portal.js`). Verify: 2.1 passes.
-- [ ] 2.3 Browser test (`tests/browser/customer-money.spec.ts`): the Owner turns Store credit on, Jo adds credit to Maya Patel with a reason, at computer and phone widths. Verify: `npm run test:browser`.
+- [x] 2.1 Screen tests (`tests/screens/customer-money.test.js`): Ways to pay's two rows, read-only for Staff; At a glance's Store credit line only when on; the `cs-credit` pop-up's words, Add credit and Take some away, the refusals shown in the pop-up, the new balance and history row after; the website account's Store credit card when on and not when off; the delete pop-up's "will be lost" line. Verify: red before 2.2.
+- [x] 2.2 The Ways to pay section on the Payments page; `credit-dialog.tsx`; At a glance and history rows in `customer-page.tsx`; the account's card and delete line in `src/screens/book/account.tsx` and the portal's answer (`server/routes/portal.js`). Verify: 2.1 passes.
+- [x] 2.3 Browser test (`tests/browser/customer-money.spec.ts`): the Owner turns Store credit on, Jo adds credit to Maya Patel with a reason, at computer and phone widths. Verify: `npm run test:browser`.
 
 ## 3. Accounts, server (pull request 3; money)
 

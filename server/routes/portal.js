@@ -18,6 +18,7 @@ import { clientIp } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import { jobChecklistCopy } from '../workshop/checklists.js';
+import { creditOf, paymentSettings } from '../lib/customer-money.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE,
@@ -840,6 +841,8 @@ export function register(route) {
       deletion: customer ? await openDeletion(customer.id) : null,
       // For "Call [shop phone] if you need to talk it through" (ac-delete-blocked).
       shopPhone: (await db.prepare('SELECT phone FROM shops WHERE id = ?').get(ctx.shop.id))?.phone || null,
+      // Her store credit in pence while the shop has it on, else null (finish-customers design 8; ac-account, ac-delete).
+      storeCredit: customer && (await paymentSettings()).store_credit_on ? await creditOf(customer.id) : null,
     });
   });
 

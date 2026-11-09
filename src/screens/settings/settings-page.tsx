@@ -13,6 +13,7 @@ import { ServicesSettings, SERVICES_SUMMARY } from './services-settings.tsx';
 import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-settings.tsx';
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
+import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
@@ -953,6 +954,7 @@ function OwnerSettings() {
   const diaryBlocks = useDiaryBlocksSummary();
   const storageSlots = useStorageSlotsSummary();
   const customerGroups = useCustomerGroupsSummary();
+  const waysToPay = useWaysToPaySummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
   const tills = useTillsSummary();
@@ -973,8 +975,9 @@ function OwnerSettings() {
           // Beside Tills, its own fold (stage-1 gaps 9; trust-pin-workshop).
           { key: 'signing-in', title: 'Signing in', summary: signingIn, body: <SigningInSettings /> },
         ] },
-        // After Till, as drawn (settings-frame.mjs); only Customer groups works yet (cs-groups).
+        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers) and Customer groups (cs-groups).
         { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
+          { key: 'ways-to-pay', title: 'Ways to pay', summary: waysToPay, body: <WaysToPaySettings /> },
           { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [

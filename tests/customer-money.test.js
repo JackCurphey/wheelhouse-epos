@@ -16,7 +16,7 @@ let owner;
 let other;
 let jo;
 before(async () => {
-  server = await startLiveServer();
+  server = await startLiveServer({ env: { TRUST_PROXY: '1', CUSTOMER_SIGNIN_PROVIDER: 'pretend', APP_PUBLIC_URL: 'https://wh.test' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
   other = await staffSignup(server.baseUrl, { shopName: '[Other shop]' });
   const made = await staffRequest(server.baseUrl, owner.cookie, '/api/team', { method: 'POST', body: { name: 'Jo Taylor', isCashier: true, email: `jo-${randomUUID().slice(0, 8)}@example.test`, password: 'password123' } });
@@ -197,4 +197,33 @@ test('a merge whose store credit has since been spent can’t be undone, so nobo
   assert.equal(undo.status, 409);
   assert.equal(undo.body.code, 'money_used');
   assert.equal(await credit(kept), 200, 'still merged, nothing moved');
+});
+
+// ---------- The website account (ac-account; account and reminders decision 1) ----------
+
+let network = 0;
+async function signInAsCustomer(email) {
+  const ip = `203.0.113.${100 + (++network)}`;
+  const send = (p, body) => fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}${p}`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
+  });
+  await send('/sign-in/code', { email });
+  const { code } = await runWithShop(owner.shop.id, () => prepare('SELECT code FROM pretend_signin_codes WHERE email = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(email));
+  const res = await send('/sign-in/check', { email, code });
+  assert.equal(res.status, 200, await res.text());
+  return res.headers.get('set-cookie').split(';')[0];
+}
+const me = async (cookie) => (await (await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/me`, { headers: { cookie } })).json());
+
+test('her website account carries her store credit while it is on, and none while it is off', async () => {
+  const email = `c-${randomUUID().slice(0, 8)}@example.test`;
+  const id = (await post(asOwner, '/api/customers', { name: 'Maya Patel', email })).body.id;
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET email_from_customer = true WHERE id = ?').run(id));
+  await switches({ storeCreditOn: true });
+  await give(id, 1500);
+  const cookie = await signInAsCustomer(email);
+  assert.equal((await me(cookie)).storeCredit, 1500);
+  await switches({ storeCreditOn: false });
+  assert.equal((await me(cookie)).storeCredit, null);
+  await switches({ storeCreditOn: true });
 });
