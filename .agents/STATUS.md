@@ -150,9 +150,19 @@ here before starting it, so two people never build the same one):
   export (answer 11). Merged 6 Nov: Settings › Stockroom › Categories (#626, #627);
   the stock list with sizes, colours and the Category pill, with details as filters
   and columns (#628, #629, `/review` and a hand-started CI run).
-  **Now (6 Nov):** paused at Jack's request (weekly usage). Next is WP-1.5 piece 10,
-  a product's page with sizes, Edit, adding a product on screen and editing a price.
-  Before the first real shop: an independent memory check of #616 on a real server,
+  Merged 8 Nov, WP-1.5 piece 10 (`product-page-sizes`): price and cost changes kept
+  in a product's history, who and when, shown to the Owner with a Price changes filter
+  (#632, migration 122); Edit and Details on a product's page (#633); a product with
+  sizes' own page, its grid of sizes and colours and one history (#634); adding a
+  product on Stock and when receiving an unknown barcode, and Change cost on a booked-in
+  delivery's line (#635). The restock list, finishing WP-2.3 (`restock-list`): its
+  server, grouped by supplier with a suggested count, Add to an order and a download
+  for the supplier's basket, Owner only until roles (#636, migration 123); its page,
+  the Restock list section on Deliveries and orders, and Today's line (#637). Each had
+  `/review`; the gaps and defaults are in Jack's 8 Nov section of
+  `decided-while-building.md`.
+  **Now (8 Nov):** WP-1.5 is in apart from piece 7, which waits for a real export;
+  WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
   a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
