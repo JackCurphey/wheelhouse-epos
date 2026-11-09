@@ -41,6 +41,9 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     const sku = `[Supplier code]-${size}`;
     const bike = await asOwner('/api/products', { name: 'Trek Domane AL 3', sku, category: 'Bikes', price: 500, cost: 300 });
     expect(bike.status).toBe(201);
+    // Bikes is marked as bikes in Settings › Stockroom › Categories (migration 127).
+    const bikes = (await staffRequest(server!.baseUrl, owner.cookie, '/api/product-categories')).body.categories.find((c: { path: string }) => c.path === 'Bikes');
+    expect((await staffRequest(server!.baseUrl, owner.cookie, `/api/product-categories/${bikes.id}`, { method: 'PUT', body: { bikeKind: 'bikes' } })).status).toBe(200);
     const frames = [`[frame ${size} 1]`, `[frame ${size} 2]`];
     await page.setViewportSize(viewport);
     const [name, value] = jo.split('=');

@@ -11,7 +11,6 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { isBike } from '../server/lib/bikes.js';
 
 let server;
 let owner;
@@ -28,6 +27,8 @@ before(async () => {
   await runWithShop(owner.shop.id, async () => {
     supplierId = (await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now())").run()).lastInsertRowid;
   });
+  // Bikes, marked in Settings › Stockroom › Categories (migration 127), in both businesses.
+  for (const shop of [owner.shop, other.shop]) await markBikes(shop);
 });
 after(async () => {
   if (owner) await deleteTestShop(owner.shop.id);
@@ -42,6 +43,13 @@ const inShop = (fn, shop = owner.shop) => runWithShop(shop.id, fn);
 const deliver = (body, as = asJo) => as('/api/deliveries/receive', { method: 'POST', body });
 const frame = () => `[frame ${randomUUID().slice(0, 8)}]`;
 
+async function markBikes(shop) {
+  await runWithShop(shop.id, async () => {
+    const top = (await prepare("INSERT INTO product_categories (name, path, bike_kind) VALUES ('Bikes', 'Bikes', 'bikes') RETURNING id").get()).id;
+    await prepare("INSERT INTO product_categories (parent_id, name, path) VALUES (?, 'Road bikes', 'Bikes › Road bikes')").run(top);
+  });
+}
+
 async function bike({ name = 'Trek Domane AL 3', category = 'Bikes › Road bikes', shop = owner.shop } = {}) {
   const sku = `[Supplier code]-${randomUUID().slice(0, 6)}`;
   return inShop(async () => (await prepare('INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES (?, ?, ?, 28, 14, 0, now())').run(sku, name, category)).lastInsertRowid, shop);
@@ -51,9 +59,29 @@ const framesOf = (productId) => inShop(() => prepare(
 ).all(productId));
 const stockOf = async (id) => (await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(id))).stock_qty;
 
-test('which categories are bikes', () => {
-  for (const c of ['Bikes', 'bikes', 'Road bikes', 'Bikes › E-bikes', 'Kids’ bikes', 'Bike', 'Second-hand › Mountain bikes']) assert.equal(isBike(c), true, c);
-  for (const c of ['Bike parts', 'Bike lights', 'Parts', 'Uncategorised', '', null, 'Drivetrain › Derailleurs', 'Bikesheds']) assert.equal(isBike(c), false, String(c));
+test('which products are bikes: a category marked Bikes or E-bikes, and what sits inside it unless marked itself', async () => {
+  const cat = async (name, parentId = null) => {
+    const res = await asOwner('/api/product-categories', { method: 'POST', body: { name, parentId } });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    return res.body;
+  };
+  const mark = (id, bikeKind, as = asOwner) => as(`/api/product-categories/${id}`, { method: 'PUT', body: { bikeKind } });
+  const top = await cat('[Cycles]');
+  const road = await cat('[Road]', top.id);
+  const electric = await cat('[Electric]', top.id);
+  const parts = await cat('[Bike parts]');
+  assert.equal((await mark(top.id, 'bikes', asJo)).status, 403, 'the Owner’s');
+  assert.equal((await mark(top.id, 'trikes')).status, 400);
+  assert.equal((await mark(top.id, 'bikes')).status, 200);
+  assert.equal((await mark(electric.id, 'ebikes')).status, 200);
+  const list = (await asJo('/api/product-categories')).body.categories;
+  assert.deepEqual([top, road, electric, parts].map((c) => list.find((l) => l.id === c.id).bikeKind), ['bikes', null, 'ebikes', null]);
+  const isBikeIn = async (category) => (await asJo(`/api/products/${await bike({ name: '[Bike]', category })}`)).body.isBike;
+  assert.deepEqual([await isBikeIn(top.path), await isBikeIn(road.path), await isBikeIn(electric.path), await isBikeIn(parts.path)], [true, true, true, false]);
+  // The name no longer decides: unmarked, nothing in it is a bike.
+  assert.equal((await mark(top.id, null)).status, 200);
+  assert.equal(await isBikeIn(road.path), false);
+  assert.equal(await isBikeIn(electric.path), true, 'marked itself');
 });
 
 test('a product says whether it is a bike', async () => {

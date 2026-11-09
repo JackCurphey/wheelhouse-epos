@@ -1,14 +1,29 @@
 // Bikes and their frame numbers (openspec/changes/frame-numbers, design 1 and 2; receiving
-// decision 5). Which products are bikes isn't drawn: a product whose category, or a category it
-// sits in, is named as bikes ("Bikes", "Road bikes", "Bikes › E-bikes"), decided while building
-// for Jack to overrule. One place, so the receive screen asks by the rule booking in checks.
+// decision 5). Which products are bikes: those in a category marked "Bikes" or "E-bikes" in
+// Settings › Stockroom › Categories, or sitting inside one, unless marked itself (Jack's 9 Nov
+// answer to finish-customers' bike question, his option 3; migration 127 marked every category
+// the old name rule matched). One place, so the receive screen asks by the rule booking in checks.
 import { prepare } from '../db.js';
 
-// Any part of the path ending in the word bike or bikes: "Kids’ bikes" and "E-bikes" are;
-// "Bike parts", "Bike lights" and "Bikesheds" aren't.
-export function isBike(category) {
-  return String(category ?? '').split('›').some((part) => /(^|[\s\-‐’'])bikes?$/i.test(part.trim()));
+/**
+ * The business's bike categories: each category's path to 'bikes' or 'ebikes', its own mark or
+ * the nearest one above it. Read once a request and handed to isBike and bikeKindOf.
+ */
+export async function bikeKinds() {
+  const rows = await prepare('SELECT id, parent_id, path, bike_kind FROM product_categories').all();
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const kinds = new Map();
+  for (const row of rows) {
+    let at = row;
+    // A tree, but a loop in old data mustn't hang a request.
+    for (let up = 0; at && !at.bike_kind && up < 100; up += 1) at = at.parent_id === null ? null : byId.get(at.parent_id);
+    if (at?.bike_kind) kinds.set(row.path, at.bike_kind);
+  }
+  return kinds;
 }
+// A product's category (its whole path, as products.category holds it) to 'bikes', 'ebikes' or null.
+export const bikeKindOf = (category, kinds) => kinds.get(String(category ?? '').trim()) ?? null;
+export const isBike = (category, kinds) => bikeKindOf(category, kinds) !== null;
 
 // What's compared: capitals, no spaces, so " wtu 123 " and "WTU123" are one frame.
 export const frameKey = (number) => String(number ?? '').replace(/\s+/g, '').toUpperCase();

@@ -9,7 +9,7 @@ import { canSeeCosts } from '../lib/can-see-costs.js';
 import { newestFirst, priceChangesOf } from '../lib/price-changes.js';
 import { oldestSite } from '../lib/stock.js';
 import { siteHere } from './purchase-orders.js';
-import { isBike } from '../lib/bikes.js';
+import { bikeKinds, isBike } from '../lib/bikes.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -154,7 +154,8 @@ export function register(route) {
       if (how === 'exact' || how === 'size') entry.sized = true;
     }
     // A bike's frames in stock, for its line (st-list: "[n] bikes, each by frame number").
-    const bikes = [...singles.values()].filter((r) => isBike(r.category)).map((r) => r.id);
+    const kinds = await bikeKinds();
+    const bikes = [...singles.values()].filter((r) => isBike(r.category, kinds)).map((r) => r.id);
     if (bikes.length) {
       const counts = new Map((await db.prepare(
         "SELECT product_id, count(*)::int AS n FROM stock_frames WHERE state = 'in_stock' AND product_id = ANY(?::int[]) GROUP BY product_id"

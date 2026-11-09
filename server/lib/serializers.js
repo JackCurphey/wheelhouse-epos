@@ -7,7 +7,8 @@
 // NULL, no cost recorded being 0), so a screen can tell it wasn't told.
 import { isBike } from './bikes.js';
 
-export function serializeProduct(row, costs = false) {
+// `kinds` is bikeKinds(), the business's bike categories.
+export function serializeProduct(row, costs = false, kinds = new Map()) {
   return {
     id: row.id,
     sku: row.sku,
@@ -37,7 +38,7 @@ export function serializeProduct(row, costs = false) {
     // before VAT on Stock (openspec/changes/stock-list).
     vatRateBp: row.vat_rate_bp ?? null,
     // Asked for its frame number when it's booked in (openspec/changes/frame-numbers, design 1).
-    isBike: isBike(row.category),
+    isBike: isBike(row.category, kinds),
   };
 }
 

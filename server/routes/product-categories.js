@@ -10,6 +10,8 @@ import { JOIN, isNone } from '../lib/categories.js';
 import { limitLockWait } from '../lib/stock.js';
 
 const db = { prepare, exec: dbExec };
+// A category's bike mark (Jack's 9 Nov answer, option 3): null follows the category it sits in.
+const BIKE_KINDS = [null, 'bikes', 'ebikes'];
 const CHANGE = 'Only the shop’s owner can change categories';
 const MAX_NAME = 60;
 const MAX_DETAILS = 50;
@@ -34,7 +36,7 @@ function nameProblem(name) {
 // Each category, oldest path first, with its own details and how many products are in it
 // and answer each detail ("Saving removes [Detail] from [n] products", st-category-edit).
 async function categories(only = null) {
-  const rows = await db.prepare(`SELECT id, name, parent_id, path FROM product_categories ${only ? 'WHERE id = ?' : ''} ORDER BY path`).all(...(only ? [only] : []));
+  const rows = await db.prepare(`SELECT id, name, parent_id, path, bike_kind FROM product_categories ${only ? 'WHERE id = ?' : ''} ORDER BY path`).all(...(only ? [only] : []));
   if (rows.length === 0) return [];
   const details = await db.prepare(
     `SELECT d.id, d.category_id, d.name, d.kind, d.unit, d.choices,
@@ -45,6 +47,8 @@ async function categories(only = null) {
     .all(rows.map((r) => r.path))).map((r) => [r.category, r.n]));
   return rows.map((r) => ({
     id: r.id, name: r.name, parentId: r.parent_id, path: r.path, products: counts.get(r.path) ?? 0,
+    // Its own mark, "bikes" or "ebikes", or null to follow the category it sits in (migration 127).
+    bikeKind: r.bike_kind ?? null,
     details: details.filter((d) => d.category_id === r.id).map((d) => ({ id: d.id, name: d.name, kind: d.kind, unit: d.unit, choices: d.choices, answered: d.answered })),
   }));
 }
@@ -145,6 +149,7 @@ export function register(route) {
     if (moving && body.parentId !== null && parentId === null) return badRequest(res, 'Choose where it sits');
     const sent = body.details === undefined ? null : detailsSent(body.details);
     if (sent?.problem) return badRequest(res, sent.problem);
+    if (body.bikeKind !== undefined && !BIKE_KINDS.includes(body.bikeKind)) return badRequest(res, 'Mark it Bikes, E-bikes or neither');
 
     await db.exec('BEGIN');
     const refuse = async (status, error) => {
@@ -230,6 +235,7 @@ export function register(route) {
         await db.prepare('UPDATE product_categories SET name = ?, parent_id = ? WHERE id = ?').run(name, newParent, id);
       }
 
+      if (body.bikeKind !== undefined) await db.prepare('UPDATE product_categories SET bike_kind = ? WHERE id = ?').run(body.bikeKind, id);
       if (sent) {
         const keep = sent.details.filter((d) => d.id !== null).map((d) => d.id);
         await db.prepare('DELETE FROM category_details WHERE category_id = ? AND NOT (id = ANY(?::int[]))').run(id, keep);
