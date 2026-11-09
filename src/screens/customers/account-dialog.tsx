@@ -50,7 +50,7 @@ function Big({ label, pence }: { label: string; pence: number }) {
   return (
     <div className="flex grow flex-col gap-1 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3">
       <span className="text-size-13 text-[var(--wh-muted)]">{label}</span>
-      <span className={`text-size-20 ${mono}`}>{penceText(pence)}</span>
+      <span className={`text-xl ${mono}`}>{penceText(pence)}</span>
     </div>
   );
 }
