@@ -2387,6 +2387,13 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 2. **The Owner's undo is a small box of its own.** Question 14 has the Owner undo a mistaken store credit change (and later a transfer) with a reason, but no drawing shows where. Each store credit row in the history has an "Undo" for the Owner only, opening "Undo this change" with a Reason, "The change and its undoing both stay in the history.", Cancel and "Undo it". The undone row then says "undone", and the undoing shows as its own row, "Store credit change undone". *Pattern:* the store credit pop-up (`cs-credit`), a Form box.
 3. **Ways to pay shows only its two rows for now, and the fold's summary names those switched on** ("Store credit and Customer accounts on", or "None switched on yet"), not the drawn "Cash, card and 4 more", because cash, card, gift cards and deposits aren't rows yet. Staff can't open Settings at all (your 19 Oct decision, Owner-only settings), so there is no read-only view of Ways to pay for them; the server refuses a change from them. *Pattern:* Customer groups' summary.
 
+### 9 Nov 2026: the plan for finishing the account (WP-4.5; `openspec/changes/finish-account`; Jack's 9 Nov account answers 1 and 3)
+
+1. **The receipt email's "See it in your account" waits for step C.** Staff email receipts only for sales recorded without a receipt number, and your answer 1 keeps those receipts closed on the account until step C, so the button would lead nowhere. It comes with step C. *Pattern:* your 26 Oct choice that the text receipt waits for step C.
+2. **The old address is told when a customer changes their email:** one email, "Your email address has changed — [shop]", naming the new address with its middle hidden and the shop's phone to call if it wasn't them. Nothing built tells a customer about a change to their account. *Pattern:* the receipt email's plain frame, and the delete pop-up's "call [shop phone]".
+3. **Devices already signed in stay signed in** after an email change: a sign-in belongs to the account, not the address.
+4. **An email used by another account or another customer here can't be taken**, refused before a code is sent: "That email is already used for another account at [shop]. Ask [shop] to help." *Why:* a customer's own email decides which record a first sign-in joins.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
