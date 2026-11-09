@@ -70,6 +70,7 @@ export function WaysToPaySettings() {
     }
   }
 
+  if (settings.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the ways to pay. Try again in a moment.</p>;
   return (
     <div className="grid items-start gap-2 md:grid-cols-2">
       <Way sub="Earned back on sales, and given on refunds without a receipt"

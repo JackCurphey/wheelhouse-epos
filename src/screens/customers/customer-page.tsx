@@ -117,7 +117,8 @@ export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSal
   }
   if (item.kind === 'store_credit') {
     const what = CREDIT_WORDS[item.change] ?? 'Store credit changed';
-    const undoable = onUndo && !item.undone && !['undo', 'lost_on_deletion'].includes(item.change);
+    // Only a change made by hand here; the till's own entries come with the till's half.
+    const undoable = onUndo && !item.undone && ['added', 'taken'].includes(item.change);
     return (
       <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
         {tag('Credit')}

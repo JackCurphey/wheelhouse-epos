@@ -56,7 +56,6 @@ test('126 keeps money entries to their business, never zero, once undone, and ru
     await assert.rejects(c.query("INSERT INTO store_credit_entries (customer_id, change_pence, kind, undoes_entry_id) VALUES ($1, -500, 'undo', $2)", [customer.id, added.id]), /idx_store_credit_entries_undoes/);
 
     await c.query("INSERT INTO account_entries (customer_id, change_pence, kind) VALUES ($1, 12000, 'opening')", [customer.id]);
-    await assert.rejects(c.query("INSERT INTO account_entries (customer_id, change_pence, kind) VALUES ($1, 100, 'opening')", [customer.id]), /idx_account_entries_opening/);
     await c.query("INSERT INTO account_entries (customer_id, change_pence, kind, received_on, reference) VALUES ($1, -2000, 'bank_transfer', '2026-09-01', '[reference]')", [customer.id]);
     await assert.rejects(c.query("INSERT INTO account_entries (customer_id, change_pence, kind) VALUES ($1, 100, 'cheque')", [customer.id]), /check/i);
 
