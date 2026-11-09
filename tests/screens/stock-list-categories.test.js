@@ -96,13 +96,14 @@ test('Bearings’ details become columns, Margin making room, and the line keeps
   await pick(t, 'bear', ['ArrowDown', 'Enter']);
   await t.ui.findByText('3 in Bearings');
   const heads = t.ui.getAllByRole('columnheader').map((h) => h.textContent.replace(/[▴▾]/g, ''));
-  assert.deepEqual(heads, ['Product', 'Inner diameter', 'Outer diameter', 'Height', 'In stock', 'Price']);
+  // The first is the Owner's Tick all (st-list-ticked).
+  assert.deepEqual(heads, ['', 'Product', 'Inner diameter', 'Outer diameter', 'Height', 'In stock', 'Price']);
   const a = t.within(t.ui.getByRole('link', { name: /\[Bearing A\]/ }).closest('[role="row"]'));
   assert.ok(a.getByRole('link').textContent.endsWith('[Supplier code] · [Supplier]'));
   const cells = a.getAllByRole('cell').map((c) => c.textContent);
-  assert.deepEqual(cells.slice(1, 4), ['Inner diameter: 10 mm', 'Outer diameter: 30 mm', 'Height: 9 mm']);
+  assert.deepEqual(cells.slice(2, 5), ['Inner diameter: 10 mm', 'Outer diameter: 30 mm', 'Height: 9 mm']);
   const c = t.within(t.ui.getByRole('link', { name: /\[Bearing C\]/ }).closest('[role="row"]'));
-  assert.equal(c.getAllByRole('cell')[3].textContent, 'Height: —');
+  assert.equal(c.getAllByRole('cell')[4].textContent, 'Height: —');
 });
 
 test('a number detail’s box asks the server for that detail, and the summary says what’s shown', async () => {
@@ -131,7 +132,7 @@ test('Derailleurs has its own details and Drivetrain’s; a choice filters by it
   assert.deepEqual(gears.getAllByRole('radio').map((r) => r.textContent), ['Any', '[11]', '[12]']);
   assert.equal(gears.getByRole('radio', { name: 'Any' }).getAttribute('aria-checked'), 'true');
   const heads = t.ui.getAllByRole('columnheader').map((h) => h.textContent.replace(/[▴▾]/g, ''));
-  assert.deepEqual(heads, ['Product', '[Detail]', 'Number of gears', 'In stock', 'Price']);
+  assert.deepEqual(heads, ['', 'Product', '[Detail]', 'Number of gears', 'In stock', 'Price']);
   t.fireEvent.click(gears.getByRole('radio', { name: '[12]' }));
   await t.ui.findByText('1 in Drivetrain › Derailleurs with Number of gears [12]');
   assert.ok(listCalls().some((c) => c.includes('d31=[12]')), listCalls().join('\n'));

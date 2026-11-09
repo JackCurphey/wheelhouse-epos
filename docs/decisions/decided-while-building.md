@@ -2340,6 +2340,20 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 15. **The page's title** is "Deliveries and orders" with the way back, as New order's is; the card is the drawn "Tick what to reorder".
 16. **Today's "new"** is per person: the list's lines when that person last opened it or downloaded from it; a product counts once however many reasons it's on for.
 
+### 9 Nov 2026: changing prices in bulk (WP-2.1; `openspec/changes/bulk-price-change`; `st-list-ticked`, `st-prices`, `st-prices-done`)
+
+1. **Rounding:** ".99" takes the nearest price ending in .99 (£30.80 → £30.99, £30.40 → £29.99), ".00" the nearest whole pound, halfway going up. £0.00 stays £0.00; anything above it never rounds to nothing (it becomes £0.99 or £1.00). The drawing shows the endings, not how they round.
+2. **A target margin** is the margin as Stock shows it: on the price before VAT, with the product's own VAT rate. A product with no cost recorded (none, or £0.00) keeps its price, says "No cost recorded" and isn't counted in "Change [n] prices".
+3. **The figures allowed:** a percentage from −99 to +1000, a margin from 0 up to 99.99, each to two decimal places; a price no more than £21,474,836.47, as everywhere.
+4. **Prices end in** isn't shown for A new price for each: the price is what was typed. Up or down by a percentage and .99 are picked to start, as drawn; the percentage box starts empty, and Change says "Type the percentage" (or "Type the target margin") until it has one.
+5. **A product with sizes ticked as one row** changes every size, each listed in the preview with its size and colour.
+6. **Change is greyed** with "Nothing would change" when no price would change, in the pattern of Adjust stock's greyed button.
+7. **The ticked bar** has Untick all and Change prices. Print labels and Send to another shop, also drawn there, come with labels and sending between shops, not built yet.
+8. **Who ticks:** the tick boxes and the bar show only to whoever can change prices, the Owner, by the same rule as Edit on a product's page (the Owner's sign-in, sent costs), since Change prices is the bar's only button for now. When Print labels and Send exist, Staff will get tick boxes for those.
+9. **Ticks stay** through searches, filters and categories, so products can be gathered from several searches; "Tick all [n] shown" ticks (or unticks) the rows on screen. There's no Tick all on a phone, as drawn.
+10. **Undo** puts back every price the change made that is still as it left it, and leaves alone any changed since, saying "Prices put back · [n] products · [n] changed since, left as they are" (not drawn). It works once, and the server allows it at any time; the screen offers it until the next change or until the page is left.
+11. **The message after** reads "Prices changed · [n] products", [n] counting each size that changed as one.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
