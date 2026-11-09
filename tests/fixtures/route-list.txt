@@ -314,3 +314,4 @@ POST /api/restock/add-to-order
 POST /api/stock/prices/preview
 POST /api/stock/prices
 POST /api/stock/prices/:id/undo
+GET /api/stock-frames/check
