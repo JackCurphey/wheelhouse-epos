@@ -6,9 +6,9 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 1. Store credit and the Ways to pay switches, server (pull request 1; migration, money)
 
-- [ ] 1.1 Tests (`tests/migration-126.test.js`, `tests/customer-money.test.js`): migration 126 from empty and run twice; payment settings created lazily, both off, Owner-only `PUT`; add and take with a reason in pence, the balance as the sum, refused with no reason, a bad amount, or more than held; two takes at once never below zero; Owner-only undo kept as its own entry; the customer's `money` with only the switched-on fields; store credit rows in the history; another business's customer a 404. Verify: the file runs red before 1.2, green after.
-- [ ] 1.2 Migration 126 (store credit entries, account entries, the customer's account columns, payment settings, privacy requests' `how`); `server/lib/customer-money.js` (store credit half); routes in `server/routes/customer-money.js` and `/api/payment-settings`, with their place in `server/routes/index.js` and `tests/fixtures/route-list.txt`. Verify: 1.1 passes.
-- [ ] 1.3 Merging moves store credit to the record kept and undoing moves it back (question 13). Verify: a merge test in `tests/customer-money.test.js`.
+- [x] 1.1 Tests (`tests/migration-126.test.js`, `tests/customer-money.test.js`): migration 126 from empty and run twice; payment settings created lazily, both off, Owner-only `PUT`; add and take with a reason in pence, the balance as the sum, refused with no reason, a bad amount, or more than held; two takes at once never below zero; Owner-only undo kept as its own entry; the customer's `money` with only the switched-on fields; store credit rows in the history; another business's customer a 404. Verify: the file runs red before 1.2, green after.
+- [x] 1.2 Migration 126 (store credit entries, account entries, the customer's account columns, payment settings, privacy requests' `how`); `server/lib/customer-money.js` (store credit half); routes in `server/routes/customer-money.js` and `/api/payment-settings`, with their place in `server/routes/index.js` and `tests/fixtures/route-list.txt`. Verify: 1.1 passes.
+- [x] 1.3 Merging moves store credit to the record kept and undoing moves it back (question 13). Verify: a merge test in `tests/customer-money.test.js`.
 
 ## 2. Store credit and Ways to pay, screens (pull request 2; customer accounts)
 
