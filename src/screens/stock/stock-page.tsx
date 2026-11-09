@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { ProductBox } from './product-box.tsx';
+import { ChangePrices, type Changed } from './change-prices.tsx';
 import { answerText, DetailFilters, detailsFor, filterValue, inCategoryText, MeasureLine, useCategoryList, useCategoryPicker } from './stock-list-bits.tsx';
 import { count, mono, productHref, sizesHref, rowHasCost, rowIs, rowKey, rowLine, rowMargin, rowPrice, rowPriceText, rowState, StateTag, type ListRow } from './stock-bits.tsx';
 
@@ -20,11 +21,16 @@ import { count, mono, productHref, sizesHref, rowHasCost, rowIs, rowKey, rowLine
  * category picked brings its details as filters and columns (st-filter-bearings),
  * and a measurement searched shows each row's (st-search-measure). The Owner adds a
  * product (st-list, st-list-none, st-list-new; openspec/changes/product-page-sizes,
- * design 4); ticking comes with its own piece.
+ * design 4). The Owner ticks products, kept through searches, and changes their prices
+ * together, with Undo (st-list-ticked, st-prices, st-prices-done; openspec/changes/bulk-price-change,
+ * design 4 and 5); the ticked bar's Print labels and Send to another shop come with their pieces.
  */
 type Filter = 'All' | 'Running low' | 'Below zero';
 type SortKey = 'name' | 'stock' | 'price' | 'margin';
 const SHOWN = 50;
+// What a bulk change, or its Undo, said (st-prices-done).
+type Done = { text: string; batchId: number | null };
+const several = (n: number) => `${n} ${n === 1 ? 'product' : 'products'}`;
 const SORTS: Record<SortKey, (r: ListRow) => number | string> = {
   name: (r) => r.name.toLowerCase(),
   stock: (r) => r.stockQty,
@@ -54,6 +60,11 @@ export function StockPage() {
   const navigate = useNavigate();
   // The box, with the name typed when nothing matched (st-list-none); null when shut.
   const [adding, setAdding] = useState<{ name?: string } | null>(null);
+  const queryClient = useQueryClient();
+  // Ticked rows by rowKey, kept through searches and filters (st-list-ticked).
+  const [ticked, setTicked] = useState<Map<string, ListRow>>(new Map());
+  const [changing, setChanging] = useState(false);
+  const [done, setDone] = useState<Done | null>(null);
   const [typed, setTyped] = useState('');
   const search = useTyped(typed);
   // Today's See them opens Stock with Below zero picked (st-today-below; stock-warnings-on-today design 8).
@@ -95,8 +106,27 @@ export function StockPage() {
       return (x < y ? -1 : x > y ? 1 : 0) * (sortUp ? 1 : -1);
     });
   const shown = all ? rows : rows.slice(0, SHOWN);
+  // Ticking is for whoever can change prices: the Owner, the one the server sends costs to, as
+  // Edit on a product's page (bulk-price-change, design 4).
+  const ticking = owner && (list.data ?? []).some(rowHasCost);
+  const allTicked = shown.length > 0 && shown.every((r) => ticked.has(rowKey(r)));
+  const tick = (r: ListRow) => { const next = new Map(ticked); if (next.has(rowKey(r))) next.delete(rowKey(r)); else next.set(rowKey(r), r); setTicked(next); };
+  const tickAll = () => { const next = new Map(ticked); shown.forEach((r) => (allTicked ? next.delete(rowKey(r)) : next.set(rowKey(r), r))); setTicked(next); };
+  const refresh = () => Promise.all([queryClient.invalidateQueries({ queryKey: ['stock'] }), queryClient.invalidateQueries({ queryKey: ['product'] })]);
+  const changed = (c: Changed) => { setChanging(false); setTicked(new Map()); setDone({ text: `Prices changed · ${several(c.changed)}`, batchId: c.batchId }); refresh(); };
+  async function undo(batchId: number) {
+    // Undo goes at once, so a second press can't send it again (the review).
+    setDone((d) => (d ? { ...d, batchId: null } : d));
+    try {
+      const u = await apiMutate<{ undone: number; leftAlone: number }>(`/api/stock/prices/${batchId}/undo`, {});
+      setDone({ text: [`Prices put back · ${several(u.undone)}`, u.leftAlone ? `${u.leftAlone} changed since, left as they are` : null].filter(Boolean).join(' · '), batchId: null });
+      refresh();
+    } catch (err) {
+      setDone({ text: err instanceof ApiError && err.status !== 500 ? err.message : 'Wheelhouse couldn’t put the prices back. Try again in a moment.', batchId: null });
+    }
+  }
   // The sign-in can say Owner with someone else at the till: what the server sent decides.
-  const grid = { gridTemplateColumns: isPhone ? 'minmax(0, 1fr) auto' : ['minmax(0, 2.2fr)', ...columns.map(() => 'minmax(0, 0.7fr)'), 'minmax(0, 0.9fr)', 'minmax(0, 0.8fr)', ...(margins ? ['minmax(0, 0.7fr)'] : [])].join(' ') };
+  const grid = { gridTemplateColumns: isPhone ? `${ticking ? '44px ' : ''}minmax(0, 1fr) auto` : [...(ticking ? ['44px'] : []), 'minmax(0, 2.2fr)', ...columns.map(() => 'minmax(0, 0.7fr)'), 'minmax(0, 0.9fr)', 'minmax(0, 0.8fr)', ...(margins ? ['minmax(0, 0.7fr)'] : [])].join(' ') };
   // All is everything: it takes a category off too.
   const pick = (f: Filter) => { setFilter(filter === f && f !== 'All' ? 'All' : f); if (f === 'All') choose(null); setAll(false); };
   const head = (key: SortKey, label: string, right = false) => (
@@ -128,6 +158,19 @@ export function StockPage() {
       {picker.list}
       {category ? <DetailFilters name={categories.find((c) => c.path === category)?.name ?? category} details={details} values={values} onChange={(id, v) => { setValues({ ...values, [id]: v }); setAll(false); }} /> : null}
       <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (category ? `${rows.length} ${inCategory}` : rows.length ? plural(rows) : 'No products') : ''}</p>
+      {ticking && ticked.size ? (
+        <div role="region" aria-label="Ticked products" className="flex flex-wrap items-center gap-2.5 rounded-[10px] bg-[var(--wh-ink)] py-2 pr-2 pl-3.5 text-[var(--wh-panel)]">
+          <span className="grow text-size-15 font-bold">{`${ticked.size} ticked`}</span>
+          <button type="button" onClick={() => setTicked(new Map())} className="min-h-11 border-0 bg-transparent px-3 text-sm font-semibold text-[var(--wh-panel)] underline">Untick all</button>
+          <Button onClick={() => { setDone(null); setChanging(true); }}>Change prices</Button>
+        </div>
+      ) : null}
+      {done ? (
+        <div role="status" className="flex items-center gap-3 self-start rounded-lg bg-[var(--wh-ink)] py-1 pr-1 pl-3.5 text-sm font-semibold text-[var(--wh-panel)]">
+          <span>{done.text}</span>
+          {done.batchId !== null ? <button type="button" onClick={() => undo(done.batchId!)} className="min-h-11 border-0 bg-transparent px-3 text-sm font-bold text-[var(--wh-panel)] underline">Undo</button> : null}
+        </div>
+      ) : null}
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the stock. Try again in a moment.</p>
         : !list.data ? <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>
         : rows.length === 0 ? (
@@ -149,7 +192,8 @@ export function StockPage() {
           <div role="table" aria-label="Products" className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
             {isPhone ? null : (
               <div role="rowgroup">
-                <div role="row" style={grid} className="grid items-center gap-3 px-4 pt-1">
+                <div role="row" style={grid} className={`grid items-center gap-3 pt-1 ${ticking ? 'pr-4' : 'px-4'}`}>
+                  {ticking ? <span role="columnheader"><TickBox label={`Tick all ${shown.length} shown`} on={allTicked} onChange={tickAll} /></span> : null}
                   {head('name', 'Product')}{columns.map((d) => <span key={d.id} role="columnheader" className="text-size-13 font-bold text-[var(--wh-muted)]">{d.name}</span>)}{head('stock', 'In stock')}{head('price', 'Price', true)}{margins ? head('margin', 'Margin', true) : null}
                 </div>
               </div>
@@ -164,7 +208,8 @@ export function StockPage() {
                 );
                 const m = rowMargin(r);
                 return (
-                <div role="row" key={rowKey(r)} style={grid} className={`grid min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] px-4 py-1 first:border-t-0 md:first:border-t`}>
+                <div role="row" key={rowKey(r)} style={grid} className={`grid min-h-[60px] items-center gap-3 border-t border-[var(--wh-border)] py-1 first:border-t-0 md:first:border-t ${ticking ? 'pr-4' : 'px-4'}`}>
+                  {ticking ? <span role="cell"><TickBox label={`Tick ${r.name}${r.kind === 'size' ? `, ${rowLine(r)}` : ''}`} on={ticked.has(rowKey(r))} onChange={() => tick(r)} /></span> : null}
                   <span role="cell" className="min-w-0">
                     {/* A product with sizes opens its own page (product-page-sizes, design 3). */}
                     <Link to={r.kind === 'group' ? sizesHref(r.groupId) : productHref(r.id)} className="flex min-h-11 min-w-0 flex-col justify-center gap-0.5 text-[var(--wh-ink)] no-underline">{label}</Link>
@@ -186,10 +231,20 @@ export function StockPage() {
       {!all && rows.length > SHOWN ? (
         <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${rows.length})`}</button>
       ) : null}
+      {changing ? <ChangePrices rows={[...ticked.values()]} onClose={() => setChanging(false)} onChanged={changed} /> : null}
       {adding ? (
         <ProductBox title="Add a product" saveLabel="Add" start={adding} onClose={() => setAdding(null)}
           onSaved={(p) => { setAdding(null); navigate(productHref(p.id)); }} />
       ) : null}
     </div>
+  );
+}
+
+// A 44 by 44 tick box, as stock.mjs's tickBox draws it.
+function TickBox({ label, on, onChange }: { label: string; on: boolean; onChange: () => void }) {
+  return (
+    <label className="inline-flex size-11 items-center justify-center">
+      <input type="checkbox" aria-label={label} checked={on} onChange={onChange} className="m-0 size-5 accent-[var(--accent-dark)]" />
+    </label>
   );
 }
