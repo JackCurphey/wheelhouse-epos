@@ -29,14 +29,26 @@ export async function openDeletion(customerId) {
 
 /**
  * What holds a deletion back: a bike still in the workshop (coverage walks
- * answers 4 and 5), for the customer and any record merged into theirs.
+ * answers 4 and 5), and money owed on account (finish-customers design 7;
+ * question 16), for the customer and any record merged into theirs. Store
+ * credit never holds it back; it's lost on deletion.
  */
 export async function inTheWay(customerId) {
-  return (await prepare(
+  const ids = await chainIds(customerId);
+  const bikes = (await prepare(
     `SELECT w.id AS "jobId", w.reference FROM workshop_jobs w
       WHERE w.custody_state = 'in_shop' AND w.customer_id = ANY(?::int[])
       ORDER BY w.id`
-  ).all(await chainIds(customerId))).map((r) => ({ jobId: r.jobId, reference: r.reference }));
+  ).all(ids)).map((r) => ({ jobId: r.jobId, reference: r.reference }));
+  const { owed } = await prepare('SELECT COALESCE(sum(change_pence), 0)::int AS owed FROM account_entries WHERE customer_id = ANY(?::int[])').get(ids);
+  return owed > 0 ? [...bikes, { owedPence: owed }] : bikes;
+}
+
+/** Why Delete waits, from what's in the way: "Can be deleted once the bike is collected." */
+export function inTheWayWhy(items) {
+  const bike = items.some((i) => i.jobId !== undefined);
+  const owed = items.some((i) => i.owedPence !== undefined);
+  return `Can be deleted once ${[bike ? 'the bike is collected' : null, owed ? 'what they owe is paid' : null].filter(Boolean).join(' and ')}.`;
 }
 
 /**
@@ -173,7 +185,7 @@ async function deleteOnce(requestId) {
     const blocking = await inTheWay(who);
     if (blocking.length) {
       await dbExec('ROLLBACK');
-      return refuse(409, 'in_the_way', 'Can be deleted once the bike is collected.', { inTheWay: blocking });
+      return refuse(409, 'in_the_way', inTheWayWhy(blocking), { inTheWay: blocking });
     }
 
     // Their emails, for the sign-in codes sent to them.

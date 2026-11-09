@@ -257,7 +257,7 @@ test('only the Owner gives a customer an account, at the shop’s limit; with ac
   assert.equal((await openAccount(id)).status, 200);
   assert.equal((await openAccount(id)).status, 409, 'once');
   const a = await account(id, asJo);
-  assert.deepEqual([a.hasAccount, a.owed, a.limit, a.ownLimit, a.shopLimit, a.statement], [true, 0, 25000, null, 25000, []]);
+  assert.deepEqual([a.hasAccount, a.owed, a.limit, a.ownLimit, a.shopLimit, a.statement, a.today], [true, 0, 25000, null, 25000, [], '2026-09-01']);
   await switches({ storeCreditOn: true, accountsOn: false });
   assert.equal((await openAccount(await maya())).status, 409, 'not while switched off');
   assert.deepEqual((await asJo(`/api/customers/${id}`)).body.money, { storeCreditOn: true, accountsOn: false, credit: 0 });
@@ -397,4 +397,33 @@ test('a mistyped opening amount, undone by the Owner, can be entered again', asy
   assert.equal(again.status, 201, JSON.stringify(again.body));
   assert.equal(await owed(id), 1200);
   assert.equal((await opening(id, 500)).status, 409, 'still only one that stands');
+});
+
+// ---------- Money owed holds a deletion back (group 4; design 7; question 16) ----------
+
+test('money owed on account holds a deletion back, across merged records, until it is paid', async () => {
+  const kept = await owing(1000, 'Maya Patel');
+  const gone = await owing(2500, 'Maya P.');
+  assert.equal((await post(asOwner, `/api/customers/${kept}/merge`, { otherId: gone, keep: {} })).status, 200);
+  const req = await runWithShop(owner.shop.id, () => prepare("INSERT INTO privacy_requests (customer_id, kind, source, asked_at) VALUES (?, 'delete', 'account', now()) RETURNING id").get(kept));
+  const row = (await asOwner('/api/privacy-requests')).body.requests.find((r) => r.id === req.id);
+  assert.deepEqual(row.inTheWay, [{ owedPence: 3500 }]);
+  assert.deepEqual((await asOwner(`/api/customers/${kept}`)).body.deletionRequest.inTheWay, [{ owedPence: 3500 }]);
+  const refused = await post(asOwner, `/api/privacy-requests/${req.id}/delete`, {});
+  assert.deepEqual([refused.status, refused.body.code, refused.body.error], [409, 'in_the_way', 'Can be deleted once what they owe is paid.']);
+  assert.equal((await transfer(kept, { pence: 3500 })).status, 201);
+  assert.deepEqual((await asOwner('/api/privacy-requests')).body.requests.find((r) => r.id === req.id).inTheWay, []);
+  assert.equal((await post(asOwner, `/api/privacy-requests/${req.id}/delete`, {})).status, 200);
+});
+
+test('her website account says what she owes on account, for the delete pop-up', async () => {
+  const email = `c-${randomUUID().slice(0, 8)}@example.test`;
+  await switches({ accountsOn: true });
+  const id = (await post(asOwner, '/api/customers', { name: 'Maya Patel', email })).body.id;
+  await runWithShop(owner.shop.id, () => prepare('UPDATE customers SET email_from_customer = true WHERE id = ?').run(id));
+  const cookie = await signInAsCustomer(email);
+  assert.equal((await me(cookie)).owed, 0);
+  await openAccount(id);
+  await opening(id, 4200);
+  assert.equal((await me(cookie)).owed, 4200);
 });

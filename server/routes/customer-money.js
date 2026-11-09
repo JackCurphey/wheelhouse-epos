@@ -60,7 +60,9 @@ async function accountOf(customerId, settings) {
   const c = await db.prepare('SELECT account_limit_pence, account_opened_at FROM customers WHERE id = ?').get(customerId);
   const figures = await accountFigures(customerId, settings);
   const statement = await accountEntries(customerId);
-  return { ...figures, ownLimit: c.account_limit_pence ?? null, openedAt: c.account_opened_at ? new Date(c.account_opened_at).toISOString() : null, hasOpening: statement.some((e) => e.kind === 'opening' && !e.undone), statement };
+  return { ...figures, ownLimit: c.account_limit_pence ?? null, openedAt: c.account_opened_at ? new Date(c.account_opened_at).toISOString() : null, hasOpening: statement.some((e) => e.kind === 'opening' && !e.undone), statement,
+    // The shop's day, for "Date it arrived" (cs-transfer starts at today and can't go past it).
+    today: shopToday(await shopZone()) };
 }
 
 export function register(route) {
