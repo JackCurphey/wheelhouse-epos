@@ -5,6 +5,8 @@
 // `costs`: canSeeCosts(req), the one check (openspec/changes/product-costs-hidden).
 // Without it the cost is null, which nothing stored can be (the column is NOT
 // NULL, no cost recorded being 0), so a screen can tell it wasn't told.
+import { isBike } from './bikes.js';
+
 export function serializeProduct(row, costs = false) {
   return {
     id: row.id,
@@ -34,6 +36,8 @@ export function serializeProduct(row, costs = false) {
     // The product's VAT rate in basis points (2000 = 20%), for its margin
     // before VAT on Stock (openspec/changes/stock-list).
     vatRateBp: row.vat_rate_bp ?? null,
+    // Asked for its frame number when it's booked in (openspec/changes/frame-numbers, design 1).
+    isBike: isBike(row.category),
   };
 }
 

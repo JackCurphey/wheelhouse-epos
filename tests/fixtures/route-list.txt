@@ -311,3 +311,4 @@ GET /api/restock
 POST /api/restock/seen
 POST /api/restock/download
 POST /api/restock/add-to-order
+GET /api/stock-frames/check
