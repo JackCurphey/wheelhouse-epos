@@ -15,7 +15,7 @@ import { mono } from './deliveries-bits.tsx';
 export const frameKey = (f: string) => f.replace(/\s+/g, '').toUpperCase();
 // "1 Sep 2026": three letters for the month, as the drawings write it.
 const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleDateString('en-GB', { timeZone: 'Europe/London', ...o });
-const dateText = (iso: string) => `${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' }).slice(0, 3)} ${part(iso, { year: 'numeric' })}`;
+export const dateText = (iso: string) => `${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' }).slice(0, 3)} ${part(iso, { year: 'numeric' })}`;
 
 export function FrameNumber({ bike, n, taken, onCancel, onCount }: { bike: string; n: number; taken: string[]; onCancel: () => void; onCount: (frame: string) => void }) {
   const [text, setText] = useState('');
