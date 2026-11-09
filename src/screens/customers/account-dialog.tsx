@@ -117,7 +117,7 @@ export function AccountDialog({ customerId, name, isCompany, onClose }: { custom
                           <span className="text-size-13 text-[var(--wh-muted)]">{[entryDay(e), e.undone ? 'undone' : null].filter(Boolean).join(' · ')}</span>
                         </span>
                         <span className={`text-size-15 ${mono}`}>{signed(e.changePence)}</span>
-                        {owner && e.kind === 'bank_transfer' && !e.undone
+                        {owner && (e.kind === 'bank_transfer' || e.kind === 'opening') && !e.undone
                           ? <button type="button" aria-label={`Undo ${entryWords(e)}`} onClick={() => setUndoing(e)} className="min-h-11 px-2 text-sm font-semibold underline">Undo</button>
                           : null}
                       </li>

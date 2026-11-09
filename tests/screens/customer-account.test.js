@@ -220,3 +220,9 @@ test('a bank transfer in her history, as the statement words it', async () => {
   assert.ok(ui.getByText('Fri 28 Aug · by Jo Taylor'));
   assert.ok(ui.getByText('−£20.00'));
 });
+
+test('the Owner can undo what was owed before Wheelhouse, if it was typed wrong', async () => {
+  const r = await openMaya();
+  const box = await openAccount(r);
+  assert.ok(box.getByRole('button', { name: 'Undo Owed from before Wheelhouse' }));
+});
