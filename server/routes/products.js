@@ -18,7 +18,7 @@ import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
-import { isBike } from '../lib/bikes.js';
+import { bikeKinds, isBike } from '../lib/bikes.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -74,7 +74,8 @@ async function listProducts({ search, category, activeOnly }, costs) {
   }
   sql += ' ORDER BY category, name';
   const rows = await db.prepare(sql).all(...params);
-  return rows.map((row) => serializeProduct(row, costs));
+  const kinds = await bikeKinds();
+  return rows.map((row) => serializeProduct(row, costs, kinds));
 }
 
 // ---------- Products ----------
@@ -198,14 +199,15 @@ export function register(route) {
     const costs = await canSeeCosts(req);
     // A bike's frames: in stock first, then held, then sold, newest first in each (st-product-bike;
     // openspec/changes/frame-numbers, design 4).
-    const frames = isBike(row.category) ? (await db.prepare(
+    const kinds = await bikeKinds();
+    const frames = isBike(row.category, kinds) ? (await db.prepare(
       `SELECT f.id, f.frame_number, f.state, f.received_at, f.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier
          FROM stock_frames f LEFT JOIN deliveries d ON d.id = f.delivery_id LEFT JOIN suppliers sp ON sp.id = d.supplier_id
         WHERE f.product_id = ?
         ORDER BY CASE f.state WHEN 'in_stock' THEN 0 WHEN 'held' THEN 1 ELSE 2 END, f.received_at DESC, f.id DESC LIMIT 500`
     ).all(id)).map((f) => ({ id: f.id, frameNumber: f.frame_number, state: f.state, bookedInAt: f.received_at, deliveryId: f.delivery_id, supplierName: f.supplier ?? null })) : undefined;
     sendJson(res, 200, {
-      ...serializeProduct(row, costs),
+      ...serializeProduct(row, costs, kinds),
       frames,
       stockAtShops: shops.map((s) => ({ id: s.id, name: s.name, qty: s.qty, here: s.id === here })),
       // Its category's details and those passed down, each with its answer (st-product's Details · [Category]).
@@ -267,7 +269,7 @@ export function register(route) {
       }
       const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
       await syncProductWithShopifyIfNeeded({ show_online: false, active: false }, row);
-      sendJson(res, 201, serializeProduct(row, costs));
+      sendJson(res, 201, serializeProduct(row, costs, await bikeKinds()));
     } catch (err) {
       if (err.code === '23505') {
         return badRequest(res, err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
@@ -317,7 +319,7 @@ export function register(route) {
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     await syncProductWithShopifyIfNeeded(locked, row);
-    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req), await bikeKinds()));
   });
 
   route('DELETE', '/api/products/:id', async (req, res, params) => {
@@ -406,7 +408,7 @@ export function register(route) {
     // and never fails the adjustment (firePendingShopifyPushes).
     if (pushes.length) deferShopifyPushes(afterRelease, shopId, pushes);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req), await bikeKinds()));
   });
 
   // A product's answers to its details (rs-add-product, st-product's Details · Edit;
@@ -460,6 +462,6 @@ export function register(route) {
 
     await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req)));
+    sendJson(res, 200, serializeProduct(row, await canSeeCosts(req), await bikeKinds()));
   }, uploadedImageBody(MAX_PRODUCT_PHOTO_BYTES));
 }

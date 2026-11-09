@@ -23,15 +23,34 @@ Settings › Stockroom SHALL have a "Bike warranties" section where the Owner li
 - **WHEN** Jo Taylor (Staff) opens Bike warranties
 - **THEN** she sees them but can't change them, and the server refuses a change from her
 
-### Requirement: A product records its brand and whether it is an e-bike
-A product SHALL be able to hold a brand, chosen from Bike warranties' brands or typed, and SHALL say whether it is an e-bike; both are set with the product's details and shown on its page. A typed brand SHALL match a listed brand ignoring capitals and spaces at either end. [Q 18]
+### Requirement: A category is marked Bikes or E-bikes
+In Settings › Stockroom › Categories the Owner SHALL be able to mark a category "Bikes" or "E-bikes", or leave it unmarked (Jack, 9 Nov, his answer to the bike question, option 3). A product SHALL be a bike when its category, or the nearest marked category it sits in, is marked; "E-bikes" SHALL count as bikes and SHALL make the product an e-bike. A category's name SHALL NOT decide it. Migration 127 SHALL mark "Bikes" every existing category whose name ends in the word bike or bikes, in each business that has marked none, so nothing that worked before stops working.
+
+#### Scenario: A sub-category follows its parent
+- **WHEN** Bikes is marked "Bikes" and Road bikes sits inside it unmarked
+- **THEN** a product in Road bikes is a bike, and asks for its frame number when booked in
+
+#### Scenario: Marked itself
+- **WHEN** E-bikes sits inside Bikes and is marked "E-bikes"
+- **THEN** a product in it is an e-bike
+
+#### Scenario: Unmarked
+- **WHEN** the Owner takes the mark off Bikes
+- **THEN** products in it, and in unmarked categories inside it, are no longer bikes
+
+#### Scenario: Not the Owner
+- **WHEN** Jo Taylor (Staff) sends a mark
+- **THEN** the server refuses it
+
+### Requirement: A product records its brand, and is an e-bike by its category
+A product SHALL be able to hold a brand, chosen from Bike warranties' brands or typed, set with the product's details and shown on its page. Whether it is an e-bike SHALL come from its category's mark. A typed brand SHALL match a listed brand ignoring capitals and spaces at either end. [Q 18]
 
 #### Scenario: The Trek's brand
 - **WHEN** the Owner sets the Trek Domane AL 3's brand to Trek
 - **THEN** its page shows "Brand Trek" and "Warranty: Frame lifetime · Components 2 years", from Trek's lines
 
 #### Scenario: A Trek e-bike
-- **WHEN** a Trek product is marked as an e-bike
+- **WHEN** a Trek product is in a category marked E-bikes
 - **THEN** its page's warranty adds "Electronics 2 years"
 
 #### Scenario: A brand not in the list

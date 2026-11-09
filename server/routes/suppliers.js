@@ -7,6 +7,7 @@ import { prepare, dbExec } from '../db.js';
 import { runSync } from '../suppliers/index.js';
 import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
+import { bikeKinds } from '../lib/bikes.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { poundsOf } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
@@ -179,7 +180,7 @@ export function register(route) {
         throw err;
       }
       const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
-      sendJson(res, 201, serializeProduct(product, await canSeeCosts(req)));
+      sendJson(res, 201, serializeProduct(product, await canSeeCosts(req), await bikeKinds()));
     } catch (err) {
       if (err.code === '23505') return badRequest(res, `SKU or barcode "${item.supplier_sku}" is already in use`);
       throw err;
