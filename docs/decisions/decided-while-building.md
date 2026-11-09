@@ -2354,6 +2354,12 @@ Your 27 Oct answer 2 left five details to settle when the restock list was built
 10. **Undo** puts back every price the change made that is still as it left it, and leaves alone any changed since, saying "Prices put back · [n] products · [n] changed since, left as they are" (not drawn). It works once, and the server allows it at any time; the screen offers it until the next change or until the page is left.
 11. **The message after** reads "Prices changed · [n] products", [n] counting each size that changed as one.
 
+### 9 Nov 2026: the plan for finishing Customers (WP-3.2; `openspec/changes/finish-customers`; Jack's 9 Nov answers 3 and 4)
+
+1. **A product's brand is a new field.** Nothing recorded brand before (no column, no drawing). It is free text, picked from Bike warranties' brands or typed, and matched to them ignoring capitals and spaces at either end. *Pattern:* a product's supplier, matched to the suppliers list by name (your 4 Nov answer 10).
+2. **Bike warranties live in Settings › Stockroom,** a fold after Categories, each brand's lines in its own box, the Owner's to change. *Pattern:* Settings › Stockroom › Categories (piece 8).
+3. **"E-bike" is a yes/no** on a product and on a customer's bike, since nothing marked one before and the Electronics line needs it.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
