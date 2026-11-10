@@ -7,6 +7,7 @@ import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
 import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
 import { penceText } from '@/lib/cash-count.ts';
+import { HOW, dayText } from '@/screens/customers/privacy-requests.tsx';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ type Attention =
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'day_not_closed'; day: string; checkId: number; checkDay: string; countedByName: string; checkedAt: string; tillCode: string | null }
   | { kind: 'below_zero'; count: number; takeId: number | null }
+  | { kind: 'delete_request'; requestId: number; reference: string; customerName: string | null; source: 'account' | 'shop'; how: keyof typeof HOW | null; askedOn: string; dueBy: string }
   | { kind: 'restock_new'; count: number; forJobs: number }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
@@ -282,6 +284,18 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${i.reference} · ${i.customerName ?? 'No customer'} — ready since ${shortDate(i.readySince)}`}
           sub={<>{sub}{i.phone ? <>{sub ? ' · ' : ''}<a href={`tel:${i.phone.replace(/\s+/g, '')}`} className="whitespace-nowrap text-inherit">{mono(i.phone)}</a></> : null}</>}
           right={<Button size={touch ? 'default' : 'sm'} className={touch ? 'min-h-11' : undefined} disabled={contacting.has(i.jobId)} aria-label={`Contacted: ${i.reference}`} onClick={() => void contacted(i.jobId)}>Contacted</Button>} />
+      );
+    }
+    // ac-today: a request to delete an account, until it's done or cancelled
+    // (finish-account design 5; question 11: "their"). Open goes to Privacy requests.
+    if (i.kind === 'delete_request') {
+      const who = i.customerName ?? i.reference;
+      const from = i.source === 'account' ? 'From their account on the website' : i.how ? `Asked ${HOW[i.how]}` : 'Asked';
+      return (
+        <Line key={`p${i.requestId}`} lead={warn}
+          title={`${who} asked us to delete their account`}
+          sub={`${from}, ${dayText(i.askedOn)} · answer by ${dayText(i.dueBy)}`}
+          right={<Link to={ROUTES['cs-privacy']} aria-label={`Open ${who}’s request`} className={linkButton(touch)}>Open</Link>} />
       );
     }
     if (i.kind === 'quote_no_answer') {

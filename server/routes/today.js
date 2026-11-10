@@ -16,6 +16,7 @@ import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
 import { TILL_ORDER } from '../till/this-till.js';
 import { restockList, newSince } from '../lib/restock.js';
+import { openDeletions } from '../privacy-requests.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -173,6 +174,13 @@ async function tillsToday() {
   });
 }
 
+// A request to delete an account, while it's open (ac-today; finish-account
+// design 5): "[name] asked us to delete their account" (question 11: "their",
+// as no pronouns are recorded), with Open to Privacy requests.
+async function deleteRequests() {
+  return (await openDeletions()).map((r) => ({ kind: 'delete_request', ...r }));
+}
+
 export function register(route) {
   // Anyone who can open Today (decision 4: Staff see Who's in).
   // screens: op-today, op-today-staff, op-today-late
@@ -194,7 +202,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id))] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id))] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision

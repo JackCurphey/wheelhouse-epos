@@ -13,6 +13,7 @@ import { STAGE_TEXT } from './pending-rules.ts';
 import type { BookingStage } from './pending-query.ts';
 import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
 import { NOT_FOUND, ReceiptDialog, type ReceiptRef } from './receipt-dialog.tsx';
+import { DetailsDialog } from './details-dialog.tsx';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -513,9 +514,11 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 function DetailsCard({ me, shopSlug }: { me: Me; shopSlug: string }) {
   const idBase = React.useId();
   const [changing, setChanging] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   const onOff = (on: boolean) => (on ? 'On' : 'Off');
   return (
-    <Card id={`${idBase}-details`} title="Your details">
+    <Card id={`${idBase}-details`} title="Your details"
+      aside={<button type="button" aria-label="Edit your details" onClick={() => setEditing(true)} className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Edit</button>}>
       <div>
         <Row k="Name" v={me.name ?? ''} />
         <Row k="Mobile" v={<span className="font-[family-name:var(--wh-font-mono)]">{me.phone ?? ''}</span>} />
@@ -532,6 +535,7 @@ function DetailsCard({ me, shopSlug }: { me: Me; shopSlug: string }) {
         <Row k="Offers and news" v={onOff(me.marketingPermission)} />
       </div>
       {changing ? <ContactBox me={me} shopSlug={shopSlug} onClose={() => setChanging(false)} /> : null}
+      {editing ? <DetailsDialog me={me} shopSlug={shopSlug} onClose={() => setEditing(false)} /> : null}
     </Card>
   );
 }

@@ -755,6 +755,11 @@ const holdOwnCustomer = (ctx, mode) => db.prepare(
     FOR ${mode === 'update' ? 'NO KEY UPDATE' : 'SHARE'} OF c`
 ).get(ctx.login.id);
 const SIGN_IN_AGAIN = { error: 'Please sign in again.' };
+// A mobile as typed: digits with spaces, brackets, dashes or a leading +, 10
+// to 15 digits (decided while building, 10 Nov: nothing checked a number's
+// shape before; the words follow the receipt email's).
+const MOBILE_WORDS = 'That doesn’t look like a mobile number — check it';
+const looksLikeMobile = (s) => /^\+?[\d\s()-]+$/.test(s) && (s.match(/\d/g)?.length ?? 0) >= 10 && (s.match(/\d/g)?.length ?? 0) <= 15;
 
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
@@ -913,6 +918,56 @@ export function register(route) {
     `UPDATE privacy_requests SET cancelled_at = now()
       WHERE customer_id = ? AND kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL RETURNING id`
   ).get(customerId)));
+
+  // Edit your details (finish-account design 6; Jack's answer 3): the name
+  // and the mobile, each saved as sent. The email changes only by a code sent
+  // to the new address (…/me/email).
+  // screens: ac-account
+  route('PUT', '/api/portal/:shopSlug/me', async (req, res, params) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req).catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the changes as an object');
+    const sets = [];
+    const args = [];
+    if (body.name !== undefined) {
+      const name = typeof body.name === 'string' ? body.name.replace(/\s+/g, ' ').trim() : '';
+      if (!name) return badRequest(res, 'Enter your name');
+      sets.push('name = ?');
+      args.push(name);
+    }
+    let phone;
+    if (body.phone !== undefined) {
+      if (body.phone !== null && typeof body.phone !== 'string') return badRequest(res, MOBILE_WORDS);
+      phone = (body.phone ?? '').trim();
+      if (phone && !looksLikeMobile(phone)) return badRequest(res, MOBILE_WORDS);
+      sets.push('phone = ?');
+      args.push(phone || null);
+    }
+    if (!sets.length) return badRequest(res, 'Nothing to change');
+    let saved;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'update');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      // No mobile while job updates go by text or WhatsApp (How we contact you's words).
+      if (phone === '' && (await db.prepare('SELECT update_channel FROM customers WHERE id = ?').get(held.id))?.update_channel !== 'email') {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
+      }
+      saved = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING name, phone`).get(...args, held.id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { name: saved.name, phone: saved.phone || null });
+  });
 
   // How we contact you (openspec/changes/how-we-contact-you design 1; account
   // and reminders decision 6): any of the way job updates go and the three

@@ -4968,3 +4968,20 @@ From the independent review, 28 Oct:
    it, and the figure is the one in the supplier's own feed, not a count of
    the shop's shelf. Adding a product by hand with stock does write a line
    (`server/routes/products.js:170-173`). Left as it is for Jack to say.
+
+### 10 Nov 2026: Edit your details, name and mobile (`openspec/changes/finish-account` group 5, `ac-account`)
+
+Decided here, for Jack to overrule.
+
+1. **The Edit box isn't drawn.** "Edit" beside Your details opens a box
+   titled "Edit your details" with Name, Mobile and Email, Cancel and Save.
+   Save keeps the name and mobile straight away, then closes. Email is shown
+   but can't be changed yet; changing it by a code comes in the next pull
+   request. *Pattern:* How we contact you's box, and Add a bike's fields and
+   buttons.
+2. **What counts as a bad mobile:** digits, with spaces, brackets, dashes
+   or a + in front, and 10 to 15 digits in all. Anything else gets "That
+   doesn’t look like a mobile number — check it". Nothing in the app checked
+   a phone number's shape before; the booking only checks one is there. The
+   words follow the receipt email's "That doesn’t look like an email address
+   — check it".

@@ -164,3 +164,17 @@ test('on a computer the cards are two columns, Needs attention on the left', asy
   assert.ok(attention.parentElement !== work.parentElement, 'each card should have its own column');
   assert.ok(attention.parentElement.nextElementSibling === work.parentElement, 'Needs attention should be the left column');
 });
+
+// A request to delete an account (ac-today; finish-account design 5; question 11: "their").
+test('an open request to delete reads as drawn, with Open to Privacy requests; one logged in person says so', async () => {
+  const WEB = { kind: 'delete_request', requestId: 3, reference: 'PR-3', customerName: 'Maya Patel', source: 'account', how: null, askedOn: '2026-10-19', dueBy: '2026-11-19' };
+  const SHOP = { kind: 'delete_request', requestId: 4, reference: 'PR-4', customerName: null, source: 'shop', how: 'in_person', askedOn: '2026-10-20', dueBy: '2026-11-20' };
+  const { ui } = await openToday({ items: [WEB, SHOP] });
+  assert.ok((await ui.findByRole('heading', { name: 'Needs attention · 2' })) !== null);
+  const box = await card(ui, 'Needs attention · 2');
+  assert.ok(box.queryByText('Maya Patel asked us to delete their account') !== null);
+  assert.ok(box.queryByText('From their account on the website, Mon 19 Oct · answer by Thu 19 Nov') !== null);
+  assert.equal(box.getByRole('link', { name: 'Open Maya Patel’s request' }).getAttribute('href'), '/workshop/customers/privacy');
+  assert.ok(box.queryByText('PR-4 asked us to delete their account') !== null);
+  assert.ok(box.queryByText('Asked in person, Tue 20 Oct · answer by Fri 20 Nov') !== null);
+});
