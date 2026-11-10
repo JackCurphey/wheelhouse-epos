@@ -5045,3 +5045,7 @@ Decided here, for Jack to overrule.
    counts towards the kept record's credit and what it owes. *Pattern:* the
    customer page's balance, which sums every record merged in
    (`chainIds`).
+2. **A customer removed from the list** (the older Remove, which hides them
+   from Customers without deleting their details) has no row, as a deleted
+   one has none. *Pattern:* the Customers list, which shows only those not
+   removed.

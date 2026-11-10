@@ -142,10 +142,12 @@ test('Customers: one row per customer, with groups, company details and their ye
   assert.equal(f['Owed on account (£)'], '40.00');
 });
 
-test('Customers: a deleted and a merged-away customer have no row; the kept record carries what was merged in', async (t) => {
+test('Customers: a deleted, a removed and a merged-away customer have no row; the kept record carries what was merged in', async (t) => {
   const gone = (await staff('/api/customers', { method: 'POST', body: { name: 'Deleted Person' } })).body;
   const kept = (await staff('/api/customers', { method: 'POST', body: { name: 'Kept Record' } })).body;
   const away = (await staff('/api/customers', { method: 'POST', body: { name: 'Merged Away' } })).body;
+  const removed = (await staff('/api/customers', { method: 'POST', body: { name: 'Removed From List' } })).body;
+  await staff(`/api/customers/${removed.id}`, { method: 'DELETE' });
   await inShop(async () => {
     await prepare("UPDATE customers SET deleted_at = now(), name = '' WHERE id = ?").run(gone.id);
     await prepare('UPDATE customers SET merged_into_id = ? WHERE id = ?').run(kept.id, away.id);
@@ -153,6 +155,7 @@ test('Customers: a deleted and a merged-away customer have no row; the kept reco
   });
   const rows = rowsOf((await filesFor(t))['Customers.csv']);
   assert.equal(rows.filter((r) => r.Name === 'Merged Away').length, 0);
+  assert.equal(rows.filter((r) => r.Name === 'Removed From List').length, 0, 'one removed from the list has no row, as on Customers');
   assert.equal(rows.filter((r) => r.Name === '' || r.Name === 'Deleted Person').length, 0);
   assert.equal(rows.find((r) => r.Name === 'Kept Record')['Store credit (£)'], '5.00');
 });

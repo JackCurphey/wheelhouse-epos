@@ -21,12 +21,12 @@ const DAY = "'YYYY-MM-DD'";
 
 /**
  * Customers.csv: one row per customer not deleted and not merged into another
- * record (design 6). Store credit and what's owed include any record merged in.
+ * record (design 6), nor removed from the list (active = 0), as Customers shows them. Store credit and what's owed include any record merged in.
  */
 async function customersFile(zone) {
   const rows = await prepare(
     `WITH RECURSIVE kept AS (
-       SELECT id, id AS root FROM customers WHERE merged_into_id IS NULL AND deleted_at IS NULL
+       SELECT id, id AS root FROM customers WHERE merged_into_id IS NULL AND deleted_at IS NULL AND active = 1
        UNION SELECT c.id, kept.root FROM customers c JOIN kept ON c.merged_into_id = kept.id
      ),
      credit AS (SELECT k.root, sum(e.change_pence) AS pence FROM store_credit_entries e JOIN kept k ON k.id = e.customer_id GROUP BY k.root),
@@ -42,7 +42,7 @@ async function customersFile(zone) {
        LEFT JOIN groups ON groups.customer_id = c.id
        LEFT JOIN credit ON credit.root = c.id
        LEFT JOIN owed ON owed.root = c.id
-      WHERE c.merged_into_id IS NULL AND c.deleted_at IS NULL
+      WHERE c.merged_into_id IS NULL AND c.deleted_at IS NULL AND c.active = 1
       ORDER BY c.name, c.id`
   ).all(zone, zone);
   return csvOf([
