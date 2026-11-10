@@ -7,7 +7,25 @@ import { defineConfig } from '@playwright/test';
 // `app` container, built from whatever the image was last built from. Reusing
 // whatever answers a port would test that old code and pass or fail for
 // reasons unrelated to the working tree.
-const PORT = 8091;
+//
+// A free port per run, not a fixed one: several sessions test at once on one
+// Mac, each in its own worktree, and with 8091 for all a second browser run
+// stopped at once ("already used", 10 Nov). The run picks it and keeps it in
+// WH_BROWSER_PORT, so its workers, which load this file again, use the same
+// one (tests/playwright-port.test.js).
+async function freePort(): Promise<string> {
+  const { createServer } = await import('node:net');
+  return new Promise((resolve, reject) => {
+    const probe = createServer();
+    probe.on('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address() as { port: number };
+      probe.close(() => resolve(String(port)));
+    });
+  });
+}
+process.env.WH_BROWSER_PORT ||= await freePort();
+const PORT = Number(process.env.WH_BROWSER_PORT);
 
 export default defineConfig({
   testDir: 'tests/browser',
