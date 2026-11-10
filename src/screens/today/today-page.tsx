@@ -294,7 +294,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       return (
         <Line key={`p${i.requestId}`} lead={warn}
           title={`${who} asked us to delete their account`}
-          sub={`${from}, ${dayText(i.askedOn)} · answer by ${dayText(i.dueBy)}`}
+          sub={`${from}${from === 'Asked' ? '' : ','} ${dayText(i.askedOn)} · answer by ${dayText(i.dueBy)}`}
           right={<Link to={ROUTES['cs-privacy']} aria-label={`Open ${who}’s request`} className={linkButton(touch)}>Open</Link>} />
       );
     }

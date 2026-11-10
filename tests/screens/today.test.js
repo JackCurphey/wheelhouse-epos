@@ -178,3 +178,10 @@ test('an open request to delete reads as drawn, with Open to Privacy requests; o
   assert.ok(box.queryByText('PR-4 asked us to delete their account') !== null);
   assert.ok(box.queryByText('Asked in person, Tue 20 Oct · answer by Fri 20 Nov') !== null);
 });
+
+test('a request the shop logged without saying how reads “Asked [date]”', async () => {
+  const OLD = { kind: 'delete_request', requestId: 5, reference: 'PR-5', customerName: 'Jamie Brooks', source: 'shop', how: null, askedOn: '2026-10-19', dueBy: '2026-11-19' };
+  const { ui } = await openToday({ items: [OLD] });
+  const box = await card(ui, (await ui.findByRole('heading', { name: 'Needs attention · 1' })).textContent);
+  assert.ok(box.queryByText('Asked Mon 19 Oct · answer by Thu 19 Nov') !== null);
+});
