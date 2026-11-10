@@ -179,9 +179,12 @@ here before starting it, so two people never build the same one):
   warranty (#653); a bike's warranty on its page, the customer's Bikes and the
   account, and Edit bike's Bought here on (#654); logging a privacy request by
   hand, sending the fuller copy, and writing off store credit on deletion (#655).
-  The gaps and defaults are in Jack's 9 Nov section of `decided-while-building.md`.
-  **Now (10 Nov):** open, `finish-customers` 7b: Log a request and Send the copy on
-  Privacy requests, with the archive (#656). WP-1.5 is in apart from piece 7, which
+  Merged 10 Nov: + Log a request and Send the copy on Privacy requests, and the
+  `finish-customers` archive (#656). The gaps and defaults are in Jack's 9 Nov
+  section of `decided-while-building.md`.
+  **Now (10 Nov):** `finish-customers` is built and archived; the till's half of
+  store credit and accounts is a later piece (answer 1). Next in the plan is
+  `finish-account` (WP-4.5, #646). WP-1.5 is in apart from piece 7, which
   waits for a real export; WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
   a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
