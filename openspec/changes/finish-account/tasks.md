@@ -38,7 +38,7 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 - [x] 7.1 Tests first: Settings › Shop details "Privacy notice", Owner only, saves, changes and removes the shop's words; `GET …/privacy` returns them or 404; Your data shows "Privacy notice" only when there is one, opening `/book/<shop>/privacy` with the words and line breaks as typed. Verify: each fails first.
 - [x] 7.2 The setting in `server/routes/shop-settings.js` and its screen; `src/screens/book/privacy.tsx`; the link in `account.tsx`. Verify: 7.1 passes.
-- [ ] 7.3 Walk the built piece against every requirement in this change's specs and the drawings (`ac-receipt`, `ac-receipt-sent`, `ac-account`, `ac-account-lower`, `ac-reminder-landing`, `ac-today`, `bk-bookings`) and Jack's 9 Nov answers; say in the pull request which are met, dropped or changed. Verify: the list is in the pull request description.
+- [x] 7.3 Walk the built piece against every requirement in this change's specs and the drawings (`ac-receipt`, `ac-receipt-sent`, `ac-account`, `ac-account-lower`, `ac-reminder-landing`, `ac-today`, `bk-bookings`) and Jack's 9 Nov answers; say in the pull request which are met, dropped or changed. Verify: the list is in the pull request description.
 
 ## Workflow follow-up
 
