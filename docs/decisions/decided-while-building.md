@@ -4986,7 +4986,8 @@ Decided here, for Jack to overrule.
    filled in from your reminder: Maya P. · 07700 ••• 142 · Change" takes the
    place of the two boxes; Change brings them back. How to send updates, the
    reminder tick and the terms are asked as usual. This follows the box drawn
-   on "When?".
+   on "When?". When her record has no mobile, job updates start on Email,
+   since there's no mobile box to fill in.
 3. **"From your reminder: booking the next …" shows only while that's still
    what's chosen.** Once she picks another service or changes the bike, that
    line goes, because it would be wrong. The details line stays until Change.

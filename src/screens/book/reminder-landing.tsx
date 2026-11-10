@@ -6,6 +6,7 @@ import { BookFrame } from './frame.tsx';
 import { useDraft, type BookingDraft } from './draft.tsx';
 import { hasProblem } from './require-draft.tsx';
 import { useServices } from './services-query.ts';
+import { detailsFromReminder } from './details-rules.ts';
 
 /**
  * A service reminder's booking link (openspec/changes/finish-account design 4;
@@ -48,6 +49,8 @@ export function ReminderLandingScreen() {
     const draft: BookingDraft = {
       ...(v.serviceId ? { serviceIds: [v.serviceId] } : {}),
       ...(v.bikeLabel ? { bikeNote: v.bikeLabel } : {}),
+      // No mobile on her record: updates start on email, as there's no box to type one (review).
+      ...(v.details.name !== null && v.details.phone === null ? { updateChannel: 'email' as const } : {}),
       reminder: {
         code, serviceId: v.serviceId, serviceName: v.serviceName, bikeId: v.bikeId, bikeLabel: v.bikeLabel,
         name: v.details.name, phone: v.details.phone, details: v.details.name !== null,
@@ -66,9 +69,6 @@ export function ReminderLandingScreen() {
     </BookFrame>
   );
 }
-
-/** Whether the booking goes with the reminder's details instead of typed ones. */
-export const detailsFromReminder = (draft: BookingDraft) => draft.reminder?.details === true;
 
 /**
  * The drawn box (ac-reminder-landing): what the reminder chose, while it's
@@ -95,6 +95,7 @@ export function ReminderNote({ detailsOnly = false }: { detailsOnly?: boolean })
           {' · '}
           <button
             type="button"
+            aria-label="Change your details"
             className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-[var(--wh-ink)] underline"
             onClick={() => update({ reminder: { ...r, details: false } })}
           >

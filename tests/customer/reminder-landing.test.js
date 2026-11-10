@@ -61,6 +61,19 @@ test('a service with a question still to answer opens the bike step', async () =
   assert.ok((await ui.findByText('At /book/north/problem')) !== null);
 });
 
+test('with no mobile on her record, job updates start on email, so nothing asks for a mobile it can’t show', async () => {
+  const { ui, readDraft } = await land({ ...LINK, details: { name: 'Maya P.', phone: null } });
+  assert.ok((await ui.findByText('At /book/north/date')) !== null);
+  assert.equal(readDraft().updateChannel, 'email');
+});
+
+test('the code isn’t in the copy kept on the device for later, only in the tab', async () => {
+  const { ui } = await land(LINK);
+  await ui.findByText('At /book/north/date');
+  const later = JSON.parse(window.localStorage.getItem('wh-book-draft-later:north'));
+  assert.deepEqual(later.draft, { serviceIds: [7], bikeNote: BIKE });
+});
+
 test('a code that doesn’t work opens Book a repair as for anyone, with nothing filled', async () => {
   const { ui, readDraft } = await land(() => ({ status: 404, body: { error: 'This link doesn’t work' } }), { draft: { serviceIds: [7] } });
   assert.ok((await ui.findByText('At /book/north')) !== null);
@@ -88,7 +101,7 @@ test('Change clears the filled details; a service chosen instead drops the first
   const { fireEvent } = await rtl();
   const box = await ui.findByText((_, el) => el?.tagName === 'P' && text(el).startsWith('Your details are filled in'));
   assert.ok(!text(box).includes('From your reminder: booking'));
-  fireEvent.click(ui.getByRole('button', { name: 'Change' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Change your details' }));
   assert.equal(readDraft().reminder.details, false);
   assert.ok(ui.queryByText((_, el) => el?.tagName === 'P' && text(el).startsWith('Your details are filled in')) === null);
 });
@@ -117,6 +130,14 @@ test('booking from it skips typing details: it sends the code and her bike, no n
   assert.equal(body.bikeId, 31);
   assert.equal(body.bikeNote, undefined);
   assert.deepEqual([body.guestName, body.guestPhone], ['', '']);
+});
+
+test('Change on the details step brings back name and mobile', async () => {
+  const { ui, readDraft } = await onDetails(DETAILS_DRAFT);
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('button', { name: 'Change your details' }));
+  assert.ok((await ui.findByRole('textbox', { name: /Your name/ })) !== null);
+  assert.equal(readDraft().reminder.details, false);
 });
 
 test('after Change, the details step asks as for anyone and sends no code', async () => {

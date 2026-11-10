@@ -116,7 +116,11 @@ function readLater(shopSlug: string): Later | null {
   }
 }
 
-function writeLater(shopSlug: string, draft: BookingDraft, step: string | undefined) {
+function writeLater(shopSlug: string, whole: BookingDraft, step: string | undefined) {
+  // A reminder's code stays in the tab only: kept on the device, the next
+  // person on a shared computer would be offered a booking in her name (review).
+  const draft = { ...whole };
+  delete draft.reminder;
   try {
     if (Object.keys(draft).length === 0) window.localStorage.removeItem(laterKey(shopSlug));
     else window.localStorage.setItem(laterKey(shopSlug), JSON.stringify({ draft, savedAt: new Date().toISOString(), ...(step !== undefined ? { step } : {}) }));

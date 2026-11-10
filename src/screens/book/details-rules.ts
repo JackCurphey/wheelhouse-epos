@@ -107,11 +107,14 @@ export const looksLikeEmail = (s: string) => /^[^\s@]+@[^\s@]+$/.test(s);
 
 const blank = (s: string | undefined) => (s ?? '').trim() === '';
 
+/** Whether the booking goes with a reminder's details instead of typed ones (finish-account design 4). */
+export const detailsFromReminder = (draft: BookingDraft) => draft.reminder?.details === true;
+
 /** Every field's problem, in screen order; empty when Request booking can go on. */
 export function fieldErrors(draft: BookingDraft): FieldProblem[] {
   const problems: FieldProblem[] = [];
   // Filled in from a reminder: nothing to type (finish-account design 4).
-  const filled = draft.reminder?.details === true;
+  const filled = detailsFromReminder(draft);
   if (!filled && blank(draft.name)) problems.push({ field: 'name', message: FIELD_MESSAGES.name });
   if (!filled && blank(draft.phone)) problems.push({ field: 'phone', message: FIELD_MESSAGES.phone });
   const email = (draft.email ?? '').trim();
@@ -214,7 +217,7 @@ export function bookingBody(services: ServicesResponse, draft: BookingDraft, pho
   const email = draft.email?.trim();
   // From a reminder with its details: the booking is her record's, and her
   // bike goes as itself while it's still the one chosen (finish-account design 4).
-  const reminder = draft.reminder?.details ? draft.reminder : null;
+  const reminder = detailsFromReminder(draft) ? draft.reminder ?? null : null;
   const bikeId = reminder?.bikeId && draft.bikeNote === reminder.bikeLabel ? reminder.bikeId : null;
   const bikeNote = bikeId ? undefined : draft.bikeNote?.trim();
   return {

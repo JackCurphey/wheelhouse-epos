@@ -17,10 +17,10 @@ import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
 import { photosBase64, sendBooking } from './send.ts';
-import { ReminderNote, detailsFromReminder } from './reminder-landing.tsx';
+import { ReminderNote } from './reminder-landing.tsx';
 import { DepositPart, HOLD_FAILED, PAY_AGAIN, payCard, pounds, serverCode, useDepositHold, type DepositHold, type PayState } from './deposit.tsx';
 import {
-  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
+  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, detailsFromReminder, dropoffWindowOn, emailLabel, fieldErrors,
   newRequestKey, refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
 } from './details-rules.ts';
 
