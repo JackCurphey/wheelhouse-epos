@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Navigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { BookFrame } from './frame.tsx';
@@ -35,13 +35,18 @@ export function ReminderLandingScreen() {
     retry: false,
     staleTime: Infinity,
   });
-  const [to, setTo] = React.useState<string | null>(null);
+  const navigate = useNavigate();
+  const gone = React.useRef(false);
 
   React.useEffect(() => {
-    if (to !== null) return;
+    if (gone.current) return;
+    const go = (to: string) => {
+      gone.current = true;
+      void navigate(`/book/${shopSlug}${to ? `/${to}` : ''}`, { replace: true });
+    };
     // A code that doesn't work, or a shop not taking bookings: Book a repair, which says so.
     if (link.isError || services.isError) {
-      setTo('');
+      go('');
       return;
     }
     if (!link.data || !services.data) return;
@@ -59,10 +64,9 @@ export function ReminderLandingScreen() {
     // A fresh booking: anything in progress, or kept from an earlier visit, gives way.
     clear();
     update(draft);
-    setTo(!v.serviceId ? '' : !v.bikeId || !hasProblem(draft, services.data) ? 'problem' : 'date');
-  }, [to, link.isError, link.data, services.isError, services.data, code, clear, update]);
+    go(!v.serviceId ? '' : !v.bikeId || !hasProblem(draft, services.data) ? 'problem' : 'date');
+  }, [link.isError, link.data, services.isError, services.data, code, shopSlug, clear, update, navigate]);
 
-  if (to !== null) return <Navigate to={`/book/${shopSlug}${to ? `/${to}` : ''}`} replace />;
   return (
     <BookFrame title="Book a repair">
       <p role="status" className="m-0">Loading…</p>
