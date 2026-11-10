@@ -17,9 +17,10 @@ import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
 import { photosBase64, sendBooking } from './send.ts';
+import { ReminderNote } from './reminder-landing.tsx';
 import { DepositPart, HOLD_FAILED, PAY_AGAIN, payCard, pounds, serverCode, useDepositHold, type DepositHold, type PayState } from './deposit.tsx';
 import {
-  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
+  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, SEND_FAILED, bookingBody, channelOf, detailsFromReminder, dropoffWindowOn, emailLabel, fieldErrors,
   newRequestKey, refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
 } from './details-rules.ts';
 
@@ -159,6 +160,9 @@ function DetailsForm({ services, back, onExit }: FormProps) {
     } catch (err) {
       const route = refusalRoute(err);
       const code = serverCode(err);
+      // The reminder's link stopped working: its words are shown, and the
+      // details step asks as for anyone (finish-account design 4).
+      if (code === 'reminder_expired') update({ reminder: undefined });
       if (code === 'deposit_changed' || code === 'deposit_not_held') {
         // Paid for another amount, or not held after all: ask for the hold
         // and the card again (design 4).
@@ -248,10 +252,15 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       }
     >
       <Summary services={services} draft={draft} deposit={hold} />
-      <TextField id={ids.name} label="Your name" autoComplete="name" required value={draft.name}
-        error={errorFor('name')} onChange={(name) => update({ name })} />
-      <TextField id={ids.phone} label="Mobile number" type="tel" autoComplete="tel" required value={draft.phone}
-        error={errorFor('phone')} onChange={(phone) => update({ phone })} />
+      {/* Filled in from a reminder: the drawn line in place of name and mobile, with Change (decided while building). */}
+      {detailsFromReminder(draft) ? <ReminderNote detailsOnly /> : (
+        <>
+          <TextField id={ids.name} label="Your name" autoComplete="name" required value={draft.name}
+            error={errorFor('name')} onChange={(name) => update({ name })} />
+          <TextField id={ids.phone} label="Mobile number" type="tel" autoComplete="tel" required value={draft.phone}
+            error={errorFor('phone')} onChange={(phone) => update({ phone })} />
+        </>
+      )}
       <PillGroup
         legend="How should we send updates?"
         options={CHANNEL_OPTIONS}

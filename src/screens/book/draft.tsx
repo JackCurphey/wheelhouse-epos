@@ -64,6 +64,20 @@ export type BookingDraft = {
   // (deposit-pay-screen), so a retry or a refresh sends without paying
   // again; a new hold has a new ref, so it's paid afresh.
   depositHeld?: string;
+  // From a service reminder's link (finish-account design 4): its code, what
+  // it chose, and the customer's details partly hidden ("Maya P.", "07700 •••
+  // 142"). While `details` is true the booking goes with her record's details
+  // instead of typed ones; Change sets it false and the details step asks.
+  reminder?: {
+    code: string;
+    serviceId: number | null;
+    serviceName: string | null;
+    bikeId: number | null;
+    bikeLabel: string | null;
+    name: string | null;
+    phone: string | null;
+    details: boolean;
+  };
 };
 
 type DraftApi = {
@@ -102,7 +116,11 @@ function readLater(shopSlug: string): Later | null {
   }
 }
 
-function writeLater(shopSlug: string, draft: BookingDraft, step: string | undefined) {
+function writeLater(shopSlug: string, whole: BookingDraft, step: string | undefined) {
+  // A reminder's code stays in the tab only: kept on the device, the next
+  // person on a shared computer would be offered a booking in her name (review).
+  const draft = { ...whole };
+  delete draft.reminder;
   try {
     if (Object.keys(draft).length === 0) window.localStorage.removeItem(laterKey(shopSlug));
     else window.localStorage.setItem(laterKey(shopSlug), JSON.stringify({ draft, savedAt: new Date().toISOString(), ...(step !== undefined ? { step } : {}) }));

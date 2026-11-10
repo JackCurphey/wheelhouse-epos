@@ -57,3 +57,11 @@ export const ACCOUNT_ROUTE = '/book/:shopSlug/account';
  * the shop, by her sign-in. The shop's "Reply to a message" links here.
  */
 export const MESSAGES_ROUTE = '/book/:shopSlug/messages';
+
+/**
+ * A service reminder's booking link (openspec/changes/finish-account design 4;
+ * ac-reminder-landing): fills a booking from the reminder, with no sign-in.
+ * The server's reminderBookPath (server/messaging/reminder-links.js) gives the
+ * same address.
+ */
+export const REMINDER_BOOK_ROUTE = '/book/:shopSlug/from-reminder/:code';
