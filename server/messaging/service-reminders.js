@@ -11,10 +11,12 @@ import { channelFor, queueMessage, whyNotQueued } from './engine.js';
 import { render, templateFor } from './templates.js';
 import { stopLink } from './stop-codes.js';
 import { messageLink } from '../workshop/job-messages.js';
+import { reminderBookLink, REMINDER_LINK } from './reminder-links.js';
 
 const KEY = 'service_reminder';
-// Links read "[link]" while sending is pretend, as messageLink's do: the
-// booking landing and the stop page come in later pieces.
+// Links read "[link]" while sending is pretend, as messageLink's do. The
+// booking link (finish-account design 4) is made with the reminder and found
+// again in its words when it goes.
 const LINK = '[link]';
 // Added after the shop's wording, so it can't be taken off (drawn: "It can't
 // be taken off"); its link is the customer's stop page (stop-reminders),
@@ -26,7 +28,7 @@ const LIVE = LIVE_BOOKING_STATES.map((s) => `'${s}'`).join(', ');
 /** The job's service with the fewest reminder months, then the first in its order (answer 2); null with none. */
 function soonestService(jobId) {
   return prepare(
-    `SELECT s.name, s.reminder_months AS months FROM workshop_job_services js
+    `SELECT s.id, s.name, s.reminder_months AS months FROM workshop_job_services js
        JOIN workshop_services s ON s.id = js.service_id
       WHERE js.workshop_job_id = ? AND s.reminder_months IS NOT NULL
       ORDER BY s.reminder_months, js.position LIMIT 1`
@@ -59,7 +61,7 @@ export async function dueAt(jobId, { months = 0, days = 0 }) {
 }
 
 /** The words' tap-ins, as they are now. */
-async function reminderVars(jobId, shopId, serviceName) {
+async function reminderVars(jobId, shopId, serviceName, bookLink = LINK) {
   const job = await prepare(
     `SELECT c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label
        FROM workshop_jobs w LEFT JOIN customers c ON c.id = w.customer_id
@@ -73,7 +75,7 @@ async function reminderVars(jobId, shopId, serviceName) {
     Bike: job?.bike_label || null,
     Service: serviceName,
     'Shop name': shop.name,
-    'Link to book': LINK,
+    'Link to book': bookLink,
   };
 }
 
@@ -100,12 +102,12 @@ export async function queueServiceReminder(jobId, shopId, base) {
   const at = await dueAt(jobId, { months: service.months });
   // The stop link is made now and kept with the message: the timer that sends
   // it has no request to make one from (stop-reminders design 2).
-  const link = await messageLink(async () => {
-    const shop = await prepare('SELECT slug FROM shops WHERE id = ?').get(shopId);
-    return stopLink(base, shop.slug, job.customer_id);
-  });
+  const slug = async () => (await prepare('SELECT slug FROM shops WHERE id = ?').get(shopId)).slug;
+  const link = await messageLink(async () => stopLink(base, await slug(), job.customer_id));
+  // Its booking link: the bike and service chosen, her details filled in (ac-reminder-landing).
+  const bookLink = await messageLink(async () => reminderBookLink(base, await slug(), { customerId: job.customer_id, bikeId: job.bike_id, serviceId: service.id, jobId }));
   const queued = await queueMessage({
-    customerId: job.customer_id, jobId, key: KEY, vars: await reminderVars(jobId, shopId, service.name),
+    customerId: job.customer_id, jobId, key: KEY, vars: await reminderVars(jobId, shopId, service.name, bookLink),
     at, ending: stopLine(link),
   });
   return queued.skipped ? null : queued;
@@ -137,7 +139,8 @@ export async function serviceReminderNow(m, shopId) {
   const how = channelFor(job);
   const service = await soonestService(job.id);
   if (!how || !service) return null;
-  const vars = await reminderVars(job.id, shopId, service.name);
+  // The booking link made with it, kept in the words it was queued with.
+  const vars = await reminderVars(job.id, shopId, service.name, REMINDER_LINK.exec(m.body ?? '')?.[0] ?? LINK);
   return {
     customerId: job.customer_id,
     body: `${render(template.wording, vars)} ${m.ending ?? STOP_LINE}`,

@@ -560,6 +560,7 @@ test('everything else of hers goes, and her till sales, orders and payments stay
   const other = (await staff('/api/customers', { method: 'POST', body: { name: '[Other name]', phone: '07700 900 999' } })).body;
   const ids = await inShop(async () => {
     await prepare("INSERT INTO reminder_stop_codes (code_hash, customer_id, kind) VALUES (?, ?, 'service_reminders')").run(randomUUID(), kit.id);
+    await prepare('INSERT INTO reminder_book_codes (code_hash, customer_id) VALUES (?, ?)').run(randomUUID(), kit.id);
     const msg = (await prepare("INSERT INTO shop_messages (name, send_when, amount, unit, by_text, by_email, wording) VALUES ('[Message]', 'after_sale', 3, 'days', true, false, '[Wording]') RETURNING id").get()).id;
     await prepare('INSERT INTO shop_message_stops (shop_message_id, customer_id) VALUES (?, ?)').all(msg, kit.id);
     await prepare('INSERT INTO customer_not_duplicates (first_id, second_id) VALUES (?, ?)').all(Math.min(kit.id, other.id), Math.max(kit.id, other.id));
@@ -592,7 +593,7 @@ test('everything else of hers goes, and her till sales, orders and payments stay
     tillPayments: await prepare('SELECT method, amount_pence FROM till_sale_payments WHERE till_sale_id = ?').all(ids.tillSale),
     salePayments: await prepare('SELECT tender_type, amount FROM sale_payments WHERE sale_id = ?').all(ids.sale),
     order: await prepare('SELECT customer_id, total, title FROM sale_documents WHERE id = ?').get(ids.order),
-    stops: await prepare('SELECT count(*)::int AS n FROM reminder_stop_codes WHERE customer_id = ?').get(kit.id),
+    stops: await prepare('SELECT ((SELECT count(*) FROM reminder_stop_codes WHERE customer_id = ?) + (SELECT count(*) FROM reminder_book_codes WHERE customer_id = ?))::int AS n').get(kit.id, kit.id),
     ownStops: await prepare('SELECT count(*)::int AS n FROM shop_message_stops WHERE customer_id = ?').get(kit.id),
     notDuplicates: await prepare('SELECT count(*)::int AS n FROM customer_not_duplicates WHERE first_id = ? OR second_id = ?').get(kit.id, kit.id),
     codes: await prepare('SELECT count(*)::int AS n FROM pretend_signin_codes WHERE lower(email) = lower(?)').get(kit.email),
