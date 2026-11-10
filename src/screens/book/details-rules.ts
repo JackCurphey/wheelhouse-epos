@@ -45,6 +45,10 @@ export type BookingBody = {
   remindMe?: true;
   // The deposit's held payment (deposit-payments design 5).
   paymentId?: number;
+  // From a service reminder's link, with its details (finish-account design 4):
+  // the code, and her bike while it's still the one chosen.
+  reminderCode?: string;
+  bikeId?: number;
 } & BookingRequestKey;
 
 export const DEFAULT_CHANNEL: UpdateChannel = 'sms';
@@ -103,11 +107,16 @@ export const looksLikeEmail = (s: string) => /^[^\s@]+@[^\s@]+$/.test(s);
 
 const blank = (s: string | undefined) => (s ?? '').trim() === '';
 
+/** Whether the booking goes with a reminder's details instead of typed ones (finish-account design 4). */
+export const detailsFromReminder = (draft: BookingDraft) => draft.reminder?.details === true;
+
 /** Every field's problem, in screen order; empty when Request booking can go on. */
 export function fieldErrors(draft: BookingDraft): FieldProblem[] {
   const problems: FieldProblem[] = [];
-  if (blank(draft.name)) problems.push({ field: 'name', message: FIELD_MESSAGES.name });
-  if (blank(draft.phone)) problems.push({ field: 'phone', message: FIELD_MESSAGES.phone });
+  // Filled in from a reminder: nothing to type (finish-account design 4).
+  const filled = detailsFromReminder(draft);
+  if (!filled && blank(draft.name)) problems.push({ field: 'name', message: FIELD_MESSAGES.name });
+  if (!filled && blank(draft.phone)) problems.push({ field: 'phone', message: FIELD_MESSAGES.phone });
   const email = (draft.email ?? '').trim();
   if ((channelOf(draft) === 'email' && !email) || (email && !looksLikeEmail(email))) {
     problems.push({ field: 'email', message: FIELD_MESSAGES.email });
@@ -204,22 +213,28 @@ export function summaryLines(services: ServicesResponse, draft: BookingDraft, wh
  * date and a real mechanic; a start time is sent only on a timed day.
  */
 export function bookingBody(services: ServicesResponse, draft: BookingDraft, photos: string[]): BookingBody {
-  const bikeNote = draft.bikeNote?.trim();
   const description = draft.description?.trim();
   const email = draft.email?.trim();
+  // From a reminder with its details: the booking is her record's, and her
+  // bike goes as itself while it's still the one chosen (finish-account design 4).
+  const reminder = detailsFromReminder(draft) ? draft.reminder ?? null : null;
+  const bikeId = reminder?.bikeId && draft.bikeNote === reminder.bikeLabel ? reminder.bikeId : null;
+  const bikeNote = bikeId ? undefined : draft.bikeNote?.trim();
   return {
     ...(draft.notSure
       ? { notSure: true as const }
       : { serviceIds: draft.serviceIds ?? [], answers: cleanAnswers(services, draft) }),
     ...(bikeNote ? { bikeNote } : {}),
+    ...(bikeId ? { bikeId } : {}),
     ...(description ? { description } : {}),
     ...(spendLimit(draft) !== null ? { spendLimit: spendLimit(draft) as number } : {}),
     photos: photos.map((dataBase64) => ({ dataBase64 })),
     jobDate: draft.date as string,
     mechanicId: draft.mechanicId as number,
     ...(draft.startTime ? { startTime: draft.startTime } : {}),
-    guestName: (draft.name ?? '').trim(),
-    guestPhone: (draft.phone ?? '').trim(),
+    guestName: reminder ? '' : (draft.name ?? '').trim(),
+    guestPhone: reminder ? '' : (draft.phone ?? '').trim(),
+    ...(reminder ? { reminderCode: reminder.code } : {}),
     ...(email ? { email } : {}),
     updateChannel: channelOf(draft),
     termsAccepted: true,
