@@ -5008,3 +5008,21 @@ Decided here, for Jack to overrule.
    a phone number's shape before; the booking only checks one is there. The
    words follow the receipt email's "That doesn’t look like an email address
    — check it".
+
+### 10 Nov 2026: the privacy notice (`openspec/changes/finish-account` group 7, `ac-account`)
+
+Decided here, for Jack to overrule.
+
+1. **The privacy notice's setting isn't drawn.** In Settings › Shop and
+   sites › Shop details, under the shop's details: "Privacy notice", the
+   line "Shown on your website account. Each shop is responsible for its own
+   policies.", and "Add your privacy notice", which opens a box with Save
+   and Cancel. Once added, its words show under the line as typed, with
+   Change and Remove. Remove takes it away at once without asking, as Booking
+   terms' "Go back to Wheelhouse’s standard terms" does. *Pattern:* Booking
+   terms (design 7 says "built as Booking terms is").
+2. **The notice's own page isn't drawn.** `/book/<shop>/privacy` opens in the
+   booking frame with the heading "Privacy notice", the shop's words with
+   their line breaks, and "← Your account" back. Opened when the shop has no
+   notice, it says "This shop hasn’t added a privacy notice yet." *Pattern:*
+   the conversation page's frame and back link.

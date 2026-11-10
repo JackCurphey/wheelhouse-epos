@@ -14,6 +14,7 @@ import type { BookingStage } from './pending-query.ts';
 import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
 import { NOT_FOUND, ReceiptDialog, type ReceiptRef } from './receipt-dialog.tsx';
 import { DetailsDialog } from './details-dialog.tsx';
+import { usePrivacyNotice } from './privacy-query.ts';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -38,7 +39,8 @@ import { DetailsDialog } from './details-dialog.tsx';
  * address ?receipt=till-<id> (openspec/changes/finish-account design 3;
  * ac-receipt, ac-receipt-sent). Older in-shop sales and repairs open no
  * receipt until step C gives those sales numbers (Jack, 9 Nov, answer 1).
- * Not built yet, so not shown: the privacy notice.
+ * Your data ends with "Privacy notice" once the shop has added one
+ * (finish-account design 7; Jack, 9 Nov, answer 2).
  */
 // An open request to delete the account: the shop's days it was asked and will be done by.
 type Deletion = { askedOn: string; finishBy: string };
@@ -295,9 +297,12 @@ const askedLine = (d: Deletion) => `You asked us to delete your account on ${lon
 
 // "Your data" (ac-account; account and reminders decision 4 and audit H3):
 // Download a copy, then Ask us to delete your account, or, while a request is
-// open, when it was asked and Cancel my request.
+// open, when it was asked and Cancel my request; then the shop's privacy
+// notice, when it has one.
 function YourDataCard({ copy, deletion, onAsk, onCancel, cancelling }: { copy: CopyState; deletion: Deletion | null; onAsk: () => void; onCancel: () => void; cancelling: boolean }) {
   const idBase = React.useId();
+  const { shopSlug = '' } = useParams();
+  const privacy = usePrivacyNotice(shopSlug);
   return (
     <Card id={`${idBase}-data`} title="Your data">
       <div className="flex flex-col items-start">
@@ -308,6 +313,7 @@ function YourDataCard({ copy, deletion, onAsk, onCancel, cancelling }: { copy: C
             <Button disabled={cancelling} onClick={onCancel}>Cancel my request</Button>
           </>
         ) : <button type="button" onClick={onAsk} className={LINK_BUTTON}>Ask us to delete your account</button>}
+        {privacy.data ? <Link to={`/book/${shopSlug}/privacy`} className={LINK_BUTTON}>Privacy notice</Link> : null}
       </div>
     </Card>
   );

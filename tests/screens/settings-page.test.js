@@ -19,6 +19,7 @@ let holdDetails = null;
 let holdSettings = null;
 let refuseHours = null;
 let termsFail = false;
+let privacy = null;
 const STANDARD_TERMS = '1. Your booking is a request.\n2. Payment is due when you collect your bike.';
 const WEEK = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, open: '09:00', close: '17:00' }));
 afterEach(async () => {
@@ -34,7 +35,7 @@ afterEach(async () => {
 const ROOM_NAME = { 'front-desk': 'Front desk', workshop: 'Workshop', office: 'Office' };
 // Checklists comes first in Settings › Workshop (Jack, 22 Oct), so the booking
 // settings these tests are about are opened, not found open.
-async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null } = {}) {
+async function openSettings({ me = OWNER, room = 'workshop', open = room === 'workshop' && me.isOwner ? 'Online booking' : null, notice = null } = {}) {
   calls = [];
   settings = { openingHours: WEEK, openingTime: '08:00', closingTime: '18:00', showSignOffToCustomers: false, fullDayThresholdMinutes: 120, bookingMode: 'timed', timedLeadMinutes: 30, minNoticeMinutes: 120, minNoticeDays: null, nextBookingMode: null, nextBookingModeFrom: null, dropoffWindowStart: '09:00', dropoffWindowEnd: '10:00', showPricesOnline: true, confirmBookingsAutomatically: false, confirmationNote: 'Please bring the lock key, and tell us about any accessories.', bookingTerms: null, blockFirst: 'bike', blockSecond: 'jobTitle', depositOn: false, depositKind: 'percent', depositPercent: null, depositFixedPence: null, depositUnknownPence: null, depositCancelHours: 24, paymentsConnected: true };
   refuseHours = null;
@@ -42,6 +43,7 @@ async function openSettings({ me = OWNER, room = 'workshop', open = room === 'wo
   putFails = false;
   details = { name: 'North Street Cycles', address: null, phone: null, email: null, vatNumber: null, receiptFooter: null };
   detailsFail = false;
+  privacy = notice;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -57,6 +59,12 @@ async function openSettings({ me = OWNER, room = 'workshop', open = room === 'wo
       return answer;
     }
     if (u.pathname === '/api/shop-details') return reply(200, details);
+    if (u.pathname === '/api/privacy-notice' && method === 'PUT') {
+      if (typeof body.text === 'string' && body.text.length > 20000) return reply(400, { error: 'The privacy notice can be up to 20,000 characters' });
+      privacy = body.text?.trim() || null;
+      return reply(200, { text: privacy });
+    }
+    if (u.pathname === '/api/privacy-notice') return reply(200, { text: privacy });
     if (u.pathname === '/api/workshop-settings' && method === 'PUT') {
       if (putFails) return reply(500, { error: 'Internal error' });
       if (refuseHours && body.openingHours) return reply(400, { error: refuseHours });
@@ -875,4 +883,45 @@ test('with no payment provider connected, switching on says so and stays off', a
   fireEvent.click(ui.getByRole('switch', { name: 'Take a deposit when booking' }));
   assert.ok((await ui.findByText('Connect a payment provider first, then deposits can be switched on.')) !== null);
   assert.equal(ui.getByRole('switch', { name: 'Take a deposit when booking' }).getAttribute('aria-checked'), 'false');
+});
+
+// The shop's privacy notice (openspec/changes/finish-account design 7; Jack,
+// 9 Nov, answer 2): in Shop details, as Booking terms is. Add, then Change and
+// Remove; no Wheelhouse wording offered.
+test('Shop details › Privacy notice: none yet, Add opens a box, Save keeps it', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office' });
+  assert.ok(has(await ui.findByRole('heading', { name: 'Privacy notice' })));
+  assert.ok(has(ui.queryByText('Shown on your website account. Each shop is responsible for its own policies.')));
+  fireEvent.click(await ui.findByRole('button', { name: 'Add your privacy notice' }));
+  const box = ui.getByLabelText('Your privacy notice');
+  assert.equal(box.value, '', 'no wording offered');
+  assert.equal(box.getAttribute('maxlength'), '20000');
+  fireEvent.change(box, { target: { value: '[Paragraph one]\n\n[Paragraph two]' } });
+  fireEvent.click(ui.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.url === '/api/privacy-notice' && c.method === 'PUT').map((c) => c.body), [{ text: '[Paragraph one]\n\n[Paragraph two]' }]));
+  assert.ok(has(await ui.findByRole('button', { name: 'Change the privacy notice' })));
+  assert.ok(has(ui.getByText((_, el) => el?.tagName === 'P' && el.textContent === '[Paragraph one]\n\n[Paragraph two]')));
+  assert.ok(ui.queryByLabelText('Your privacy notice') === null);
+});
+
+test('Change opens it with the words; Remove takes it away', async () => {
+  const { ui, fireEvent, waitFor } = await openSettings({ room: 'office', notice: '[The shop’s notice]' });
+  fireEvent.click(await ui.findByRole('button', { name: 'Change the privacy notice' }));
+  const box = ui.getByLabelText('Your privacy notice');
+  assert.equal(box.value, '[The shop’s notice]');
+  fireEvent.click(ui.getByRole('button', { name: 'Cancel' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove the privacy notice' }));
+  await waitFor(() => assert.deepEqual(calls.filter((c) => c.url === '/api/privacy-notice' && c.method === 'PUT').map((c) => c.body), [{ text: null }]));
+  assert.ok(has(await ui.findByRole('button', { name: 'Add your privacy notice' })));
+});
+
+test('a refused notice says why and keeps the box open with the words', async () => {
+  const { ui, fireEvent } = await openSettings({ room: 'office' });
+  fireEvent.click(await ui.findByRole('button', { name: 'Add your privacy notice' }));
+  const box = ui.getByLabelText('Your privacy notice');
+  // Past the box's own limit only by a paste the browser didn't stop.
+  fireEvent.change(box, { target: { value: 'x'.repeat(20001) } });
+  fireEvent.click(ui.getByRole('button', { name: 'Save' }));
+  assert.equal((await ui.findByText('The privacy notice can be up to 20,000 characters')).getAttribute('role'), 'alert');
+  assert.equal(ui.getByLabelText('Your privacy notice').value.length, 20001);
 });
