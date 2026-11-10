@@ -179,6 +179,8 @@ GET /api/portal/:shopSlug/me
 POST /api/portal/:shopSlug/me/delete-request
 POST /api/portal/:shopSlug/me/delete-request/cancel
 PUT /api/portal/:shopSlug/me
+POST /api/portal/:shopSlug/me/email
+POST /api/portal/:shopSlug/me/email/confirm
 PUT /api/portal/:shopSlug/me/contact
 GET /api/portal/:shopSlug/mechanics
 GET /api/portal/:shopSlug/services
