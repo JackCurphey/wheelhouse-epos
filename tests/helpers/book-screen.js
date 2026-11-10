@@ -91,7 +91,7 @@ export async function renderBookScreen({
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/reminder-links/') ? reminderLink
             : pathname.includes('/sign-in/') ? signIn
-            : /\/(me|me\/contact|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout)$/.test(pathname) ? account
+            : /\/(me|me\/contact|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
             : pathname.endsWith('/messages') ? messages
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
