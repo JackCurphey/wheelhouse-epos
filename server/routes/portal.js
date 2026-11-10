@@ -1199,6 +1199,14 @@ export function register(route) {
     });
   });
 
+  // The shop's own privacy notice, for the account's Your data
+  // (finish-account design 7): its words as the Owner typed them, or 404 when
+  // it hasn't added one. Public, as the booking terms are.
+  route('GET', '/api/portal/:shopSlug/privacy', async (req, res, params, query, shop) => {
+    if (!shop.privacy_notice) return sendJson(res, 404, { error: 'This shop hasn’t added a privacy notice' });
+    sendJson(res, 200, { shopName: shop.name, text: shop.privacy_notice });
+  });
+
   // Public: the customer calendar. `busy` and `fullDays` keep the shape the old
   // booking page reads (public-portal/portal.js:263) - blocks, closures and a
   // shorter day come back as busy time with no reason. With `minutes`, `days`

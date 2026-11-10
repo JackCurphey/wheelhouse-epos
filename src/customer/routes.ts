@@ -65,3 +65,10 @@ export const MESSAGES_ROUTE = '/book/:shopSlug/messages';
  * same address.
  */
 export const REMINDER_BOOK_ROUTE = '/book/:shopSlug/from-reminder/:code';
+
+/**
+ * The shop's privacy notice (openspec/changes/finish-account design 7): the
+ * Owner's own words, opened from the account's Your data. Apart from the
+ * booking steps, as the account is.
+ */
+export const PRIVACY_ROUTE = '/book/:shopSlug/privacy';

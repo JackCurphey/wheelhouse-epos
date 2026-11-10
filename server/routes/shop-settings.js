@@ -116,6 +116,25 @@ export function register(route) {
     sendJson(res, 200, serializeShopDetails(await db.prepare(SHOP_DETAILS_SELECT).get(shopId)));
   });
 
+  // The shop's own privacy notice (openspec/changes/finish-account design 7;
+  // Jack, 9 Nov, answer 2): typed by the Owner, shown on the customer's
+  // account once added. Kept apart from the details above, as it can be long.
+  route('GET', '/api/privacy-notice', async (req, res, params, query, afterRelease, shopId) => {
+    const row = await db.prepare('SELECT privacy_notice FROM shops WHERE id = ?').get(shopId);
+    sendJson(res, 200, { text: row?.privacy_notice ?? null });
+  });
+
+  route('PUT', '/api/privacy-notice', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const body = await readJsonBody(req);
+    if (body?.text !== null && typeof body?.text !== 'string') return badRequest(res, 'Send the privacy notice as text');
+    // Line breaks as typed; only the ends are trimmed. Blank removes it.
+    const text = (body.text ?? '').trim() || null;
+    if (text && text.length > 20000) return badRequest(res, 'The privacy notice can be up to 20,000 characters');
+    const row = await db.prepare('UPDATE shops SET privacy_notice = ? WHERE id = ? RETURNING privacy_notice').get(text, shopId);
+    sendJson(res, 200, { text: row.privacy_notice ?? null });
+  });
+
   route('GET', '/api/label-settings', async (req, res) => {
     sendJson(res, 200, serializeLabelSettings(await getOrCreateLabelSettings()));
   });
