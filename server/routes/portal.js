@@ -1711,14 +1711,27 @@ export function register(route) {
       // filled in only when the customer has none, never overwritten. For a guest
       // this row is brand new each time (see resolveGuestCustomer); for a
       // signed-in customer it overwrites.
-      await db
-        .prepare(
-          // An email typed into the booking is the customer's own (option 2, 26 Oct).
-          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
-                  email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
-                  phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
-        )
-        .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      if (fromReminder) {
+        // From a reminder's link, with no sign-in: the booking uses her
+        // record's details (finish-account design 4), so whoever has the link
+        // can only fill what's missing, never change her email or choices.
+        await db
+          .prepare(
+            `UPDATE customers SET update_channel = COALESCE(update_channel, ?),
+                    email_from_customer = email_from_customer OR (NULLIF(email, '') IS NULL AND NULLIF(?, '') IS NOT NULL),
+                    email = COALESCE(NULLIF(email, ''), NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
+          )
+          .run(request.updateChannel, request.email, request.email, nowIso(), customerId);
+      } else {
+        await db
+          .prepare(
+            // An email typed into the booking is the customer's own (option 2, 26 Oct).
+            `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
+                    email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
+                    phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
+          )
+          .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      }
       // The reminder tick is a yes to service reminders and review requests,
       // with when and how; not ticking says nothing, so an earlier yes stays
       // (reminder-consent design 2). Here for the same reason as above.

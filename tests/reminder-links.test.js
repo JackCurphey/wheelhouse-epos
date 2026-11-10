@@ -126,6 +126,16 @@ test('a booking with the reminder’s code and no details typed is made for her,
   assert.deepEqual([job.customer_id, job.bike_id], [maya.id, bikeId]);
 });
 
+test('a booking from the reminder keeps her record’s details: an email or choice typed in doesn’t change them (design 4)', async () => {
+  const { maya, bikeId, code } = await mayaWithCode();
+  const before = await inShop(() => prepare('SELECT email, email_from_customer, marketing_permission, update_channel FROM customers WHERE id = ?').get(maya.id));
+  const res = await book({ reminderCode: code, bikeId, email: 'someone.else@example.test', marketingPermission: !before.marketing_permission });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const after = await inShop(() => prepare('SELECT email, email_from_customer, marketing_permission, update_channel FROM customers WHERE id = ?').get(maya.id));
+  // Only a missing choice is filled in: she had no update channel yet.
+  assert.deepEqual(after, { ...before, update_channel: before.update_channel ?? 'email' });
+});
+
 test('with details typed, the booking uses those, not the code’s customer', async () => {
   const { maya, code } = await mayaWithCode();
   const res = await book({ reminderCode: code, guestName: 'Sam Lee', guestPhone: '07700 900555', newBike: { make: 'Cube', model: 'Attain' } });
@@ -172,7 +182,8 @@ test('a reminder set up while sending is pretend reads [link] and makes no code'
 
   // When it goes, the link made with it stays in its words (the words are written afresh then).
   const { link } = await (async () => ({ link: await inShop(() => reminderBookLink('https://wh.test', owner.shop.slug, { customerId: maya.id, jobId })) }))();
-  const now = await inShop(() => serviceReminderNow({ job_id: jobId, body: `Hi Maya, book here: ${link} Stop these: [link].`, ending: 'Stop these: [link].' }, owner.shop.id));
+  const now = await inShop(() => serviceReminderNow({ job_id: jobId, body: `Hi Maya, book here:(${link}) Stop these: [link].`, ending: 'Stop these: [link].' }, owner.shop.id));
   assert.ok(now, 'still goes');
   assert.ok(now.body.includes(link), now.body);
+  assert.ok(!now.body.includes(`(${link}`), 'only the link is carried, not what it was joined to');
 });

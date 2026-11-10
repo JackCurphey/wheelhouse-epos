@@ -13,7 +13,7 @@ export const EXPIRED = 'This reminder’s link has expired. Choose your bike and
 
 export const reminderBookPath = (shopSlug, code) => `/book/${shopSlug}/from-reminder/${code}`;
 // The link inside a reminder's words, found again when it goes (its text is written afresh then).
-export const REMINDER_LINK = /\S+\/from-reminder\/[0-9a-f]{64}/;
+export const REMINDER_LINK = /https?:\/\/\S*?\/from-reminder\/[0-9a-f]{64}/;
 
 /** A new code for this customer, bike and service; returns the code itself, kept nowhere. */
 export async function makeReminderBookCode({ customerId, bikeId = null, serviceId = null, jobId = null }) {
