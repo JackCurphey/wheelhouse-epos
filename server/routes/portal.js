@@ -1203,9 +1203,8 @@ export function register(route) {
   // (finish-account design 7): its words as the Owner typed them, or 404 when
   // it hasn't added one. Public, as the booking terms are.
   route('GET', '/api/portal/:shopSlug/privacy', async (req, res, params, query, shop) => {
-    const row = await db.prepare('SELECT name, privacy_notice FROM shops WHERE id = ?').get(shop.id);
-    if (!row?.privacy_notice) return sendJson(res, 404, { error: 'This shop hasn’t added a privacy notice' });
-    sendJson(res, 200, { shopName: row.name, text: row.privacy_notice });
+    if (!shop.privacy_notice) return sendJson(res, 404, { error: 'This shop hasn’t added a privacy notice' });
+    sendJson(res, 200, { shopName: shop.name, text: shop.privacy_notice });
   });
 
   // Public: the customer calendar. `busy` and `fullDays` keep the shape the old
