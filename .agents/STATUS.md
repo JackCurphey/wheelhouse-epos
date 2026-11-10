@@ -161,8 +161,28 @@ here before starting it, so two people never build the same one):
   the Restock list section on Deliveries and orders, and Today's line (#637). Each had
   `/review`; the gaps and defaults are in Jack's 8 Nov section of
   `decided-while-building.md`.
-  **Now (8 Nov):** WP-1.5 is in apart from piece 7, which waits for a real export;
-  WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
+  Merged 9 Nov, WP-2.1 stock control: changing prices in bulk, its server with a
+  preview, a new price, a percentage or a target margin, rounding and Undo (#639,
+  migration 124), and its screen, ticking on Stock, Change prices and Undo (#640);
+  frame numbers, each bike's frame number recorded when it's booked in, no frame in
+  stock twice (#641, migration 125), and the Frame number box on receiving, a bike's
+  page and Stock's line (#642); an unknown barcode on Stock says so, with Add this
+  product (#644). Jack's 9 Nov answers and the `finish-customers` plan (#643,
+  documents only) and the `finish-account` plan for WP-4.5 (#646, documents only).
+  WP-3.2, `finish-customers`: store credit and Ways to pay, server (#645, migration
+  126) and screens (#647); pay-later accounts with a statement, bank transfers and
+  Email the statement, server (#648) and screens (#649); a bike known by a mark on
+  its category, not its name (#650, migration 127); bike warranties by brand and a
+  product's brand (#651, migration 128); a bike sold or recorded as bought here
+  keeps its warranty lines (#652; the till's half is a later piece); the Bike
+  warranties fold, the category's Bikes mark and a bike product's brand and
+  warranty (#653); a bike's warranty on its page, the customer's Bikes and the
+  account, and Edit bike's Bought here on (#654); logging a privacy request by
+  hand, sending the fuller copy, and writing off store credit on deletion (#655).
+  The gaps and defaults are in Jack's 9 Nov section of `decided-while-building.md`.
+  **Now (10 Nov):** open, `finish-customers` 7b: Log a request and Send the copy on
+  Privacy requests, with the archive (#656). WP-1.5 is in apart from piece 7, which
+  waits for a real export; WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
   a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
   Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
