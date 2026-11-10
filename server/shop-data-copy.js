@@ -151,7 +151,7 @@ const JOBS_HEADER = ['Job', 'Customer', 'Bike', 'Services', 'Booked in', 'Due', 
 function jobStage(j) {
   if (j.booking_state === 'pending') return 'Booking request';
   if (j.booking_state === 'offered') return 'Time offered';
-  if (j.booking_state === 'reschedule_requested') return 'Change requested';
+  if (j.booking_state === 'reschedule_requested' && j.requested_job_date) return 'Change requested';
   if (j.booking_state === 'cancelled') return 'Cancelled';
   if (j.booking_state === 'declined') return 'Declined';
   if (j.booking_state === 'expired') return 'Expired';
@@ -172,15 +172,21 @@ function jobStage(j) {
  */
 async function jobsFile(zone) {
   const rows = await prepare(
-    `SELECT w.reference, CASE WHEN c.deleted_at IS NULL THEN c.name END AS customer,
+    // Each job's paid order found once (sale_documents has no index on the job).
+    `WITH paid AS (
+       SELECT DISTINCT ON (d.workshop_job_id) d.workshop_job_id, ROUND(s.total * 100) AS pence
+         FROM sale_documents d JOIN sales s ON s.id = d.converted_sale_id
+        WHERE d.workshop_job_id IS NOT NULL AND d.kind = 'order'
+        ORDER BY d.workshop_job_id, d.id DESC
+     )
+     SELECT w.reference, CASE WHEN c.deleted_at IS NULL THEN c.name END AS customer,
             NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike,
             (SELECT string_agg(sv.name, '; ' ORDER BY js.position, js.service_id) FROM workshop_job_services js
                JOIN workshop_services sv ON sv.id = js.service_id WHERE js.workshop_job_id = w.id) AS services,
             to_char(w.booked_in_at AT TIME ZONE ?, ${WHEN}) AS booked_in, w.job_date AS due,
-            w.booking_state, w.custody_state, w.work_state, w.no_show_at, lq.state AS quote_state, m.name AS mechanic,
+            w.booking_state, w.requested_job_date, w.custody_state, w.work_state, w.no_show_at, lq.state AS quote_state, m.name AS mechanic,
             (SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = lq.id) AS quoted_pence,
-            (SELECT ROUND(s.total * 100) FROM sale_documents d JOIN sales s ON s.id = d.converted_sale_id
-              WHERE d.workshop_job_id = w.id AND d.kind = 'order' ORDER BY d.id DESC LIMIT 1) AS final_pence,
+            paid.pence AS final_pence,
             (SELECT p.amount_pence FROM online_payments p WHERE p.job_id = w.id AND p.status IN ('held', 'taken', 'refunded')
               ORDER BY p.id DESC LIMIT 1) AS deposit_pence,
             to_char(w.collected_at AT TIME ZONE ?, ${WHEN}) AS collected, w.notes
@@ -188,6 +194,7 @@ async function jobsFile(zone) {
        LEFT JOIN customers c ON c.id = w.customer_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
        LEFT JOIN employees m ON m.id = w.mechanic_id
+       LEFT JOIN paid ON paid.workshop_job_id = w.id
        LEFT JOIN LATERAL (SELECT q.id, q.state FROM workshop_quotes q WHERE q.workshop_job_id = w.id ORDER BY q.revision DESC LIMIT 1) lq ON true
       ORDER BY w.id`
   ).all(zone, zone);
