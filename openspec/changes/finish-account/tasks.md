@@ -21,8 +21,8 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 4. The reminder's landing (PR 4, about 350 lines)
 
-- [ ] 4.1 Tests first (`tests/screens/reminder-landing.test.js`, `tests/browser/reminder-landing.spec.ts`): `/book/<shop>/from-reminder/<code>` opens on "When?" with the service and bike done, the box "From your reminder: booking the next Standard service for your Trek Domane AL 3 · green · black mudguards. Change either above." and "Maya P. · 07700 ••• 142 · Change"; booking from it skips typing details; Change clears them and the details step asks; a missing service or bike opens at that step; a bad code opens Book a repair as for anyone. Verify: each fails first.
-- [ ] 4.2 The route and draft filling (`src/screens/book/draft.tsx`, `date.tsx`, `details.tsx`, the router). Verify: 4.1 passes.
+- [x] 4.1 Tests first (`tests/screens/reminder-landing.test.js`, `tests/browser/reminder-landing.spec.ts`): `/book/<shop>/from-reminder/<code>` opens on "When?" with the service and bike done, the box "From your reminder: booking the next Standard service for your Trek Domane AL 3 · green · black mudguards. Change either above." and "Maya P. · 07700 ••• 142 · Change"; booking from it skips typing details; Change clears them and the details step asks; a missing service or bike opens at that step; a bad code opens Book a repair as for anyone. Verify: each fails first.
+- [x] 4.2 The route and draft filling (`src/screens/book/draft.tsx`, `date.tsx`, `details.tsx`, the router). Verify: 4.1 passes.
 
 ## 5. Today's deletion line, and Edit for name and mobile (PR 5, about 400 lines)
 

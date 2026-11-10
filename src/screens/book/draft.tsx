@@ -64,6 +64,20 @@ export type BookingDraft = {
   // (deposit-pay-screen), so a retry or a refresh sends without paying
   // again; a new hold has a new ref, so it's paid afresh.
   depositHeld?: string;
+  // From a service reminder's link (finish-account design 4): its code, what
+  // it chose, and the customer's details partly hidden ("Maya P.", "07700 •••
+  // 142"). While `details` is true the booking goes with her record's details
+  // instead of typed ones; Change sets it false and the details step asks.
+  reminder?: {
+    code: string;
+    serviceId: number | null;
+    serviceName: string | null;
+    bikeId: number | null;
+    bikeLabel: string | null;
+    name: string | null;
+    phone: string | null;
+    details: boolean;
+  };
 };
 
 type DraftApi = {
