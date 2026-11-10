@@ -108,6 +108,23 @@ const signinEmail = (body) => {
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
   return email.length <= 254 && EMAIL_RE.test(email) ? email : '';
 };
+// An email that already signs in to another account here, or is another live
+// customer's own email here (finish-account design 6: a first sign-in joins
+// the customer whose own email it is, so two records with it would guess wrong).
+async function emailTaken(shop, email, login) {
+  const other = await db.prepare('SELECT 1 FROM customer_logins WHERE shop_id = ? AND lower(email) = ? AND id <> ?').get(shop.id, email, login.id);
+  if (other) return true;
+  return Boolean(await db.prepare(
+    `SELECT 1 FROM customers WHERE lower(btrim(email)) = ? AND id <> ? AND email_from_customer
+        AND active = 1 AND deleted_at IS NULL AND merged_into_id IS NULL`
+  ).get(email, login.customer_id));
+}
+const takenWords = (shop) => `That email is already used for another account at ${shop.name}. Ask ${shop.name} to help.`;
+// "m•••@example.test": the address with its middle hidden, for the old address's email.
+const hiddenMiddle = (email) => {
+  const at = email.lastIndexOf('@');
+  return `${email.slice(0, 1)}•••${email.slice(at)}`;
+};
 const SIGNIN_REFUSED = {
   wrong: 'That code isn’t right. Check it, or send a new one',
   expired: 'That code has expired — send a new one',
@@ -755,6 +772,11 @@ const holdOwnCustomer = (ctx, mode) => db.prepare(
     FOR ${mode === 'update' ? 'NO KEY UPDATE' : 'SHARE'} OF c`
 ).get(ctx.login.id);
 const SIGN_IN_AGAIN = { error: 'Please sign in again.' };
+// A mobile as typed: digits with spaces, brackets, dashes or a leading +, 10
+// to 15 digits (decided while building, 10 Nov: nothing checked a number's
+// shape before; the words follow the receipt email's).
+const MOBILE_WORDS = 'That doesn’t look like a mobile number — check it';
+const looksLikeMobile = (s) => /^\+?[\d\s()-]+$/.test(s) && (s.match(/\d/g)?.length ?? 0) >= 10 && (s.match(/\d/g)?.length ?? 0) <= 15;
 
 export function register(route) {
   route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
@@ -914,6 +936,138 @@ export function register(route) {
       WHERE customer_id = ? AND kind = 'delete' AND done_at IS NULL AND cancelled_at IS NULL RETURNING id`
   ).get(customerId)));
 
+  // Edit your details (finish-account design 6; Jack's answer 3): the name
+  // and the mobile, each saved as sent. The email changes only by a code sent
+  // to the new address (…/me/email).
+  // screens: ac-account
+  route('PUT', '/api/portal/:shopSlug/me', async (req, res, params) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const body = await readJsonBody(req).catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the changes as an object');
+    const sets = [];
+    const args = [];
+    if (body.name !== undefined) {
+      const name = typeof body.name === 'string' ? body.name.replace(/\s+/g, ' ').trim() : '';
+      if (!name) return badRequest(res, 'Enter your name');
+      sets.push('name = ?');
+      args.push(name);
+    }
+    let phone;
+    if (body.phone !== undefined) {
+      if (body.phone !== null && typeof body.phone !== 'string') return badRequest(res, MOBILE_WORDS);
+      phone = (body.phone ?? '').trim();
+      if (phone && !looksLikeMobile(phone)) return badRequest(res, MOBILE_WORDS);
+      sets.push('phone = ?');
+      args.push(phone || null);
+    }
+    if (!sets.length) return badRequest(res, 'Nothing to change');
+    let saved;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'update');
+      if (!held) {
+        await db.exec('ROLLBACK');
+        return sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      // No mobile while job updates go by text or WhatsApp (How we contact you's words).
+      if (phone === '' && (await db.prepare('SELECT update_channel FROM customers WHERE id = ?').get(held.id))?.update_channel !== 'email') {
+        await db.exec('ROLLBACK');
+        return badRequest(res, 'We don’t have a mobile number for you, so we can’t text you.');
+      }
+      saved = await db.prepare(`UPDATE customers SET ${sets.join(', ')}, updated_at = now() WHERE id = ? RETURNING name, phone`).get(...args, held.id);
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, { name: saved.name, phone: saved.phone || null });
+  });
+
+  // A new email for the account, confirmed by a code sent to it (finish-account
+  // design 6; Jack, 9 Nov, answer 3). Nothing changes until the code is
+  // entered: the old email still signs in and gets every message.
+  // screens: ac-account
+  route('POST', '/api/portal/:shopSlug/me/email', async (req, res, params, query, shop) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    const body = await readJsonBody(req).catch(() => null);
+    const email = signinEmail(body);
+    if (!email) return badRequest(res, 'That doesn’t look like an email address — check it');
+    const login = await db.prepare('SELECT id, email, customer_id FROM customer_logins WHERE id = ?').get(ctx.login.id);
+    if (!login) return sendJson(res, 401, SIGN_IN_AGAIN);
+    if (email === login.email.toLowerCase()) return badRequest(res, 'That’s already your email');
+    // Counted before "already used" is answered, so addresses can't be tried
+    // one after another to find who has an account here.
+    if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
+      return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
+    }
+    if (await emailTaken(shop, email, login)) return badRequest(res, takenWords(shop));
+    await db.prepare('UPDATE customer_logins SET pending_email = ?, pending_email_at = now() WHERE id = ?').run(email, login.id);
+    await provider.sendCode({ email });
+    sendJson(res, 200, { pendingEmail: email });
+  });
+
+  route('POST', '/api/portal/:shopSlug/me/email/confirm', async (req, res, params, query, shop) => {
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const provider = signinProvider();
+    if (!provider) return sendJson(res, 503, { error: SIGNIN_OFF });
+    if (!signinCheckLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries. Wait a few minutes, then try again' });
+    const body = await readJsonBody(req).catch(() => null);
+    const code = typeof body?.code === 'string' ? body.code.replace(/\s/g, '') : '';
+    // A change asked for more than 10 minutes ago, or never, is gone.
+    const pending = await db.prepare(
+      "SELECT pending_email FROM customer_logins WHERE id = ? AND pending_email IS NOT NULL AND pending_email_at > now() - interval '10 minutes'"
+    ).get(ctx.login.id);
+    if (!pending) return badRequest(res, SIGNIN_REFUSED.expired);
+    const answer = /^\d{6}$/.test(code) ? await provider.checkCode({ email: pending.pending_email, code }) : 'wrong';
+    if (answer !== 'ok') return sendJson(res, 400, { error: SIGNIN_REFUSED[answer], reason: answer });
+    let changed;
+    await db.exec('BEGIN');
+    try {
+      const held = await holdOwnCustomer(ctx, 'update');
+      const login = held && await db.prepare(
+        'SELECT id, email, pending_email, customer_id FROM customer_logins WHERE id = ? AND pending_email = ? FOR NO KEY UPDATE'
+      ).get(ctx.login.id, pending.pending_email);
+      if (!login) {
+        await db.exec('ROLLBACK');
+        return held ? badRequest(res, SIGNIN_REFUSED.expired) : sendJson(res, 401, SIGN_IN_AGAIN);
+      }
+      // Taken since the code was sent: refused, as it would have been then.
+      if (await emailTaken(shop, login.pending_email, login)) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, takenWords(shop));
+      }
+      await db.prepare('UPDATE customer_logins SET email = pending_email, pending_email = NULL, pending_email_at = NULL WHERE id = ?').run(login.id);
+      await db.prepare('UPDATE customers SET email = ?, email_from_customer = true, updated_at = now() WHERE id = ?').run(login.pending_email, held.id);
+      changed = { from: login.email, to: login.pending_email, customerId: held.id };
+      // The old address is told, once, with the change (decided while building, 9 Nov).
+      await sendEmailTo({
+        to: changed.from,
+        subject: `Your email address has changed — ${shop.name}`,
+        body: `The email on your ${shop.name} account is now ${hiddenMiddle(changed.to)}. You’ll sign in with it from now on.${shop.phone ? ` If you didn’t make this change, call ${shop.phone}.` : ''}`,
+        customerId: changed.customerId,
+        templateKey: 'account_email_changed',
+      });
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      // Another account took it at the same moment.
+      if (err?.code === '23505') return badRequest(res, takenWords(shop));
+      throw err;
+    }
+    sendJson(res, 200, { email: changed.to, said: `Your email is now ${changed.to}. Use it to sign in from now on.` });
+  });
+
   // How we contact you (openspec/changes/how-we-contact-you design 1; account
   // and reminders decision 6): any of the way job updates go and the three
   // switches, each saved as sent. A yes to reminders or review requests from
@@ -1043,6 +1197,14 @@ export function register(route) {
       text: standard ? STANDARD_BOOKING_TERMS : settings.booking_terms,
       standard,
     });
+  });
+
+  // The shop's own privacy notice, for the account's Your data
+  // (finish-account design 7): its words as the Owner typed them, or 404 when
+  // it hasn't added one. Public, as the booking terms are.
+  route('GET', '/api/portal/:shopSlug/privacy', async (req, res, params, query, shop) => {
+    if (!shop.privacy_notice) return sendJson(res, 404, { error: 'This shop hasn’t added a privacy notice' });
+    sendJson(res, 200, { shopName: shop.name, text: shop.privacy_notice });
   });
 
   // Public: the customer calendar. `busy` and `fullDays` keep the shape the old

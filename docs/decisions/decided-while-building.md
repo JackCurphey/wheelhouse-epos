@@ -4991,3 +4991,43 @@ Decided here, for Jack to overrule.
 3. **"From your reminder: booking the next …" shows only while that's still
    what's chosen.** Once she picks another service or changes the bike, that
    line goes, because it would be wrong. The details line stays until Change.
+
+### 10 Nov 2026: Edit your details, name and mobile (`openspec/changes/finish-account` group 5, `ac-account`)
+
+Decided here, for Jack to overrule.
+
+1. **The Edit box isn't drawn.** "Edit" beside Your details opens a box
+   titled "Edit your details" with Name, Mobile and Email, Cancel and Save.
+   Save keeps the name and mobile straight away, then closes. Email is shown
+   but can't be changed yet; changing it by a code comes in the next pull
+   request. *Pattern:* How we contact you's box, and Add a bike's fields and
+   buttons.
+2. **What counts as a bad mobile:** digits, with spaces, brackets, dashes
+   or a + in front, and 10 to 15 digits in all. Anything else gets "That
+   doesn’t look like a mobile number — check it". Nothing in the app checked
+   a phone number's shape before; the booking only checks one is there. The
+   words follow the receipt email's "That doesn’t look like an email address
+   — check it".
+
+### 10 Nov 2026: the privacy notice (`openspec/changes/finish-account` group 7, `ac-account`)
+
+Decided here, for Jack to overrule.
+
+1. **The privacy notice's setting isn't drawn.** In Settings › Shop and
+   sites › Shop details, under the shop's details: "Privacy notice", the
+   line "Shown on your website account. Each shop is responsible for its own
+   policies.", and "Add your privacy notice", which opens a box with Save
+   and Cancel. Once added, its words show under the line as typed, with
+   Change and Remove. Remove takes it away at once without asking, as Booking
+   terms' "Go back to Wheelhouse’s standard terms" does. *Pattern:* Booking
+   terms (design 7 says "built as Booking terms is").
+2. **The notice's own page isn't drawn.** `/book/<shop>/privacy` opens in the
+   booking frame with the heading "Privacy notice", the shop's words with
+   their line breaks, and "← Your account" back. Opened when the shop has no
+   notice, it says "This shop hasn’t added a privacy notice yet." *Pattern:*
+   the conversation page's frame and back link.
+3. **Today's line for a request the shop logged without saying how it came
+   in** (group 5, `ac-today`) reads "Asked [date] · answer by [date]". Design
+   § 5 gives only "Asked in person, [date]" for one logged in person; "by
+   email" and "by phone" read the same way. *Pattern:* the Privacy requests
+   page's own words for how a request came.

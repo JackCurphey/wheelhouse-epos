@@ -264,3 +264,14 @@ Setting up a service reminder or a review request when a bike is collected, writ
 #### Scenario: a message is written while every other connection is busy
 - **WHEN** a service reminder or a review request comes due, or a shop's own message after a sale is found, while every other database connection is in use
 - **THEN** it is written at once, with the shop's name, not after a 5-second wait
+
+### Requirement: A service reminder carries its own booking link
+Each service reminder SHALL carry a link of its own that opens the booking for that customer's bike and service (see the `book` capability), made when the reminder is set up and kept until the customer's record is deleted; a merge SHALL move it with the customer. While messages are pretend the link SHALL read "[link]", as every link does.
+
+#### Scenario: a reminder goes
+- **WHEN** Maya's Standard service reminder for her Trek goes
+- **THEN** its link opens Book a repair with her Trek and Standard service chosen
+
+#### Scenario: pretend sending
+- **WHEN** messages are pretend
+- **THEN** the reminder's booking link reads "[link]"

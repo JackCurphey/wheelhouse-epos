@@ -46,7 +46,7 @@ const inTheWayLine = (items: InTheWay[]) => {
 const inTheWayWhy = (items: InTheWay[]) => `Can be deleted once ${[bikesIn(items).length ? 'the bike is collected' : null, owedIn(items) > 0 ? 'what they owe is paid' : null].filter(Boolean).join(' and ')}.`;
 const FROM = { account: 'From their account on the website', shop: '' } as const;
 // How a request logged by hand came (question 7): "Asked in person · [date]".
-const HOW = { in_person: 'in person', phone: 'by phone', email: 'by email', letter: 'by letter' } as const;
+export const HOW = { in_person: 'in person', phone: 'by phone', email: 'by email', letter: 'by letter' } as const;
 const asked = (r: Request) => (r.how ? `Asked ${HOW[r.how]} ·` : 'Asked');
 // Store credit isn't in the way; it's lost on deletion (cs-privacy's web row; audit M12).
 const creditLine = (r: Request) => (r.storeCreditPence ? `store credit ${penceText(r.storeCreditPence)} will be lost` : null);

@@ -100,7 +100,79 @@ function ShopDetailsBox() {
       ))}
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
+      <PrivacyNoticeSetting />
     </div>
+  );
+}
+
+/**
+ * The shop's own privacy notice (openspec/changes/finish-account design 7;
+ * Jack, 9 Nov, answer 2), in Shop details as Booking terms is in Online
+ * booking: "Add your privacy notice" opens a box, Save; once added, its words
+ * with Change and Remove. No Wheelhouse wording is offered. Not drawn: the
+ * words show under the heading as typed (decided while building).
+ */
+function PrivacyNoticeSetting() {
+  const queryClient = useQueryClient();
+  const notice = useQuery({ queryKey: ['privacy-notice'], queryFn: () => apiGet<{ text: string | null }>('/api/privacy-notice') });
+  const [typed, setTyped] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const text = notice.data?.text ?? null;
+
+  async function put(value: string | null) {
+    setBusy(true);
+    setError(null);
+    try {
+      const saved = await apiMutate<{ text: string | null }>('/api/privacy-notice', { text: value }, { method: 'PUT' });
+      queryClient.setQueryData(['privacy-notice'], saved);
+      setTyped(null);
+    } catch (err) {
+      setError(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const alert = error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null;
+  return (
+    <section aria-labelledby="privacy-notice-h" className="mt-3 flex flex-col gap-2 border-t border-[var(--wh-border)] pt-3">
+      <h4 id="privacy-notice-h" className="m-0 text-size-15 font-bold">Privacy notice</h4>
+      <p className="m-0 text-sm text-[var(--wh-muted)]">Shown on your website account. Each shop is responsible for its own policies.</p>
+      {notice.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the privacy notice. Try again in a moment.</p> : null}
+      {typed !== null ? (
+        <>
+          <label htmlFor="privacy-notice" className="text-sm font-semibold">Your privacy notice</label>
+          <textarea
+            id="privacy-notice"
+            rows={8}
+            maxLength={20000}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            className="rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-sm"
+          />
+          {alert}
+          <div className="flex gap-2.5">
+            <Button variant="accent" disabled={busy} onClick={() => void put(typed)}>Save</Button>
+            <Button variant="ghost" disabled={busy} onClick={() => { setTyped(null); setError(null); }}>Cancel</Button>
+          </div>
+        </>
+      ) : text !== null ? (
+        <>
+          <p className="m-0 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-[var(--wh-border)] p-2.5 text-sm">{text}</p>
+          {alert}
+          <div className="flex gap-2.5">
+            <Button disabled={busy} aria-label="Change the privacy notice" onClick={() => setTyped(text)}>Change</Button>
+            <Button variant="ghost" disabled={busy} aria-label="Remove the privacy notice" onClick={() => void put(null)}>Remove</Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {alert}
+          <div><Button disabled={busy || !notice.data} onClick={() => setTyped('')}>Add your privacy notice</Button></div>
+        </>
+      )}
+    </section>
   );
 }
 

@@ -139,3 +139,17 @@ test('signed out, the receipt’s address goes to sign in and back to the same a
   const { ui } = await open({ me: null }, '/book/north/account?receipt=till-41');
   assert.ok(await ui.findByText(`At /book/north/sign-in?from=${encodeURIComponent('/book/north/account?receipt=till-41')}`));
 });
+
+// The walk against the specs (task 7.3): a receipt is kept with the rest of
+// the account, so signing out forgets it, as it forgets her details, and the
+// next person at a shared computer can't see it on the same address.
+test('signing out forgets an opened receipt along with the rest of the account', async () => {
+  const { ui, client } = await open({}, '/book/north/account?receipt=till-41');
+  const { fireEvent, waitFor } = await rtl();
+  await ui.findByRole('dialog', { name: 'Your receipt' });
+  const receipts = () => client.getQueryCache().findAll().filter((q) => q.queryKey.includes('receipt'));
+  assert.equal(receipts().length, 1);
+  fireEvent.click(ui.getByRole('button', { name: 'Close' }));
+  fireEvent.click(await ui.findByRole('button', { name: 'Sign out' }));
+  await waitFor(() => assert.equal(receipts().length, 0));
+});

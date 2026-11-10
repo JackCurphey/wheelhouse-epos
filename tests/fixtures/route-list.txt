@@ -20,6 +20,8 @@ GET /api/deliveries/booked-in/:id
 PUT /api/deliveries/booked-in/:id/lines/:lineId/cost
 GET /api/shop-details
 PUT /api/shop-details
+GET /api/privacy-notice
+PUT /api/privacy-notice
 GET /api/label-settings
 PUT /api/label-settings
 GET /api/shop-theme
@@ -178,10 +180,14 @@ POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
 POST /api/portal/:shopSlug/me/delete-request
 POST /api/portal/:shopSlug/me/delete-request/cancel
+PUT /api/portal/:shopSlug/me
+POST /api/portal/:shopSlug/me/email
+POST /api/portal/:shopSlug/me/email/confirm
 PUT /api/portal/:shopSlug/me/contact
 GET /api/portal/:shopSlug/mechanics
 GET /api/portal/:shopSlug/services
 GET /api/portal/:shopSlug/terms
+GET /api/portal/:shopSlug/privacy
 GET /api/portal/:shopSlug/availability
 GET /api/portal/:shopSlug/bikes
 POST /api/portal/:shopSlug/bikes
