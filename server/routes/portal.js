@@ -42,6 +42,7 @@ import { parseBookingRequest } from '../booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage } from '../booking-photos.js';
 import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
 import { setStopped, stopView } from '../messaging/stop-codes.js';
+import { EXPIRED as REMINDER_EXPIRED, reminderCode, reminderLinkView } from '../messaging/reminder-links.js';
 import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { dataCopyFiles } from '../customer-data-copy.js';
@@ -1432,9 +1433,20 @@ export function register(route) {
     // The request's own fields are checked before any customer row is created, so
     // a bad request leaves nothing behind. The phone the channel rule needs is the
     // guest's, or the signed-in customer's own.
+    // From a service reminder's link (finish-account design 4): with nothing
+    // typed, the booking is the code's customer's, as a signed-in one is; with
+    // details typed, those are used. A code that no longer works is refused.
+    let fromReminder = null;
+    if (!signedIn && body.reminderCode !== undefined && body.reminderCode !== null) {
+      if (!stopCodeLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+      const found = await reminderCode(body.reminderCode);
+      if (!found) return sendJson(res, 400, { error: REMINDER_EXPIRED, code: 'reminder_expired' });
+      const typed = [body.guestName, body.guestPhone].some((v) => typeof v === 'string' && v.trim());
+      if (!typed) fromReminder = found;
+    }
     const phoneForChannel = signedIn
       ? ((await db.prepare('SELECT phone FROM customers WHERE id = ?').get(ctx.login.customer_id))?.phone || '') || (body.guestPhone || '')
-      : body.guestPhone;
+      : fromReminder ? (fromReminder.phone || '') : body.guestPhone;
     const parsed = parseBookingRequest(body, phoneForChannel);
     if (parsed.error) return badRequest(res, parsed.error);
     const request = parsed.value;
@@ -1541,6 +1553,12 @@ export function register(route) {
     let customerId;
     if (signedIn) {
       customerId = ctx.login.customer_id;
+    } else if (fromReminder) {
+      const ip = clientIp(req);
+      if (!portalGuestBookingLimiter.check(ip)) {
+        return sendJson(res, 429, { error: 'Too many booking requests from this network - please try again later.' });
+      }
+      customerId = fromReminder.customer_id;
     } else {
       const ip = clientIp(req);
       if (!portalGuestBookingLimiter.check(ip)) {
@@ -1596,6 +1614,14 @@ export function register(route) {
         ).get(ctx.login.id);
         if (!held) return { status: 401, body: { error: 'Please sign in again to book.' } };
         customerId = held.id;
+      }
+      // From a reminder: its customer held too, so a deletion or merge that
+      // finished first refuses the booking instead of booking a gone record.
+      if (fromReminder) {
+        const held = await db.prepare(
+          'SELECT id FROM customers WHERE id = ? AND active = 1 AND deleted_at IS NULL AND merged_into_id IS NULL FOR NO KEY UPDATE'
+        ).get(customerId);
+        if (!held) return { status: 400, body: { error: REMINDER_EXPIRED, code: 'reminder_expired' } };
       }
       const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
       if (checked.refusal) return checked.refusal;
@@ -1689,14 +1715,27 @@ export function register(route) {
       // filled in only when the customer has none, never overwritten. For a guest
       // this row is brand new each time (see resolveGuestCustomer); for a
       // signed-in customer it overwrites.
-      await db
-        .prepare(
-          // An email typed into the booking is the customer's own (option 2, 26 Oct).
-          `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
-                  email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
-                  phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
-        )
-        .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      if (fromReminder) {
+        // From a reminder's link, with no sign-in: the booking uses her
+        // record's details (finish-account design 4), so whoever has the link
+        // can only fill what's missing, never change her email or choices.
+        await db
+          .prepare(
+            `UPDATE customers SET update_channel = COALESCE(update_channel, ?),
+                    email_from_customer = email_from_customer OR (NULLIF(email, '') IS NULL AND NULLIF(?, '') IS NOT NULL),
+                    email = COALESCE(NULLIF(email, ''), NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
+          )
+          .run(request.updateChannel, request.email, request.email, nowIso(), customerId);
+      } else {
+        await db
+          .prepare(
+            // An email typed into the booking is the customer's own (option 2, 26 Oct).
+            `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email),
+                    email_from_customer = email_from_customer OR NULLIF(?, '') IS NOT NULL,
+                    phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
+          )
+          .run(request.updateChannel, request.marketingPermission, request.email, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
+      }
       // The reminder tick is a yes to service reminders and review requests,
       // with when and how; not ticking says nothing, so an earlier yes stays
       // (reminder-consent design 2). Here for the same reason as above.
@@ -1813,6 +1852,18 @@ export function register(route) {
     sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
     return true;
   };
+
+  // A service reminder's booking link (ac-reminder-landing; finish-account
+  // design 4): what the booking fills in. No sign-in is made. A code that
+  // doesn't work gets the stop page's answer, so codes can't be probed.
+  // screens: ac-reminder-landing
+  route('GET', '/api/portal/:shopSlug/reminder-links/:code', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (stopCodeTooMany(req, res)) return;
+    const view = await reminderLinkView(params.code);
+    if (!view) return stopCodeGone(res);
+    sendJson(res, 200, view);
+  });
 
   // screens: ac-stopped
   route('GET', '/api/portal/:shopSlug/reminder-stops/:code', async (req, res, params, query, shop) => {

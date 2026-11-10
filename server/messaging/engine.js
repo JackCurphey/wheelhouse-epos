@@ -215,7 +215,10 @@ export async function readyStillNeeded(jobId) {
 
 const DUE_CHECKS = { quote_reminder: reminderStillNeeded, bike_still_waiting: stillWaitingNeeded, bike_ready: readyStillNeeded };
 
-async function sendDueForShop(shopId) {
+// Exported for a test to send one shop's due messages without waiting for a round
+// over every shop in a shared test database (tests/uncollected-bike.test.js and the
+// other message tests).
+export async function sendDueForShop(shopId) {
   const now = new Date();
   // The shop's own messages that have come due, at most once a minute (own-messages-server design 2).
   // A failure there is logged and never stops the shop's other messages going.
