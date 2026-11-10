@@ -8,20 +8,22 @@ import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { ROUTES } from '@/staff/routes.ts';
+import { LogRequestDialog } from './log-request-dialog.tsx';
 
 /**
  * The shop's privacy requests (openspec/changes/delete-account design 7;
  * drawn as cs-privacy, ac-privacy-requests and cs-privacy-delete in
  * customer.mjs and account.mjs; customer service decision 9; coverage walks
  * answers 4 and 5; Jack's 30 Oct answer 3): each request, dated, answered
- * within a month, and Delete their details, the Owner only. "+ Log a
- * request" and "Send the copy" aren't built yet, so aren't shown.
+ * within a month, and Delete their details, the Owner only; "+ Log a
+ * request" and "Send the copy" (finish-customers design 7).
  */
 // A bike still in the workshop, or money owed on account (finish-customers design 7).
 export type InTheWay = { jobId: number; reference: string } | { owedPence: number };
 type Request = {
   id: number; reference: string; customerId: number | null; name: string | null; kind: 'copy' | 'delete'; source: 'account' | 'shop';
   askedOn: string; dueBy: string; overdue: boolean; doneOn: string | null; inTheWay: InTheWay[];
+  how?: 'in_person' | 'phone' | 'email' | 'letter' | null; hasEmail?: boolean; storeCreditPence?: number;
 };
 type List = { requests: Request[]; openCount: number };
 
@@ -43,6 +45,11 @@ const inTheWayLine = (items: InTheWay[]) => {
 // Why Delete waits, as the server says it (privacy-requests.js inTheWayWhy).
 const inTheWayWhy = (items: InTheWay[]) => `Can be deleted once ${[bikesIn(items).length ? 'the bike is collected' : null, owedIn(items) > 0 ? 'what they owe is paid' : null].filter(Boolean).join(' and ')}.`;
 const FROM = { account: 'From their account on the website', shop: '' } as const;
+// How a request logged by hand came (question 7): "Asked in person · [date]".
+const HOW = { in_person: 'in person', phone: 'by phone', email: 'by email', letter: 'by letter' } as const;
+const asked = (r: Request) => (r.how ? `Asked ${HOW[r.how]} ·` : 'Asked');
+// Store credit isn't in the way; it's lost on deletion (cs-privacy's web row; audit M12).
+const creditLine = (r: Request) => (r.storeCreditPence ? `store credit ${penceText(r.storeCreditPence)} will be lost` : null);
 
 /** "Privacy requests · [n] open", at the foot of Customers (cs-list), for the Owner. */
 export function PrivacyLink() {
@@ -68,23 +75,25 @@ export function DeletionLine({ request }: { request: { askedOn: string; dueBy: s
   );
 }
 
-function Row({ r, onDelete }: { r: Request; onDelete: (r: Request) => void }) {
+function Row({ r, onDelete, onSend }: { r: Request; onDelete: (r: Request) => void; onSend: (r: Request) => void }) {
   const open = r.doneOn === null;
   const blocked = open && r.inTheWay.length > 0;
   const whyId = `pr-why-${r.id}`;
   const sub = open
-    ? `${r.overdue ? 'Overdue · ' : ''}${FROM[r.source] ? `${FROM[r.source]} · asked` : 'Asked'} ${dayText(r.askedOn)} · answer by ${dayText(r.dueBy)}`
-    : `Asked ${dayText(r.askedOn)} · done ${dayText(r.doneOn as string)}`;
+    ? `${r.overdue ? 'Overdue · ' : ''}${FROM[r.source] ? `${FROM[r.source]} · asked` : asked(r)} ${dayText(r.askedOn)} · answer by ${dayText(r.dueBy)}`
+    : `${asked(r)} ${dayText(r.askedOn)} · done ${dayText(r.doneOn as string)}`;
+  const credit = open ? creditLine(r) : null;
+  const warn = [blocked ? inTheWayLine(r.inTheWay) : null, credit].filter(Boolean).join(' · ');
   return (
     <li className="flex min-h-[60px] flex-wrap items-center gap-3 border-t border-[var(--wh-border)] px-3.5 py-2 first:border-t-0">
       <span className="flex min-w-[200px] grow flex-col gap-0.5">
         <span className="text-size-15 font-bold">{`${r.name ?? r.reference} · ${WHAT[r.kind]}`}</span>
         <span className={r.overdue && open ? 'text-size-13 font-bold text-[var(--wh-warn-ink)]' : 'text-size-13 text-[var(--wh-muted)]'}>{sub}</span>
-        {blocked ? <span className="text-size-13 font-bold text-[var(--wh-warn-ink)]">{inTheWayLine(r.inTheWay)}</span> : null}
+        {warn ? <span className="text-size-13 font-bold text-[var(--wh-warn-ink)]">{warn.charAt(0).toUpperCase() + warn.slice(1)}</span> : null}
       </span>
       {!open ? <span className="text-sm text-[var(--wh-muted)]">Done</span>
         : r.kind === 'delete' ? <Button variant="danger" disabled={blocked} aria-describedby={blocked ? whyId : undefined} onClick={() => onDelete(r)}>Delete their details</Button>
-        : null}
+        : <Button variant="default" onClick={() => onSend(r)}>Send the copy</Button>}
       {blocked ? <span id={whyId} className="basis-full text-size-13 text-[var(--wh-muted)]">{inTheWayWhy(r.inTheWay)}</span> : null}
     </li>
   );
@@ -127,11 +136,72 @@ function DeleteDialog({ r, onClose }: { r: Request; onClose: () => void }) {
   );
 }
 
+// "Send the copy" (finish-customers design 7; Jack's 9 Nov answer 6). Not drawn as a box: the
+// delete box's pattern, with Download it, and Email it when they have an email.
+function SendDialog({ r, onClose }: { r: Request; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function send(how: 'download' | 'email') {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/privacy-requests/${r.id}/copy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ send: how }) });
+      if (!res.ok) {
+        // The server's own words for a refusal (already sent, no email).
+        const words = res.status < 500 ? await res.json().then((b: { error?: unknown }) => (typeof b?.error === 'string' ? b.error : null), () => null) : null;
+        setError(words ?? 'Wheelhouse couldn’t make the copy. Try again in a moment.');
+        setBusy(false);
+        return;
+      }
+      if (how === 'download') {
+        const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'data.zip';
+        const url = URL.createObjectURL(await res.blob());
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['privacy-requests'] });
+      onClose();
+    } catch {
+      setError('That didn’t go through. Check your connection and try again.');
+      setBusy(false);
+    }
+  }
+  const who = r.name ?? r.reference;
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="copy-title" className="md:max-w-[560px]">
+      <DialogHeader>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <DialogTitle id="copy-title">{`Send ${who}’s copy`}</DialogTitle>
+          <span className="text-size-13 text-[var(--wh-muted)]">{`A privacy request asked on ${dayText(r.askedOn)}`}</span>
+        </div>
+      </DialogHeader>
+      <DialogBody className="flex flex-col gap-3">
+        <p className="m-0 text-sm text-[var(--wh-muted)]">Their details, bikes, repairs, purchases, messages and what they agreed to, with the shop’s notes on them and their bikes. Sending it marks the request done.</p>
+        {r.hasEmail ? null : <p className="m-0 text-sm text-[var(--wh-muted)]">{`${who} has no email address, so the copy can only be downloaded.`}</p>}
+        {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
+      </DialogBody>
+      <DialogFooter className="flex flex-wrap justify-end gap-2.5">
+        <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
+        <Button variant={r.hasEmail ? 'default' : 'primary'} disabled={busy} onClick={() => void send('download')}>Download it</Button>
+        {r.hasEmail ? <Button variant="primary" disabled={busy} onClick={() => void send('email')}>Email it</Button> : null}
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
 export function PrivacyRequestsPage() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const list = useQuery({ queryKey: ['privacy-requests', 'list'], queryFn: () => apiGet<List>('/api/privacy-requests'), enabled: owner, retry: false });
   const [deleting, setDeleting] = useState<Request | null>(null);
+  const [sending, setSending] = useState<Request | null>(null);
+  const [logging, setLogging] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
   if (session.status === 'signed-in' && !owner) {
     return <div className="flex flex-col gap-2.5">{back}<p className="m-0 text-sm">Only the shop’s owner can see privacy requests.</p></div>;
@@ -139,17 +209,22 @@ export function PrivacyRequestsPage() {
   return (
     <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3.5">
       {back}
-      <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-size-22 font-bold">Privacy requests</h2>
-        <p className="m-0 text-sm text-[var(--wh-muted)]">When someone asks for a copy of what the shop holds about them, or for it to be deleted. Answer within one month.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="m-0 text-size-22 font-bold">Privacy requests</h2>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">When someone asks for a copy of what the shop holds about them, or for it to be deleted. Answer within one month.</p>
+        </div>
+        <Button variant="default" onClick={() => setLogging(true)}>+ Log a request</Button>
       </div>
       <div className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
         {list.isError ? <p role="alert" className="m-0 px-3.5 py-3 text-sm">Wheelhouse couldn’t load the privacy requests. Try again in a moment.</p>
           : !list.data ? <p className="m-0 px-3.5 py-3 text-sm text-[var(--wh-muted)]">Loading…</p>
           : list.data.requests.length === 0 ? <p className="m-0 px-3.5 py-3 text-sm text-[var(--wh-muted)]">No privacy requests yet.</p>
-          : <ul aria-label="Privacy requests" className="m-0 list-none p-0">{list.data.requests.map((r) => <Row key={r.id} r={r} onDelete={setDeleting} />)}</ul>}
+          : <ul aria-label="Privacy requests" className="m-0 list-none p-0">{list.data.requests.map((r) => <Row key={r.id} r={r} onDelete={setDeleting} onSend={setSending} />)}</ul>}
       </div>
       {deleting ? <DeleteDialog r={deleting} onClose={() => setDeleting(null)} /> : null}
+      {sending ? <SendDialog r={sending} onClose={() => setSending(null)} /> : null}
+      {logging ? <LogRequestDialog onClose={() => setLogging(false)} /> : null}
     </div>
   );
 }

@@ -397,7 +397,7 @@ For the Owner, Deliveries and orders SHALL show a Restock list section, after To
 - **THEN** the section says "2 products at or under their low-stock level", and See the list opens the list with Running low picked
 
 ### Requirement: A bike asks for its frame number before it counts
-Scanning or picking a bike while receiving SHALL ask for its frame number ("Scan the sticker on the frame, or type it") before it counts, and SHALL count it when the number is scanned or "Count this bike" is pressed. A bike is a product whose category, or a category it sits in, is named as bikes (`rs-frame`).
+Scanning or picking a bike while receiving SHALL ask for its frame number ("Scan the sticker on the frame, or type it") before it counts, and SHALL count it when the number is scanned or "Count this bike" is pressed. A bike is a product whose category, or the nearest marked category it sits in, is marked "Bikes" or "E-bikes" in Settings › Stockroom › Categories (`rs-frame`; Jack, 9 Nov, the bike question, option 3).
 
 #### Scenario: Scanning a bike's sticker
 - **WHEN** Jo Taylor scans a bike in a delivery and then its frame sticker

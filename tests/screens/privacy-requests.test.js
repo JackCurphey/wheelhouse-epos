@@ -27,24 +27,36 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(at, { who = OWNER, requests = [OLIVER, MAYA, COPY, GONE], deleteReply = null } = {}) {
+async function open(at, { who = OWNER, requests = [OLIVER, MAYA, COPY, GONE], deleteReply = null, logReply = null } = {}) {
   calls = [];
   let list = requests;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
-    calls.push({ url: String(url), method });
-    const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
+    calls.push({ url: String(url), method, body: init.body ? JSON.parse(init.body) : undefined });
+    const reply = (status, b, headers = {}) => ({ status, ok: status < 300, json: async () => b, blob: async () => new Blob(['[zip]']), headers: new Headers(headers) });
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, who);
     if (u.pathname === '/api/recent-customers') return reply(200, []);
     if (u.pathname === '/api/privacy-requests/open-count') return reply(200, { openCount: list.filter((r) => !r.doneOn).length });
-    if (u.pathname === '/api/privacy-requests') return who.isOwner ? reply(200, { requests: list, openCount: list.filter((r) => !r.doneOn).length }) : reply(403, { error: 'Only the shop’s owner can deal with privacy requests', code: 'owner_only' });
+    if (u.pathname === '/api/privacy-requests' && method === 'GET') return who.isOwner ? reply(200, { requests: list, openCount: list.filter((r) => !r.doneOn).length }) : reply(403, { error: 'Only the shop’s owner can deal with privacy requests', code: 'owner_only' });
     const del = /^\/api\/privacy-requests\/(\d+)\/delete$/.exec(u.pathname);
     if (del && method === 'POST') {
       if (deleteReply) return reply(...deleteReply);
       list = list.map((r) => (r.id === Number(del[1]) ? { ...r, name: null, doneOn: '2026-10-30' } : r));
       return reply(200, { ok: true });
     }
+    if (u.pathname === '/api/privacy-requests' && method === 'POST') {
+      if (logReply) return reply(...logReply);
+      const b = JSON.parse(init.body);
+      list = [{ id: 9, reference: 'PR-9', customerId: b.customerId, name: 'Maya Patel', kind: b.kind, source: 'shop', how: b.how, askedOn: b.askedOn, dueBy: '2026-11-30', overdue: false, doneOn: null, inTheWay: [], hasEmail: true }, ...list];
+      return reply(201, { id: 9 });
+    }
+    const copy = /^\/api\/privacy-requests\/(\d+)\/copy$/.exec(u.pathname);
+    if (copy && method === 'POST') {
+      list = list.map((r) => (r.id === Number(copy[1]) ? { ...r, doneOn: '2026-10-30' } : r));
+      return JSON.parse(init.body).send === 'email' ? reply(200, { ok: true }) : reply(200, null, { 'content-type': 'application/zip', 'content-disposition': 'attachment; filename="north-street-maya-patel-data-2026-10-30.zip"' });
+    }
+    if (u.pathname === '/api/search') return reply(200, { jobs: [], bikes: [], customers: [{ id: 5, name: 'Maya Patel', phone: '07700 900142' }] });
     if (u.pathname === '/api/customers/5') return reply(200, CUSTOMER);
     if (u.pathname.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
@@ -138,4 +150,78 @@ test('money owed on account is in the way: the row says so and Delete waits unti
   assert.match(rows[1].textContent, /Still in the way: bike in the workshop, WH-1042; owes on account £35\.00/);
   const bothDelete = within(rows[1]).getByRole('button', { name: 'Delete their details' });
   assert.equal(document.getElementById(bothDelete.getAttribute('aria-describedby')).textContent, 'Can be deleted once the bike is collected and what they owe is paid.');
+});
+
+// Logging a request by hand, sending the copy, and store credit lost on deletion
+// (finish-customers design 7, task 7.1; question 7; Jack's 9 Nov answer 6).
+const OPEN_COPY = { id: 4, reference: 'PR-4', customerId: 5, name: 'Maya Patel', kind: 'copy', source: 'shop', how: 'in_person', askedOn: '2026-10-30', dueBy: '2026-11-30', overdue: false, doneOn: null, inTheWay: [], hasEmail: true };
+const posted = (path) => calls.filter((c) => c.method === 'POST' && c.url.endsWith(path)).map((c) => c.body);
+
+test('+ Log a request: Maya Patel, found as the header search finds her, asked in person on a day; the row says how', async () => {
+  const t = await open('/workshop/customers/privacy');
+  t.fireEvent.click(await t.ui.findByRole('button', { name: '+ Log a request' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Log a request' }));
+  t.fireEvent.change(box.getByLabelText('Customer'), { target: { value: 'Maya' } });
+  t.fireEvent.click(t.within(await box.findByRole('list', { name: 'Customers found' })).getByRole('button', { name: /Maya Patel/ }));
+  t.fireEvent.click(t.within(box.getByRole('radiogroup', { name: 'What they asked for' })).getByRole('radio', { name: 'Copy of their data' }));
+  t.fireEvent.click(t.within(box.getByRole('radiogroup', { name: 'How they asked' })).getByRole('radio', { name: 'In person' }));
+  t.fireEvent.change(box.getByLabelText('Day they asked'), { target: { value: '2026-10-30' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Log it' }));
+  await t.waitFor(() => assert.deepEqual(posted('/api/privacy-requests'), [{ customerId: 5, kind: 'copy', askedOn: '2026-10-30', how: 'in_person' }]));
+  const rows = t.within(await t.ui.findByRole('list', { name: 'Privacy requests' }));
+  await t.waitFor(() => assert.ok(rows.getByText('Asked in person · Fri 30 Oct · answer by Mon 30 Nov')));
+  assert.ok(t.ui.queryByRole('dialog') === null);
+  assert.ok(rows.getByRole('button', { name: 'Send the copy' }));
+});
+
+test('Log it with nothing chosen asks for the customer; the shop’s refusal shows its words', async () => {
+  const t = await open('/workshop/customers/privacy', { logReply: [409, { error: 'Maya Patel already has an open request for a copy of their data', code: 'open' }] });
+  t.fireEvent.click(await t.ui.findByRole('button', { name: '+ Log a request' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Log a request' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Log it' }));
+  assert.equal((await box.findByRole('alert')).textContent, 'Find the customer');
+  assert.deepEqual(posted('/api/privacy-requests'), []);
+  t.fireEvent.change(box.getByLabelText('Customer'), { target: { value: 'Maya' } });
+  t.fireEvent.click(t.within(await box.findByRole('list', { name: 'Customers found' })).getByRole('button', { name: /Maya Patel/ }));
+  t.fireEvent.click(t.within(box.getByRole('radiogroup', { name: 'What they asked for' })).getByRole('radio', { name: 'Copy of their data' }));
+  t.fireEvent.click(t.within(box.getByRole('radiogroup', { name: 'How they asked' })).getByRole('radio', { name: 'Phone' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Log it' }));
+  await t.waitFor(() => assert.equal(box.getByRole('alert').textContent, 'Maya Patel already has an open request for a copy of their data'));
+});
+
+test('Send the copy › Email it sends it and the row is done', async () => {
+  const t = await open('/workshop/customers/privacy', { requests: [OPEN_COPY] });
+  const rows = t.within(await t.ui.findByRole('list', { name: 'Privacy requests' }));
+  t.fireEvent.click(rows.getByRole('button', { name: 'Send the copy' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Send Maya Patel’s copy' }));
+  assert.ok(box.getByText('A privacy request asked on Fri 30 Oct'));
+  assert.ok(box.getByRole('button', { name: 'Download it' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Email it' }));
+  await t.waitFor(() => assert.deepEqual(posted('/api/privacy-requests/4/copy'), [{ send: 'email' }]));
+  await t.waitFor(() => assert.ok(rows.getByText('Asked in person · Fri 30 Oct · done Fri 30 Oct')));
+  assert.ok(rows.getByText('Done'));
+});
+
+test('no email: only Download it, which downloads the zip and marks it done', async () => {
+  const made = [];
+  globalThis.URL.createObjectURL = () => 'blob:copy';
+  globalThis.URL.revokeObjectURL = () => {};
+  const t = await open('/workshop/customers/privacy', { requests: [{ ...OPEN_COPY, hasEmail: false }] });
+  window.HTMLAnchorElement.prototype.click = function click() { made.push(this.download); };
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Send the copy' }));
+  const box = t.within(await t.ui.findByRole('dialog', { name: 'Send Maya Patel’s copy' }));
+  assert.ok(box.getByText('Maya Patel has no email address, so the copy can only be downloaded.'));
+  assert.ok(box.queryByRole('button', { name: 'Email it' }) === null);
+  t.fireEvent.click(box.getByRole('button', { name: 'Download it' }));
+  await t.waitFor(() => assert.deepEqual(made, ['north-street-maya-patel-data-2026-10-30.zip']));
+  assert.deepEqual(posted('/api/privacy-requests/4/copy'), [{ send: 'download' }]);
+  assert.ok(await t.ui.findByText('Done'));
+});
+
+test('store credit on a deletion row will be lost, and doesn’t hold Delete back', async () => {
+  const t = await open('/workshop/customers/privacy', { requests: [{ ...OLIVER, storeCreditPence: 2500 }, { ...MAYA, storeCreditPence: 2500 }] });
+  const rows = t.within(await t.ui.findByRole('list', { name: 'Privacy requests' })).getAllByRole('listitem');
+  assert.ok(t.within(rows[0]).getByText('Store credit £25.00 will be lost'));
+  assert.equal(t.within(rows[0]).getByRole('button', { name: 'Delete their details' }).disabled, false);
+  assert.ok(t.within(rows[1]).getByText('Still in the way: bike in the workshop, WH-1042 · store credit £25.00 will be lost'));
 });
