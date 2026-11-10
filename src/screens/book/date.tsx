@@ -16,6 +16,7 @@ import {
   jobMinutes, localToday, pickedDay, reresolveMechanic, resolveMechanic, summaryText, type BookingRange,
 } from './date-rules.ts';
 import { TIME_TAKEN_MESSAGE, type SendRefusalState } from './details-rules.ts';
+import { ReminderNote } from './reminder-landing.tsx';
 
 /**
  * The date screen (screen design `date`, step 3): a month calendar for this month and
@@ -194,6 +195,7 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
         )
       }
     >
+      <ReminderNote />
       {refused && (
         <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
           {TIME_TAKEN_MESSAGE}

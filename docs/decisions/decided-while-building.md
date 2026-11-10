@@ -4969,6 +4969,29 @@ From the independent review, 28 Oct:
    the shop's shelf. Adding a product by hand with stock does write a line
    (`server/routes/products.js:170-173`). Left as it is for Jack to say.
 
+### 10 Nov 2026: the reminder's booking link, the screens (`openspec/changes/finish-account` group 4, `ac-reminder-landing`)
+
+Decided here, for Jack to overrule.
+
+1. **The bike step is the "Your bike" box.** The drawing shows the bike as a
+   step of its own, done. The built booking has no bike step: the bike is
+   the "Your bike (optional)" box on the problem step. So the link fills that
+   box with her bike ("Trek Domane AL 3 · green · black mudguards"). While the
+   box still says that, the booking is made for that bike itself, not just a
+   note. A removed bike opens the problem step. The same goes for a service
+   with a question still to answer. The drawn words "Change either above"
+   are kept: the built steps are one page each, with Back at the top.
+2. **The details step shows the drawn details line instead of name and
+   mobile.** Only "When?" is drawn. On the details step, "Your details are
+   filled in from your reminder: Maya P. · 07700 ••• 142 · Change" takes the
+   place of the two boxes; Change brings them back. How to send updates, the
+   reminder tick and the terms are asked as usual. This follows the box drawn
+   on "When?". When her record has no mobile, job updates start on Email,
+   since there's no mobile box to fill in.
+3. **"From your reminder: booking the next …" shows only while that's still
+   what's chosen.** Once she picks another service or changes the bike, that
+   line goes, because it would be wrong. The details line stays until Change.
+
 ### 10 Nov 2026: Edit your details, name and mobile (`openspec/changes/finish-account` group 5, `ac-account`)
 
 Decided here, for Jack to overrule.
