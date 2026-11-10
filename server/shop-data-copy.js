@@ -9,6 +9,8 @@ import { prepare } from './db.js';
 import { csvOf } from './lib/csv.js';
 import { shopZone } from './privacy-requests.js';
 import { currentMoment } from './clock.js';
+import { receiptLabel } from './till/money.js';
+import { linePence } from './workshop/quotes.js';
 
 const WAYS = { sms: 'Text', whatsapp: 'WhatsApp', email: 'Email' };
 const YES_VIA = { booking: 'at booking', collection: 'at collection', account: 'from their account', stop_page: 'on the reminders page' };
@@ -81,8 +83,119 @@ async function stockFile() {
 
 const SALES_HEADER = ['Date', 'Kind', 'Receipt', 'Shop', 'Till', 'Served by', 'Customer', 'Item', 'Quantity',
   'Price each (£)', 'Line total (£)', 'VAT (£)', 'Sale total (£)', 'Paid by', 'Refunded'];
+const PAID_BY = { cash: 'Cash', card: 'Card' };
+
+/**
+ * Sales and refunds.csv (design 3 and 4; answers 3 and 4): every sale from both records, one
+ * row per item sold with the sale's details on each row, and the refunds Wheelhouse records
+ * today as minus rows: online deposits refunded, and Shopify refunds (which record what came
+ * back, not an amount). Oldest first. Older-record cells never stored (VAT, receipt, shop,
+ * till) stay empty. Till refunds join here when step C records them (tasks 5.2).
+ */
+async function salesFile(zone) {
+  const who = "CASE WHEN c.deleted_at IS NULL THEN c.name END";
+  const rows = await prepare(
+    // Each till sale's ways of paying gathered once, not looked up per line (timed in the pull request).
+    `WITH paid AS (SELECT till_sale_id, string_agg(method, ', ' ORDER BY id) AS methods FROM till_sale_payments GROUP BY till_sale_id)
+     SELECT r.*, to_char(r.at AT TIME ZONE ?, ${WHEN}) AS shown FROM (
+       SELECT a.made_at AS at, 1 AS part, a.id AS sale_id, l.id AS line_id, 'Sale' AS kind,
+              t.code AS till, a.receipt_number, si.name AS shop, e.name AS served_by, ${who} AS customer,
+              l.description AS item, l.qty, l.unit_price_pence AS each_pence, l.line_total_pence AS line_pence,
+              l.vat_pence, a.total_pence,
+              paid.methods AS paid_by,
+              NULL AS refunded
+         FROM all_sales a
+         JOIN till_sales ts ON a.source = 'till' AND ts.id = a.id
+         JOIN till_sale_lines l ON l.till_sale_id = a.id
+         LEFT JOIN paid ON paid.till_sale_id = a.id
+         LEFT JOIN tills t ON t.id = ts.till_id
+         LEFT JOIN sites si ON si.id = ts.site_id
+         LEFT JOIN employees e ON e.id = a.employee_id
+         LEFT JOIN customers c ON c.id = a.customer_id
+       UNION ALL
+       SELECT a.made_at, 0, a.id, l.id, 'Sale', NULL, NULL, NULL, e.name, ${who},
+              l.name, l.qty, ROUND(l.unit_price * 100)::int, ROUND(l.line_total * 100)::int,
+              NULL, a.total_pence, s.payment_method, NULL
+         FROM all_sales a
+         JOIN sales s ON a.source = 'old' AND s.id = a.id
+         JOIN sale_items l ON l.sale_id = a.id
+         LEFT JOIN employees e ON e.id = a.employee_id
+         LEFT JOIN customers c ON c.id = a.customer_id
+       UNION ALL
+       SELECT p.refunded_at, 2, p.id, 0, 'Refund', NULL, NULL, NULL, NULL, ${who},
+              'Deposit paid online', 1, -p.amount_pence, -p.amount_pence, NULL, -p.amount_pence,
+              'Deposit paid online', 'Online deposit for job ' || coalesce(j.reference, '[job removed]')
+         FROM online_payments p
+         LEFT JOIN workshop_jobs j ON j.id = p.job_id
+         LEFT JOIN customers c ON c.id = j.customer_id
+        WHERE p.status = 'refunded'
+       UNION ALL
+       SELECT m.created_at, 3, m.id, 0, 'Refund', NULL, NULL, NULL, NULL, NULL,
+              pr.name, -m.change_qty, NULL, NULL, NULL, NULL, 'Shopify', 'Shopify refund #' || m.shopify_refund_id
+         FROM stock_movements m JOIN products pr ON pr.id = m.product_id
+        WHERE m.type = 'return' AND m.shopify_refund_id IS NOT NULL
+     ) r
+     ORDER BY r.at, r.part, r.sale_id, r.line_id`
+  ).all(zone);
+  return csvOf([SALES_HEADER, ...rows.map((r) => [
+    r.shown, r.kind, r.receipt_number == null ? '' : receiptLabel(r.till, r.receipt_number),
+    r.shop, r.till, r.served_by, r.customer, r.item, r.qty, money(r.each_pence), money(r.line_pence), money(r.vat_pence),
+    money(r.total_pence), r.paid_by == null ? '' : r.paid_by.split(', ').map((m) => PAID_BY[m] ?? m).join(', '), r.refunded,
+  ])]);
+}
+
 const JOBS_HEADER = ['Job', 'Customer', 'Bike', 'Services', 'Booked in', 'Due', 'Where it’s up to', 'Mechanic',
   'Quoted (£)', 'Final (£)', 'Deposit (£)', 'Collected', 'Staff notes'];
+
+// The job page's word for where a job is up to (jobStage in src/screens/diary/job-dialog.tsx).
+function jobStage(j) {
+  if (j.booking_state === 'pending') return 'Booking request';
+  if (j.booking_state === 'offered') return 'Time offered';
+  if (j.booking_state === 'reschedule_requested') return 'Change requested';
+  if (j.booking_state === 'cancelled') return 'Cancelled';
+  if (j.booking_state === 'declined') return 'Declined';
+  if (j.booking_state === 'expired') return 'Expired';
+  if (j.custody_state === 'collected') return 'Collected';
+  if (j.work_state === 'complete') return 'Finished';
+  if (j.work_state === 'waiting_parts') return 'Waiting for parts';
+  if (j.quote_state === 'sent') return 'Quoting';
+  if (j.work_state === 'on_hold') return 'On hold';
+  if (j.custody_state === 'in_shop') return 'In the workshop';
+  if (j.no_show_at) return 'Didn’t come';
+  return 'Expected';
+}
+
+/**
+ * Workshop jobs.csv (answer 6): one row per job. Due is the day it's booked for; Quoted the
+ * latest quote's lines; Final what the job was paid at the till (its order turned into a
+ * sale); Deposit an online deposit held or taken; staff notes as on the job page.
+ */
+async function jobsFile(zone) {
+  const rows = await prepare(
+    `SELECT w.reference, CASE WHEN c.deleted_at IS NULL THEN c.name END AS customer,
+            NULLIF(trim(concat_ws(' ', b.make, b.model)), '') AS bike,
+            (SELECT string_agg(sv.name, '; ' ORDER BY js.position, js.service_id) FROM workshop_job_services js
+               JOIN workshop_services sv ON sv.id = js.service_id WHERE js.workshop_job_id = w.id) AS services,
+            to_char(w.booked_in_at AT TIME ZONE ?, ${WHEN}) AS booked_in, w.job_date AS due,
+            w.booking_state, w.custody_state, w.work_state, w.no_show_at, lq.state AS quote_state, m.name AS mechanic,
+            (SELECT sum(${linePence('l.')}) FROM workshop_quote_lines l WHERE l.workshop_quote_id = lq.id) AS quoted_pence,
+            (SELECT ROUND(s.total * 100) FROM sale_documents d JOIN sales s ON s.id = d.converted_sale_id
+              WHERE d.workshop_job_id = w.id AND d.kind = 'order' ORDER BY d.id DESC LIMIT 1) AS final_pence,
+            (SELECT p.amount_pence FROM online_payments p WHERE p.job_id = w.id AND p.status IN ('held', 'taken', 'refunded')
+              ORDER BY p.id DESC LIMIT 1) AS deposit_pence,
+            to_char(w.collected_at AT TIME ZONE ?, ${WHEN}) AS collected, w.notes
+       FROM workshop_jobs w
+       LEFT JOIN customers c ON c.id = w.customer_id
+       LEFT JOIN customer_bikes b ON b.id = w.bike_id
+       LEFT JOIN employees m ON m.id = w.mechanic_id
+       LEFT JOIN LATERAL (SELECT q.id, q.state FROM workshop_quotes q WHERE q.workshop_job_id = w.id ORDER BY q.revision DESC LIMIT 1) lq ON true
+      ORDER BY w.id`
+  ).all(zone, zone);
+  return csvOf([JOBS_HEADER, ...rows.map((j) => [
+    j.reference, j.customer, j.bike, j.services, j.booked_in, j.due, jobStage(j), j.mechanic,
+    money(j.quoted_pence), money(j.final_pence), money(j.deposit_pence), j.collected, j.notes,
+  ])]);
+}
 
 /** The zip's name and files, for GET /api/settings/your-data/download. */
 export async function shopDataCopy() {
@@ -94,9 +207,9 @@ export async function shopDataCopy() {
     name: `${name} data ${day}.zip`,
     files: [
       { name: 'Customers.csv', content: await customersFile(zone) },
-      { name: 'Sales and refunds.csv', content: csvOf([SALES_HEADER]) },
+      { name: 'Sales and refunds.csv', content: await salesFile(zone) },
       { name: 'Stock.csv', content: await stockFile() },
-      { name: 'Workshop jobs.csv', content: csvOf([JOBS_HEADER]) },
+      { name: 'Workshop jobs.csv', content: await jobsFile(zone) },
     ],
   };
 }
