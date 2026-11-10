@@ -178,6 +178,7 @@ POST /api/portal/:shopSlug/logout
 GET /api/portal/:shopSlug/me
 POST /api/portal/:shopSlug/me/delete-request
 POST /api/portal/:shopSlug/me/delete-request/cancel
+PUT /api/portal/:shopSlug/me
 PUT /api/portal/:shopSlug/me/contact
 GET /api/portal/:shopSlug/mechanics
 GET /api/portal/:shopSlug/services

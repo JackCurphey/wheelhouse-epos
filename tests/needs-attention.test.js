@@ -139,3 +139,26 @@ test('only the Owner sees the list, until roles', async () => {
   assert.equal(res.status, 403, JSON.stringify(res.body));
   assert.equal(res.body.code, 'owner_only');
 });
+
+// A request to delete an account (ac-today; finish-account design 5; question 11).
+test('an open request to delete is listed for the Owner: who, how it came, asked on and answer by; gone once done or cancelled', async () => {
+  const deletes = (items) => items.filter((i) => i.kind === 'delete_request');
+  const ask = (customerId, source, how = null) => runWithShop(owner.shop.id, () => prepare(
+    "INSERT INTO privacy_requests (customer_id, kind, source, how, asked_at) VALUES (?, 'delete', ?, ?, '2026-09-01T09:00:00Z') RETURNING id"
+  ).get(customerId, source, how));
+  const web = await ask(maya.id, 'account');
+  const inPerson = await ask(jamie.id, 'shop', 'in_person');
+  try {
+    const lines = deletes((await attention()).body.items);
+    assert.deepEqual(lines.filter((l) => [web.id, inPerson.id].includes(l.requestId)), [
+      { kind: 'delete_request', requestId: web.id, reference: `PR-${web.id}`, customerName: 'Maya Patel', source: 'account', how: null, askedOn: '2026-09-01', dueBy: '2026-10-01' },
+      { kind: 'delete_request', requestId: inPerson.id, reference: `PR-${inPerson.id}`, customerName: 'Jamie Brooks', source: 'shop', how: 'in_person', askedOn: '2026-09-01', dueBy: '2026-10-01' },
+    ]);
+    assert.equal(deletes((await attention(other)).body.items).length, 0, 'another shop sees none');
+    await runWithShop(owner.shop.id, () => prepare('UPDATE privacy_requests SET cancelled_at = now() WHERE id = ?').run(web.id));
+    await runWithShop(owner.shop.id, () => prepare('UPDATE privacy_requests SET done_at = now() WHERE id = ?').run(inPerson.id));
+    assert.equal(deletes((await attention()).body.items).filter((l) => [web.id, inPerson.id].includes(l.requestId)).length, 0);
+  } finally {
+    await runWithShop(owner.shop.id, () => prepare('DELETE FROM privacy_requests WHERE id = ANY(?::int[])').run([web.id, inPerson.id]));
+  }
+});

@@ -4991,3 +4991,20 @@ Decided here, for Jack to overrule.
 3. **"From your reminder: booking the next …" shows only while that's still
    what's chosen.** Once she picks another service or changes the bike, that
    line goes, because it would be wrong. The details line stays until Change.
+
+### 10 Nov 2026: Edit your details, name and mobile (`openspec/changes/finish-account` group 5, `ac-account`)
+
+Decided here, for Jack to overrule.
+
+1. **The Edit box isn't drawn.** "Edit" beside Your details opens a box
+   titled "Edit your details" with Name, Mobile and Email, Cancel and Save.
+   Save keeps the name and mobile straight away, then closes. Email is shown
+   but can't be changed yet; changing it by a code comes in the next pull
+   request. *Pattern:* How we contact you's box, and Add a bike's fields and
+   buttons.
+2. **What counts as a bad mobile:** digits, with spaces, brackets, dashes
+   or a + in front, and 10 to 15 digits in all. Anything else gets "That
+   doesn’t look like a mobile number — check it". Nothing in the app checked
+   a phone number's shape before; the booking only checks one is there. The
+   words follow the receipt email's "That doesn’t look like an email address
+   — check it".

@@ -26,8 +26,8 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 5. Today's deletion line, and Edit for name and mobile (PR 5, about 400 lines)
 
-- [ ] 5.1 Tests first (today route and screen tests; portal and screen tests for details): an open deletion request shows for the Owner as "Maya Patel asked us to delete their account" with "From their account on the website, [date] · answer by [date]" and Open to Privacy requests (question 11), not for staff, gone once done or cancelled; "Edit" opens Name, Mobile and Email; a changed name or mobile saves at once and shows; a bad mobile, a cleared mobile while updates go by text, and another website's request are refused. Verify: each fails first.
-- [ ] 5.2 `server/routes/today.js`, `today-page.tsx`; `PUT /api/portal/:shopSlug/me` (locks the customer's row) and `src/screens/book/details-dialog.tsx` (Email shown, changed in PR 6). Log the Edit box (not drawn) in `decided-while-building.md`. Verify: 5.1 passes.
+- [x] 5.1 Tests first (today route and screen tests; portal and screen tests for details): an open deletion request shows for the Owner as "Maya Patel asked us to delete their account" with "From their account on the website, [date] · answer by [date]" and Open to Privacy requests (question 11), not for staff, gone once done or cancelled; "Edit" opens Name, Mobile and Email; a changed name or mobile saves at once and shows; a bad mobile, a cleared mobile while updates go by text, and another website's request are refused. Verify: each fails first.
+- [x] 5.2 `server/routes/today.js`, `today-page.tsx`; `PUT /api/portal/:shopSlug/me` (locks the customer's row) and `src/screens/book/details-dialog.tsx` (Email shown, changed in PR 6). Log the Edit box (not drawn) in `decided-while-building.md`. Verify: 5.1 passes.
 
 ## 6. Changing the email, confirmed by code (PR 6, sign-in, about 500 lines)
 

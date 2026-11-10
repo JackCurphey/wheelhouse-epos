@@ -157,6 +157,23 @@ export async function listRequests() {
   return { requests, openCount: requests.filter((r) => r.doneOn === null).length };
 }
 
+/**
+ * Every open request to delete, oldest asked first, for Today's line
+ * (ac-today; finish-account design 5): who, how it came, asked on, answer by.
+ */
+export async function openDeletions() {
+  const zone = await shopZone();
+  const rows = await prepare(
+    `SELECT r.id, c.deleted_at IS NULL AS named, c.name, r.source, r.how, ${ASKED_ON} AS asked_on, ${DUE_BY} AS due_by
+       FROM privacy_requests r LEFT JOIN customers c ON c.id = r.customer_id
+      WHERE r.kind = 'delete' AND ${OPEN} ORDER BY r.asked_at, r.id`
+  ).all(zone, zone);
+  return rows.map((r) => ({
+    requestId: r.id, reference: `PR-${r.id}`, customerName: r.named ? r.name : null,
+    source: r.source, how: r.how ?? null, askedOn: r.asked_on, dueBy: r.due_by,
+  }));
+}
+
 export async function openCount() {
   return Number((await prepare(`SELECT count(*) AS n FROM privacy_requests r WHERE ${OPEN}`).get()).n);
 }
