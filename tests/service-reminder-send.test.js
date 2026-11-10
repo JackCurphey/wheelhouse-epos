@@ -7,6 +7,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -82,7 +83,11 @@ const until = async (check, ms = 8000) => {
   }
 };
 const dueNow = (id) => inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE id = ?").run(id));
+// Sends this shop's due messages itself rather than waiting for the server's round,
+// which visits every shop in the shared test database and can take longer than any
+// wait here (10 Nov; tests/uncollected-bike.test.js).
 const settled = (id) => until(async () => {
+  await sendDueForShop(owner.shop.id);
   const row = await inShop(() => prepare('SELECT * FROM customer_messages WHERE id = ?').get(id));
   return ['delivered', 'undone', 'failed'].includes(row.intent_state) ? row : null;
 });

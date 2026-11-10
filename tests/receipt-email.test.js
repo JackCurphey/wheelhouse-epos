@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -67,6 +68,10 @@ test('it is sent through the pretend sender, and the customer’s saved address 
   await send(sale.id, 'someone.else@example.com');
   let row;
   for (let i = 0; i < 100; i++) {
+    // Sends this shop's due messages itself rather than waiting for the server's round,
+    // which visits every shop in the shared test database and can take longer than any
+    // wait here (10 Nov; tests/uncollected-bike.test.js).
+    await sendDueForShop(owner.shop.id);
     row = (await receiptsFor(sale.id)).find((r) => r.to_address === 'someone.else@example.com');
     if (row?.sent_at) break;
     await new Promise((r) => setTimeout(r, 100));

@@ -63,6 +63,10 @@ for (const [size, viewport] of [['a computer', { width: 1440, height: 900 }], ['
     const row = staff.getByRole('listitem').filter({ hasText: 'Maya Patel · Delete their details' });
     await row.getByRole('button', { name: 'Delete their details' }).click();
     await staff.getByRole('dialog', { name: 'Delete Maya Patel’s details?' }).getByRole('button', { name: 'Delete their details' }).click();
+    // Her row loses her name only once the server has deleted her details. A
+    // PR row alone isn't proof: on the phone the computer run's is already
+    // there, so the reload below could come before this deletion finished.
+    await expect(row).toHaveCount(0);
     await expect(staff.getByRole('listitem').filter({ hasText: /^PR-\d+ · Delete their details/ }).first()).toBeVisible();
     // Opened straight from its address, it shows the same.
     await staff.goto(`${server!.baseUrl}/workshop/customers/privacy`);
