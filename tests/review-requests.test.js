@@ -7,6 +7,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -46,9 +47,13 @@ async function collected(customer) {
   assert.equal(res.status, 200, JSON.stringify(res.body));
   return res.body;
 }
+// Sends this shop's due messages itself rather than waiting for the server's round,
+// which visits every shop in the shared test database and can take longer than any
+// wait here (10 Nov; tests/uncollected-bike.test.js).
 const settled = async (id) => {
   const end = Date.now() + 8000;
   for (;;) {
+    await sendDueForShop(owner.shop.id);
     const row = await inShop(() => prepare('SELECT * FROM customer_messages WHERE id = ?').get(id));
     if (['delivered', 'undone', 'failed'].includes(row.intent_state)) return row;
     if (Date.now() > end) throw new Error('timed out');

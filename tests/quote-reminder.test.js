@@ -4,6 +4,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -104,8 +105,8 @@ test('once the reminder has gone, the customer’s quote says when', async () =>
   // booking-link limiter (30 reads in 15 minutes), and polling it 10 times a
   // second used that up before a slow sender round got to this shop, so every
   // later read was a 429 and the test failed (28 Oct). One sender round walks
-  // every shop in the test database, a few seconds on a long-lived one, so
-  // up to 20 seconds.
+  // every shop in the test database, more than 20 seconds with several test
+  // runs at once (10 Nov), so this file sends its own shop's due messages.
   const sent = async () => (await runWithShop(owner.shop.id, () => prepare(
     "SELECT sent_at FROM customer_messages WHERE job_id = ? AND template_key = 'quote_reminder'"
   ).get(job.id)))?.sent_at ?? null;
@@ -113,6 +114,7 @@ test('once the reminder has gone, the customer’s quote says when', async () =>
   let sentAt = await sent();
   while (!sentAt && Date.now() < end) {
     await new Promise((r) => setTimeout(r, 100));
+    await sendDueForShop(owner.shop.id);
     sentAt = await sent();
   }
   assert.ok(sentAt, 'the sender sent the reminder');
@@ -130,10 +132,12 @@ async function bringForward(jobId) {
     "UPDATE customer_messages SET send_after = now() - interval '1 minute' WHERE (job_id = ? OR job_id IS NULL) AND template_key = 'quote_reminder' AND intent_state = 'intended'"
   ).run(jobId));
 }
-// Until the sender's tick has dealt with every due reminder (no longer
-// waiting), up to 10 seconds, so a busy machine doesn't decide the result.
+// Until every due reminder has been dealt with (no longer waiting), sending this
+// shop's due messages itself rather than waiting for the server's round over every
+// shop; up to 10 seconds, in case another test server's round has one part-sent.
 async function settle() {
   for (let i = 0; i < 100; i++) {
+    await sendDueForShop(owner.shop.id);
     const waiting = await runWithShop(owner.shop.id, () => prepare(
       "SELECT count(*)::int AS n FROM customer_messages WHERE template_key = 'quote_reminder' AND intent_state IN ('intended', 'sending') AND send_after <= now()"
     ).get());
