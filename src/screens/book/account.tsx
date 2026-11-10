@@ -212,7 +212,7 @@ export function AccountScreen() {
           <DetailsCard me={me.data} shopSlug={shopSlug} />
         </div>
       </div>
-      {receipt ? <ReceiptDialog key={`${receipt.source}-${receipt.id}`} base={base} of={receipt} email={me.data.email} onNotFound={notFound} onClose={() => showReceipt(null)} /> : null}
+      {receipt ? <ReceiptDialog key={`${receipt.source}-${receipt.id}`} shopSlug={shopSlug} base={base} of={receipt} email={me.data.email} onNotFound={notFound} onClose={() => showReceipt(null)} /> : null}
       {asking ? <DeleteDialog me={me.data} base={base} bike={bikeWithUs} onDownload={() => void copy.download()} onClose={() => setAsking(false)} /> : null}
     </BookFrame>
   );

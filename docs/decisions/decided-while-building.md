@@ -5026,3 +5026,8 @@ Decided here, for Jack to overrule.
    their line breaks, and "← Your account" back. Opened when the shop has no
    notice, it says "This shop hasn’t added a privacy notice yet." *Pattern:*
    the conversation page's frame and back link.
+3. **Today's line for a request the shop logged without saying how it came
+   in** (group 5, `ac-today`) reads "Asked [date] · answer by [date]". Design
+   § 5 gives only "Asked in person, [date]" for one logged in person; "by
+   email" and "by phone" read the same way. *Pattern:* the Privacy requests
+   page's own words for how a request came.

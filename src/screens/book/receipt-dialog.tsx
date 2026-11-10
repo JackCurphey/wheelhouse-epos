@@ -41,11 +41,12 @@ const whenLine = (iso: string) => { const t = london(iso); return `${t.d} ${MONT
 const cell = 'border-t border-[var(--wh-border)] py-1.5';
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 
-export function ReceiptDialog({ base, of, email, onNotFound, onClose }: {
-  base: string; of: ReceiptRef; email: string; onNotFound: () => void; onClose: () => void;
+export function ReceiptDialog({ shopSlug, base, of, email, onNotFound, onClose }: {
+  shopSlug: string; base: string; of: ReceiptRef; email: string; onNotFound: () => void; onClose: () => void;
 }) {
   const path = `${base}/receipts/${encodeURIComponent(of.source)}/${of.id}`;
-  const receipt = useQuery({ queryKey: ['account', base, 'receipt', of.source, of.id], queryFn: () => apiGet<Receipt>(path), retry: false, refetchOnWindowFocus: false });
+  // Kept with the rest of the account, so signing out forgets it too.
+  const receipt = useQuery({ queryKey: ['account', shopSlug, 'receipt', of.source, of.id], queryFn: () => apiGet<Receipt>(path), retry: false, refetchOnWindowFocus: false });
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
