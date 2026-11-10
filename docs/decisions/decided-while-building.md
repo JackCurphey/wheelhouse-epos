@@ -5031,3 +5031,17 @@ Decided here, for Jack to overrule.
    § 5 gives only "Asked in person, [date]" for one logged in person; "by
    email" and "by phone" read the same way. *Pattern:* the Privacy requests
    page's own words for how a request came.
+
+### 10 Nov 2026: Download everything's Customers spreadsheet (`openspec/changes/your-data-download` group 1, `set-data-export`)
+
+Decided here, for Jack to overrule.
+
+1. **Customers.csv also holds each customer's store credit, what they owe
+   on account and the shop's notes on them**, beyond the spec's list, as
+   "Store credit (£)", "Owed on account (£)" and "Notes" (empty when there
+   is none). Store credit and accounts (finish-customers, #645 to #656)
+   merged after the spec was written; the notes are the shop's own, like
+   the job staff notes answer 6 includes. A record merged into another
+   counts towards the kept record's credit and what it owes. *Pattern:* the
+   customer page's balance, which sums every record merged in
+   (`chainIds`).
