@@ -65,7 +65,7 @@ const row = (left, right) => `${left}  ${right}`;
 // "25 Aug 2026 · 10:05" in the shop's time, as the printed receipt says it.
 export function receiptWhen(iso) {
   const part = (o) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', ...o }).format(new Date(iso));
-  return `${part({ day: 'numeric' })} ${MONTHS[Number(part({ month: 'numeric' })) - 1]} ${part({ year: 'numeric' })} · ${part({ hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  return `${part({ day: 'numeric' })} ${MONTHS[Number(part({ month: 'numeric' })) - 1]} ${part({ year: 'numeric' })} · ${part({ hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`;
 }
 
 /** The receipt as plain text, in the receipt email's frame (server/messaging/receipt-email.js), for "Email it to me". */
