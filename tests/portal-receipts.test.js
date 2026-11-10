@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { receiptFor, receiptText } from '../server/receipts.js';
+import { repairsAndPurchases } from '../server/routes/portal.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -245,4 +246,11 @@ test('the history: a till purchase carries its receipt, an old-record one none, 
     ['Inner tube', null],
   ]);
   assert.equal(res.body.filter((h) => h.kind === 'repair').length, 1, 'the repair, once');
+  // The copy of her data still lists every sale, the repair's included (review of #657).
+  const copy = await runWithShop(owner.shop.id, () => repairsAndPurchases(ana.id, { everySale: true }));
+  assert.deepEqual(copy.filter((h) => h.kind === 'purchase').map((p) => p.what).sort(), ['Inner tube', 'Standard service', 'Track pump, Maintenance book']);
+  // A cancelled order's sale isn't the repair's: it stays a purchase.
+  await runWithShop(owner.shop.id, () => prepare("UPDATE sale_documents SET status = 'cancelled' WHERE id = ?").run(orderId));
+  const after = (await portal('/history', { cookie })).body.filter((h) => h.kind === 'purchase');
+  assert.equal(after.length, 3);
 });

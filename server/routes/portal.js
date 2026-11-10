@@ -694,7 +694,9 @@ const contactOf = (customer) => ({
 // purchases from both sales records: the account's history, and the copy of
 // their data (your-data-copy design 3).
 const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-export async function repairsAndPurchases(customerId) {
+// `everySale` keeps a repair's own sale among the purchases: the copy of
+// their data lists every sale, as the repair's total may be hidden.
+export async function repairsAndPurchases(customerId, { everySale = false } = {}) {
   const zone = await shopZone();
   const jobs = await db.prepare(
     `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
@@ -724,9 +726,10 @@ export async function repairsAndPurchases(customerId) {
        FROM all_sales v WHERE v.customer_id = ?
         -- A repair's own payment shows on the repair's row, not again as a
         -- purchase (finish-account question 8).
-        AND NOT (v.source = 'old' AND EXISTS (
-              SELECT 1 FROM sale_documents d WHERE d.converted_sale_id = v.id AND d.workshop_job_id IS NOT NULL))`
-  ).all(customerId);
+        AND (? OR NOT (v.source = 'old' AND EXISTS (
+              SELECT 1 FROM sale_documents d
+               WHERE d.converted_sale_id = v.id AND d.workshop_job_id IS NOT NULL AND d.kind = 'order' AND d.status = 'converted')))`
+  ).all(customerId, everySale);
   const purchases = sales.map((p) => ({
     kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
     what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
@@ -1352,7 +1355,7 @@ export function register(route) {
         return sendJson(res, 429, { error: 'You’ve already downloaded a copy today. You can get another tomorrow.' });
       }
       await db.prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at) VALUES (?, ?, 'copy', 'account', now(), now())").run(customer.id, ctx.login.id);
-      files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });
+      files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id, { everySale: true }) });
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
