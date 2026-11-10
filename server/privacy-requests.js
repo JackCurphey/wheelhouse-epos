@@ -272,6 +272,7 @@ async function deleteOnce(requestId) {
     await prepare('DELETE FROM customer_logins WHERE customer_id = ANY(?::int[])').run(ids);
     if (emails.length) await prepare('DELETE FROM pretend_signin_codes WHERE lower(email) = ANY(?::text[])').run(emails);
     await prepare('DELETE FROM reminder_stop_codes WHERE customer_id = ANY(?::int[])').run(ids);
+    await prepare('DELETE FROM reminder_book_codes WHERE customer_id = ANY(?::int[])').run(ids);
     await prepare('DELETE FROM shop_message_stops WHERE customer_id = ANY(?::int[])').run(ids);
     await prepare('DELETE FROM customer_group_members WHERE customer_id = ANY(?::int[])').run(ids);
     await prepare('DELETE FROM customer_not_duplicates WHERE first_id = ANY(?::int[]) OR second_id = ANY(?::int[])').run(ids, ids);

@@ -12,7 +12,7 @@ const UNDO_DAYS = 30;
 // Every table that points at a customer, moved together (design 2).
 // A reminder's stop link moves too, so it stops the kept record's reminders (stop-reminders, review).
 // A row from a Citrus Lime file about them moves too, so deleting the kept record still finds it (citrus-import-fix, design 19).
-const MOVED = ['move_rows', 'customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'job_notes', 'privacy_requests', 'store_credit_entries', 'account_entries'];
+const MOVED = ['move_rows', 'customer_bikes', 'workshop_jobs', 'sales', 'sale_documents', 'customer_messages', 'till_sales', 'till_attention', 'reminder_stop_codes', 'reminder_book_codes', 'job_notes', 'privacy_requests', 'store_credit_entries', 'account_entries'];
 // Store credit and money owed move too, and back on Undo (finish-customers, question 13).
 // The fields that may differ, and the columns each takes.
 // A company's details travel with its name (company customers' review 1).
