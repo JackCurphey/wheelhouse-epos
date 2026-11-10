@@ -1275,8 +1275,8 @@ export function register(route) {
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const receipt = await ownReceipt(ctx, params);
     if (!receipt) return sendJson(res, 404, RECEIPT_NOT_FOUND);
-    const { customerId, ...shown } = receipt;
-    sendJson(res, 200, shown);
+    // The customer's id stays on the server.
+    sendJson(res, 200, { ...receipt, customerId: undefined });
   });
 
   // "Email it to me" (ac-receipt-sent): to the account's own email only, never
