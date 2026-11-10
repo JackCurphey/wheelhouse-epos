@@ -8,6 +8,7 @@ import { prepare, dbExec } from './db.js';
 import { wipedAnswers, wipedNotes, wipedTitle, REMOVED } from './workshop/booking-notes.js';
 import { UPLOADS_DIR } from './lib/uploads.js';
 import { forgetForMove } from './move/bring-customers.js';
+import { isDay } from './clock.js';
 
 export const shopZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
 
@@ -29,14 +30,77 @@ export async function openDeletion(customerId) {
 
 /**
  * What holds a deletion back: a bike still in the workshop (coverage walks
- * answers 4 and 5), for the customer and any record merged into theirs.
+ * answers 4 and 5), and money owed on account (finish-customers design 7;
+ * question 16), for the customer and any record merged into theirs. Store
+ * credit never holds it back; it's lost on deletion.
  */
 export async function inTheWay(customerId) {
-  return (await prepare(
+  const ids = await chainIds(customerId);
+  const bikes = (await prepare(
     `SELECT w.id AS "jobId", w.reference FROM workshop_jobs w
       WHERE w.custody_state = 'in_shop' AND w.customer_id = ANY(?::int[])
       ORDER BY w.id`
-  ).all(await chainIds(customerId))).map((r) => ({ jobId: r.jobId, reference: r.reference }));
+  ).all(ids)).map((r) => ({ jobId: r.jobId, reference: r.reference }));
+  const { owed } = await prepare('SELECT COALESCE(sum(change_pence), 0)::int AS owed FROM account_entries WHERE customer_id = ANY(?::int[])').get(ids);
+  return owed > 0 ? [...bikes, { owedPence: owed }] : bikes;
+}
+
+/** Store credit held by the customer and any record merged into theirs, in pence. */
+async function creditInAll(customerId) {
+  const ids = await chainIds(customerId);
+  return (await prepare('SELECT COALESCE(sum(change_pence), 0)::int AS credit FROM store_credit_entries WHERE customer_id = ANY(?::int[])').get(ids)).credit;
+}
+
+const KIND_WORDS = { copy: 'a copy of their data', delete: 'deleting their details' };
+const HOWS = ['in_person', 'phone', 'email', 'letter'];
+
+/**
+ * Log a request made in person, by phone, email or letter (finish-customers design 7;
+ * question 7): from the shop, asked on a day not after the shop's today. A second open
+ * request of the same kind for them is refused. Returns { status, body }.
+ */
+export async function logRequest(body) {
+  const bad = (error) => ({ status: 400, body: { error } });
+  if (!Object.hasOwn(KIND_WORDS, body?.kind)) return bad('Choose what they asked for');
+  if (!HOWS.includes(body.how)) return bad('Choose how they asked');
+  if (!isDay(body.askedOn)) return bad('Give the day they asked');
+  const zone = await shopZone();
+  // The shop's today as the database has it, as every date here is.
+  const { today } = await prepare("SELECT to_char((now() AT TIME ZONE ?)::date, 'YYYY-MM-DD') AS today").get(zone);
+  if (body.askedOn > today) return bad('The day they asked can’t be in the future');
+  const id = Number(body.customerId);
+  if (!Number.isInteger(id) || id <= 0) return { status: 404, body: { error: 'Customer not found' } };
+  await dbExec('BEGIN');
+  try {
+    // Held, so two people logging the same request at once make one.
+    const who = await prepare('SELECT id, name FROM customers WHERE id = ? AND deleted_at IS NULL AND merged_into_id IS NULL FOR UPDATE').get(id);
+    if (!who) {
+      await dbExec('ROLLBACK');
+      return { status: 404, body: { error: 'Customer not found' } };
+    }
+    const open = await prepare(`SELECT 1 FROM privacy_requests r WHERE r.customer_id = ? AND r.kind = ? AND ${OPEN}`).get(id, body.kind);
+    if (open) {
+      await dbExec('ROLLBACK');
+      return { status: 409, body: { error: `${who.name} already has an open request for ${KIND_WORDS[body.kind]}`, code: 'open' } };
+    }
+    // Midday in the shop's zone on the day asked, so the day is the same however it's read.
+    const row = await prepare(
+      `INSERT INTO privacy_requests (customer_id, kind, source, how, asked_at)
+       VALUES (?, ?, 'shop', ?, (?::date + time '12:00') AT TIME ZONE ?) RETURNING id`
+    ).get(id, body.kind, body.how, body.askedOn, zone);
+    await dbExec('COMMIT');
+    return { status: 201, body: { id: row.id } };
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+/** Why Delete waits, from what's in the way: "Can be deleted once the bike is collected." */
+export function inTheWayWhy(items) {
+  const bike = items.some((i) => i.jobId !== undefined);
+  const owed = items.some((i) => i.owedPence !== undefined);
+  return `Can be deleted once ${[bike ? 'the bike is collected' : null, owed ? 'what they owe is paid' : null].filter(Boolean).join(' and ')}.`;
 }
 
 /**
@@ -59,7 +123,8 @@ export async function listRequests() {
     `SELECT r.id, r.customer_id, r.kind, r.source, c.deleted_at IS NULL AS named, c.name,
             ${ASKED_ON} AS asked_on, ${DUE_BY} AS due_by,
             (r.done_at IS NULL AND (r.asked_at AT TIME ZONE ?)::date + interval '1 month' < (now() AT TIME ZONE ?)::date) AS overdue,
-            to_char((r.done_at AT TIME ZONE ?)::date, 'YYYY-MM-DD') AS done_on
+            to_char((r.done_at AT TIME ZONE ?)::date, 'YYYY-MM-DD') AS done_on,
+            r.how, coalesce(btrim(c.email), '') <> '' AS has_email
        FROM privacy_requests r LEFT JOIN customers c ON c.id = r.customer_id
       WHERE r.cancelled_at IS NULL
       ORDER BY (r.done_at IS NULL) DESC,
@@ -81,8 +146,13 @@ export async function listRequests() {
       dueBy: r.due_by,
       overdue: Boolean(r.overdue),
       doneOn: r.done_on,
+      how: r.how,
+      hasEmail: Boolean(r.has_email),
       inTheWay: open && r.kind === 'delete' && r.customer_id !== null ? await inTheWay(r.customer_id) : [],
     });
+    // Store credit on an open deletion is listed as "will be lost", never in the way (design 7).
+    const credit = open && r.kind === 'delete' && r.customer_id !== null ? await creditInAll(r.customer_id) : 0;
+    if (credit > 0) requests.at(-1).storeCreditPence = credit;
   }
   return { requests, openCount: requests.filter((r) => r.doneOn === null).length };
 }
@@ -173,7 +243,7 @@ async function deleteOnce(requestId) {
     const blocking = await inTheWay(who);
     if (blocking.length) {
       await dbExec('ROLLBACK');
-      return refuse(409, 'in_the_way', 'Can be deleted once the bike is collected.', { inTheWay: blocking });
+      return refuse(409, 'in_the_way', inTheWayWhy(blocking), { inTheWay: blocking });
     }
 
     // Their emails, for the sign-in codes sent to them.
@@ -241,11 +311,14 @@ async function deleteOnce(requestId) {
           .run(wipedTitle(j.order_title, j.customer_description), wipedNotes(j.order_note, said), j.order_id);
       }
     }
-    // Answer 3.2: their bikes stay as bare rows, for the kept jobs.
+    // Answer 3.2: their bikes stay as bare rows, for the kept jobs, with nothing of when they
+    // were bought here or their warranty (finish-customers, design 6).
     await prepare(
-      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', citrus_ref = NULL, active = 0, updated_at = now()
+      `UPDATE customer_bikes SET make = '', model = '', colour = '', serial_number = '', notes = '', citrus_ref = NULL, active = 0,
+              bought_here_on = NULL, is_ebike = false, warranty_brand = NULL, warranty_product_id = NULL, updated_at = now()
         WHERE customer_id = ANY(?::int[])`
     ).run(ids);
+    await prepare('DELETE FROM bike_warranty_lines l USING customer_bikes b WHERE b.id = l.customer_bike_id AND b.customer_id = ANY(?::int[])').run(ids);
     // Answer 3.1: the records stay, with nothing that identifies them.
     await prepare(
       `UPDATE customers SET name = '', email = '', phone = '', notes = '', address = NULL, postcode = NULL,
@@ -256,6 +329,14 @@ async function deleteOnce(requestId) {
               active = 0, deleted_at = now(), updated_at = now()
         WHERE id = ANY(?::int[])`
     ).run(ids);
+    // Store credit is lost, kept in the books without a name (design 7; audit M12).
+    const credits = await prepare(
+      `SELECT customer_id, sum(change_pence)::int AS credit FROM store_credit_entries
+        WHERE customer_id = ANY(?::int[]) GROUP BY customer_id HAVING sum(change_pence) <> 0 ORDER BY customer_id`
+    ).all(ids);
+    for (const c of credits) {
+      await prepare("INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason) VALUES (?, ?, 'lost_on_deletion', 'Lost when their details were deleted')").run(c.customer_id, -c.credit);
+    }
     // Answer 3.6: the request stays, done, with its reference.
     await prepare('UPDATE privacy_requests SET done_at = now() WHERE id = ?').run(requestId);
     await dbExec('COMMIT');

@@ -13,11 +13,13 @@ import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, makeRateLimiter, nowIso, parseCookies, readJsonBody, sendJson } from '../lib/http.js';
 import { UPLOADS_DIR } from '../lib/uploads.js';
 import { serializeBike } from '../lib/serializers.js';
+import { bikesWithWarranty } from '../lib/bike-warranty.js';
 import { currentCustomerSession, setCustomerSessionCookie } from '../lib/session.js';
 import { clientIp } from '../proxy-trust.js';
 import { queueMessage, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import { jobChecklistCopy } from '../workshop/checklists.js';
+import { creditOf, owedOf, paymentSettings } from '../lib/customer-money.js';
 import {
   CustomerAuthError, resolveGuestCustomer, signupCustomer, verifyCustomerLogin, createCustomerSession, destroyCustomerSession,
   serializeCustomerLogin, CUSTOMER_SESSION_COOKIE,
@@ -691,7 +693,7 @@ const contactOf = (customer) => ({
 // purchases from both sales records: the account's history, and the copy of
 // their data (your-data-copy design 3).
 const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-async function repairsAndPurchases(customerId) {
+export async function repairsAndPurchases(customerId) {
   const zone = await shopZone();
   const jobs = await db.prepare(
     `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
@@ -840,6 +842,10 @@ export function register(route) {
       deletion: customer ? await openDeletion(customer.id) : null,
       // For "Call [shop phone] if you need to talk it through" (ac-delete-blocked).
       shopPhone: (await db.prepare('SELECT phone FROM shops WHERE id = ?').get(ctx.shop.id))?.phone || null,
+      // Her store credit in pence while the shop has it on, else null (finish-customers design 8; ac-account, ac-delete).
+      storeCredit: customer && (await paymentSettings()).store_credit_on ? await creditOf(customer.id) : null,
+      // What she owes on account in pence: her deletion waits until it's paid (question 16).
+      owed: customer ? await owedOf(customer.id) : 0,
     });
   });
 
@@ -1109,7 +1115,9 @@ export function register(route) {
         GROUP BY w.bike_id`
     ).all(ctx.login.customer_id, LIVE_BOOKING_STATES);
     const dueFor = new Map(due.map((d) => [d.bike_id, d.day]));
-    sendJson(res, 200, rows.map((r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
+    // Each bike's warranty, as the customer page shows it (finish-customers, design 6; ac-account).
+    const zone = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+    sendJson(res, 200, await bikesWithWarranty(rows, shopToday(zone), (r) => ({ ...serializeBike(r), nextServiceDue: dueFor.get(r.id) ?? null })));
   });
 
   route('POST', '/api/portal/:shopSlug/bikes', async (req, res, params) => {

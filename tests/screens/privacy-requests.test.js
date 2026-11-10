@@ -124,3 +124,18 @@ test('the customer page shows her request, and what’s in the way', async () =>
   const line = await ui.findByRole('note');
   assert.equal(line.textContent, 'Asked to delete their account on Fri 30 Oct · from their account on the website · answer by Mon 30 Nov. Still in the way: bike in the workshop, WH-1042.');
 });
+
+// Money owed on account holds a deletion back too (finish-customers design 7; question 16).
+test('money owed on account is in the way: the row says so and Delete waits until it is paid', async () => {
+  const OWES = { ...OLIVER, inTheWay: [{ owedPence: 3500 }] };
+  const BOTH = { ...MAYA, inTheWay: [{ jobId: 42, reference: 'WH-1042' }, { owedPence: 3500 }] };
+  const { ui, within } = await open('/workshop/customers/privacy', { requests: [OWES, BOTH] });
+  const rows = within(await ui.findByRole('list', { name: 'Privacy requests' })).getAllByRole('listitem');
+  assert.match(rows[0].textContent, /Still in the way: owes on account £35\.00/);
+  const owesDelete = within(rows[0]).getByRole('button', { name: 'Delete their details' });
+  assert.equal(owesDelete.disabled, true);
+  assert.equal(document.getElementById(owesDelete.getAttribute('aria-describedby')).textContent, 'Can be deleted once what they owe is paid.');
+  assert.match(rows[1].textContent, /Still in the way: bike in the workshop, WH-1042; owes on account £35\.00/);
+  const bothDelete = within(rows[1]).getByRole('button', { name: 'Delete their details' });
+  assert.equal(document.getElementById(bothDelete.getAttribute('aria-describedby')).textContent, 'Can be deleted once the bike is collected and what they owe is paid.');
+});

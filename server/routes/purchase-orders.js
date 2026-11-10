@@ -17,6 +17,7 @@ import { currentCheckin, ownAccountHere } from './till-pins.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { recordPriceChanges } from '../lib/price-changes.js';
 import { penceToPounds, wholePence } from '../lib/pence.js';
+import { alreadyInStock, bikeKinds, frameInStock, frameKey, framesInStock, isBike, MAX_FRAME } from '../lib/bikes.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -252,7 +253,7 @@ const refuse = (message) => ({ refusal: (res) => badRequest(res, message) });
  * order. Marking only Missing keeps none: nothing arrived. Returns { refusal }
  * or { booked, orderIds, deliveryId, shopifyPushes }.
  */
-async function bookIn({ orderId = null, supplier = null, lines, problems, who, requestKey = null }) {
+async function bookIn({ orderId = null, supplier = null, lines, problems, who, requestKey = null, needsFrames = false }) {
   const loginId = who.loginId;
   const onOrder = [...lines, ...problems].filter((x) => x.itemId !== undefined);
   // Which orders: the one named, or the ones the lines are on.
@@ -300,6 +301,26 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
   for (const x of problems) {
     if (x.itemId === undefined && !(await activeProduct(x.productId))) return refuse(`Product ${x.productId} not found or inactive`);
   }
+  // A bike's frame numbers, one per bike booked in, none in stock already (openspec/changes/
+  // frame-numbers, design 3). Only the receive route asks: the old app's sends none.
+  const inDelivery = new Set();
+  const kinds = await bikeKinds();
+  const named = new Map((await db.prepare('SELECT id, name, category FROM products WHERE id = ANY(?::int[])').all(items.map((x) => x.productId))).map((p) => [p.id, p]));
+  for (const x of items) {
+    const product = named.get(x.productId);
+    if (!isBike(product.category, kinds)) {
+      if (x.frames?.length) return refuse('Only a bike has frame numbers');
+      continue;
+    }
+    if (!needsFrames) continue;
+    if (!x.frames || x.frames.length !== x.qty) return refuse(`Each bike needs its frame number: ${product.name}`);
+    for (const f of x.frames) {
+      if (inDelivery.has(frameKey(f))) return refuse(`Frame ${f} is in this delivery twice`);
+      inDelivery.add(frameKey(f));
+    }
+  }
+  const [found] = inDelivery.size ? await framesInStock([...inDelivery]) : [];
+  if (found) return refuse(alreadyInStock(found));
 
   const arrived = items.length > 0 || problems.some((p) => p.kind !== 'missing');
   const deliverySupplierId = supplier?.id ?? orders.get(orderIds[0])?.supplier_id ?? null;
@@ -315,7 +336,7 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
   const shopifyPushes = [];
   let booked = 0;
   items.sort((x, y) => x.productId - y.productId || (x.itemId ?? 0) - (y.itemId ?? 0));
-  for (const { itemId, productId, qty } of items) {
+  for (const { itemId, productId, qty, frames } of items) {
     let note;
     let fromOrder = null;
     const orderLine = itemId !== undefined ? itemsById.get(itemId) : null;
@@ -328,9 +349,19 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     }
     const moved = await moveStock([{ productId, change: qty, type: fromOrder ? 'po_receipt' : 'intake', note, purchaseOrderId: fromOrder?.id, deliveryId }], who);
     const product = moved.products.get(productId);
-    await db.prepare(
+    const lineId = (await db.prepare(
       'INSERT INTO delivery_lines (delivery_id, product_id, product_name, product_sku, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost);
+    ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost)).lastInsertRowid;
+    // Each bike's frame, in stock at the shop its stock line went to (frame-numbers, design 3).
+    if (needsFrames && frames?.length) {
+      const moveId = moved.lineOf.get(productId);
+      const { site_id: siteId } = await db.prepare('SELECT site_id FROM stock_movements WHERE id = ?').get(moveId);
+      for (const f of frames) {
+        await db.prepare(
+          'INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, delivery_id, delivery_line_id, stock_movement_id, received_by_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        ).run(productId, siteId, f, frameKey(f), deliveryId, lineId, moveId, who.name ?? null);
+      }
+    }
     shopifyPushes.push(...moved.pushes);
     booked += qty;
   }
@@ -683,8 +714,16 @@ export function register(route) {
     for (const it of Array.isArray(body.items) ? body.items : []) {
       const qty = Number(it.qty);
       if (!Number.isInteger(qty) || qty <= 0 || qty > MAX_QTY) return badRequest(res, 'Each item needs how many, a whole number above 0');
-      if (it.itemId !== undefined && it.itemId !== null) lines.push({ itemId: Number(it.itemId), qty });
-      else lines.push({ productId: Number(it.productId), qty });
+      // A bike's frame numbers, as scanned or typed, trimmed (frame-numbers, design 3).
+      let frames;
+      if (it.frames !== undefined && it.frames !== null) {
+        if (!Array.isArray(it.frames) || it.frames.some((f) => typeof f !== 'string' || f.trim().length === 0 || f.trim().length > MAX_FRAME)) {
+          return badRequest(res, `A frame number is 1 to ${MAX_FRAME} characters`);
+        }
+        frames = it.frames.map((f) => f.trim().replace(/\s+/g, ' '));
+      }
+      if (it.itemId !== undefined && it.itemId !== null) lines.push({ itemId: Number(it.itemId), qty, frames });
+      else lines.push({ productId: Number(it.productId), qty, frames });
     }
     const problems = [];
     for (const p of Array.isArray(body.problems) ? body.problems : []) {
@@ -698,7 +737,21 @@ export function register(route) {
 
     const who = await whoIsBooking(req);
     if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
-    const done = await inTransaction(async () => (key.value && (await replayDelivery(key.value))) || bookIn({ supplier, lines, problems, who, requestKey: key.value }));
+    let done;
+    try {
+      done = await inTransaction(async () => (key.value && (await replayDelivery(key.value))) || bookIn({ supplier, lines, problems, who, requestKey: key.value, needsFrames: true }));
+    } catch (err) {
+      // A frame booked in by someone else at the same moment (frame-numbers, design 3).
+      if (err.code === '23505' && err.constraint === 'idx_stock_frames_in_stock') {
+        const taken = lines.flatMap((l) => l.frames ?? []);
+        for (const f of taken) {
+          const found = await frameInStock(f);
+          if (found) return sendJson(res, 409, { error: alreadyInStock(found) });
+        }
+        return sendJson(res, 409, { error: 'One of these frame numbers was booked in just now. Check the stickers.' });
+      }
+      throw err;
+    }
     if (done.refusal) return done.refusal(res);
     deferShopifyPushes(afterRelease, shopId, done.shopifyPushes);
     const costs = await canSeeCosts(req);

@@ -9,6 +9,7 @@ import { canSeeCosts } from '../lib/can-see-costs.js';
 import { newestFirst, priceChangesOf } from '../lib/price-changes.js';
 import { oldestSite } from '../lib/stock.js';
 import { siteHere } from './purchase-orders.js';
+import { bikeKinds, isBike } from '../lib/bikes.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -151,6 +152,15 @@ export function register(route) {
       const how = words.length ? matches(p, g, words, search) : 'name';
       if (how) entry.found.push(p);
       if (how === 'exact' || how === 'size') entry.sized = true;
+    }
+    // A bike's frames in stock, for its line (st-list: "[n] bikes, each by frame number").
+    const kinds = await bikeKinds();
+    const bikes = [...singles.values()].filter((r) => isBike(r.category, kinds)).map((r) => r.id);
+    if (bikes.length) {
+      const counts = new Map((await db.prepare(
+        "SELECT product_id, count(*)::int AS n FROM stock_frames WHERE state = 'in_stock' AND product_id = ANY(?::int[]) GROUP BY product_id"
+      ).all(bikes)).map((c) => [c.product_id, c.n]));
+      for (const id of bikes) singles.get(id).framesInStock = counts.get(id) ?? 0;
     }
     // Products and products with sizes together, by category then name, as the database
     // orders them; a size found by a search sits where its product with sizes would.

@@ -53,7 +53,7 @@ async function openCategories({ start = START(), refuse = null, listReply = null
     }
     const one = u.pathname.match(/^\/api\/product-categories\/(\d+)$/);
     if (one && method === 'PUT') {
-      cats = cats.map((c) => (c.id === Number(one[1]) ? { ...c, parentId: body.parentId ?? c.parentId, details: (body.details ?? c.details).map((d, i) => ({ id: d.id ?? 90 + i, unit: null, choices: [], answered: 0, ...d })) } : c));
+      cats = cats.map((c) => (c.id === Number(one[1]) ? { ...c, parentId: body.parentId ?? c.parentId, bikeKind: body.bikeKind !== undefined ? body.bikeKind : c.bikeKind, details: (body.details ?? c.details).map((d, i) => ({ id: d.id ?? 90 + i, unit: null, choices: [], answered: 0, ...d })) } : c));
       return reply(200, cats.find((c) => c.id === Number(one[1])));
     }
     return reply(200, []);
@@ -218,4 +218,36 @@ test('no categories yet says so, with + Add a category', async () => {
   const { ui, fold } = await openCategories({ start: [] });
   assert.match(fold.textContent, /None yet/);
   assert.ok(ui.getByText('No categories yet.'));
+});
+
+// The bike mark (Jack's 9 Nov answer to finish-customers' bike question, option 3): a small,
+// approved change to the box, in its own pills' pattern (Kind of answer). Wording logged.
+test('a category is marked Bikes or E-bikes in its box; one inside follows the category it sits in', async () => {
+  const marked = START().map((c) => (c.id === 2 ? { ...c, bikeKind: 'bikes' } : { ...c, bikeKind: null }));
+  const t = await openCategories({ start: marked });
+  let box = await edit(t, 'Bearings');
+  const pills = box.getByRole('radiogroup', { name: 'Bikes' });
+  assert.deepEqual(t.within(pills).getAllByRole('radio').map((r) => [r.textContent, r.getAttribute('aria-checked')]), [['No', 'true'], ['Bikes', 'false'], ['E-bikes', 'false']]);
+  assert.ok(box.getByText('Bikes ask for each frame number when they’re booked in. E-bikes also get the Electronics warranty line.'));
+  t.fireEvent.click(t.within(pills).getByRole('radio', { name: 'E-bikes' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(writes().length, 1));
+  assert.equal(writes()[0][2].bikeKind, 'ebikes');
+
+  // Derailleurs sits inside Drivetrain, marked Bikes: unmarked, it follows Drivetrain.
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  box = await edit(t, 'Derailleurs');
+  const inside = box.getByRole('radiogroup', { name: 'Bikes' });
+  assert.deepEqual(t.within(inside).getAllByRole('radio').map((r) => [r.textContent, r.getAttribute('aria-checked')]), [['As Drivetrain', 'true'], ['Bikes', 'false'], ['E-bikes', 'false']]);
+});
+
+test('a new category marked Bikes is made, then marked', async () => {
+  const t = await openCategories();
+  t.fireEvent.click(t.ui.getByRole('button', { name: '+ Add a category' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.fireEvent.change(box.getByLabelText('Name'), { target: { value: '[Bikes category]' } });
+  t.fireEvent.click(box.getByRole('radio', { name: 'Bikes' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(writes().length, 2));
+  assert.deepEqual(writes().map((w) => [w[0], w[2].bikeKind]), [['POST', undefined], ['PUT', 'bikes']]);
 });

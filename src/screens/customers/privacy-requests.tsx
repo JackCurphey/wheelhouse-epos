@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TriangleAlert } from 'lucide-react';
+import { penceText } from '@/lib/cash-count.ts';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,8 @@ import { ROUTES } from '@/staff/routes.ts';
  * within a month, and Delete their details, the Owner only. "+ Log a
  * request" and "Send the copy" aren't built yet, so aren't shown.
  */
-export type InTheWay = { jobId: number; reference: string };
+// A bike still in the workshop, or money owed on account (finish-customers design 7).
+export type InTheWay = { jobId: number; reference: string } | { owedPence: number };
 type Request = {
   id: number; reference: string; customerId: number | null; name: string | null; kind: 'copy' | 'delete'; source: 'account' | 'shop';
   askedOn: string; dueBy: string; overdue: boolean; doneOn: string | null; inTheWay: InTheWay[];
@@ -31,7 +33,15 @@ export const dayText = (day: string) => {
   return `${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]}`;
 };
 const WHAT = { copy: 'Copy of their data', delete: 'Delete their details' } as const;
-const inTheWayLine = (refs: InTheWay[]) => `Still in the way: bike in the workshop, ${refs.map((r) => r.reference).join(', ')}`;
+const bikesIn = (items: InTheWay[]) => items.flatMap((i) => ('reference' in i ? [i.reference] : []));
+const owedIn = (items: InTheWay[]) => items.reduce((n, i) => n + ('owedPence' in i ? i.owedPence : 0), 0);
+const inTheWayLine = (items: InTheWay[]) => {
+  const bikes = bikesIn(items);
+  const owed = owedIn(items);
+  return `Still in the way: ${[bikes.length ? `bike in the workshop, ${bikes.join(', ')}` : null, owed > 0 ? `owes on account ${penceText(owed)}` : null].filter(Boolean).join('; ')}`;
+};
+// Why Delete waits, as the server says it (privacy-requests.js inTheWayWhy).
+const inTheWayWhy = (items: InTheWay[]) => `Can be deleted once ${[bikesIn(items).length ? 'the bike is collected' : null, owedIn(items) > 0 ? 'what they owe is paid' : null].filter(Boolean).join(' and ')}.`;
 const FROM = { account: 'From their account on the website', shop: '' } as const;
 
 /** "Privacy requests · [n] open", at the foot of Customers (cs-list), for the Owner. */
@@ -75,7 +85,7 @@ function Row({ r, onDelete }: { r: Request; onDelete: (r: Request) => void }) {
       {!open ? <span className="text-sm text-[var(--wh-muted)]">Done</span>
         : r.kind === 'delete' ? <Button variant="danger" disabled={blocked} aria-describedby={blocked ? whyId : undefined} onClick={() => onDelete(r)}>Delete their details</Button>
         : null}
-      {blocked ? <span id={whyId} className="basis-full text-size-13 text-[var(--wh-muted)]">Can be deleted once the bike is collected.</span> : null}
+      {blocked ? <span id={whyId} className="basis-full text-size-13 text-[var(--wh-muted)]">{inTheWayWhy(r.inTheWay)}</span> : null}
     </li>
   );
 }

@@ -7,12 +7,15 @@
 import { prepare, dbExec } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { serializeBike } from '../lib/serializers.js';
+import { bikesWithWarranty, dayOf, writeBikeLines } from '../lib/bike-warranty.js';
+import { shopZone } from '../privacy-requests.js';
 import { ALL_SALES_SELECT, serializeAnySale } from '../lib/sales.js';
 import { serializeWorkshopJob } from '../workshop/jobs.js';
 import { TEMPLATES } from '../messaging/templates.js';
-import { shopToday } from '../clock.js';
+import { isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { deletionOnPage } from '../privacy-requests.js';
+import { accountHistory, creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -337,7 +340,9 @@ export function register(route) {
     const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
     if (!row) return notFound(res, 'Customer not found');
     // An open request to delete their account, for the page's line (ac-customer-delete).
-    sendJson(res, 200, { ...serializeCustomer(row, await groupsForCustomer(row.id)), deletionRequest: await deletionOnPage(row.id) });
+    // Its money, with only the ways to pay switched on (finish-customers design 4).
+    const money = await moneyFor(row.id, await paymentSettings());
+    sendJson(res, 200, { ...serializeCustomer(row, await groupsForCustomer(row.id)), deletionRequest: await deletionOnPage(row.id), money });
   });
 
   // A customer's page: one history of their jobs, sales and messages, newest
@@ -375,7 +380,14 @@ export function register(route) {
       `SELECT id, template_key, channel, to_address, coalesce(sent_at, created_at) AS at FROM customer_messages
         WHERE customer_id = ? AND coalesce(direction, 'outbound') = 'outbound' AND intent_state <> 'undone'`
     ).all(id);
+    // Store credit changes while Store credit is on (finish-customers design 4).
+    const settings = await paymentSettings();
+    const credit = settings.store_credit_on ? await creditHistory(id) : [];
+    // Bank transfers while Customer accounts is on (design 4).
+    const transfers = settings.accounts_on ? await accountHistory(id) : [];
     const items = [
+      ...credit,
+      ...transfers,
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,
         bookingState: j.booking_state, custodyState: j.custody_state, workState: j.work_state, mechanicName: j.mechanic_name ?? null,
@@ -383,7 +395,7 @@ export function register(route) {
         at: iso(j.at),
       })),
       ...sales.map((x) => ({ kind: 'sale', source: x.source, id: x.id, receiptNumber: x.receipt_number ?? null, total: Number(x.total_pence) / 100, what: x.what ?? '', at: iso(x.created_at) })),
-      ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
+      ...messages.map((m) => ({ kind: 'message', id: m.id, name: TEMPLATES[m.template_key]?.name ?? (m.template_key === 'receipt' ? 'Receipt' : m.template_key === 'statement' ? 'Statement' : 'Message'), channel: m.channel ?? 'sms', to: m.to_address ?? null, at: iso(m.at) })),
     ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
     sendJson(res, 200, { items });
   });
@@ -453,6 +465,28 @@ export function register(route) {
 
   // ---------- Customer bikes ----------
 
+  // Edit bike's Bought here on, Brand, Model and E-bike (finish-customers, design 6; Jack, 9 Nov,
+  // answer 4): each as sent or as it is; { on, brand, productId, isEbike } or { problem }.
+  const WARRANTY_FIELDS = ['boughtHereOn', 'warrantyBrand', 'warrantyProductId', 'isEbike'];
+  async function boughtHereSent(body, current) {
+    let on = current.bought_here_on ? dayOf(current.bought_here_on) : null;
+    if (body.boughtHereOn !== undefined) {
+      on = body.boughtHereOn || null;
+      if (on !== null && !isDay(on)) return { problem: 'Give the day it was bought here' };
+      if (on !== null && on > shopToday(await shopZone())) return { problem: 'Bought here on can’t be in the future' };
+    }
+    const brand = body.warrantyBrand !== undefined ? (String(body.warrantyBrand ?? '').trim() || null) : current.warranty_brand;
+    if (brand && brand.length > 60) return { problem: 'A brand can be up to 60 characters' };
+    let productId = current.warranty_product_id;
+    if (body.warrantyProductId !== undefined) {
+      productId = body.warrantyProductId ?? null;
+      if (productId !== null && !(Number.isSafeInteger(productId) && productId > 0 && productId <= 2147483647
+        && await db.prepare('SELECT 1 FROM products WHERE id = ?').get(productId))) return { problem: 'That model isn’t one of the shop’s products' };
+    }
+    const isEbike = body.isEbike !== undefined ? Boolean(body.isEbike) : current.is_ebike;
+    return { on, brand, productId, isEbike };
+  }
+
   route('GET', '/api/customers/:id/bikes', async (req, res, params, query) => {
     const customerId = Number(params.id);
     const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
@@ -462,7 +496,7 @@ export function register(route) {
     if (query.get('all') !== '1') sql += ' AND active = 1';
     sql += ' ORDER BY make, model';
     const rows = await db.prepare(sql).all(...args);
-    sendJson(res, 200, rows.map(serializeBike));
+    sendJson(res, 200, await bikesWithWarranty(rows, shopToday(await shopZone()), serializeBike));
   });
 
   route('POST', '/api/customers/:id/bikes', async (req, res, params) => {
@@ -534,11 +568,19 @@ export function register(route) {
       const serialNumber = body.serialNumber !== undefined ? String(body.serialNumber).trim() : current.serial_number;
       const notes = body.notes !== undefined ? String(body.notes).trim() : current.notes;
       const active = body.active !== undefined ? (body.active ? 1 : 0) : current.active;
+      const bought = await boughtHereSent(body, current);
+      if (bought.problem) {
+        await db.exec('ROLLBACK');
+        return badRequest(res, bought.problem);
+      }
 
       await db.prepare(
-        `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?, updated_at = ?
+        `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?,
+                bought_here_on = ?, warranty_brand = ?, warranty_product_id = ?, is_ebike = ?, updated_at = ?
          WHERE id = ?`
-      ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
+      ).run(make, model, colour, serialNumber, notes, active, bought.on, bought.brand, bought.productId, bought.isEbike, nowIso(), id);
+      // Its lines worked out again from what it is now, only when one of those changed (design 6).
+      if (WARRANTY_FIELDS.some((k) => body[k] !== undefined)) await writeBikeLines(id);
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
@@ -575,8 +617,9 @@ export function register(route) {
               ${JOB_MOMENT} AS at
          FROM workshop_jobs w LEFT JOIN employees e ON e.id = w.mechanic_id WHERE w.bike_id = ? ORDER BY at DESC, w.id DESC`
     ).all(zone, id);
+    const [withWarranty] = await bikesWithWarranty([bike], today, serializeBike);
     sendJson(res, 200, {
-      ...serializeBike(bike),
+      ...withWarranty,
       customer: { id: bike.customer_id, name: bike.customer_name, phone: bike.customer_phone || null },
       jobs: jobs.map((j) => ({
         id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,

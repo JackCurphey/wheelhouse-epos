@@ -546,3 +546,104 @@ A product with sizes SHALL open from its Stock row on a page with its category a
 #### Scenario: Nothing matches
 - **WHEN** the Owner searches "[what was typed]", finds nothing and presses "+ Add “[what was typed]” as a product"
 - **THEN** the box opens with that name filled in
+
+### Requirement: Products are ticked on Stock
+Whoever can change prices SHALL see a tick box on each product on Stock and, on a computer, "Tick all [n] shown" above them. With any ticked, a bar SHALL say "[n] ticked" with Untick all and Change prices. Ticks SHALL stay while the search, the filter or the category changes (`st-list-ticked`).
+
+#### Scenario: Ticking a supplier's products
+- **WHEN** the Owner searches "[Supplier]" and ticks all 3 shown
+- **THEN** the bar says "3 ticked" with Change prices
+
+#### Scenario: Jo Taylor
+- **WHEN** Jo Taylor (Staff) opens Stock
+- **THEN** there are no tick boxes and no Change prices
+
+### Requirement: Change prices shows old and new before anything changes
+Change prices SHALL offer A new price for each, Up or down by a percentage, or A target margin, and for a percentage or margin an ending: Leave as they are, .99 or .00. It SHALL list each ticked product (each size of a product with sizes) with its price now, its new price and its margin before and after, mark a new price under the product's cost "Below cost", and change nothing until "Change [n] prices" is pressed (`st-prices`).
+
+#### Scenario: Ten per cent up, ending in .99
+- **WHEN** the Owner ticks Shimano brake pads B05S-RX at £28.00 and picks Up or down by a percentage, +10, ending .99
+- **THEN** the preview shows Now £28.00 and New £30.99, and the price is still £28.00
+
+#### Scenario: A target margin with no cost recorded
+- **WHEN** a ticked product has no cost recorded and A target margin is picked
+- **THEN** it keeps its price, says "No cost recorded", and isn't counted in "Change [n] prices"
+
+#### Scenario: Nothing would change
+- **WHEN** the rule leaves every price as it is
+- **THEN** "Change prices" is greyed and says "Nothing would change"
+
+### Requirement: Prices are rounded to the nearest ending chosen
+Ending in .99 SHALL take the nearest price ending in .99, and .00 the nearest whole pound, halfway going up. A price of £0.00 SHALL stay £0.00, and no other price SHALL round to £0.00.
+
+#### Scenario: Rounding to .99
+- **WHEN** a percentage change gives £30.80, and another gives £30.40
+- **THEN** they become £30.99 and £29.99
+
+### Requirement: A bulk change goes into each product's history
+Each price a bulk change makes SHALL be recorded in that product's history as an edited price is, "Price changed · £28.00 → £[price]", with who and when, and SHALL be pushed to the website as a saved price is.
+
+#### Scenario: The brake pads' history
+- **WHEN** the Owner changes the brake pads' price from £28.00 in a bulk change
+- **THEN** its history's newest line reads "Price changed · £28.00 → £[price]" with the Owner's name
+
+### Requirement: A bulk change can be undone
+After a bulk change, "Prices changed · [n] products" SHALL show with Undo (`st-prices-done`). Undo SHALL put back every price the change made that is still as it made it, record each in the product's history, and leave alone, and count, any price changed since. A change SHALL be undone only once.
+
+#### Scenario: Undo straight after
+- **WHEN** the Owner changes 3 prices and presses Undo
+- **THEN** all 3 go back to what they were, and it says "Prices put back · 3 products"
+
+#### Scenario: A price edited in between
+- **WHEN** one of the 3 products' price is edited after the change, then Undo is pressed
+- **THEN** the other 2 go back, the edited one keeps its new price, and it says "· 1 changed since, left as they are"
+
+### Requirement: Only the Owner changes prices in bulk
+Previewing, making and undoing a bulk change SHALL be refused to anyone but the Owner, the one at the computer, with "Only the shop’s owner can add or change products", until roles bring "Can order stock"; on a till or workshop computer with nobody checked in it SHALL ask for a PIN. A business's change SHALL never reach another business's products.
+
+#### Scenario: Jo Taylor sends a change
+- **WHEN** Jo Taylor sends a bulk price change
+- **THEN** it is refused and no price changes
+
+#### Scenario: Another business's product
+- **WHEN** a bulk change names a product of another business
+- **THEN** that product is left out and its price doesn't change
+
+### Requirement: A bulk change never hangs on a held product
+A bulk change SHALL wait a short time for a product something else holds, then say Wheelhouse is busy and change nothing.
+
+#### Scenario: One product is held
+- **WHEN** one ticked product's row stays locked and the change is made
+- **THEN** within seconds it says Wheelhouse is busy, and no price has changed
+
+### Requirement: A bike's page lists its frame numbers
+A bike's page SHALL show "Bikes by frame number" with each frame in stock, "Frame [frame number]", In stock, "Booked in [date] from [Supplier]" (`st-product-bike`). Its history's received line SHALL read "Received · delivery from [Supplier]" with how many frame numbers came in, and open the delivery.
+
+#### Scenario: A bike with two in stock
+- **WHEN** staff open a bike with two frames booked in from [Supplier]
+- **THEN** both frames are listed, each In stock, and the history says "Received · delivery from [Supplier]" and "2 frame numbers"
+
+### Requirement: Stock says how many bikes by frame number
+A bike's line on Stock SHALL read "[Category] · [n] bikes, each by frame number", [n] the frames in stock (`st-list`).
+
+#### Scenario: Two bikes
+- **WHEN** a bike has two frames in stock
+- **THEN** its line on Stock reads "[Category] · 2 bikes, each by frame number"
+
+### Requirement: A frame is ready to be sold
+Each frame SHALL keep room for when it is sold, the customer it is sold to and the customer's bike it becomes, so the till can sell a bike by its frame and the warranty can start from the right bike.
+
+#### Scenario: Nothing sold yet
+- **WHEN** a frame is booked in
+- **THEN** it is In stock, with no sale, customer or customer's bike
+
+### Requirement: An unknown barcode searched on Stock
+A search on Stock of only digits, 8 to 14 of them, that matches nothing SHALL say "Barcode [barcode] isn’t in Wheelhouse yet" (`st-list-unknown`). The Owner SHALL be offered Add this product, opening the product box with that barcode filled in; Staff SHALL be told only the shop's owner can add products.
+
+#### Scenario: The Owner scans an unknown barcode into Stock's search
+- **WHEN** the Owner searches Stock for a barcode no product has
+- **THEN** it says the barcode isn't in Wheelhouse yet, and Add this product opens the box with the barcode filled in
+
+#### Scenario: Jo Taylor
+- **WHEN** Jo Taylor (Staff) searches for the same barcode
+- **THEN** she sees the heading and "Only the shop’s owner can add products for now.", and no Add this product

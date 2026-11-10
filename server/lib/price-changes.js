@@ -6,15 +6,16 @@ import { prepare } from '../db.js';
 
 // `before` and `after`: the product's rows as read FOR UPDATE and as written (price_pence and
 // cost_pence, generated from the pounds). `who`: whoIsBooking's { loginId, name }, or null.
-export async function recordPriceChanges(before, after, who, { deliveryId = null } = {}) {
+// `batchId`: the bulk change that made it (openspec/changes/bulk-price-change, design 1).
+export async function recordPriceChanges(before, after, who, { deliveryId = null, batchId = null } = {}) {
   for (const field of ['price', 'cost']) {
     const was = Number(before[`${field}_pence`]);
     const now = Number(after[`${field}_pence`]);
     if (was === now) continue;
     await prepare(
-      `INSERT INTO product_price_changes (product_id, field, was_pence, now_pence, login_id, who_name, delivery_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(after.id, field, was, now, who?.loginId ?? null, who?.name ?? null, deliveryId);
+      `INSERT INTO product_price_changes (product_id, field, was_pence, now_pence, login_id, who_name, delivery_id, batch_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(after.id, field, was, now, who?.loginId ?? null, who?.name ?? null, deliveryId, batchId);
   }
 }
 

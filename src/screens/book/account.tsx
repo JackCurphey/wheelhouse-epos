@@ -8,8 +8,10 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { BookFrame } from './frame.tsx';
 import { pounds } from './money.ts';
+import { penceText } from '@/lib/cash-count.ts';
 import { STAGE_TEXT } from './pending-rules.ts';
 import type { BookingStage } from './pending-query.ts';
+import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -27,7 +29,10 @@ import type { BookingStage } from './pending-query.ts';
  * it's open (openspec/changes/delete-account design 6; ac-delete,
  * ac-delete-blocked, ac-delete-sent, ac-account-delete-pending,
  * ac-account-delete-cancelled).
- * Not built yet, so not shown: store credit, the warranty line, a purchase's
+ * Store credit's card while the shop has it on, and the delete pop-up's warning
+ * that it will be lost (finish-customers design 8; ac-account, ac-delete).
+ * Each bike bought here shows its warranty (finish-customers design 6).
+ * Not built yet, so not shown: a purchase’s
  * receipt, and the privacy notice.
  */
 // An open request to delete the account: the shop's days it was asked and will be done by.
@@ -36,8 +41,12 @@ type Me = {
   id: number; email: string; name: string | null; phone: string | null; shopName: string; shopSlug: string;
   updateChannel: 'sms' | 'whatsapp' | 'email'; serviceReminders: boolean; reviewRequests: boolean; marketingPermission: boolean;
   shopPhone?: string | null; deletion?: Deletion | null;
+  // Pence, or null while the shop has store credit off (finish-customers design 8).
+  storeCredit?: number | null;
+  // What she owes on account, in pence; her deletion waits until it's paid (question 16).
+  owed?: number;
 };
-type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null };
+type Bike = { id: number; make: string; model: string; colour: string | null; nextServiceDue?: string | null; warranty?: BikeWarranty | null };
 type Repair = {
   kind: 'repair'; jobId: number; reference: string; title: string; bikeLabel: string | null; bikeId: number | null;
   stage: BookingStage; workStarted: boolean; jobDate: string; totalPence: number | null; at: string;
@@ -159,7 +168,18 @@ export function AccountScreen() {
           <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} />
           <div className="order-last lg:order-none"><YourDataCard copy={copy} deletion={deletion} onAsk={() => { setCancelled(false); setAsking(true); }} onCancel={() => void cancelRequest()} cancelling={cancelling} /></div>
         </div>
-        <div className="lg:col-start-1 lg:row-start-2"><DetailsCard me={me.data} shopSlug={shopSlug} /></div>
+        <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2">
+          {/* Under the bikes, as drawn (ac-account; account and reminders decision 1). */}
+          {typeof me.data.storeCredit === 'number' ? (
+            <Card id="a-credit" title="Store credit">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span className="font-mono text-2xl">{penceText(me.data.storeCredit)}</span>
+                <span className="text-size-13 text-[var(--wh-muted)]">Use it in the shop or online</span>
+              </div>
+            </Card>
+          ) : null}
+          <DetailsCard me={me.data} shopSlug={shopSlug} />
+        </div>
       </div>
       {asking ? <DeleteDialog me={me.data} base={base} bike={bikeWithUs} onDownload={() => void copy.download()} onClose={() => setAsking(false)} /> : null}
     </BookFrame>
@@ -276,8 +296,8 @@ function PendingBar({ deletion, onCancel, busy }: { deletion: Deletion; onCancel
 
 /**
  * "Ask us to delete your account" (ac-delete; with a bike still with the
- * shop, ac-delete-blocked; once asked, ac-delete-sent). Store credit isn't
- * built, so its line isn't shown.
+ * shop, ac-delete-blocked; once asked, ac-delete-sent). Store credit she
+ * holds will be lost, and the pop-up says so (audit M12).
  */
 function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: string; bike: Repair | null; onDownload: () => void; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -285,6 +305,8 @@ function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: s
   const [error, setError] = React.useState<string | null>(null);
   const [sent, setSent] = React.useState<Deletion | null>(null);
   const note = 'text-sm text-[var(--wh-muted)]';
+  // Owing on account holds it back, as a bike with the shop does (question 16).
+  const owes = (me.owed ?? 0) > 0;
 
   async function ask() {
     setBusy(true);
@@ -316,16 +338,20 @@ function DeleteDialog({ me, base, bike, onDownload, onClose }: { me: Me; base: s
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="del-title" className="md:max-w-[520px]">
       <DialogHeader><DialogTitle id="del-title">Ask us to delete your account</DialogTitle></DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        {bike ? (
+        {bike || owes ? (
           <>
-            <p className="m-0 text-size-15 leading-normal">We’ll delete your account once your bike has been collected.</p>
-            <Row k="Bike with us" v={[bike.bikeLabel, bike.reference].filter(Boolean).join(' · ')} />
+            <p className="m-0 text-size-15 leading-normal">{`We’ll delete your account once ${[bike ? 'your bike has been collected' : null, owes ? 'what you owe the shop is paid' : null].filter(Boolean).join(' and ')}.`}</p>
+            {bike ? <Row k="Bike with us" v={[bike.bikeLabel, bike.reference].filter(Boolean).join(' · ')} /> : null}
+            {owes ? <Row k="Owed on account" v={penceText(me.owed ?? 0)} /> : null}
             <p className={`m-0 ${note}`}>{`Call ${me.shopPhone || 'the shop'} if you need to talk it through.`}</p>
           </>
         ) : (
           <>
             <p className="m-0 text-size-15 leading-normal">{`${me.shopName} will delete your account within one month, and tell you when it’s done.`}</p>
             <p className={`m-0 ${note}`}>Your details, bikes and messages are deleted. Sales stay in the shop’s books without your name, because the shop must keep them for tax.</p>
+            {me.storeCredit ? (
+              <p role="note" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3 py-2.5 text-size-15 leading-normal text-[var(--wh-warn-ink)]">You have <strong className="font-mono">{penceText(me.storeCredit)}</strong> of store credit. It will be lost when your account is deleted — use it first, or ask for it back.</p>
+            ) : null}
             <p className={`m-0 ${note}`}>Want a copy first? <button type="button" onClick={onDownload} className="cursor-pointer border-0 bg-transparent p-0 font-semibold text-inherit underline">Download a copy of your data</button>.</p>
             <p className="m-0 text-size-15 font-bold">This can’t be undone.</p>
           </>
@@ -374,6 +400,13 @@ function BikesCard({ bikes, items, bookLink, shopSlug, reminders }: { bikes: Bik
         return (
           <div key={b.id} className="flex flex-col gap-1.5 border-t border-[var(--wh-border)] pt-2.5">
             <span className="text-base font-bold">{[[b.make, b.model].filter(Boolean).join(' '), b.colour].filter(Boolean).join(' · ')}</span>
+            {/* Bought here and its warranty, as drawn on ac-account, each line under it (finish-customers, design 6). */}
+            {b.warranty ? (
+              <span className="flex flex-col gap-0.5">
+                <span className={`text-size-13 font-semibold ${b.warranty.running ? 'text-[var(--wh-status-complete-ink)]' : 'text-[var(--wh-muted)]'}`}>{['Bought here', warrantyState(b.warranty)?.replace(/^U/, 'u').replace(/^W/, 'w')].filter(Boolean).join(' · ')}</span>
+                {b.warranty.running ? <span className="text-size-13 text-[var(--wh-muted)]">{b.warranty.lines.map(lineText).join(' · ')}</span> : null}
+              </span>
+            ) : null}
             {/* "next service due [date]", only while reminders are on (audit L10; next-service-due design 3). */}
             {(() => {
               const due = reminders && b.nextServiceDue ? `next service due ${longDate(b.nextServiceDue)}` : null;

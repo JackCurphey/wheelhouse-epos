@@ -38,11 +38,11 @@ function Row({ c, phone }: { c: Recent; phone: boolean }) {
   );
 }
 
-export function Field({ id, label, value, onChange, type = 'text', placeholder }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
+export function Field({ id, label, value, onChange, type = 'text', placeholder, onBlur, max }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; onBlur?: () => void; max?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
-      <input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)}
+      <input id={id} type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} max={max}
         className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-size-15" />
     </div>
   );

@@ -667,3 +667,24 @@ test('no morning check after a day nobody closed: both days\' cash expected, eac
   const left = await runWithShop(owner.shop.id, () => prepare('SELECT count(*)::int AS n FROM sales WHERE day_close_id IS NULL').get());
   assert.equal(left.n, 0);
 });
+
+// A bank transfer paid onto a customer's account is not till money (openspec/changes/
+// finish-customers, design 3): the day's figures and its close are what they would be without it.
+test('a bank transfer recorded today never reaches the takings, the cash or the close', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 20, card: 10, extra: [{ tenderType: 'Cyclescheme', amount: 5 }] });
+  await tillSale(owner, '2026-09-01T12:00:00Z', [{ method: 'cash', pence: 1000 }, { method: 'card', pence: 300 }]);
+  const before = await day(owner);
+  assert.equal((await call(owner, '/api/payment-settings', { method: 'PUT', body: { accountsOn: true } })).status, 200);
+  const maya = (await post(owner, '/api/customers', { name: 'Maya Patel', email: 'maya@example.test' })).body.id;
+  assert.equal((await post(owner, `/api/customers/${maya}/account/open`, {})).status, 200);
+  assert.equal((await post(owner, `/api/customers/${maya}/account/opening`, { pence: 9000 })).status, 201);
+  const paid = await post(owner, `/api/customers/${maya}/account/transfers`, { pence: 9000, receivedOn: '2026-09-01', reference: '[reference]' });
+  assert.equal(paid.status, 201, JSON.stringify(paid.body));
+  const after = await day(owner);
+  assert.deepEqual(after, before);
+  const res = await post(owner, '/api/close-the-day', { countedPence: after.expectedPence, expectedPence: after.expectedPence });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const { close } = res.body;
+  assert.deepEqual([close.takingsPence, close.cardPence, close.cashPence, close.otherPence], [1300 + 3000 + 500, 1300, 3000, 500]);
+});

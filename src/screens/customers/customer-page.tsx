@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { TriangleAlert } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
@@ -13,6 +14,11 @@ import { DeletionLine, type InTheWay } from './privacy-requests.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { CompanyInvoice, CompanyNames, Field, OnOff, WHO, companyProblem, initials, type Who } from './customers-page.tsx';
 import { SaleDialog } from './sale-dialog.tsx';
+import { CreditDialog, UndoEntryDialog } from './credit-dialog.tsx';
+import { AccountDialog, entryWords, type Entry } from './account-dialog.tsx';
+import { useSession } from '@/lib/auth/use-session.ts';
+import { penceText } from '@/lib/cash-count.ts';
+import { dayYear, warrantyText, type BikeWarranty } from '@/lib/warranty-words.ts';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
@@ -29,14 +35,18 @@ type Customer = {
   groups: { id: number; name: string; discountPercent: number }[];
   // An open request to delete their account (ac-customer-delete; openspec/changes/delete-account).
   deletionRequest?: { askedOn: string; dueBy: string; source: 'account' | 'shop'; inTheWay: InTheWay[] } | null;
+  // Its money, with only the ways to pay switched on (finish-customers design 4), in pence.
+  money?: { storeCreditOn: boolean; accountsOn: boolean; credit?: number; owed?: number; hasAccount?: boolean; overBy?: number };
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
-type Bike = { id: number; make: string | null; model: string | null; colour?: string | null };
+type Bike = { id: number; make: string | null; model: string | null; colour?: string | null; warranty?: BikeWarranty | null };
 export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
-  | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string };
+  | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
+  | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string }
+  | { kind: 'account'; id: number; change: 'bank_transfer' | 'undo'; changePence: number; reference: string | null; receivedOn: string | null; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
 const SHOWN = 8;
@@ -68,7 +78,15 @@ function Stage({ j }: { j: Extract<Item, { kind: 'job' }> }) {
   return <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${tone}`}>{label}</span>;
 }
 
-export function HistoryRow({ item, onOpenSale }: { item: Item; onOpenSale?: (sale: Extract<Item, { kind: 'sale' }>) => void }) {
+// A store credit change's words (cs-page's history: "Store credit added").
+const CREDIT_WORDS: Record<string, string> = {
+  added: 'Store credit added', taken: 'Store credit taken away', undo: 'Store credit change undone', lost_on_deletion: 'Store credit lost when their details were deleted',
+  earned: 'Store credit earned', spent: 'Store credit spent', refund: 'Store credit given on a refund',
+};
+// "+£15.00" or "−£4.00", the drawing's signs.
+export const signed = (pence: number) => `${pence < 0 ? '−' : '+'}${penceText(Math.abs(pence))}`;
+
+export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSale?: (sale: Extract<Item, { kind: 'sale' }>) => void; onUndo?: (entry: Extract<Item, { kind: 'store_credit' }>) => void }) {
   const tag = (t: string) => <span className="w-[76px] shrink-0 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   if (item.kind === 'job') {
     const when = [item.jobDate ? shortDay(item.jobDate) : null, item.mechanicName].filter(Boolean).join(' · ');
@@ -101,6 +119,36 @@ export function HistoryRow({ item, onOpenSale }: { item: Item; onOpenSale?: (sal
       </li>
     );
   }
+  if (item.kind === 'store_credit') {
+    const what = CREDIT_WORDS[item.change] ?? 'Store credit changed';
+    // Only a change made by hand here; the till's own entries come with the till's half.
+    const undoable = onUndo && !item.undone && ['added', 'taken'].includes(item.change);
+    return (
+      <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
+        {tag('Credit')}
+        <span className="flex min-w-0 grow flex-col gap-0.5">
+          <span className="text-size-15 font-semibold">{what}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.at), item.reason, item.by ? `by ${item.by}` : null, item.undone ? 'undone' : null].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className={`text-size-15 ${mono}`}>{signed(item.changePence)}</span>
+        {undoable ? <button type="button" aria-label={`Undo ${what}`} onClick={() => onUndo(item)} className="min-h-11 px-2 text-sm font-semibold underline">Undo</button> : null}
+      </li>
+    );
+  }
+  if (item.kind === 'account') {
+    // A bank transfer, or the Owner's undoing of one, in the statement's words (design 4).
+    const what = item.change === 'bank_transfer' ? entryWords({ kind: 'bank_transfer', reference: item.reference } as Entry) : 'Bank transfer undone';
+    return (
+      <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
+        {tag('Account')}
+        <span className="flex min-w-0 grow flex-col gap-0.5">
+          <span className="text-size-15 font-semibold">{what}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{[shortDate(item.receivedOn ? `${item.receivedOn}T12:00:00Z` : item.at), item.reason, item.by ? `by ${item.by}` : null, item.undone ? 'undone' : null].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className={`text-size-15 ${mono}`}>{signed(item.changePence)}</span>
+      </li>
+    );
+  }
   return (
     <li className="flex min-h-[52px] items-center gap-3 border-t border-[var(--wh-border)]">
       {tag(item.channel === 'email' ? 'Email' : 'Text')}
@@ -117,6 +165,10 @@ function History({ id }: { id: number }) {
   const [filter, setFilter] = useState<Filter>('Everything');
   const [all, setAll] = useState(false);
   const [sale, setSale] = useState<Extract<Item, { kind: 'sale' }> | null>(null);
+  const [undoing, setUndoing] = useState<Extract<Item, { kind: 'store_credit' }> | null>(null);
+  // The Owner puts a mistaken change right (design question 14).
+  const session = useSession();
+  const onUndo = session.status === 'signed-in' && session.user.isOwner ? setUndoing : undefined;
   const items = (history.data?.items ?? []).filter((i) => !KIND[filter] || i.kind === KIND[filter]);
   // What's open now is always shown, however much came since (review); the rest eight at a time.
   const open = items.filter((i) => i.kind === 'job' && i.open);
@@ -146,14 +198,15 @@ function History({ id }: { id: number }) {
           </div>
         ) : (
           <div className="flex flex-col">
-            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
-            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} />)}</ul></> : null}
+            {open.length ? <>{head('Open now', 'h-open')}<ul aria-labelledby="h-open" className="m-0 list-none p-0">{open.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} onUndo={onUndo} />)}</ul></> : null}
+            {earlier.length ? <>{head('Earlier, newest first', 'h-earlier')}<ul aria-labelledby="h-earlier" className="m-0 list-none p-0">{earlier.map((i) => <HistoryRow key={rowKey(i)} item={i} onOpenSale={setSale} onUndo={onUndo} />)}</ul></> : null}
             {!all && open.length + earlier.length < items.length ? (
               <button type="button" onClick={() => setAll(true)} className="inline-flex min-h-11 items-center self-start text-sm font-semibold underline">{`Show all (${items.length})`}</button>
             ) : null}
           </div>
         )}
       {sale ? <SaleDialog id={sale.id} source={sale.source} receiptNumber={sale.receiptNumber} onClose={() => setSale(null)} /> : null}
+      {undoing ? <UndoEntryDialog url={`/api/store-credit-entries/${undoing.id}/undo`} invalidate={[['customer', id], ['customer-history', id]]} onClose={() => setUndoing(null)} /> : null}
     </section>
   );
 }
@@ -369,6 +422,19 @@ function Duplicates({ me }: { me: Customer & { createdAt?: string } }) {
   );
 }
 
+// "Owes [£]" beside the name, in the warning colour when over the limit (customer service
+// decision 12; cs-page, cs-page-over). Only while accounts are on and something is owed.
+function OwesChip({ money }: { money?: Customer['money'] }) {
+  if (!money?.accountsOn || !money.owed || money.owed <= 0) return null;
+  const over = (money.overBy ?? 0) > 0;
+  return (
+    <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-size-13 font-bold ${over ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]'}`}>
+      {over ? <TriangleAlert aria-hidden="true" className="size-3.5" /> : null}
+      {over ? `Over the limit by ${penceText(money.overBy ?? 0)}` : `Owes ${penceText(money.owed)}`}
+    </span>
+  );
+}
+
 export function CustomerPage() {
   // A customer's number from the address; anything else is no such customer.
   const id = Number(useParams().id ?? '');
@@ -378,6 +444,8 @@ export function CustomerPage() {
   const bikes = useQuery({ queryKey: ['customer-bikes', id], queryFn: () => apiGet<Bike[]>(`/api/customers/${id}/bikes`), enabled: known });
   const [editing, setEditing] = useState(false);
   const [addingBike, setAddingBike] = useState(false);
+  const [crediting, setCrediting] = useState(false);
+  const [accounting, setAccounting] = useState(false);
   const back = <Link to={ROUTES.customers} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-[var(--wh-ink)] no-underline"><span aria-hidden="true">‹</span>Customers</Link>;
   if (!known || customer.isError) {
     return <div className="flex flex-col gap-2.5">{back}<p role="alert" className="m-0 text-sm">{!known || (customer.error instanceof ApiError && customer.error.status === 404) ? 'There’s no such customer.' : 'Wheelhouse couldn’t load this customer. Try again in a moment.'}</p></div>;
@@ -391,7 +459,10 @@ export function CustomerPage() {
       <div className="flex flex-wrap items-center gap-4">
         <span aria-hidden="true" className="inline-flex size-12 items-center justify-center rounded-full bg-[var(--wh-surface-muted)] text-size-17 font-bold">{initials(c.name)}</span>
         <span className="flex grow flex-col gap-[3px]">
-          <h2 className="m-0 text-size-22 font-bold">{c.name}</h2>
+          <span className="flex flex-wrap items-center gap-2.5">
+            <h2 className="m-0 text-size-22 font-bold">{c.name}</h2>
+            <OwesChip money={c.money} />
+          </span>
           <span className="text-sm text-[var(--wh-muted)]">{[c.phone, c.email].filter(Boolean).join(' · ')}</span>
         </span>
         <Link to={newJobHref(c.id)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--wh-on-brand)] no-underline">New job</Link>
@@ -428,7 +499,9 @@ export function CustomerPage() {
                     {/* Each bike opens its own page (bike-page; mockup/links/j07.mjs:142). */}
                     <Link to={ROUTES['cs-bike'].replace(':id', String(b.id))} className="flex flex-col gap-1 py-2.5 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
                       <span className="text-size-15 font-semibold underline">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
-                      {b.colour ? <span className="text-size-13 text-[var(--wh-muted)]">{b.colour}</span> : null}
+                      {b.colour || b.warranty ? <span className="text-size-13 text-[var(--wh-muted)]">{[b.colour, b.warranty ? `bought here ${dayYear(b.warranty.boughtHereOn)}` : null].filter(Boolean).join(' · ')}</span> : null}
+                      {/* As drawn on cs-page, with each line (finish-customers, design 6; question 19). */}
+                      {warrantyText(b.warranty) ? <span className={`inline-flex items-center gap-1 self-start rounded-full px-2.5 py-0.5 text-size-13 font-bold ${b.warranty?.running ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>{warrantyText(b.warranty)}</span> : null}
                     </Link>
                   </li>
                 ))}
@@ -436,6 +509,20 @@ export function CustomerPage() {
             ) : <p className="m-0 border-t border-[var(--wh-border)] py-2.5 text-sm text-[var(--wh-muted)]">{bikes.data ? 'No bikes yet.' : 'Loading…'}</p>}
           </Section>
           <Section id="h-glance" title="At a glance">
+            {/* Only while Customer accounts is on (customer service decision 6); the whole row opens it (cs-account). */}
+            {c.money?.accountsOn ? (
+              <button type="button" onClick={() => setAccounting(true)} className="flex min-h-[52px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
+                <span className="text-size-15 font-semibold underline">Owes on account</span>
+                <span className={`text-size-15 ${mono}`}>{penceText(c.money.owed ?? 0)}</span>
+              </button>
+            ) : null}
+            {/* Only while Store credit is on (cs-page-off; customer service decision 6); the whole row opens it (cs-credit). */}
+            {c.money?.storeCreditOn ? (
+              <button type="button" onClick={() => setCrediting(true)} className="flex min-h-[52px] w-full items-center justify-between gap-3 border-0 border-t border-[var(--wh-border)] bg-transparent p-0 text-left text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]">
+                <span className="text-size-15 font-semibold underline">Store credit</span>
+                <span className={`text-size-15 ${mono}`}>{penceText(c.money.credit ?? 0)}</span>
+              </button>
+            ) : null}
             <div className="flex min-h-[52px] items-center justify-between gap-3 border-t border-[var(--wh-border)]">
               <span className="text-size-15 font-semibold">Happy to hear about offers</span>
               <span className={`text-sm font-semibold ${c.marketingPermission ? '' : 'text-[var(--wh-muted)]'}`}>{c.marketingPermission ? 'On' : 'Off'}</span>
@@ -446,6 +533,8 @@ export function CustomerPage() {
       </div>
       {editing ? <EditCustomer customer={c} onClose={() => setEditing(false)} /> : null}
       {addingBike ? <AddBike customerId={c.id} onClose={() => setAddingBike(false)} /> : null}
+      {accounting ? <AccountDialog customerId={c.id} name={c.name} isCompany={c.isCompany} onClose={() => setAccounting(false)} /> : null}
+      {crediting ? <CreditDialog customerId={c.id} name={c.name} credit={c.money?.credit ?? 0} onClose={() => setCrediting(false)} /> : null}
     </div>
   );
 }

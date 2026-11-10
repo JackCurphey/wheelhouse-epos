@@ -73,3 +73,6 @@ export function dropoffIsInTime(earliest, date, windowEnd) {
   if (date !== earliest.date) return date > earliest.date;
   return earliest.minutes < toMinutes(windowEnd);
 }
+
+// A real calendar day as YYYY-MM-DD (not 30 Feb), as a form sends one.
+export const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;

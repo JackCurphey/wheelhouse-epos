@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { detailsFor, useCategoryList, type Detail } from './stock-list-bits.tsx';
 import { mono, type Product } from './stock-bits.tsx';
+import { useBikeWarranties } from '@/screens/settings/bike-warranties-settings.tsx';
 
 /**
  * The product box (openspec/changes/product-page-sizes, design 2): adds a product and edits
@@ -29,14 +30,14 @@ export function pence(text: string): number | null {
 export const pounds = (p: number | null | undefined) => (p === null || p === undefined ? '' : (p / 100).toFixed(2));
 const words = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t save the product. Try again in a moment.');
 
-export function Field({ id, name, value, onChange, unit, mono: isMono, inputRef }: {
-  id: string; name: string; value: string; onChange: (v: string) => void; unit?: string | null; mono?: boolean; inputRef?: React.Ref<HTMLInputElement>;
+export function Field({ id, name, value, onChange, unit, mono: isMono, inputRef, list }: {
+  id: string; name: string; value: string; onChange: (v: string) => void; unit?: string | null; mono?: boolean; inputRef?: React.Ref<HTMLInputElement>; list?: string;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={id} className={label}>{name}</label>
       <span className="flex items-center gap-1.5">
-        <input id={id} ref={inputRef} value={value} onChange={(e) => onChange(e.target.value)} className={`${field} ${isMono ? mono : ''}`} />
+        <input id={id} ref={inputRef} list={list} value={value} onChange={(e) => onChange(e.target.value)} className={`${field} ${isMono ? mono : ''}`} />
         {unit ? <span className="text-sm text-[var(--wh-muted)]">{unit}</span> : null}
       </span>
     </div>
@@ -71,6 +72,9 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
   const [sku, setSku] = useState(product?.sku ?? '');
   const [barcode, setBarcode] = useState(product?.barcode ?? start?.barcode ?? '');
   const [supplier, setSupplier] = useState(product?.supplier ?? '');
+  // Its brand, picked from Bike warranties' brands or typed (finish-customers, design 6; question 18).
+  const [brand, setBrand] = useState(product?.brand ?? '');
+  const brands = useBikeWarranties();
   const [cost, setCost] = useState(pounds(product?.costPence));
   const [price, setPrice] = useState(pounds(product?.pricePence));
   const [low, setLow] = useState(String(product?.lowStockThreshold ?? 3));
@@ -110,7 +114,7 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
     setBusy(true);
     setError(null);
     const body = {
-      name: name.trim(), sku: sku.trim(), barcode: barcode.trim(), supplier: supplier.trim(),
+      name: name.trim(), sku: sku.trim(), barcode: barcode.trim(), supplier: supplier.trim(), brand: brand.trim(),
       pricePence, lowStockThreshold: lowLevel, category,
       ...(costPence === null ? {} : { costPence }),
     };
@@ -152,6 +156,10 @@ export function ProductBox({ product, title, subtitle, saveLabel, start, focus =
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 max-md:grid-cols-1">
           <Field id="pb-supplier" name="Supplier" value={supplier} onChange={setSupplier} />
           <Field id="pb-barcode" name="Barcode" value={barcode} onChange={setBarcode} mono />
+        </div>
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 max-md:grid-cols-1">
+          <Field id="pb-brand" name="Brand" value={brand} onChange={setBrand} list="pb-brands" />
+          <datalist id="pb-brands">{(brands.data?.brands ?? []).map((b) => <option key={b.id} value={b.brand} />)}</datalist>
         </div>
         <div className="grid grid-cols-3 gap-3 max-md:grid-cols-2">
           <Field id="pb-cost" name="Cost" value={cost} onChange={setCost} mono />

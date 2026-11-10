@@ -40,14 +40,14 @@ afterEach(async () => {
 });
 
 let mergeBusy = false;
-async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null, dups = [], undoable = [], busy = false } = {}) {
+async function open({ items = [JOB, SALE, TEXT, OLD_JOB], who = MAYA, expect = null, dups = [], undoable = [], busy = false, bikeList = BIKES } = {}) {
   mergeBusy = busy;
   calls = [];
   duplicates = dups;
   merges = undoable;
   customer = { ...who };
   history = items;
-  bikes = [...BIKES];
+  bikes = [...bikeList];
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -381,4 +381,24 @@ test('+ Add beside Bikes opens Add a bike; adding lists it; nothing typed is ref
   assert.ok(ui.queryByRole('dialog') === null, 'the box closes');
   const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/api/customers/5/bikes'));
   assert.deepEqual(post.body, { make: 'Specialized', model: 'Allez', colour: 'Red', serialNumber: '' });
+});
+
+// The Bikes list's bought here and warranty (cs-page, customer.mjs:101-118; finish-customers,
+// design 6; question 19): "bought here [date]" after the colour, then the warranty with each line.
+test('a bike bought here: bought here [date] after the colour, then Under warranty and each line', async () => {
+  const LINE = (part, endsOn, monthsLeft = null, ended = false) => ({ part, endsOn, monthsLeft, ended });
+  const under = { boughtHereOn: '2026-01-15', brand: 'Trek', running: true, endedOn: null, lines: [LINE('frame', null), LINE('components', '2028-01-15', 16)] };
+  const ended = { boughtHereOn: '2024-01-10', brand: 'Cube', running: false, endedOn: '2025-01-10', lines: [LINE('frame', '2025-01-10', null, true)] };
+  const { ui, within } = await open({ bikeList: [
+    { ...BIKES[0], warranty: under },
+    { id: 8, customerId: 5, make: 'Cube', model: '[Model]', colour: null, notes: null, warranty: ended },
+    { id: 9, customerId: 5, make: '[Make]', model: '[Model]', colour: 'Green', notes: null, warranty: null },
+  ] });
+  const bikes = within(await ui.findByRole('region', { name: 'Bikes' }));
+  await bikes.findByText('Trek Domane AL 3');
+  assert.deepEqual(bikes.getAllByRole('listitem').map((li) => li.textContent), [
+    'Trek Domane AL 3Green · bought here 15 Jan 2026Under warranty · Frame: lifetime · Components: until 15 Jan 2028, 16 months left',
+    'Cube [Model]bought here 10 Jan 2024Warranty ended 10 Jan 2025',
+    '[Make] [Model]Green',
+  ]);
 });
