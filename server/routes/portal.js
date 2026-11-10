@@ -1003,10 +1003,12 @@ export function register(route) {
     const login = await db.prepare('SELECT id, email, customer_id FROM customer_logins WHERE id = ?').get(ctx.login.id);
     if (!login) return sendJson(res, 401, SIGN_IN_AGAIN);
     if (email === login.email.toLowerCase()) return badRequest(res, 'That’s already your email');
-    if (await emailTaken(shop, email, login)) return badRequest(res, takenWords(shop));
+    // Counted before "already used" is answered, so addresses can't be tried
+    // one after another to find who has an account here.
     if (!signinAskNetworkLimiter.check(clientIp(req)) || !signinAskEmailLimiter.check(`${shop.id}:${email}`)) {
       return sendJson(res, 429, { error: 'Too many codes asked for. Wait a few minutes, then try again' });
     }
+    if (await emailTaken(shop, email, login)) return badRequest(res, takenWords(shop));
     await db.prepare('UPDATE customer_logins SET pending_email = ?, pending_email_at = now() WHERE id = ?').run(email, login.id);
     await provider.sendCode({ email });
     sendJson(res, 200, { pendingEmail: email });
@@ -1048,20 +1050,21 @@ export function register(route) {
       await db.prepare('UPDATE customer_logins SET email = pending_email, pending_email = NULL, pending_email_at = NULL WHERE id = ?').run(login.id);
       await db.prepare('UPDATE customers SET email = ?, email_from_customer = true, updated_at = now() WHERE id = ?').run(login.pending_email, held.id);
       changed = { from: login.email, to: login.pending_email, customerId: held.id };
+      // The old address is told, once, with the change (decided while building, 9 Nov).
+      await sendEmailTo({
+        to: changed.from,
+        subject: `Your email address has changed — ${shop.name}`,
+        body: `The email on your ${shop.name} account is now ${hiddenMiddle(changed.to)}. You’ll sign in with it from now on.${shop.phone ? ` If you didn’t make this change, call ${shop.phone}.` : ''}`,
+        customerId: changed.customerId,
+        templateKey: 'account_email_changed',
+      });
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
+      // Another account took it at the same moment.
+      if (err?.code === '23505') return badRequest(res, takenWords(shop));
       throw err;
     }
-    // The old address is told, once (decided while building, 9 Nov).
-    const phone = (await db.prepare('SELECT phone FROM shops WHERE id = ?').get(shop.id))?.phone || null;
-    await sendEmailTo({
-      to: changed.from,
-      subject: `Your email address has changed — ${shop.name}`,
-      body: `The email on your ${shop.name} account is now ${hiddenMiddle(changed.to)}. You’ll sign in with it from now on.${phone ? ` If you didn’t make this change, call ${phone}.` : ''}`,
-      customerId: changed.customerId,
-      templateKey: 'account_email_changed',
-    });
     sendJson(res, 200, { email: changed.to, said: `Your email is now ${changed.to}. Use it to sign in from now on.` });
   });
 

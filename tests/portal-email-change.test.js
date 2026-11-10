@@ -141,6 +141,15 @@ test('the sign-in’s limit on codes asked for applies', async () => {
   assert.deepEqual(answers, [200, 200, 200, 200, 200, 429]);
 });
 
+test('“already used” counts towards the limit, so addresses can’t be tried one after another', async () => {
+  const m = await maya();
+  const other = await maya();
+  const answers = [];
+  for (let i = 0; i < 6; i += 1) answers.push((await ask(m.cookie, other.email)).status);
+  // Five codes an address in 15 minutes; the other account's own sign-in used one.
+  assert.deepEqual(answers, [400, 400, 400, 400, 429, 429]);
+});
+
 test('another website’s request, or no sign-in, is refused', async () => {
   const m = await maya();
   assert.equal((await ask(m.cookie, unique('x'), { 'sec-fetch-site': 'cross-site' })).status, 403);
