@@ -6,6 +6,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -16,7 +17,9 @@ let other;
 let alex;
 
 before(async () => {
-  server = await startLiveServer({ env: { WH_MESSAGES_TICK_MS: '100' } });
+  // The server's own sender stays off: this file sends its shop's due messages
+  // itself (settle, below).
+  server = await startLiveServer({ env: { WH_MESSAGES_TICK_MS: '3600000' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'Collection Cycles' });
   other = await staffSignup(server.baseUrl, { shopName: 'Elsewhere Cycles' });
   alex = await seedMechanic(owner.shop.id, { name: 'Alex Morgan' });
@@ -66,9 +69,14 @@ async function bringForward(jobId) {
     await settle(jobId);
   }
 }
-// Until the sender's tick has dealt with the job's due messages, up to 10 seconds.
+// Sends the shop's due messages, as the sender's round does, until none is left
+// waiting. Not the server's timer: a round visits every shop in the shared test
+// database, hundreds of them, and with several test runs at once it took longer
+// than this file would wait (10 Nov). Another test server's round may have one of
+// this shop's messages part-sent, so it looks again, up to 10 seconds.
 async function settle(jobId) {
   for (let i = 0; i < 100; i++) {
+    await sendDueForShop(owner.shop.id);
     const { n } = await inShop(() => prepare(
       "SELECT count(*)::int AS n FROM customer_messages WHERE job_id = ? AND intent_state IN ('intended', 'sending') AND send_after <= now()"
     ).get(jobId));

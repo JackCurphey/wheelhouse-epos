@@ -8,6 +8,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic, setOpeningDays } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -18,6 +19,8 @@ let server;
 let owner;
 let alex;
 before(async () => {
+  // Off in this process too, where the tests send their shop's due messages themselves.
+  process.env.WH_OWN_MESSAGES_SCAN = 'off';
   server = await startLiveServer({ env: { WH_MESSAGES_TICK_MS: '200', WH_OWN_MESSAGES_SCAN: 'off' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
   alex = await seedMechanic(owner.shop.id, { name: 'Alex Morgan' });
@@ -271,12 +274,14 @@ test('checked again as it goes: a customer who took back their yes gets nothing'
   const [row] = (await queued(m.id)).filter((r) => r.job_id === j);
   await inShop(() => prepare('UPDATE customers SET marketing_permission = false WHERE id = ?').run(c.id));
   await inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE id = ?").run(row.id));
-  // Up to 20 seconds: one sender round walks every shop in the test database,
-  // 3 to 4 seconds when two test files run at once on a long-lived one (28 Oct).
+  // Sent by this file for its own shop, not left to the server's round, which
+  // walks every shop in the shared test database: 3 to 4 seconds on 28 Oct, more
+  // than 20 with several test runs at once on 10 Nov.
   const end = Date.now() + 20_000;
   let state;
   do {
     await new Promise((r) => setTimeout(r, 150));
+    await sendDueForShop(owner.shop.id);
     state = (await inShop(() => prepare('SELECT intent_state FROM customer_messages WHERE id = ?').get(row.id))).intent_state;
   } while (!['undone', 'delivered', 'failed'].includes(state) && Date.now() < end);
   assert.equal(state, 'undone');

@@ -8,6 +8,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -104,6 +105,10 @@ test('the reminder keeps its Stop these line, and puts it back after the shop’
   const end = Date.now() + 8000;
   let sent;
   while (Date.now() < end) {
+    // Sends this shop's due messages itself rather than waiting for the server's round,
+    // which visits every shop in the shared test database and can take longer than any
+    // wait here (10 Nov; tests/uncollected-bike.test.js).
+    await sendDueForShop(owner.shop.id);
     sent = await inShop(() => prepare('SELECT * FROM customer_messages WHERE id = ?').get(r.id));
     if (sent.intent_state === 'delivered') break;
     await new Promise((res) => setTimeout(res, 100));
