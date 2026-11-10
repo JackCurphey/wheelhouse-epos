@@ -36,7 +36,7 @@ async function takeCopy(requestId, send, loginId) {
     if (send === 'email' && !to) return refuse(409, `${who.name} has no email address. Download the copy instead.`);
     const signIn = await prepare('SELECT email FROM customer_logins WHERE customer_id = ? AND active = 1 ORDER BY id LIMIT 1').get(who.id);
     const files = [
-      ...await dataCopyFiles({ customerId: who.id, email: signIn?.email ?? '', zone, history: await repairsAndPurchases(who.id) }),
+      ...await dataCopyFiles({ customerId: who.id, email: signIn?.email ?? '', zone, history: await repairsAndPurchases(who.id, { everySale: true }) }),
       await shopNotesFile(who.id),
     ];
     const shop = await prepare('SELECT s.name, s.slug FROM shops s WHERE s.id = current_setting(\'app.current_shop_id\')::int').get();

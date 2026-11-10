@@ -16,7 +16,7 @@ import { serializeBike } from '../lib/serializers.js';
 import { bikesWithWarranty } from '../lib/bike-warranty.js';
 import { currentCustomerSession, setCustomerSessionCookie } from '../lib/session.js';
 import { clientIp } from '../proxy-trust.js';
-import { queueMessage, whyNotQueued } from '../messaging/engine.js';
+import { queueMessage, sendEmailTo, whyNotQueued } from '../messaging/engine.js';
 import { bookingMessageVars, messageLink } from '../workshop/job-messages.js';
 import { jobChecklistCopy } from '../workshop/checklists.js';
 import { creditOf, owedOf, paymentSettings } from '../lib/customer-money.js';
@@ -48,6 +48,7 @@ import { dataCopyFiles } from '../customer-data-copy.js';
 import { bookingNotes } from '../workshop/booking-notes.js';
 import { zipFiles } from '../lib/zip.js';
 import { openDeletion } from '../privacy-requests.js';
+import { receiptFor, receiptText } from '../receipts.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
@@ -693,7 +694,9 @@ const contactOf = (customer) => ({
 // purchases from both sales records: the account's history, and the copy of
 // their data (your-data-copy design 3).
 const shopZone = async () => (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-export async function repairsAndPurchases(customerId) {
+// `everySale` keeps a repair's own sale among the purchases: the copy of
+// their data lists every sale, as the repair's total may be hidden.
+export async function repairsAndPurchases(customerId, { everySale = false } = {}) {
   const zone = await shopZone();
   const jobs = await db.prepare(
     `SELECT w.id, w.reference, w.title, w.job_date, w.booking_state, w.custody_state, w.work_state, w.bike_id,
@@ -720,11 +723,19 @@ export async function repairsAndPurchases(customerId) {
             CASE WHEN v.source = 'old'
                  THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
                  ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
-       FROM all_sales v WHERE v.customer_id = ?`
-  ).all(customerId);
+       FROM all_sales v WHERE v.customer_id = ?
+        -- A repair's own payment shows on the repair's row, not again as a
+        -- purchase (finish-account question 8).
+        AND (? OR NOT (v.source = 'old' AND EXISTS (
+              SELECT 1 FROM sale_documents d
+               WHERE d.converted_sale_id = v.id AND d.workshop_job_id IS NOT NULL AND d.kind = 'order' AND d.status = 'converted')))`
+  ).all(customerId, everySale);
   const purchases = sales.map((p) => ({
     kind: 'purchase', source: p.source, id: p.id, receiptNumber: p.receipt_number ?? null,
     what: p.what || '', totalPence: Number(p.total_pence), at: new Date(p.made_at).toISOString(),
+    // Only a sale with a receipt number opens a receipt, for now (finish-account
+    // design 1; Jack, 9 Nov, answer 1): older in-shop sales wait for step C.
+    receipt: p.source === 'till' ? { source: 'till', id: p.id } : null,
   }));
   return [...repairs, ...purchases];
 }
@@ -1250,6 +1261,51 @@ export function register(route) {
     sendJson(res, 200, [...history, ...messages].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)));
   });
 
+  // A receipt from the account's history (ac-receipt; finish-account design 2):
+  // only the signed-in customer's own, including one a merge moved to them;
+  // anything else, another customer's, another shop's or a sale with no
+  // receipt yet, is the same 404. Shown whatever Show prices online says (answer 5).
+  // screens: ac-receipt
+  const RECEIPT_NOT_FOUND = { error: 'We can’t find that receipt' };
+  const ownReceipt = async (ctx, params) => {
+    const id = /^\d{1,10}$/.test(params.id) ? Number(params.id) : null;
+    const receipt = id ? await receiptFor({ source: params.source, id }) : null;
+    return receipt && receipt.customerId === ctx.login.customer_id ? receipt : null;
+  };
+  route('GET', '/api/portal/:shopSlug/receipts/:source/:id', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const receipt = await ownReceipt(ctx, params);
+    if (!receipt) return sendJson(res, 404, RECEIPT_NOT_FOUND);
+    // The customer's id stays on the server.
+    sendJson(res, 200, { ...receipt, customerId: undefined });
+  });
+
+  // "Email it to me" (ac-receipt-sent): to the account's own email only, never
+  // an address from the request; five an hour for one customer, counted from
+  // what was sent so a restart never resets it (question 9).
+  // screens: ac-receipt, ac-receipt-sent
+  route('POST', '/api/portal/:shopSlug/receipts/:source/:id/email', async (req, res, params) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' });
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const receipt = await ownReceipt(ctx, params);
+    if (!receipt) return sendJson(res, 404, RECEIPT_NOT_FOUND);
+    const { n } = await db.prepare(
+      "SELECT count(*)::int AS n FROM customer_messages WHERE customer_id = ? AND template_key = 'account_receipt' AND created_at > now() - interval '1 hour'"
+    ).get(receipt.customerId);
+    if (n >= 5) return sendJson(res, 429, { error: 'You’ve emailed five receipts in the last hour. Try again later.' });
+    const to = ctx.login.email;
+    await sendEmailTo({
+      to, subject: `${receipt.heading === 'Invoice' ? 'Invoice' : 'Your receipt'} — ${receipt.shop.name}`, body: receiptText(receipt),
+      customerId: receipt.customerId, templateKey: 'account_receipt',
+    });
+    sendJson(res, 200, { sentTo: to });
+  });
+
   // "Download a copy of your data" (ac-download; your-data-copy design 2 and
   // 3; account and reminders decision 4): one zip, made straight away and
   // logged as a privacy request from the account, done at once. The log and
@@ -1299,7 +1355,7 @@ export function register(route) {
         return sendJson(res, 429, { error: 'You’ve already downloaded a copy today. You can get another tomorrow.' });
       }
       await db.prepare("INSERT INTO privacy_requests (customer_id, customer_login_id, kind, source, asked_at, done_at) VALUES (?, ?, 'copy', 'account', now(), now())").run(customer.id, ctx.login.id);
-      files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id) });
+      files = await dataCopyFiles({ customerId: customer.id, email: ctx.login.email, zone, history: await repairsAndPurchases(customer.id, { everySale: true }) });
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
