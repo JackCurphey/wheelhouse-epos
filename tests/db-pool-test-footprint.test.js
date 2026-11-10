@@ -1,0 +1,55 @@
+// Under test, a pool hands an idle connection back to Postgres within a
+// second, instead of holding it for pg's default 10 seconds.
+//
+// Why: every test file runs its own pool and usually starts a server with
+// another, and the local Postgres allows 100 connections. One full run sat
+// close to that; two at once (several sessions testing on one Mac) went past
+// it, and Postgres refused new connections with "remaining connection slots
+// are reserved for roles with the SUPERUSER attribute". Test servers then
+// failed their start-up checks ("server exited early") and dozens of tests
+// failed that pass alone (10 Nov). Most of the connections held were idle.
+//
+// A real server keeps pg's default, so a busy shop isn't reconnecting.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DB = path.join(ROOT, 'server', 'db.js');
+
+// The pool's idle time in a fresh process with this environment.
+function idleTimeoutWith(env) {
+  const out = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `const { pool } = await import(${JSON.stringify(DB)}); process.stdout.write(String(pool.options.idleTimeoutMillis)); await pool.end();`], {
+    cwd: ROOT, env, encoding: 'utf8',
+  });
+  assert.equal(out.status, 0, out.stderr);
+  return Number(out.stdout);
+}
+
+const withoutTestMarks = () => {
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  delete env.NODE_ENV;
+  return env;
+};
+
+test('in a test process, an idle connection goes back within a second', async () => {
+  const { pool } = await import('../server/db.js');
+  try {
+    assert.ok(pool.options.idleTimeoutMillis > 0 && pool.options.idleTimeoutMillis <= 1000, `was ${pool.options.idleTimeoutMillis}`);
+  } finally {
+    await pool.end();
+  }
+});
+
+test('a test server (NODE_ENV=test, as tests/helpers/liveServer.js starts it) does the same', () => {
+  const ms = idleTimeoutWith({ ...withoutTestMarks(), NODE_ENV: 'test' });
+  assert.ok(ms > 0 && ms <= 1000, `was ${ms}`);
+});
+
+test('a real server keeps pg’s 10 seconds', () => {
+  assert.equal(idleTimeoutWith(withoutTestMarks()), 10000);
+});

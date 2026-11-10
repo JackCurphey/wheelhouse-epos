@@ -61,6 +61,12 @@ export const pool = new Pool({
   // short enough that a genuinely exhausted pool surfaces as a bounded
   // request failure well within any reasonable orchestrator probe timeout.
   connectionTimeoutMillis: 5000,
+  // Under test, an idle connection goes back to Postgres after a second, not
+  // pg's default 10. Each test file and each test server has a pool of its
+  // own against one local Postgres of 100 connections; held idle for 10
+  // seconds, two full runs at once used them all up and test servers failed
+  // to start (tests/db-pool-test-footprint.test.js). A real server keeps 10s.
+  idleTimeoutMillis: process.env.NODE_TEST_CONTEXT || process.env.NODE_ENV === 'test' ? 1000 : 10000,
 });
 
 // pg-pool emits 'error' on the POOL (not the individual client) whenever an
