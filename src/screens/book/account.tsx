@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { penceText } from '@/lib/cash-count.ts';
 import { STAGE_TEXT } from './pending-rules.ts';
 import type { BookingStage } from './pending-query.ts';
 import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words.ts';
+import { NOT_FOUND, ReceiptDialog, type ReceiptRef } from './receipt-dialog.tsx';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -32,8 +33,11 @@ import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words
  * Store credit's card while the shop has it on, and the delete pop-up's warning
  * that it will be lost (finish-customers design 8; ac-account, ac-delete).
  * Each bike bought here shows its warranty (finish-customers design 6).
- * Not built yet, so not shown: a purchase’s
- * receipt, and the privacy notice.
+ * A purchase with a receipt number opens "Your receipt", also from the
+ * address ?receipt=till-<id> (openspec/changes/finish-account design 3;
+ * ac-receipt, ac-receipt-sent). Older in-shop sales and repairs open no
+ * receipt until step C gives those sales numbers (Jack, 9 Nov, answer 1).
+ * Not built yet, so not shown: the privacy notice.
  */
 // An open request to delete the account: the shop's days it was asked and will be done by.
 type Deletion = { askedOn: string; finishBy: string };
@@ -51,7 +55,11 @@ type Repair = {
   kind: 'repair'; jobId: number; reference: string; title: string; bikeLabel: string | null; bikeId: number | null;
   stage: BookingStage; workStarted: boolean; jobDate: string; totalPence: number | null; at: string;
 };
-type Purchase = { kind: 'purchase'; source: string; id: number; receiptNumber: number | null; what: string; totalPence: number; at: string };
+type Purchase = {
+  kind: 'purchase'; source: string; id: number; receiptNumber: number | null; what: string; totalPence: number; at: string;
+  // "B1-0042" for a till sale; and the receipt it opens, or null (finish-account design 2).
+  number?: string | null; receipt?: ReceiptRef | null;
+};
 // Her one conversation with the shop (day answers 2.3): one row, by its newest message.
 type Messages = { kind: 'messages'; at: string; shopReplied: boolean };
 type Item = Repair | Purchase | Messages;
@@ -101,9 +109,23 @@ export function AccountScreen() {
   const [cancelled, setCancelled] = React.useState(false);
   const copy = useDataCopy(base);
   const home = `/book/${shopSlug}`;
+  // The receipt in front: from its row, or ?receipt=till-41 on arrival (design 3).
+  const [search, setSearch] = useSearchParams();
+  const asked = /^([a-z]+)-(\d{1,10})$/.exec(search.get('receipt') ?? '');
+  const receipt: ReceiptRef | null = asked ? { source: asked[1], id: Number(asked[2]) } : null;
+  const [missing, setMissing] = React.useState(false);
+  const showReceipt = React.useCallback((of: ReceiptRef | null) => {
+    setSearch((old) => {
+      const next = new URLSearchParams(old);
+      if (of) next.set('receipt', `${of.source}-${of.id}`); else next.delete('receipt');
+      return next;
+    }, { replace: true });
+  }, [setSearch]);
+  const notFound = React.useCallback(() => { setMissing(true); showReceipt(null); }, [showReceipt]);
 
   if ([me, bikes, history].some((q) => signedOut(q.error)) || copy.state === 'signed-out') {
-    return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/account`)}`} />;
+    // Back to the same address after signing in, a receipt's included.
+    return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/account${search.size ? `?${search}` : ''}`)}`} />;
   }
   if (me.isPending || bikes.isPending || history.isPending) return <BookFrame title="Loading…">{null}</BookFrame>;
   if (!me.data || !bikes.data || !history.data) {
@@ -160,12 +182,18 @@ export function AccountScreen() {
       <CopyBar copy={copy} />
       {deletion ? <PendingBar deletion={deletion} onCancel={() => void cancelRequest()} busy={cancelling} /> : null}
       {cancelled && !deletion ? <p role="status" className={GREEN_BAR}><Check aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" /><span>Request cancelled — your account stays as it is.</span></p> : null}
+      {missing ? (
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+          <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
+          <span className="grow">{NOT_FOUND}</span>
+        </div>
+      ) : null}
       {failed ? <p role="alert" className="m-0 mb-4 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">That didn’t go through. Check your connection and try again.</p> : null}
       {/* On a phone: bikes, history, details, your data (ac-account phone); on a computer, bikes and details on the left, the history and your data on the right (audit M2). */}
       <div className="grid items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="lg:col-start-1 lg:row-start-1">{bikesCard}</div>
         <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
-          <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} />
+          <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} onReceipt={(of) => { setMissing(false); showReceipt(of); }} />
           <div className="order-last lg:order-none"><YourDataCard copy={copy} deletion={deletion} onAsk={() => { setCancelled(false); setAsking(true); }} onCancel={() => void cancelRequest()} cancelling={cancelling} /></div>
         </div>
         <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2">
@@ -181,6 +209,7 @@ export function AccountScreen() {
           <DetailsCard me={me.data} shopSlug={shopSlug} />
         </div>
       </div>
+      {receipt ? <ReceiptDialog key={`${receipt.source}-${receipt.id}`} base={base} of={receipt} email={me.data.email} onNotFound={notFound} onClose={() => showReceipt(null)} /> : null}
       {asking ? <DeleteDialog me={me.data} base={base} bike={bikeWithUs} onDownload={() => void copy.download()} onClose={() => setAsking(false)} /> : null}
     </BookFrame>
   );
@@ -596,7 +625,7 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
 
 type Filter = 'Everything' | 'Repairs' | 'Purchases';
 
-function HistoryCard({ items, shopSlug, shopName, bookLink }: { items: Item[]; shopSlug: string; shopName: string; bookLink: React.ReactNode }) {
+function HistoryCard({ items, shopSlug, shopName, bookLink, onReceipt }: { items: Item[]; shopSlug: string; shopName: string; bookLink: React.ReactNode; onReceipt: (of: ReceiptRef) => void }) {
   const idBase = React.useId();
   const [filter, setFilter] = React.useState<Filter>('Everything');
   const [more, setMore] = React.useState(false);
@@ -621,7 +650,7 @@ function HistoryCard({ items, shopSlug, shopName, bookLink }: { items: Item[]; s
   const shown = items.filter((i) => filter === 'Everything' || (i.kind !== 'messages' && (filter === 'Repairs') === (i.kind === 'repair')));
   const newest = (a: Item, b: Item) => b.at.localeCompare(a.at);
   const row = (i: Item) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} />
-    : i.kind === 'messages' ? <MessagesRow key="m" m={i} shopSlug={shopSlug} shopName={shopName} /> : <PurchaseRow key={`p${i.source}${i.id}`} p={i} />);
+    : i.kind === 'messages' ? <MessagesRow key="m" m={i} shopSlug={shopSlug} shopName={shopName} /> : <PurchaseRow key={`p${i.source}${i.id}`} p={i} onReceipt={onReceipt} />);
   const now = shown.filter(isNow).sort(newest);
   const earlier = shown.filter((i) => !isNow(i)).sort(newest);
   const earlierShown = more ? earlier : earlier.slice(0, EARLIER_SHOWN);
@@ -678,17 +707,27 @@ function MessagesRow({ m, shopSlug, shopName }: { m: Messages; shopSlug: string;
   );
 }
 
-// A purchase opens nothing yet: its receipt is a later piece (design 2).
-function PurchaseRow({ p }: { p: Purchase }) {
-  const number = p.receiptNumber !== null ? String(p.receiptNumber) : `No. ${p.id}`;
-  return (
-    <div className={rowClass}>
+// A purchase with a receipt number opens its receipt (finish-account design 3;
+// ac-account's "[date] · in the shop · receipt"); an older in-shop sale, recorded
+// without one, opens nothing until step C (Jack, 9 Nov, answer 1).
+function PurchaseRow({ p, onReceipt }: { p: Purchase; onReceipt: (of: ReceiptRef) => void }) {
+  const number = p.number ?? (p.receiptNumber !== null ? String(p.receiptNumber) : `No. ${p.id}`);
+  const of = p.receipt ?? null;
+  const inner = (
+    <>
       <span className={kindClass}>Purchase</span>
       <span className="flex min-w-0 grow flex-col gap-0.5">
         <span className="text-size-15 font-semibold">{`${number} · ${p.what}`}</span>
-        <span className="text-size-15 text-[var(--wh-muted)]"><span className="sm:hidden">Purchase · </span>{`${shortDate(londonDate(p.at))} · in the shop`}</span>
+        <span className="text-size-15 text-[var(--wh-muted)]"><span className="sm:hidden">Purchase · </span>{`${shortDate(londonDate(p.at))} · in the shop${of ? ' · receipt' : ''}`}</span>
       </span>
       <span className="shrink-0 font-[family-name:var(--wh-font-mono)] text-size-15">{pounds(p.totalPence)}</span>
-    </div>
+    </>
+  );
+  if (!of) return <div className={rowClass}>{inner}</div>;
+  return (
+    <button type="button" onClick={() => onReceipt(of)} className={cn(rowClass, 'w-full cursor-pointer border-x-0 border-b-0 bg-transparent px-0 text-left font-[inherit]')}>
+      {inner}
+      <span aria-hidden="true" className="text-[var(--wh-muted)]">›</span>
+    </button>
   );
 }
