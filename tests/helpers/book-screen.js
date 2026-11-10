@@ -47,7 +47,8 @@ export async function renderBookScreen({
   // A service reminder's booking link, /reminder-links/<code> (finish-account).
   reminderLink = NO_LINK,
   // The account's /me, /bikes, /history and /logout (customer-account-screens),
-  // /me/data-copy (your-data-copy), and /me/delete-request[/cancel] (delete-account).
+  // /me/data-copy (your-data-copy), /me/email[/confirm] (finish-account), and
+  // /me/delete-request[/cancel] (delete-account).
   account = () => ({ status: 401, body: { error: 'Not signed in' } }),
   // The conversation's GET and POST /messages (ask-the-shop-screens).
   messages = () => ({ status: 401, body: { error: 'Not signed in' } }),
@@ -91,7 +92,7 @@ export async function renderBookScreen({
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/reminder-links/') ? reminderLink
             : pathname.includes('/sign-in/') ? signIn
-            : /\/(me|me\/contact|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
+            : /\/(me|me\/contact|me\/email|me\/email\/confirm|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
             : pathname.endsWith('/messages') ? messages
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
