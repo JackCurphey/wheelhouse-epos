@@ -241,9 +241,9 @@ test('the history: a till purchase carries its receipt, an old-record one none, 
   const res = await portal('/history', { cookie });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const purchases = res.body.filter((h) => h.kind === 'purchase');
-  assert.deepEqual(purchases.map((p) => [p.what, p.receipt]), [
-    ['Track pump, Maintenance book', { source: 'till', id: tillId }],
-    ['Inner tube', null],
+  assert.deepEqual(purchases.map((p) => [p.what, p.receipt, p.number]), [
+    ['Track pump, Maintenance book', { source: 'till', id: tillId }, `B1-00${receiptNo}`],
+    ['Inner tube', null, null],
   ]);
   assert.equal(res.body.filter((h) => h.kind === 'repair').length, 1, 'the repair, once');
   // The copy of her data still lists every sale, the repair's included (review of #657).

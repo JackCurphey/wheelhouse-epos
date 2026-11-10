@@ -50,6 +50,7 @@ import { bookingNotes } from '../workshop/booking-notes.js';
 import { zipFiles } from '../lib/zip.js';
 import { openDeletion } from '../privacy-requests.js';
 import { receiptFor, receiptText } from '../receipts.js';
+import { receiptLabel } from '../till/money.js';
 import { checkAnswers } from '../service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, linkExpiry, bookingStage } from '../booking-link.js';
 import { readRequestKey } from '../booking-request-key.js';
@@ -721,6 +722,7 @@ export async function repairsAndPurchases(customerId, { everySale = false } = {}
   }
   const sales = await db.prepare(
     `SELECT v.source, v.id, v.receipt_number, v.total_pence, v.made_at,
+            CASE WHEN v.source = 'till' THEN (SELECT t.code FROM till_sales s JOIN tills t ON t.id = s.till_id WHERE s.id = v.id) END AS till_code,
             CASE WHEN v.source = 'old'
                  THEN (SELECT string_agg(i.name, ', ' ORDER BY i.id) FROM sale_items i WHERE i.sale_id = v.id)
                  ELSE (SELECT string_agg(l.description, ', ' ORDER BY l.id) FROM till_sale_lines l WHERE l.till_sale_id = v.id) END AS what
@@ -737,6 +739,8 @@ export async function repairsAndPurchases(customerId, { everySale = false } = {}
     // Only a sale with a receipt number opens a receipt, for now (finish-account
     // design 1; Jack, 9 Nov, answer 1): older in-shop sales wait for step C.
     receipt: p.source === 'till' ? { source: 'till', id: p.id } : null,
+    // "B1-0042", as the row and the receipt name it (ac-account).
+    number: p.till_code && p.receipt_number != null ? receiptLabel(p.till_code, p.receipt_number) : null,
   }));
   return [...repairs, ...purchases];
 }
