@@ -68,6 +68,7 @@ async function accountOf(customerId, settings) {
 const MAX_WAY_NAME = 30;
 const MAX_WAY_NOTE = 120;
 const WAY_TAKEN = { error: 'That way to pay is already on the list', code: 'name_taken' };
+const WAYS_BUSY = { error: 'Someone else is changing the other ways to pay just now. Try again in a moment.', code: 'busy' };
 const otherWays = async () => ({ ways: await db.prepare('SELECT id, name, note, position FROM payment_ways_other ORDER BY position, id').all() });
 async function renumberWays(ids) {
   if (ids.length) await db.prepare('UPDATE payment_ways_other t SET position = o.n - 1 FROM unnest(?::int[]) WITH ORDINALITY AS o(id, n) WHERE t.id = o.id').run(ids);
@@ -75,12 +76,13 @@ async function renumberWays(ids) {
 // As the signing-in settings save: BEGIN, the rows read FOR UPDATE, the write, COMMIT, then
 // the whole list. The shop's row is held FOR NO KEY UPDATE, so two saves queue (an empty list
 // has no rows to hold) without blocking inserts that check the shop link; then the list's rows
-// in id order. change(held) gets them in list order and returns extra fields, or [status, body]
-// to refuse, which writes nothing.
+// in id order, waiting at most SAVE_LOCK_WAIT for them, as the file's other saves do. change(held)
+// gets them in list order and returns extra fields, or [status, body] to refuse, which writes nothing.
 async function changeOtherWays(res, shopId, status, change) {
   let extra;
   await db.exec('BEGIN');
   try {
+    await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
     await db.prepare('SELECT id FROM shops WHERE id = ? FOR NO KEY UPDATE').get(shopId);
     const held = await db.prepare('SELECT id, position, lower(name) AS key FROM payment_ways_other ORDER BY id FOR UPDATE').all();
     const result = await change(held.sort((a, b) => a.position - b.position || a.id - b.id));
@@ -93,6 +95,7 @@ async function changeOtherWays(res, shopId, status, change) {
   } catch (err) {
     await db.exec('ROLLBACK').catch(() => {});
     if (err.code === '23505') return sendJson(res, 409, WAY_TAKEN);
+    if (err.code === '55P03') return sendJson(res, 503, WAYS_BUSY);
     throw err;
   }
   return sendJson(res, status, { ...extra, ...(await otherWays()) });

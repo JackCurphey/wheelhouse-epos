@@ -2,7 +2,7 @@
 -- Jack's answer 3 of 11 Nov, docs/decisions/2026-11-11-settings-rest-answers.md):
 -- the shop's list of ways to pay that sit under "Other" at the bottom of Take
 -- payment, in order. Settings only for now; the till reads it once Take payment
--- offers "Other". Additive; safe to run twice.
+-- offers "Other". Additive; running it twice changes nothing for a shop that has rows.
 -- (130, 131 and 132 are taken by other pieces in progress.)
 
 CREATE TABLE IF NOT EXISTS payment_ways_other (
@@ -29,7 +29,8 @@ END $$;
 
 -- Every shop starts with the three drawn rows and their lines (setup.mjs
 -- payOther, set-pay-other). New shops get them in createShop (server/auth.js).
--- A shop that already has rows is left alone, so a second run adds nothing.
+-- A shop that already has rows is left alone, so a second run adds nothing to it;
+-- a shop that has removed all its rows by then gets the three drawn rows again.
 DO $$
 DECLARE
   business RECORD;

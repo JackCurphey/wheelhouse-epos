@@ -195,3 +195,21 @@ test("another shop's list is never seen or changed: GET shows only its own, DELE
   assert.equal((await as(other)('/api/payment-ways-other', { method: 'POST', body: { name: '[Our way]' } })).status, 201);
   assert.deepEqual(await list(), ours, 'nothing of ours changed');
 });
+
+test('a change waits at most SAVE_LOCK_WAIT for another save, then says to try again, writing nothing', async () => {
+  const before = await list();
+  const holder = await pool.connect();
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.current_shop_id', $1, true)", [String(owner.shop.id)]);
+    await holder.query('SELECT id FROM shops WHERE id = $1 FOR NO KEY UPDATE', [owner.shop.id]);
+    const started = Date.now();
+    const res = await own('/api/payment-ways-other', { method: 'POST', body: { name: '[Way]' } });
+    assert.deepEqual([res.status, res.body.code], [503, 'busy']);
+    assert.ok(Date.now() - started < 10_000, 'it stopped waiting');
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+  }
+  assert.deepEqual(await list(), before);
+});
