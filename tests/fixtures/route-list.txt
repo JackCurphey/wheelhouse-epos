@@ -345,3 +345,5 @@ PUT /api/bike-warranties/:id
 PUT /api/products/:id/warranty
 GET /api/reports/home
 GET /api/reports/sales
+GET /api/reports/takings
+GET /api/reports/days/:id

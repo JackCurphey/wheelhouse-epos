@@ -16,15 +16,19 @@ test('Reports opens with the date and shop, this week\'s takings so far and the 
   // The shop's name opens its Sales report (rp-home: answer 3 of the third walk).
   assert.equal(strip.getByRole('link', { name: /North Street Cycles, Bolton/ }).getAttribute('href'), '/workshop/reports/sales');
   const cards = within(await ui.findByRole('region', { name: 'Ready-made reports' }));
-  const sales = cards.getByRole('link', { name: /Sales/ });
+  const sales = cards.getByRole('link', { name: /^Sales/ });
   assert.equal(sales.getAttribute('href'), '/workshop/reports/sales');
   assert.ok(within(sales).queryByText('Takings, number of sales and the average sale') !== null);
+  // The drawing's "and till" is left out while closes are per shop (Jack's answer 4).
+  const cash = cards.getByRole('link', { name: /Takings and cash-ups/ });
+  assert.equal(cash.getAttribute('href'), '/workshop/reports/takings');
+  assert.ok(within(cash).queryByText('Each closed day, and any cash difference') !== null);
 });
 
 test('only reports that are built have a card, and no Margin tile on the strip', async () => {
   const { ui, within } = await openReports('/workshop/reports', { answers: home });
   const cards = within(await ui.findByRole('region', { name: 'Ready-made reports' }));
-  assert.deepEqual(cards.getAllByRole('link').map((a) => a.querySelector('span')?.textContent), ['Sales']);
+  assert.deepEqual(cards.getAllByRole('link').map((a) => a.querySelector('span')?.textContent), ['Sales', 'Takings and cash-ups']);
   for (const name of ['Workshop', 'Discounts and refunds', 'Returning customers', 'Margin and stock value', 'VAT', 'Your reports']) {
     assert.ok(cards.queryByText(name) === null, name);
   }

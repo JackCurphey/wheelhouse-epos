@@ -9,6 +9,8 @@ import { sendJson, ValidationError } from '../lib/http.js';
 import { currentShopToday } from '../workshop/jobs.js';
 import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
+import { takingsReport } from '../lib/report-takings.js';
+import { closeOn } from './close-the-day.js';
 
 const OWNER_ONLY = "Only the shop's owner can see reports";
 
@@ -57,5 +59,30 @@ export function register(route) {
       throw err;
     }
   });
-}
+  // Takings and cash-ups: each closed day as saved, for a period and the one before it.
+  // screens: rp-takings
+  route('GET', '/api/reports/takings', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await takingsReport(asked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
 
+  // One closed day's end-of-day report, as saved at the close; another shop's
+  // close is not found (row-level security).
+  // screens: rp-day
+  route('GET', '/api/reports/days/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
+    const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
+    const close = row ? await closeOn(row.day) : null;
+    if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
+    sendJson(res, 200, { close });
+  });
+}
