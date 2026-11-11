@@ -91,7 +91,7 @@ test('a month of days beyond 62 shows a row per month that opens nothing', async
   });
   const { ui, within } = await openReports('/workshop/reports/takings?period=dates&from=2026-06-30&to=2026-09-17', { answers: served({ '/api/reports/takings': () => [200, months()] }) });
   const table = within(await ui.findByRole('table', { name: 'Closed days' }));
-  assert.deepEqual(rowsOf(table)[1], ['Sep', '£2049.00', '£500.00', '−£5.00 short', '7 closed days']);
+  assert.deepEqual(rowsOf(table)[1], ['Sep', '£2,049.00', '£500.00', '−£5.00 short', '7 closed days']);
   assert.equal(table.queryAllByRole('button').length, 0);
 });
 function bar2(key, label, takings, before) { return { key, label, notReached: false, takingsPence: takings, sales: null, averagePence: null, beforeTakingsPence: before, beforeSales: 0 }; }

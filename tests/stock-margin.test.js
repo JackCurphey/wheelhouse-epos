@@ -7,10 +7,11 @@ const { margin, marginText, money } = await import(new URL('../.test-build/scree
 
 test('a figure in pence shows exactly: every one to £1,000.00, and the most a product can hold', () => {
   for (let p = 0; p <= 100000; p += 1) {
-    assert.equal(money(p), `£${Math.floor(p / 100)}.${String(p % 100).padStart(2, '0')}`);
+    const pounds = String(Math.floor(p / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    assert.equal(money(p), `£${pounds}.${String(p % 100).padStart(2, '0')}`);
   }
   assert.equal(money(2800), '£28.00');
-  assert.equal(money(9999999999), '£99999999.99');
+  assert.equal(money(9999999999), '£99,999,999.99');
 });
 
 test('£28 at 20% VAT with a £14 cost is a 40% margin', () => {

@@ -12,6 +12,7 @@ import { MAX_BYTES, TOO_LARGE, readBase64 } from './job-files.tsx';
 import { AddLinePhoto, PhotoFromPhoneDialog } from './photo-from-phone.tsx';
 // "Mon 5 Oct, 10:15" in London's time, as the customer's page says it.
 import { when } from './when.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * The quote, in the job's work and parts (journey 4; quoteJobBoards in
@@ -37,7 +38,7 @@ type Quote = {
 };
 type SendResult = { message: { status: 'sent' | 'failed' | 'not_sent'; reason?: string; channel?: string }; link: string };
 
-const money = (n: number) => `£${Number(n).toFixed(2)}`;
+const money = (n: number) => poundsText(Number(n));
 const ANSWERED = new Set(['approved', 'partly_approved', 'declined']);
 
 const CHIP: Record<QuoteLine['decision'], [string, string]> = {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { ItemSearch } from './item-search.tsx';
 import { QuotePanel } from './quote-panel.tsx';
 import type { WorkshopJob } from '@/lib/api/types.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * A job's work and parts (journey 12; decision 46: labour above parts), on
@@ -32,7 +33,7 @@ type Line = {
 };
 type Order = { id: number; status: string; total: number; items: Line[] };
 
-const money = (n: number) => `£${Number(n).toFixed(2)}`;
+const money = (n: number) => poundsText(Number(n));
 const isLabour = (l: Line) => l.lineType === 'labour';
 
 /** A line as the server takes it back, with its id so its Done tick and note stay. */

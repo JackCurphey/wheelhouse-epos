@@ -1,3 +1,4 @@
+import { poundsText } from '@/lib/money.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { money, type SalesRow } from './reports-format.ts';
 
@@ -25,7 +26,7 @@ function niceMax(pence: number): number {
   const step = 10 ** Math.floor(Math.log10(pounds));
   return Math.ceil(pounds / step) * step * 100;
 }
-const scaleLabel = (pence: number) => `£${Math.round(pence / 100)}`;
+const scaleLabel = (pence: number) => poundsText(Math.round(pence / 100)).replace(/\.00$/, '');
 // A count's scale: an even number, so the middle gridline is a whole one.
 const niceCount = (n: number): number => (n <= 0 ? 2 : n <= 10 ? n + (n % 2) : niceMax(n * 100) / 100);
 

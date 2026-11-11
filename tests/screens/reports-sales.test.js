@@ -63,7 +63,7 @@ test('Last 12 months is a line by month with the 12 months before, and its table
   assert.ok(within(graph).queryByText('The 12 months before') !== null);
   const rows = within(ui.getByRole('table', { name: 'Takings by month' })).getAllByRole('row');
   assert.equal(rows.length, 14);
-  assert.deepEqual([...rows[13].querySelectorAll('th,td')].map((c) => c.textContent), ['12 months', '£1200.00', '48', '£25.00']);
+  assert.deepEqual([...rows[13].querySelectorAll('th,td')].map((c) => c.textContent), ['12 months', '£1,200.00', '48', '£25.00']);
 });
 
 test('Pick dates opens its box, shows the range, and refuses To before From beside the field', async () => {
