@@ -216,11 +216,14 @@ test('changes at once never go under zero between them when they mustn’t', asy
 
 test('the lock limit ends with its transaction, and never stays on a connection another request reuses', async () => {
   await inShop(async () => {
+    // What this connection started with: none for a real server, a minute under test (server/db.js).
+    const start = (await prepare('SHOW lock_timeout').get()).lock_timeout;
+    assert.notEqual(start, '2s');
     await dbExec('BEGIN');
     await lockStock([await (async () => (await prepare("INSERT INTO products (name, updated_at) VALUES ('[Product]', now()) RETURNING id").get()).id)()]);
     assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '2s', 'on during the transaction');
     await dbExec('COMMIT');
-    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '0', 'off again, as every connection starts');
+    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, start, 'back to what the connection started with');
   });
 });
 

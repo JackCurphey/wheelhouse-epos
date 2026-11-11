@@ -32,7 +32,7 @@ function runWithNpmTestFlags(file) {
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
   const started = Date.now();
-  const out = spawnSync(process.execPath, ['--test', ...flags.filter((f) => !f.startsWith('--test-timeout=')), '--test-timeout=1500', path.join(FIXTURES, file)], {
+  const out = spawnSync(process.execPath, ['--test', ...flags.filter((f) => !f.startsWith('--test-timeout=')), '--test-timeout=1500', '--test-reporter=tap', path.join(FIXTURES, file)], {
     cwd: ROOT, env, encoding: 'utf8', timeout: 30_000,
   });
   return { ...out, took: Date.now() - started };
@@ -42,7 +42,8 @@ test('a test that never finishes fails at the limit, by name', () => {
   const out = runWithNpmTestFlags('hangs-in-a-test.fixture.mjs');
   assert.notEqual(out.signal, 'SIGTERM', 'the run itself hung');
   assert.notEqual(out.status, 0);
-  assert.match(out.stdout, /✖ waits for something that never comes/);
+  // One report style everywhere: CI's runner would otherwise pick another one.
+  assert.match(out.stdout, /^not ok \d+ - waits for something that never comes$/m);
   assert.ok(out.took < 20_000, `took ${out.took} ms`);
 });
 
