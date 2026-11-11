@@ -7,12 +7,14 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../scripts/dev/new-db.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
 const FILE = '130_vat_quarter.sql';
+const SQL = readFileSync(path.join(ROOT, 'server/migrations', FILE), 'utf8');
 
 function adminUrlOrSkip(t) {
   try {
@@ -53,6 +55,13 @@ test('130 adds the VAT quarter start month to shops, null to start, 1 to 3 only,
     }
     const type = await one(c, "SELECT data_type FROM information_schema.columns WHERE table_name = 'shops' AND column_name = 'vat_quarter_start_month'");
     assert.equal(type.data_type, 'smallint');
+    // The migration's own words, run twice more on a shop that has said: nothing fails, the answer stays.
+    await c.query('UPDATE shops SET vat_quarter_start_month = 2 WHERE id = $1', [shop.id]);
+    await c.query(SQL);
+    await c.query(SQL);
+    assert.equal((await one(c, 'SELECT vat_quarter_start_month FROM shops WHERE id = $1', [shop.id])).vat_quarter_start_month, 2);
+    const checks = await one(c, "SELECT count(*)::int AS n FROM pg_constraint WHERE conrelid = 'shops'::regclass AND pg_get_constraintdef(oid) LIKE '%vat_quarter_start_month%'");
+    assert.equal(checks.n, 1);
   });
   // Run again: nothing new to apply, nothing fails.
   assert.doesNotMatch(migrate(env), new RegExp(`Applied migration: ${FILE}`));

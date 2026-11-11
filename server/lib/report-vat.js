@@ -23,20 +23,21 @@ const inDays = (col) => `${col} >= (?::date)::timestamp AT TIME ZONE ? AND ${col
 // Sales before VAT and VAT charged, by rate, for the shop's days from–to.
 async function byRate(from, to, timeZone) {
   const rows = await prepare(
-    `SELECT l.vat_rate_bp AS rate, SUM(l.line_total_pence - l.vat_pence)::int AS sales, SUM(l.vat_pence)::int AS vat
+    `SELECT l.vat_rate_bp AS rate, SUM(l.line_total_pence - l.vat_pence) AS sales, SUM(l.vat_pence) AS vat
        FROM till_sale_lines l JOIN till_sales t ON t.id = l.till_sale_id
       WHERE ${inDays('t.till_clock_at')}
       GROUP BY l.vat_rate_bp`
   ).all(from, timeZone, to, timeZone);
-  return new Map(rows.map((r) => [r.rate, { sales: r.sales, vat: r.vat }]));
+  // SUM gives a bigint, which comes back as a string: a quarter's pence can pass 2^31.
+  return new Map(rows.map((r) => [r.rate, { sales: Number(r.sales), vat: Number(r.vat) }]));
 }
 
 // The old record's takings, including VAT: it never kept the split.
 async function notRecorded(from, to, timeZone) {
   const row = await prepare(
-    `SELECT COALESCE(SUM(total_pence), 0)::int AS takings FROM all_sales WHERE source = 'old' AND ${inDays('made_at')}`
+    `SELECT COALESCE(SUM(total_pence), 0) AS takings FROM all_sales WHERE source = 'old' AND ${inDays('made_at')}`
   ).get(from, timeZone, to, timeZone);
-  return row.takings;
+  return Number(row.takings);
 }
 
 export async function vatReport({ period = 'this-vat-quarter', from, to }, today) {
@@ -72,6 +73,9 @@ export async function vatReport({ period = 'this-vat-quarter', from, to }, today
   };
 }
 
+// Said under the old record's row, on screen and in the download.
+export const NOT_RECORDED_LINE = 'These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.';
+
 const pounds = (pence) => (pence / 100).toFixed(2);
 
 export function vatCsv(report) {
@@ -85,5 +89,6 @@ export function vatCsv(report) {
     [],
     ['Sales without their VAT', 'Takings including VAT', 'Quarter before'],
     [n.label, pounds(n.takingsPence), pounds(n.beforeTakingsPence)],
+    [NOT_RECORDED_LINE],
   ]);
 }

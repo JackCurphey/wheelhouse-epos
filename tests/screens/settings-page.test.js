@@ -154,7 +154,7 @@ test('Shop and sites › Shop details shows the five boxes and the note', async 
 test('Shop details has the months the VAT quarters start in; picking one saves it and says Saved', async () => {
   const { ui, within, fireEvent, waitFor } = await openSettings({ room: 'office' });
   await ui.findByLabelText('Shop name');
-  const months = within(ui.getByRole('radiogroup', { name: 'Months your VAT quarters start' })).getAllByRole('radio');
+  const months = within(ui.getByRole('radiogroup', { name: 'VAT quarter starts' })).getAllByRole('radio');
   assert.deepEqual(months.map((m) => m.textContent), ['January, April, July, October', 'February, May, August, November', 'March, June, September, December']);
   assert.deepEqual(months.map((m) => m.getAttribute('aria-checked')), ['false', 'false', 'false']);
   fireEvent.click(months[1]);

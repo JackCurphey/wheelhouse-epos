@@ -74,7 +74,10 @@ test('the Sales table by rate with the Total, no Refunds row, the Stock purchase
     ['Total', '£150.00', '£21.00', '£15.00'],
   ]);
   assert.ok(t.queryByText('Refunds') === null);
-  assert.ok(ui.queryByRole('table', { name: /VAT not recorded/ }) === null);
+  // The old record's row is there even with nothing in it (design 5: one more row).
+  const old = within(ui.getByRole('table', { name: 'Sales without their VAT' }));
+  assert.deepEqual([...old.getAllByRole('row')[1].querySelectorAll('th, td')].map((c) => c.textContent), ['VAT not recorded', '£0.00', '£0.00']);
+  assert.ok(ui.getByRole('region', { name: 'Sales' }) !== null);
   const stock = within(ui.getByRole('region', { name: 'Stock purchases' }));
   assert.ok(stock.getByRole('note').textContent === 'Stock purchases only — not your full VAT reclaim. Rent, bills and other costs don’t go through Wheelhouse.');
   assert.ok(stock.queryByText('Supplier invoices are checked in your accounts software — take this figure from there.') !== null);
@@ -126,6 +129,15 @@ test('Not now shows calendar quarters with a line saying so, and asks again next
   await closeReports();
   const again = await openReports('/workshop/reports/vat', { answers: served(NOT_SAID) });
   assert.ok(await again.ui.findByRole('dialog', { name: 'When does your VAT quarter start?' }) !== null);
+});
+
+test('the popup\'s Close × leaves it as Not now does, saving nothing', async () => {
+  const { ui, within, fireEvent, waitFor } = await openReports('/workshop/reports/vat', { answers: served(NOT_SAID) });
+  const dialog = within(await ui.findByRole('dialog', { name: 'When does your VAT quarter start?' }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Close' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+  assert.ok(ui.queryByText(/^Showing calendar quarters/) !== null);
+  assert.ok(calls.every((c) => c.method !== 'PUT'));
 });
 
 test('"Download as spreadsheet" downloads this period\'s file under the server\'s name', async () => {

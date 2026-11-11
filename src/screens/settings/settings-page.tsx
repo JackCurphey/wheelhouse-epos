@@ -118,7 +118,7 @@ function ShopDetailsBox() {
       ))}
       <div className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3">
         <span id="shop-vat-quarter" className="shrink-0 text-size-15 font-semibold md:w-40">VAT quarter starts</span>
-        <RadioPillGroup pickOnMove={false} aria-label="Months your VAT quarters start" className="flex flex-wrap gap-2">
+        <RadioPillGroup pickOnMove={false} aria-labelledby="shop-vat-quarter" className="flex flex-wrap gap-2">
           {VAT_QUARTERS.map(([month, words]) => (
             <button key={month} type="button" role="radio" aria-checked={quarter === month} disabled={!details.data} onClick={() => void saveQuarter(month)}
               className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${quarter === month ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{words}</button>

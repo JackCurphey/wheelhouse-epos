@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
 import { money } from './reports-format.ts';
@@ -104,6 +104,7 @@ function QuarterQuestion({ onNotNow, onSaved }: { onNotNow: () => void; onSaved:
     <Dialog open onOpenChange={(o) => { if (!o) onNotNow(); }} aria-labelledby="vq-title" className="md:max-w-[560px]">
       <DialogHeader>
         <div><DialogTitle id="vq-title">When does your VAT quarter start?</DialogTitle><DialogDescription>Asked once. Change it later in Settings › Shop and sites.</DialogDescription></div>
+        <DialogClose onClick={onNotNow} />
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
         <RadioPillGroup aria-label="Months your VAT quarters start" className="flex flex-col items-start gap-1.5">
@@ -115,7 +116,7 @@ function QuarterQuestion({ onNotNow, onSaved }: { onNotNow: () => void; onSaved:
         <Note>It’s on your VAT registration, or ask your accountant.</Note>
         {failed ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{failed}</p> : null}
       </DialogBody>
-      <DialogFooter>
+      <DialogFooter className="justify-between">
         <Button variant="ghost" onClick={onNotNow}>Not now</Button>
         <Button variant="primary" onClick={save} disabled={busy}>Save</Button>
       </DialogFooter>
@@ -125,7 +126,7 @@ function QuarterQuestion({ onNotNow, onSaved }: { onNotNow: () => void; onSaved:
 
 const HEAD = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-xs font-bold text-[var(--wh-muted)] max-md:whitespace-normal max-md:px-1';
 const CELL = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-right whitespace-nowrap max-md:px-1';
-const ROW_HEAD = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-left font-semibold whitespace-nowrap max-md:whitespace-normal max-md:px-1';
+const ROW_HEAD = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-left font-semibold whitespace-nowrap max-md:px-1';
 const TOTAL = 'px-1.5 py-2.5 max-md:px-1';
 
 function Table({ label, columns, rows, total }: { label: string; columns: string[]; rows: string[][]; total?: string[] }) {
@@ -148,21 +149,16 @@ function Table({ label, columns, rows, total }: { label: string; columns: string
 
 function Body({ report }: { report: VatReport }) {
   const { total: t, notRecorded: n } = report;
-  const old = n.takingsPence !== 0 || n.beforeTakingsPence !== 0;
   return (
     <>
-      <Box>
+      <Box label="Sales">
         <BoxHeading>Sales</BoxHeading>
         <Table label="VAT on sales by rate" columns={['Rate', 'Sales before VAT', 'VAT charged', 'Quarter before']}
           rows={report.rows.map((r) => [r.label, money(r.salesPence), money(r.vatPence), money(r.beforeVatPence)])}
           total={[t.label, money(t.salesPence), money(t.vatPence), money(t.beforeVatPence)]} />
-        {old ? (
-          <>
-            <Table label="Sales without their VAT" columns={['Sales', 'Takings including VAT', 'Quarter before']}
-              rows={[[n.label, money(n.takingsPence), money(n.beforeTakingsPence)]]} />
-            <Note>These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.</Note>
-          </>
-        ) : null}
+        <Table label="Sales without their VAT" columns={['Sales', 'Takings including VAT', 'Quarter before']}
+          rows={[[n.label, money(n.takingsPence), money(n.beforeTakingsPence)]]} />
+        <Note>These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.</Note>
       </Box>
       <Box label="Stock purchases">
         <BoxHeading>Stock purchases</BoxHeading>

@@ -28,7 +28,7 @@ async function seeder(shop) {
     return { site: siteRow, till: tillRow };
   });
   let receipt = 0;
-  const noon = (day) => `${day}T12:00:00Z`;
+  const noon = (day) => (day.includes('T') ? day : `${day}T12:00:00Z`);
   return {
     // A sale in the old record, in pounds: no VAT kept.
     old: (day, pounds) => one(
@@ -148,6 +148,7 @@ test('the download has the Sales table by rate with its Total row, as on screen'
     '',
     'Sales without their VAT,Takings including VAT,Quarter before',
     'VAT not recorded,30.00,10.00',
+    'These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.',
   ]);
 });
 
@@ -172,4 +173,32 @@ test('once the quarter is saved it is not asked again, and the quarters follow i
   assert.deepEqual(body.before, { from: '2026-06-01', to: '2026-08-31' });
   assert.deepEqual(body.rows.map((r) => [r.label, r.salesPence, r.beforeVatPence]), [['Standard 20%', 0, 200], ['12.5%', 0, 125], ['Reduced rate 5%', 0, 50], ['Zero rate 0%', 0, 0]]);
   assert.deepEqual(body.notRecorded, { label: 'VAT not recorded', takingsPence: 0, beforeTakingsPence: 3000 });
+});
+
+test('a sale is placed in its quarter by the shop’s own day, in summer time too', async () => {
+  // A shop of its own, so the edges are all that's in it. Last VAT quarter (calendar) is
+  // 1 April to 30 June; in summer time the shop's day starts at 23:00 UTC the day before.
+  const edge = await staffSignup(server.baseUrl, { shopName: 'Edge Cycles' });
+  await firstShopIsBolton(edge);
+  const s = await seeder(edge);
+  await s.till('2026-03-31T22:30:00Z', [[3600, 2000, 600]]); // 31 March, 23:30: the quarter before that
+  await s.till('2026-03-31T23:30:00Z', [[2400, 2000, 400]]); // 1 April, 00:30: in
+  await s.till('2026-06-30T22:30:00Z', [[1200, 2000, 200]]); // 30 June, 23:30: in
+  await s.till('2026-06-30T23:30:00Z', [[600, 2000, 100]]);  // 1 July, 00:30: out
+  await s.old('2026-03-31T22:30:00Z', 80);
+  await s.old('2026-03-31T23:30:00Z', 20);
+  await s.old('2026-06-30T22:30:00Z', 10);
+  await s.old('2026-06-30T23:30:00Z', 40);
+  try {
+    const { body } = await vat('period=last-vat-quarter', edge);
+    assert.deepEqual(body.rows[0], { rateBp: 2000, label: 'Standard 20%', salesPence: 3000, vatPence: 600, beforeVatPence: 600 });
+    assert.equal(body.notRecorded.takingsPence, 3000);
+    assert.equal(body.notRecorded.beforeTakingsPence, 8000);
+    // And this quarter so far holds only the 1 July sale.
+    const now = await vat('', edge);
+    assert.equal(now.body.rows[0].vatPence, 100);
+    assert.equal(now.body.notRecorded.takingsPence, 4000);
+  } finally {
+    await deleteTestShop(edge.shop.id);
+  }
 });
