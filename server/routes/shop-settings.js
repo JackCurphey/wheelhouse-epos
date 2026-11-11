@@ -8,6 +8,9 @@ import { dbExec, prepare } from '../db.js';
 import { badRequest, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { limitLockWait } from '../lib/stock.js';
 import { isPence } from './float-check.js';
+import { zipFiles } from '../lib/zip.js';
+import { currentMoment } from '../clock.js';
+import { shopDataCopy } from '../shop-data-copy.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -265,4 +268,24 @@ export function register(route) {
     }
     sendJson(res, 200, { adjustTodayOverPence: row.stock_adjust_today_over_pence });
   });
+
+  // Settings › Office › Your data › Download everything (openspec/changes/your-data-download;
+  // Jack's 10 Nov answers 2 and 7): the shop's customers, sales and refunds, stock and jobs as
+  // one zip of spreadsheets, made on request. The Owner only until roles are built; not
+  // recorded until the activity log exists.
+  // screens: set-data-export
+  route('GET', '/api/settings/your-data/download', async (req, res) => {
+    if (await ownerOnly(req, res, "Only the shop's owner can download the shop's data")) return;
+    const copy = await shopDataCopy();
+    const zip = zipFiles(copy.files, currentMoment());
+    res.writeHead(200, { 'content-type': 'application/zip', 'content-length': zip.length, 'content-disposition': attachmentNamed(copy.name) });
+    res.end(zip);
+  });
+}
+
+// A file name made from the shop's name, which may hold ’ or a quote mark: plain letters in
+// filename=, the whole name in filename* (RFC 6266), as a header can't carry ’ as it is.
+function attachmentNamed(name) {
+  const plain = name.replace(/[^\x20-\x7e]|["\\]/g, '_');
+  return `attachment; filename="${plain}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
