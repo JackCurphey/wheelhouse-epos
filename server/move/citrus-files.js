@@ -26,6 +26,9 @@ const HEADING_ROWS = 20;
 const MAX_KEPT_CHARS = 64_000_000;
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
+/** The columns a report keeps, in Citrus Lime's own order (for Settings › Your data's download). */
+export const keptColumns = (report) => REPORTS[report]?.keeps ?? [];
+
 /**
  * @param {string[][]} rows a file's rows
  * @returns {{ report: string, rows: string[], storeName: string } | null} each
@@ -33,9 +36,6 @@ const norm = (s) => String(s ?? '').trim().toLowerCase();
  * too much. Only the columns used are kept, rows with nothing in them are
  * dropped, and text is made safe to store.
  */
-/** The columns a report keeps, in Citrus Lime's own order (for Settings › Your data's download). */
-export const keptColumns = (report) => REPORTS[report]?.keeps ?? [];
-
 export function recognise(rows) {
   for (const [report, { needs, keeps }] of Object.entries(REPORTS)) {
     const headingAt = rows.slice(0, HEADING_ROWS).findIndex((row) => {
