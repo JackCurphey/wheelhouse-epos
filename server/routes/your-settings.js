@@ -8,9 +8,10 @@ import { readJsonBody, sendJson } from '../lib/http.js';
 import { NOT_YOURS_HERE, ownAccountHere } from './till-pins.js';
 
 // Every switch the drawing has, off to start, but Show the diary legend, on
-// to start (diary-legend-box design 1); the screens show the ones built.
-const SWITCHES = ['showLegend', 'statusSymbols', 'reduceMotion', 'noAutoClose', 'largerText', 'foldedSidebar'];
-const DEFAULT_ON = ['showLegend'];
+// to start (diary-legend-box design 1), and Show graphs in reports, on to start
+// (reports-sales-and-takings, Jack's answer 11); the screens show the ones built.
+const SWITCHES = ['showLegend', 'statusSymbols', 'reduceMotion', 'noAutoClose', 'largerText', 'foldedSidebar', 'showGraphs'];
+const DEFAULT_ON = ['showLegend', 'showGraphs'];
 
 const whole = (stored = {}) => ({
   accessibility: Object.fromEntries(SWITCHES.map((k) => [k, typeof stored[k] === 'boolean' ? stored[k] : DEFAULT_ON.includes(k)])),

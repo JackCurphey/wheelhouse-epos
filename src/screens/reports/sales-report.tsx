@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
-import { Box, BackToReports, BoxHeading, Note, Page, Refusal } from './reports-bits.tsx';
+import { useShowGraphs } from '@/lib/your-settings.ts';
+import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
 import { compareWords, count, longDate, money, type SalesReport } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
@@ -42,20 +43,20 @@ export function Figure({ name, value, words }: { name: string; value: ReactNode;
 
 export function SalesTable({ report }: { report: SalesReport }) {
   const { unit } = report.period;
-  const cell = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-right max-md:px-1 max-md:text-size-13';
-  const head = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-right text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
+  const cell = 'border-b border-[var(--wh-border)] px-2 py-2.5 max-md:px-1 max-md:text-size-13';
+  const head = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
   return (
     <div className="overflow-x-auto">
       <table aria-label={TABLE_TITLE[unit]} className="w-full border-collapse text-sm max-md:text-size-13">
         <thead><tr>
           <th scope="col" className={`${head} text-left`}>{COLUMN[unit]}</th>
-          <th scope="col" className={head}>Takings</th><th scope="col" className={head}>Sales</th><th scope="col" className={head}>Average</th>
+          <th scope="col" className={`${head} text-right`}>Takings</th><th scope="col" className={`${head} text-right`}>Sales</th><th scope="col" className={`${head} text-right`}>Average</th>
         </tr></thead>
         <tbody>
           {report.rows.map((r) => (
             <tr key={String(r.key)}>
-              <th scope="row" className={`${cell} text-left font-semibold`}>{r.label}</th>
-              <td className={cell}>{money(r.takingsPence)}</td><td className={cell}>{count(r.sales)}</td><td className={cell}>{money(r.averagePence)}</td>
+              <th scope="row" className={`${cell} text-left font-semibold whitespace-nowrap`}>{r.label}</th>
+              <td className={`${cell} text-right`}>{money(r.takingsPence)}</td><td className={`${cell} text-right`}>{count(r.sales)}</td><td className={`${cell} text-right`}>{money(r.averagePence)}</td>
             </tr>
           ))}
         </tbody>
@@ -88,9 +89,12 @@ export function SalesReportPage() {
   return (
     <Page>
       <BackToReports />
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="m-0 text-xl font-bold">Sales</h2>
-        {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
+      <div className="flex flex-wrap items-end justify-between gap-2.5">
+        <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-1">
+          <h2 className="m-0 text-xl font-bold">Sales</h2>
+          {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
+        </div>
+        <DownloadButton path={`/api/reports/sales.csv?${query}`} />
       </div>
       <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
       {sales.isError ? <Refusal error={sales.error} /> : null}
@@ -104,6 +108,7 @@ export function SalesReportPage() {
 }
 
 function Body({ report, period }: { report: SalesReport; period: string }) {
+  const showGraphs = useShowGraphs();
   const { figures, period: p } = report;
   const words = (diff: number | null, kind: 'money' | 'count') => compareWords(diff, p.against, kind);
   if (report.empty) {
@@ -129,8 +134,8 @@ function Body({ report, period }: { report: SalesReport; period: string }) {
         <Figure name="Average sale" value={money(figures.average.pence)} words={words(figures.average.diffPence, 'money')} />
       </div>
       <Box>
-        <ReportGraph title={title} rows={report.rows} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} />
+        {showGraphs ? <ReportGraph title={title} rows={report.rows} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
+          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
         <SalesTable report={report} />
       </Box>
       <Note>Takings include VAT, take refunds off, and count online and Cycle to Work money; today counts so far.</Note>

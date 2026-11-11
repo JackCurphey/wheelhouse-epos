@@ -1,3 +1,4 @@
+import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { money, type SalesRow } from './reports-format.ts';
 
 /**
@@ -8,9 +9,10 @@ import { money, type SalesRow } from './reports-format.ts';
  * for days to come; and a spoken description naming the busiest bar and the
  * change, ending "The figures are in the table below."
  */
-const W = 700;
+// The drawing's width on a computer; on a phone a narrower one, so the text isn't shrunk to nothing.
+const WIDE = 700;
+const NARROW = 340;
 const H = 120;
-const LEFT = 44;
 const TOP = 10;
 
 // The top of the scale: the biggest figure rounded up to a tidy number of pounds.
@@ -31,15 +33,15 @@ export function graphWords({ title, rows, unitWord, diffPence, against }: { titl
   return `${title}: ${parts.join('; ') || 'nothing sold'}. The figures are in the table below.`;
 }
 
-function Axis({ max }: { max: number }) {
+function Axis({ max, left, width }: { max: number; left: number; width: number }) {
   return (
     <>
       {[1, 0.5, 0].map((f) => {
         const y = TOP + H - H * f;
         return (
           <g key={f}>
-            <line x1={LEFT} x2={W} y1={y} y2={y} stroke="var(--wh-border)" strokeDasharray={f ? '3 3' : undefined} />
-            <text x={LEFT - 6} y={y + 4} textAnchor="end" fontSize="12" fill="var(--wh-muted)">{scaleLabel(max * f)}</text>
+            <line x1={left} x2={width} y1={y} y2={y} stroke="var(--wh-border)" strokeDasharray={f ? '3 3' : undefined} />
+            <text x={left - 6} y={y + 4} textAnchor="end" fontSize="12" fill="var(--wh-muted)">{scaleLabel(max * f)}</text>
           </g>
         );
       })}
@@ -64,12 +66,17 @@ const twoLines = (label: string): [string, string] => {
 export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, showBefore }: {
   title: string; rows: SalesRow[]; kind: 'bars' | 'line'; keyNow: string; keyBefore: string; spoken: string; showBefore: boolean;
 }) {
+  const phone = useMedia('(max-width: 767px)');
+  const W = phone ? NARROW : WIDE;
+  const LEFT = phone ? 36 : 44;
   const biggest = Math.max(0, ...rows.flatMap((r) => [r.takingsPence ?? 0, showBefore ? r.beforeTakingsPence : 0]));
   const max = niceMax(biggest);
   const slot = (W - LEFT) / rows.length;
   const x = (i: number) => LEFT + slot * i + slot / 2;
   const y = (pence: number) => TOP + H - (pence / max) * H;
   const barW = Math.min(56, slot * 0.6);
+  // A month or a long picked range has too many bars to name each: name every few, so the labels never run together.
+  const step = Math.max(1, Math.ceil(30 / slot));
   return (
     <figure className="m-0 flex flex-col gap-3" role="img" aria-label={spoken}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -77,19 +84,23 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
         <Key now={keyNow} before={keyBefore} dashed />
       </div>
       <svg aria-hidden="true" viewBox={`0 0 ${W} ${TOP + H + 40}`} className="h-auto w-full overflow-visible">
-        <Axis max={max} />
+        <Axis max={max} left={LEFT} width={W} />
         {kind === 'bars' ? rows.map((r, i) => (
           <g key={String(r.key)}>
             {showBefore ? <rect x={x(i) - barW / 2 - 3} y={y(r.beforeTakingsPence)} width={barW + 6} height={Math.max(0, TOP + H - y(r.beforeTakingsPence))} fill="none" stroke="var(--wh-muted)" strokeDasharray="3 3" /> : null}
             {r.notReached ? null : <rect x={x(i) - barW / 2} y={y(r.takingsPence ?? 0)} width={barW} height={Math.max(1, TOP + H - y(r.takingsPence ?? 0))} fill="var(--wh-ink)" />}
-            <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{twoLines(r.label)[0]}</text>
-            <text x={x(i)} y={TOP + H + 30} textAnchor="middle" fontSize="12" fill="var(--wh-muted)">{r.notReached ? 'Not yet' : twoLines(r.label)[1]}</text>
+            {i % step === 0 ? (
+              <>
+                <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{twoLines(r.label)[0]}</text>
+                <text x={x(i)} y={TOP + H + 30} textAnchor="middle" fontSize="12" fill="var(--wh-muted)">{r.notReached ? 'Not yet' : twoLines(r.label)[1]}</text>
+              </>
+            ) : null}
           </g>
         )) : (
           <>
             {showBefore ? <polyline fill="none" stroke="var(--wh-muted)" strokeWidth="2" strokeDasharray="5 4" points={rows.map((r, i) => `${x(i)},${y(r.beforeTakingsPence)}`).join(' ')} /> : null}
             <polyline fill="none" stroke="var(--wh-ink)" strokeWidth="2.5" points={rows.filter((r) => !r.notReached).map((r) => `${x(rows.indexOf(r))},${y(r.takingsPence ?? 0)}`).join(' ')} />
-            {rows.map((r, i) => <text key={String(r.key)} x={x(i)} y={TOP + H + 20} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{r.label}</text>)}
+            {rows.map((r, i) => (phone && i % 2 ? null : <text key={String(r.key)} x={x(i)} y={TOP + H + 20} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--wh-ink)">{r.label}</text>))}
           </>
         )}
       </svg>

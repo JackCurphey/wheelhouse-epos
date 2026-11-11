@@ -5171,6 +5171,36 @@ Decided here, for Jack to overrule.
     Wednesday's closes, so the comparison is last Monday to Wednesday, not
     last Thursday's close against nothing. Found in review. Today on its own
     still compares one day with the same weekday last week.
+
+### 11 Nov 2026: Download as spreadsheet and Show graphs in reports (`openspec/changes/reports-sales-and-takings` group 4, `rp-sales`, `rp-takings`, `rp-day`, `rp-your-settings`)
+
+1. **A closed day's file is at `/api/reports/days/:id/csv`,** not `:id.csv`
+   as `tasks.md` has it: the day's own route `/api/reports/days/:id` would
+   answer "30.csv" as an id (the route-list test checks no route shadows
+   another). The other two files are `sales.csv` and `takings.csv`.
+2. **The file name uses the shop's web address** (`north-street-cycles`), and
+   the period's first day and the last day counted, so This week on a
+   Thursday is `…-2026-09-14-to-2026-09-17.csv`, as the spec's example.
+3. **A closed day's file has two columns, Item and Amount,** with the day and
+   who closed it first, then the rows its report shows (Takings, Card, Cash,
+   Gift cards…, Float at the start, Cash difference, Banked, Online). *Pattern:*
+   Close the day's report rows.
+4. **A file shows what the screen shows:** a day to come, today's "Not
+   closed yet" row and an Online row's cash columns are "—", and a cash
+   difference is a signed amount ("-5.00"), not words and colour.
+5. **"Show graphs in reports" sits after Larger text and before Folded
+   sidebar,** for the Owner only (the only person who sees reports until
+   roles). The drawing places it among the other rows and doesn't say where.
+6. **While Your settings is still loading, the graph shows;** it goes only
+   once the person's own switch says off.
+7. **A download that fails says why under the button,** in the server's words
+   for a refusal, and the report stays.
+8. **The graph is drawn narrower on a phone** (340 wide, not 700) so its text
+   stays readable, with every other month named on the 12-month line, as the
+   drawing's phone board does; a bar graph with many bars (a month, a long
+   picked range) names every few bars so the labels never run together. A
+   phone's Takings table scrolls sideways inside
+   its card rather than breaking each date over three lines.
 ### 11 Nov 2026: Left out from Citrus Lime (`openspec/changes/your-data-download` group 4, `set-data-export`, `mv-sorted`)
 
 Decided here, for Jack to overrule.

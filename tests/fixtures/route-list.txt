@@ -348,3 +348,6 @@ GET /api/reports/home
 GET /api/reports/sales
 GET /api/reports/takings
 GET /api/reports/days/:id
+GET /api/reports/sales.csv
+GET /api/reports/takings.csv
+GET /api/reports/days/:id/csv
