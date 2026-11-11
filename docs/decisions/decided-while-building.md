@@ -5049,3 +5049,21 @@ Decided here, for Jack to overrule.
    from Customers without deleting their details) has no row, as a deleted
    one has none. *Pattern:* the Customers list, which shows only those not
    removed.
+
+### 10 Nov 2026: Download everything's Sales and refunds and Workshop jobs (`openspec/changes/your-data-download` group 2, `set-data-export`)
+
+Decided here, for Jack to overrule.
+
+1. **A Shopify refund has no amount.** Wheelhouse records only what came
+   back into stock from a Shopify refund, not the money. Its rows say
+   "Refund", the item, a minus quantity and "Shopify refund #[n]", with the
+   money cells empty rather than 0. *Pattern:* design 3's "cells Wheelhouse
+   never stored stay empty, not 0".
+2. **A job has no due date.** "Due" is the day the job is booked for, and
+   "Booked in" when the bike was booked in at the counter (empty until then).
+   *Pattern:* the diary, which places a job on its booked day.
+3. **Quoted, Final and Deposit.** "Quoted (£)" is the job's latest quote,
+   all its lines; "Final (£)" what the job was paid at the till, empty until
+   then; "Deposit (£)" an online deposit held, taken or later refunded (the
+   refund itself is a row in Sales and refunds). *Pattern:* the job page,
+   which shows one total, and the quote's own lines.

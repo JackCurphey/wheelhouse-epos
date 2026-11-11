@@ -12,7 +12,7 @@ import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, firstShopIsBolton } from './helpers/staff.js';
-import { staffLogin } from './helpers/till.js';
+import { staffLogin, registerTill } from './helpers/till.js';
 import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
@@ -94,6 +94,10 @@ test('a shop name with ’ in it still downloads, the whole name kept for the br
   const header = res.headers.get('content-disposition');
   assert.equal(decodeURIComponent(header.split("filename*=UTF-8''")[1]), `${jacks.shop.name} data 2026-09-01.zip`);
   assert.match(header, /^attachment; filename="Jack_s _Bikes_ [^"]* data 2026-09-01\.zip"; /);
+  // A new shop with no sales still gets each list, its header row only.
+  const files = filesOf(body, t);
+  assert.equal(rowsOf(files['Sales and refunds.csv']).length, 0);
+  assert.ok(files['Sales and refunds.csv'].startsWith('\uFEFFDate,Kind,Receipt'));
 });
 
 test('a staff member is refused, and nobody signed in is refused', async () => {
@@ -201,10 +205,166 @@ test("another shop's customers and products never appear", async (t) => {
   assert.ok(!files['Stock.csv'].includes('ELSE-1'));
 });
 
-test('Sales and refunds and Workshop jobs come with their header rows', async (t) => {
-  const files = await filesFor(t);
-  for (const name of ['Sales and refunds.csv', 'Workshop jobs.csv']) {
-    const lines = files[name].replace(/^﻿/, '').split('\r\n').filter(Boolean);
-    assert.ok(lines.length >= 1, `${name} has a header row`);
+// ---- Sales and refunds (group 2; answers 3 and 4) ----
+
+let maya;
+let jo;
+let till;
+async function salesSetup() {
+  if (maya) return;
+  maya = (await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: 'maya.sales@example.test' } })).body;
+  const made = await registerTill(server.baseUrl, owner);
+  till = { ...made.till, site: made.site };
+  jo = await inShop(async () => (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Jo Taylor', 1) RETURNING id").get()).id);
+}
+const salesRows = async (t) => rowsOf((await filesFor(t))['Sales and refunds.csv']);
+
+async function tillSale({ at, receipt, lines, customerId = null, payments = [['card', null]] }) {
+  return inShop(async () => {
+    const total = lines.reduce((n, l) => n + l.qty * l.each, 0);
+    const vat = lines.reduce((n, l) => n + (l.vat ?? 0), 0);
+    const sale = (await prepare(
+      `INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, employee_id, customer_id, till_clock_at, total_pence, vat_pence, made_offline)
+       VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, ?, ?, ?, false) RETURNING id`
+    ).get(till.id, till.site.id, receipt, jo, customerId, at, total, vat)).id;
+    for (const l of lines) {
+      await prepare('INSERT INTO till_sale_lines (till_sale_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence) VALUES (?, ?, ?, ?, ?, 2000, ?) RETURNING id')
+        .get(sale, l.what, l.qty, l.each, l.qty * l.each, l.vat ?? 0);
+    }
+    for (const [method, pence] of payments) {
+      await prepare('INSERT INTO till_sale_payments (till_sale_id, method, amount_pence) VALUES (?, ?, ?) RETURNING id').get(sale, method, pence ?? total);
+    }
+    return sale;
+  });
+}
+
+test('Sales: a till sale of two items is two rows sharing its date, receipt, till, who served and total, with VAT per line', async (t) => {
+  await salesSetup();
+  await tillSale({ at: '2026-08-21T09:15:00Z', receipt: 7, customerId: maya.id, lines: [
+    { what: 'Shimano brake pads B05S-RX', qty: 2, each: 1299, vat: 433 },
+    { what: '[product name]', qty: 1, each: 500, vat: 83 },
+  ] });
+  const rows = (await salesRows(t)).filter((r) => r.Receipt === `${till.code}-0007`);
+  assert.equal(rows.length, 2);
+  for (const r of rows) {
+    assert.equal(r.Date, '2026-08-21 10:15', 'in the shop’s time zone');
+    assert.equal(r.Kind, 'Sale');
+    assert.equal(r.Shop, 'Bolton');
+    assert.equal(r.Till, till.code);
+    assert.equal(r['Served by'], 'Jo Taylor');
+    assert.equal(r.Customer, 'Maya Patel');
+    assert.equal(r['Sale total (£)'], '30.98');
+    assert.equal(r['Paid by'], 'Card');
   }
+  const pads = rows.find((r) => r.Item === 'Shimano brake pads B05S-RX');
+  assert.deepEqual([pads.Quantity, pads['Price each (£)'], pads['Line total (£)'], pads['VAT (£)']], ['2', '12.99', '25.98', '4.33']);
+  assert.equal(rows.find((r) => r.Item === '[product name]')['VAT (£)'], '0.83');
+});
+
+test('Sales: an older-record sale has empty VAT, receipt, shop and till, not 0; a collected repair’s sale is there once', async (t) => {
+  await salesSetup();
+  const bike = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'Domane AL 3' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-05', customerId: maya.id, bikeId: bike.id } })).body;
+  await inShop(async () => {
+    const sale = (await prepare(
+      `INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id, cashier_id, note)
+       VALUES ('2026-08-20T10:00:00Z', 45, 45, 'Cash', 45, ?, ?, '[older sale]') RETURNING id`
+    ).get(maya.id, jo)).id;
+    await prepare("INSERT INTO sale_items (sale_id, name, unit_price, qty, line_total, line_type) VALUES (?, 'Standard service', 45, 1, 45, 'labour') RETURNING id").get(sale);
+    await prepare("INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, 'Cash', 45) RETURNING id").get(sale);
+    await prepare(`INSERT INTO sale_documents (kind, status, subtotal, total, converted_sale_id, workshop_job_id, customer_id)
+                   VALUES ('order', 'converted', 45, 45, ?, ?, ?) RETURNING id`).get(sale, job.id, maya.id);
+  });
+  const rows = (await salesRows(t)).filter((r) => r.Item === 'Standard service' && r.Date === '2026-08-20 11:00');
+  assert.equal(rows.length, 1, 'once');
+  const r = rows[0];
+  assert.deepEqual([r.Receipt, r['VAT (£)'], r.Shop, r.Till], ['', '', '', '']);
+  assert.deepEqual([r['Line total (£)'], r['Sale total (£)'], r['Paid by'], r['Served by']], ['45.00', '45.00', 'Cash', 'Jo Taylor']);
+});
+
+test('Sales: an online deposit refund and a Shopify refund are minus rows marked Refund; oldest first', async (t) => {
+  await salesSetup();
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: '[refunded booking]', jobDate: '2026-09-06', customerId: maya.id } })).body;
+  await inShop(async () => {
+    await prepare(`INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, job_id, created_at, refunded_at, refund_reason)
+                   VALUES ('pretend', 'ref-1', 2000, 'refunded', 'k-' || gen_random_uuid(), ?, '2026-08-18T09:00:00Z', '2026-08-19T09:00:00Z', 'Cancelled by the shop') RETURNING id`).get(job.id);
+    const pads = (await prepare("INSERT INTO products (name, sku, price, active) VALUES ('Shimano brake pads B05S-RX', 'B05S-RX-S', 12.99, 1) RETURNING id").get()).id;
+    await prepare("INSERT INTO stock_movements (product_id, change_qty, type, note, shopify_refund_id, created_at) VALUES (?, 1, 'return', 'Shopify refund #555', '555', '2026-08-19T12:00:00Z') RETURNING id").get(pads);
+  });
+  const rows = await salesRows(t);
+  const deposit = rows.find((r) => r.Kind === 'Refund' && r.Refunded.includes(job.reference));
+  assert.equal(deposit.Date, '2026-08-19 10:00');
+  assert.equal(deposit.Item, 'Deposit paid online');
+  assert.equal(deposit['Line total (£)'], '-20.00');
+  assert.equal(deposit['Sale total (£)'], '-20.00');
+  assert.equal(deposit.Customer, 'Maya Patel');
+  assert.equal(deposit.Refunded, `Online deposit for job ${job.reference}`);
+  const shopify = rows.find((r) => r.Kind === 'Refund' && r.Refunded === 'Shopify refund #555');
+  assert.equal(shopify.Item, 'Shimano brake pads B05S-RX');
+  assert.equal(shopify.Quantity, '-1');
+  assert.equal(shopify['Line total (£)'], '', 'Wheelhouse records no amount for a Shopify refund');
+  const dates = rows.map((r) => r.Date);
+  assert.deepEqual(dates, [...dates].sort(), 'oldest first');
+});
+
+test('Sales: a deleted customer’s sale keeps its row, with the customer empty', async (t) => {
+  await salesSetup();
+  const gone = (await staff('/api/customers', { method: 'POST', body: { name: 'Sam Leaving' } })).body;
+  await tillSale({ at: '2026-08-22T09:00:00Z', receipt: 8, customerId: gone.id, lines: [{ what: '[item]', qty: 1, each: 300 }] });
+  await inShop(() => prepare("UPDATE customers SET name = '', deleted_at = now(), active = 0 WHERE id = ?").run(gone.id));
+  const r = (await salesRows(t)).find((x) => x.Receipt === `${till.code}-0008`);
+  assert.equal(r.Customer, '');
+  assert.equal(r['Line total (£)'], '3.00');
+});
+
+// ---- Workshop jobs (group 2; answer 6) ----
+
+test('Workshop jobs: one row per job with its customer, bike, services, dates, stage, mechanic, amounts, deposit and staff notes', async (t) => {
+  await salesSetup();
+  const bike = (await staff(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: 'Trek', model: 'FX 2' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Standard service', jobDate: '2026-09-07', customerId: maya.id, bikeId: bike.id } })).body;
+  await inShop(async () => {
+    const mech = (await prepare("INSERT INTO employees (name, is_mechanic) VALUES ('Alex Mechanic', 1) RETURNING id").get()).id;
+    const svc = (await prepare("INSERT INTO workshop_services (name, price, price_pence) VALUES ('Standard service', 45, 4500) RETURNING id").get()).id;
+    await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, booked_price_pence, position) VALUES (?, ?, 45, 4500, 0) RETURNING workshop_job_id').get(job.id, svc);
+    await prepare(`UPDATE workshop_jobs SET mechanic_id = ?, notes = 'Rear hub is worn', booked_in_at = '2026-09-07T08:30:00Z',
+                   custody_state = 'collected', collected_at = '2026-09-08T16:00:00Z', work_state = 'complete' WHERE id = ?`).run(mech, job.id);
+    const quote = (await prepare("INSERT INTO workshop_quotes (workshop_job_id, revision, state) VALUES (?, 1, 'approved') RETURNING id").get(job.id)).id;
+    await prepare("INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, quantity, unit_amount, unit_amount_pence, decision) VALUES (?, 'part', 'Rear hub', 1, 30, 3000, 'approved') RETURNING id").get(quote);
+    const sale = (await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id) VALUES ('2026-09-08T16:00:00Z', 75, 75, 'Cash', 75, ?) RETURNING id").get(maya.id)).id;
+    await prepare("INSERT INTO sale_documents (kind, status, subtotal, total, converted_sale_id, workshop_job_id, customer_id) VALUES ('order', 'converted', 75, 75, ?, ?, ?) RETURNING id").get(sale, job.id, maya.id);
+    await prepare(`INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, job_id)
+                   VALUES ('pretend', 'ref-2', 1000, 'taken', 'k-' || gen_random_uuid(), ?) RETURNING id`).get(job.id);
+  });
+  const r = rowsOf((await filesFor(t))['Workshop jobs.csv']).find((x) => x.Job === job.reference);
+  assert.equal(r.Customer, 'Maya Patel');
+  assert.equal(r.Bike, 'Trek FX 2');
+  assert.equal(r.Services, 'Standard service');
+  assert.equal(r['Booked in'], '2026-09-07 09:30');
+  assert.equal(r.Due, '2026-09-07');
+  assert.equal(r['Where it’s up to'], 'Collected');
+  assert.equal(r.Mechanic, 'Alex Mechanic');
+  assert.equal(r['Quoted (£)'], '30.00');
+  assert.equal(r['Final (£)'], '75.00');
+  assert.equal(r['Deposit (£)'], '10.00');
+  assert.equal(r.Collected, '2026-09-08 17:00');
+  assert.equal(r['Staff notes'], 'Rear hub is worn');
+});
+
+test('Workshop jobs: a job not yet in has no booked-in, final or collected; a deleted customer’s job keeps its row', async (t) => {
+  await salesSetup();
+  const gone = (await staff('/api/customers', { method: 'POST', body: { name: 'Pat Gone' } })).body;
+  const job = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: '[a booking]', jobDate: '2026-09-09', customerId: gone.id } })).body;
+  await inShop(async () => {
+    await prepare("UPDATE customers SET name = '', deleted_at = now(), active = 0 WHERE id = ?").run(gone.id);
+  });
+  const r = rowsOf((await filesFor(t))['Workshop jobs.csv']).find((x) => x.Job === job.reference);
+  assert.deepEqual([r.Customer, r['Booked in'], r['Final (£)'], r.Collected, r['Quoted (£)']], ['', '', '', '', '']);
+  assert.equal(r['Where it’s up to'], 'Expected');
+});
+
+test("another shop's sales and jobs never appear", async (t) => {
+  const theirs = (await staffRequest(server.baseUrl, other.cookie, '/api/workshop-jobs', { method: 'POST', body: { title: '[their job]', jobDate: '2026-09-09' } })).body;
+  const files = await filesFor(t);
+    assert.ok(!files['Workshop jobs.csv'].includes('[their job]'));
 });
