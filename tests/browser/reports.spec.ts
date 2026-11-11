@@ -289,3 +289,32 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await noSideScroll(page);
   });
 }
+
+// Margin and stock value, its stock half (openspec/changes/reports-ready-made, group 4;
+// rp-margin): the Owner opens it from its card, sees the stock value on the shelves and
+// a damaged adjustment written off, and follows "See the counts" to Stock take.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Margin and stock value from its card`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      const chain = await prepare("INSERT INTO products (name, category, price, cost, stock_qty) VALUES ('Chain', 'Drivetrain › Chains', 0, 10, 3) RETURNING id").get() as { id: number };
+      await prepare("INSERT INTO stock_movements (product_id, change_qty, type, reason, value_pence, created_at) VALUES (?, -2, 'adjustment', 'damaged', 2000, '2026-09-16T09:00:00Z')").run(chain.id);
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Margin and stock value/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/margin`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Margin and stock value' })).toBeVisible();
+    await expect(page.getByText('Stock value, at what it cost you: £30.00')).toBeVisible();
+    const off = page.getByRole('table', { name: 'Stock written off' });
+    await expect(off.getByRole('row', { name: /Adjusted · Damaged/ })).toContainText('−£20.00');
+    await noSideScroll(page);
+    await off.getByRole('link', { name: 'See the stock takes counted under' }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/stocktake`);
+  });
+}

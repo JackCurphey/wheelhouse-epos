@@ -39,6 +39,7 @@ import { TakingsReportPage } from '@/screens/reports/takings-report.tsx';
 import { WorkshopReportPage } from '@/screens/reports/workshop-report.tsx';
 import { ReturningReportPage } from '@/screens/reports/returning-report.tsx';
 import { VatReportPage } from '@/screens/reports/vat-report.tsx';
+import { MarginReportPage } from '@/screens/reports/margin-report.tsx';
 
 /**
  * The staff app: query client, router, error boundary. The rooms sidebar
@@ -56,10 +57,10 @@ function SignedInAlready() {
   return <Navigate to="/workshop" replace />;
 }
 
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, moving: MovePage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-privacy': PrivacyRequestsPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, 'st-product-sizes': SizesPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-restock': RestockPage, 'rs-receive': ReceivePage, 'rs-delivery': DeliveryPage, 'rs-booked': DeliveryBookedPage, 'eod-count': CloseTheDayPage, 'till-setup': TillSetupPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage, reports: ReportsPage, 'rp-sales': SalesReportPage, 'rp-takings': TakingsReportPage, 'rp-workshop': WorkshopReportPage, 'rp-returning': ReturningReportPage, 'rp-vat': VatReportPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { 'auth-signedout': SignedInAlready, 'staff-signin': SignedInAlready, desk: Landing, diary: DiaryPage, overview: OverviewPage, till: TillPage, settings: SettingsPage, messages: MessagesPage, today: TodayPage, moving: MovePage, 'your-settings': YourSettingsPage, customers: CustomersPage, 'cs-page': CustomerPage, 'cs-privacy': PrivacyRequestsPage, 'cs-bike': BikePage, stock: StockPage, 'st-product': ProductPage, 'st-product-sizes': SizesPage, deliveries: DeliveriesPage, 'rs-order': NewOrderPage, 'rs-order-ordered': OrderPage, 'rs-restock': RestockPage, 'rs-receive': ReceivePage, 'rs-delivery': DeliveryPage, 'rs-booked': DeliveryBookedPage, 'eod-count': CloseTheDayPage, 'till-setup': TillSetupPage, stocktake: StockTakePage, 'tk-count': CountPage, 'tk-diff': CheckPage, 'tk-applied': AppliedPage, reports: ReportsPage, 'rp-sales': SalesReportPage, 'rp-takings': TakingsReportPage, 'rp-workshop': WorkshopReportPage, 'rp-returning': ReturningReportPage, 'rp-vat': VatReportPage, 'rp-margin': MarginReportPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
-const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-privacy', 'cs-bike', 'st-product', 'st-product-sizes', 'rs-order', 'rs-order-ordered', 'rs-restock', 'rs-receive', 'rs-delivery', 'rs-booked', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', 'rp-sales', 'rp-takings', 'rp-workshop', 'rp-returning', 'rp-vat', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
+const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', 'auth-signedout', 'staff-signin', 'cs-page', 'cs-privacy', 'cs-bike', 'st-product', 'st-product-sizes', 'rs-order', 'rs-order-ordered', 'rs-restock', 'rs-receive', 'rs-delivery', 'rs-booked', 'eod-count', 'tk-count', 'tk-diff', 'tk-applied', 'rp-sales', 'rp-takings', 'rp-workshop', 'rp-returning', 'rp-vat', 'rp-margin', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);
 const route = ([id, path]: [ScreenId, string]) => ({ path, Component: SCREENS[id] ?? notBuilt(id) });
 const entries = Object.entries(ROUTES) as [ScreenId, string][];
 
