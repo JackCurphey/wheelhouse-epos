@@ -119,9 +119,11 @@ async function howFull(from, to) {
     mechanics: mechanics.map((m) => {
       const have = available.get(m.id) ?? 0;
       const used = booked.get(m.id) ?? 0;
+      // Under half an hour in is no set hours, as the drawing shows for none, never "of 0 hours".
+      const none = hours(have) === 0;
       return {
         id: m.id, name: m.name, bookedHours: hours(used), availableHours: hours(have),
-        percent: have ? Math.round((used / have) * 100) : null, noSetHours: have === 0,
+        percent: none ? null : Math.round((used / have) * 100), noSetHours: none,
       };
     }),
     sharedQueue: { bookedHours: hours(booked.get(null) ?? 0) },

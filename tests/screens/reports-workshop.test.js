@@ -33,11 +33,12 @@ const WEEK = {
   shopLine: 'North Street Cycles, Bolton', today: '2026-09-17',
 };
 const MONTHS = ['2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
+const MONTH_LABELS = ['Oct 25', 'Nov 25', 'Dec 25', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
 const LAST_12 = {
   ...WEEK,
   period: { period: 'last-12-months', from: '2025-10-01', to: '2026-09-30', through: '2026-09-17', soFar: true, unit: 'month', label: 'October 2025 – September 2026', against: 'the 12 months before' },
   columns: { now: 'Last 12 months', before: '12 months before' },
-  rows: MONTHS.map((key, i) => ({ key, label: key, notReached: false, finished: i === 4 ? 9 : 3, beforeFinished: 2 })),
+  rows: MONTHS.map((key, i) => ({ key, label: MONTH_LABELS[i], notReached: false, finished: i === 4 ? 9 : 3, beforeFinished: 2 })),
 };
 
 const served = (week = WEEK) => ({
@@ -109,7 +110,7 @@ test('a mechanic booked past their hours shows the true figure with the bar full
 
 test('Last 12 months is a line by month, and the tables name its columns', async () => {
   const { ui, within } = await openReports('/workshop/reports/workshop?period=last-12-months', { answers: served() });
-  const graph = await ui.findByRole('img', { name: /^Jobs finished by month: busiest month 2026-02; up 2 on the 12 months before\. Each month: / });
+  const graph = await ui.findByRole('img', { name: /^Jobs finished by month: busiest month Feb; up 2 on the 12 months before\. Each month: / });
   assert.equal(graph.querySelectorAll('polyline').length, 2);
   const head = within(ui.getByRole('table', { name: 'Quotes' })).getAllByRole('columnheader').map((h) => h.textContent);
   assert.deepEqual(head, ['Quote', 'Last 12 months', '12 months before']);

@@ -121,7 +121,13 @@ before(async () => {
   await s.block(multi.id, '2026-09-16', joT.id, '16:00', '17:00');                            // its second block: 1 hour
   await s.block(multi.id, '2026-09-15', joT.id, '', '', 3);                                   // an untimed later block: its planned time is already on the first
   await s.job({ date: '2026-09-16', mechanic: joT.id, start: '09:00', end: '13:00', state: 'cancelled' }); // left out
+  await s.job({ date: '2026-09-15', mechanic: joT.id, start: '14:00', end: '18:00', state: 'declined' }); // left out
+  await s.job({ date: '2026-09-16', mechanic: joT.id, start: '13:00', end: '16:00', state: 'expired' });  // left out
   await s.job({ date: '2026-09-18', mechanic: joT.id, start: '09:00', end: '13:00' });        // Friday: not reached
+  // Sam Lee works Thursdays but is away all but 20 minutes of it: under half an hour in is no set hours.
+  const samL = await s.mechanic('Sam Lee', [4]);
+  await s.away(samL.id, '2026-09-17', '09:20', '18:00');
+  await s.job({ date: '2026-09-17', mechanic: samL.id, start: '09:00', end: '11:00' });
   // Alex Morgan has no working days: no set hours.
   const alex = await s.mechanic('Alex Morgan', []);
   await s.job({ date: '2026-09-14', mechanic: alex.id, start: '10:00', end: '11:00' });
@@ -166,6 +172,16 @@ test('jobs finished by day: one bar each day, the job reopened counted once on i
   assert.equal(rows.reduce((n, r) => n + (r.finished ?? 0), 0), 3);
 });
 
+test('Last 12 months counts jobs finished by month, and Today by hour in the shop\'s time', async () => {
+  const year = (await workshop('period=last-12-months')).body;
+  const sep = year.rows.find((r) => r.key === '2026-09');
+  assert.equal(sep.finished, 5, 'A, B and F this week; D and Friday 11th last week');
+  assert.equal(year.rows.filter((r) => r.key !== '2026-09').reduce((n, r) => n + (r.finished ?? 0), 0), 0);
+  const today = (await workshop('period=today')).body;
+  // B was signed off at 08:00 UTC on Thursday: 09:00 in the shop.
+  assert.deepEqual(today.rows.filter((r) => r.finished).map((r) => [r.key, r.finished]), [[9, 1]]);
+});
+
 test('workshop takings split labour and parts, a discount shared in proportion, adding up to the total', async () => {
   const { takings } = (await workshop('period=this-week')).body;
   assert.deepEqual(takings.labour, { pence: 5400 + 967, beforePence: 2500 });
@@ -183,10 +199,11 @@ test('quotes sent in the period, by how they stand: partly approved is Approved,
 test('how full: diary hours against working days and the workshop\'s hours, less time away', async () => {
   const { mechanics, sharedQueue } = (await workshop('period=this-week')).body;
   const by = Object.fromEntries(mechanics.map((m) => [m.name, m]));
-  assert.deepEqual(Object.keys(by).sort(), ['Alex Morgan', 'Jo Taylor'], 'only this shop\'s mechanics');
+  assert.deepEqual(Object.keys(by).sort(), ['Alex Morgan', 'Jo Taylor', 'Sam Lee'], 'only this shop\'s mechanics');
   // 3 + 2 + 2 untimed + 1 block = 8 of 23 hours: 35% full. The cancelled and Friday jobs don't count.
   assert.deepEqual({ ...by['Jo Taylor'], id: undefined }, { id: undefined, name: 'Jo Taylor', bookedHours: 8, availableHours: 23, percent: 35, noSetHours: false });
   assert.deepEqual({ ...by['Alex Morgan'], id: undefined }, { id: undefined, name: 'Alex Morgan', bookedHours: 1, availableHours: 0, percent: null, noSetHours: true });
+  assert.deepEqual({ ...by['Sam Lee'], id: undefined }, { id: undefined, name: 'Sam Lee', bookedHours: 2, availableHours: 0, percent: null, noSetHours: true });
   assert.deepEqual(sharedQueue, { bookedHours: 3 });
 });
 
@@ -212,6 +229,7 @@ test('the period\'s spreadsheet is its three tables, each under its title', asyn
     'Mechanic,Hours booked,Hours they are in,Full',
     'Alex Morgan,1,no set hours,—',
     'Jo Taylor,8,23,35%',
+    'Sam Lee,2,no set hours,—',
     'Shared queue,3,no set hours,—',
   ]);
 });
