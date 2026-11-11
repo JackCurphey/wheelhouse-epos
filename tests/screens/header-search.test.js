@@ -14,6 +14,11 @@ const MAYA = { id: 5, name: 'Maya Patel', phone: '07700 900142', email: 'maya@ex
 // Her Trek, as the bike's page draws it (cs-bike, customer.mjs).
 const TREK = { id: 7, make: 'Trek', model: 'Domane AL 3', colour: 'Green', serialNumber: '[frame number]', customerId: 5, customerName: 'Maya Patel' };
 
+// The box searches 250 ms after typing stops (header-search.tsx useSettled), then waits for the
+// reply and draws it. Testing Library's default 1 s for all of that ran out on a busy machine,
+// most on the diary, the heaviest page (CI on #678, twice; 39 in 160 here under load, on main
+// too). A wait for results allows for that pause; a passing run still goes on the moment they show.
+const SEARCHED = { timeout: 5000 };
 const realFetch = globalThis.fetch;
 let uninstall;
 let shell;
@@ -74,7 +79,7 @@ test('typing finds the jobs and the customers, grouped, each a link to its page,
     fireEvent.change(box, { target: { value } });
     await new Promise((r) => setTimeout(r, 60));
   }
-  const results = within(await ui.findByRole('region', { name: 'Search results' }));
+  const results = within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
   const jobs = within(results.getByRole('group', { name: 'Jobs' }));
   const job = jobs.getByRole('link', { name: 'WH-1042 · Maya Patel' });
   assert.equal(job.getAttribute('href'), '/workshop/diary?job=42');
@@ -93,7 +98,7 @@ test('nothing found says so, and one letter doesn’t search', async () => {
   await new Promise((r) => setTimeout(r, 400));
   assert.deepEqual(searches, []);
   fireEvent.change(box, { target: { value: 'zz' } });
-  const results = (await import('@testing-library/react')).within(await ui.findByRole('region', { name: 'Search results' }));
+  const results = (await import('@testing-library/react')).within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
   assert.ok(results.queryByText('Nothing matches “zz”') !== null, 'said in the results, not only to a screen reader');
 });
 
@@ -102,7 +107,7 @@ test('Escape clears the results and stays in the box', async () => {
   const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   box.focus();
   fireEvent.change(box, { target: { value: 'maya' } });
-  await ui.findByRole('region', { name: 'Search results' });
+  await ui.findByRole('region', { name: 'Search results' }, SEARCHED);
   fireEvent.keyDown(box, { key: 'Escape' });
   await waitFor(() => assert.ok(ui.queryByRole('region', { name: 'Search results' }) === null));
   assert.equal(box.value, '');
@@ -118,7 +123,7 @@ test('on a phone, the search button opens the box over the page; Close search an
   const box = sheet.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
   await waitFor(() => assert.ok(document.activeElement === box, 'the box takes the focus'));
   fireEvent.change(box, { target: { value: 'maya' } });
-  assert.ok((await sheet.findByRole('link', { name: 'WH-1042 · Maya Patel' })) !== null);
+  assert.ok((await sheet.findByRole('link', { name: 'WH-1042 · Maya Patel' }, SEARCHED)) !== null);
   fireEvent.click(sheet.getByRole('button', { name: 'Close search' }));
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Search' }) === null));
   assert.ok(document.activeElement === button, 'back to the button');
@@ -130,7 +135,7 @@ test('on a phone, the search button opens the box over the page; Close search an
 test('picking a job while already on the diary opens it there (review)', async () => {
   const { ui, fireEvent, waitFor } = await open('/workshop/diary');
   fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
-  fireEvent.click(await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' }));
+  fireEvent.click(await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' }, SEARCHED));
   await waitFor(() => assert.ok(calls.some((c) => c.endsWith('/api/workshop-jobs/42')), 'the diary didn’t open the job'));
 });
 
@@ -139,7 +144,7 @@ test('the count is said in one place that’s always there, so a screen reader h
   const status = document.querySelector('[data-search-status]');
   assert.ok(status, 'a status line before anything is typed');
   fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
-  await waitFor(() => assert.equal(status.textContent, '2 results'));
+  await waitFor(() => assert.equal(status.textContent, '2 results'), SEARCHED);
   assert.ok(status.isConnected, 'the same line, not a new one');
 });
 
@@ -147,7 +152,7 @@ test('the count is said in one place that’s always there, so a screen reader h
 test('a bike is found under Bikes, a link to its page with its owner, colour and frame number', async () => {
   const { ui, fireEvent, within, waitFor } = await open();
   fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'trek' } });
-  const results = within(await ui.findByRole('region', { name: 'Search results' }));
+  const results = within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
   const bikes = within(results.getByRole('group', { name: 'Bikes' }));
   const links = bikes.getAllByRole('link', { name: 'Trek Domane AL 3' });
   assert.deepEqual(links.map((a) => a.getAttribute('href')), ['/workshop/bikes/7', '/workshop/bikes/8']);
