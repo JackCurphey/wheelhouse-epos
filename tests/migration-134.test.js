@@ -1,4 +1,4 @@
-// Migration 130 (openspec/changes/reports-ready-made, design 4): when the
+// Migration 134 (openspec/changes/reports-ready-made, design 4): when the
 // shop's VAT quarter starts, one nullable column on shops. From empty, null to
 // start, 1, 2 or 3 kept and anything else refused, then run again.
 import '../server/load-env.js';
@@ -13,7 +13,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '130_vat_quarter.sql';
+const FILE = '134_vat_quarter.sql';
 const SQL = readFileSync(path.join(ROOT, 'server/migrations', FILE), 'utf8');
 
 function adminUrlOrSkip(t) {
@@ -33,10 +33,10 @@ async function withClient(url, fn) {
 const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8', stdio: 'pipe' });
 const one = async (c, sql, args) => (await c.query(sql, args)).rows[0];
 
-test('130 adds the VAT quarter start month to shops, null to start, 1 to 3 only, and runs twice', async (t) => {
+test('134 adds the VAT quarter start month to shops, null to start, 1 to 3 only, and runs twice', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig130_${process.pid}`;
+  const name = `epos_mig134_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));
