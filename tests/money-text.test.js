@@ -23,6 +23,11 @@ test('pence and pounds read with the thousands comma, to the penny', () => {
   assert.equal(poundsText(0.29), '£0.29');
   assert.equal(wholePoundsText(1500), '£1,500');
   assert.equal(wholePoundsText(200), '£200');
+  // Nothing that isn't a figure reads as one: not £NaN, not a lone sign.
+  for (const bad of [NaN, undefined, null, 'abc', Infinity]) {
+    assert.equal(wholePoundsText(bad), '', String(bad));
+    assert.equal(penceText(bad), '', String(bad));
+  }
 });
 
 test('a receipt, in its email and its text, shows a big sale with the comma', () => {

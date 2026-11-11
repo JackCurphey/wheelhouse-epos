@@ -17,4 +17,4 @@ export function penceText(pence) {
 export const poundsText = (pounds) => penceText(Math.round(Number(pounds) * 100));
 
 /** Whole pounds, as a spending limit is: 1500 is "£1,500". */
-export const wholePoundsText = (pounds) => `£${group(Math.floor(Number(pounds)))}`;
+export const wholePoundsText = (pounds) => (pounds !== null && pounds !== '' && Number.isFinite(Number(pounds)) ? `£${group(Math.floor(Number(pounds)))}` : '');

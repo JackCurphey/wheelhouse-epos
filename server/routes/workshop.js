@@ -35,7 +35,7 @@ import { removePhotoDetails } from '../photo-metadata.js';
 import { oweRefund, refundOwed } from '../payments/refund.js';
 import { graceOnConfirm } from '../workshop/deposit-cut-off.js';
 import { cancelPhotoCode, makePhotoCode, photoCodeStatus } from '../workshop/photo-codes.js';
-import { penceText, poundsText } from '../lib/money-text.js';
+import { penceText, poundsText, wholePoundsText } from '../lib/money-text.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, currentShopTimeZone, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
@@ -1555,7 +1555,7 @@ export function register(route) {
       Object.assign(vars, {
         'Work added': added.names,
         'Amount added': penceText(added.total_pence),
-        'Spending limit': `£${result.spendLimit.toLocaleString('en-GB')}`,
+        'Spending limit': wholePoundsText(result.spendLimit),
         // With no phone in Shop details, "Call the shop", as the customer's page says.
         'Shop phone': shop?.phone || 'the shop',
       });
