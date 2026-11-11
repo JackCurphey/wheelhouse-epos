@@ -31,6 +31,9 @@ export const ROUTES = {
   // Moving from Citrus Lime (mv-start), the Owner's, after Today.
   moving: '/workshop/moving',
   reports: '/workshop/reports',
+  // The Sales report (rp-sales), from the Reports page and its strip
+  // (openspec/changes/reports-sales-and-takings); ?period= and from/to pick the period.
+  'rp-sales': '/workshop/reports/sales',
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',
