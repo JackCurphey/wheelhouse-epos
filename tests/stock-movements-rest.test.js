@@ -329,17 +329,17 @@ test('lines of a paid order that match nothing here are logged as a fault', asyn
 
 test('a failed delivery’s record leaves no lock limit on the connection it used', async () => {
   const { recordFailedDelivery } = await import('../server/shopify.js');
-  // What every connection starts with: none for a real server, a minute under test (server/db.js).
-  const first = await pool.connect();
-  const start = (await first.query('SHOW lock_timeout')).rows[0].lock_timeout;
-  first.release();
-  assert.notEqual(start, '2s');
   await recordFailedDelivery(owner.shop.id, `[event ${randomUUID().slice(0, 8)}]`, 'order', '[Message]');
   const clients = [];
   try {
     for (let i = 0; i < pool.totalCount; i += 1) clients.push(await pool.connect());
     assert.ok(clients.length > 0);
-    for (const client of clients) assert.equal((await client.query('SHOW lock_timeout')).rows[0].lock_timeout, start);
+    // Each back to what it opened with (pg_settings' reset_val): none for a real server,
+    // a minute under test (server/db.js).
+    for (const client of clients) {
+      const { setting, reset_val: opened } = (await client.query("SELECT setting, reset_val FROM pg_settings WHERE name = 'lock_timeout'")).rows[0];
+      assert.equal(setting, opened);
+    }
   } finally {
     for (const client of clients) client.release();
   }

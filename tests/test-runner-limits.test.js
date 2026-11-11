@@ -40,7 +40,8 @@ function runWithNpmTestFlags(file) {
 
 test('a test that never finishes fails at the limit, by name', () => {
   const out = runWithNpmTestFlags('hangs-in-a-test.fixture.mjs');
-  assert.notEqual(out.signal, 'SIGTERM', 'the run itself hung');
+  // Killed at spawnSync's 30 s, a run reports SIGTERM or (Node 26 on a Mac) status 7.
+  assert.ok(out.signal !== 'SIGTERM' && out.took < 29_000, 'the run itself hung');
   assert.notEqual(out.status, 0);
   // One report style everywhere: CI's runner would otherwise pick another one.
   assert.match(out.stdout, /^not ok \d+ - waits for something that never comes$/m);
@@ -49,7 +50,8 @@ test('a test that never finishes fails at the limit, by name', () => {
 
 test('a file whose tests are done exits, even with something still open', () => {
   const out = runWithNpmTestFlags('never-exits.fixture.mjs');
-  assert.notEqual(out.signal, 'SIGTERM', 'the run itself hung');
+  // Killed at spawnSync's 30 s, a run reports SIGTERM or (Node 26 on a Mac) status 7.
+  assert.ok(out.signal !== 'SIGTERM' && out.took < 29_000, 'the run itself hung');
   assert.equal(out.status, 0, out.stdout);
   assert.ok(out.took < 20_000, `took ${out.took} ms`);
 });
