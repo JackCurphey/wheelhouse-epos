@@ -25,16 +25,23 @@ const VISITS = `
       FROM days
   )`;
 
-// Customers, New, and Came back within 12 months, for the days from..to.
+// Customers, New, and Came back within 12 months, for the days from..to. Came
+// back is judged on each customer's first visit in the period: of those who
+// had been in before it, the share whose gap was 12 months or less.
 async function figuresFor(from, to, timeZone) {
   const row = await prepare(
     `${VISITS}
-     SELECT count(DISTINCT customer_id)::int AS customers,
-            count(DISTINCT customer_id) FILTER (WHERE first >= ?::date)::int AS new,
-            count(DISTINCT customer_id) FILTER (WHERE prev IS NOT NULL)::int AS been_before,
-            count(DISTINCT customer_id) FILTER (WHERE prev IS NOT NULL AND day <= prev + interval '12 months')::int AS came_back
-       FROM visits WHERE day >= ?::date AND day <= ?::date`
-  ).get(timeZone, timeZone, from, from, to);
+     , firsts AS (
+       SELECT DISTINCT ON (customer_id) customer_id, day, prev, first
+         FROM visits WHERE day >= ?::date AND day <= ?::date
+        ORDER BY customer_id, day
+     )
+     SELECT count(*)::int AS customers,
+            count(*) FILTER (WHERE first >= ?::date)::int AS new,
+            count(*) FILTER (WHERE prev IS NOT NULL)::int AS been_before,
+            count(*) FILTER (WHERE prev IS NOT NULL AND day <= prev + interval '12 months')::int AS came_back
+       FROM firsts`
+  ).get(timeZone, timeZone, from, to, from);
   return {
     customers: row.customers,
     new: row.new,
@@ -42,15 +49,17 @@ async function figuresFor(from, to, timeZone) {
   };
 }
 
-// New and returning customers in each month of from..to.
+// New and returning customers in each month of from..to: new when their first
+// visit ever is in that month and in the period (a month part-way into Pick
+// dates starts on From).
 async function byMonth(from, to, timeZone) {
   const rows = await prepare(
     `${VISITS}
      SELECT to_char(day, 'YYYY-MM') AS month,
-            count(DISTINCT customer_id) FILTER (WHERE date_trunc('month', first) = date_trunc('month', day))::int AS new,
-            count(DISTINCT customer_id) FILTER (WHERE first < date_trunc('month', day))::int AS returning
+            count(DISTINCT customer_id) FILTER (WHERE first >= greatest(date_trunc('month', day)::date, ?::date))::int AS new,
+            count(DISTINCT customer_id) FILTER (WHERE first < greatest(date_trunc('month', day)::date, ?::date))::int AS returning
        FROM visits WHERE day >= ?::date AND day <= ?::date GROUP BY 1`
-  ).all(timeZone, timeZone, from, to);
+  ).all(timeZone, timeZone, from, from, from, to);
   return new Map(rows.map((r) => [r.month, r]));
 }
 
@@ -76,12 +85,12 @@ async function notSeenSince(cutoff, from, to, timeZone) {
 const WORDS = {
   'last-12-months': { label: 'the last 12 months', total: 'All 12 months', spent: 'Spent in the last 12 months' },
   'last-24-months': { label: 'the last 24 months', total: 'All 24 months', spent: 'Spent in the last 24 months' },
-  dates: { total: 'All these dates', spent: 'Spent in these dates' },
+  dates: { total: 'All these dates', spent: 'Spent between these dates' },
 };
 
 function monthsAsked(raw) {
   if (raw === null || raw === undefined || raw === '') return 6;
-  if (!/^\d+$/.test(raw) || Number(raw) < 1) throw new ValidationError('"Not seen for" needs a whole number of months, 1 or more');
+  if (!/^\d{1,4}$/.test(raw) || Number(raw) < 1 || Number(raw) > 1200) throw new ValidationError('"Not seen for" needs a whole number of months, from 1 to 1200');
   return Number(raw);
 }
 

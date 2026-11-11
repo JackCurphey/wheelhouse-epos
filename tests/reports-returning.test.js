@@ -15,6 +15,7 @@ let server;
 let owner;
 let other;
 let jo;
+let third;
 const ids = {};
 
 const as = (who) => (path, options) => staffRequest(server.baseUrl, who.cookie, path, options);
@@ -100,7 +101,7 @@ before(async () => {
 });
 
 after(async () => {
-  for (const s of [owner, other]) if (s) await deleteTestShop(s.shop.id);
+  for (const s of [owner, other, third]) if (s) await deleteTestShop(s.shop.id);
   if (server) await server.stop();
   await pool.end();
 });
@@ -121,9 +122,10 @@ test('opens on the last 12 months: Customers once each, New on the first visit, 
 
 test('came back within 12 months: of those who had been before, the share back within 12 months, in points', async () => {
   const { figures } = (await returning('period=last-12-months')).body;
-  // Ann (11 months) and Ben (2 months) came back in time; Cat after 17 months didn't.
-  // Before: only Gus had been before, and was back in 2 months.
-  assert.deepEqual(figures.cameBack, { percent: 67, beforePercent: 100, diff: -33 });
+  // Ann (11 months) came back in time; Cat after 17 months didn't. Ben is new
+  // this period, so not one who had been before. Before: Ann, Dan and Gus were
+  // all new then, so there is nothing to compare with.
+  assert.deepEqual(figures.cameBack, { percent: 50, beforePercent: null, diff: null });
 });
 
 test('new and returning by month, a sale and a repair collected each a visit, with the total row once each', async () => {
@@ -148,6 +150,8 @@ test('Last 24 months, compared with the 24 months before', async () => {
   // Ann, Ben, Cat, Dan and Gus; all but Cat are new in the 24 months.
   assert.equal(res.body.figures.customers.count, 5);
   assert.equal(res.body.figures.new.count, 4);
+  // The 24 months before: only Cat, in June 2024.
+  assert.deepEqual(res.body.figures.customers, { count: 5, beforeCount: 1, diff: 4 });
   assert.equal(res.body.total.label, 'All 24 months');
   assert.equal(res.body.notSeen.column, 'Spent in the last 24 months');
 });
@@ -181,7 +185,7 @@ test('the months are set by ?months=, and must be a whole number', async () => {
   const res = await returning('period=last-12-months&months=12');
   assert.equal(res.body.notSeen.months, 12);
   assert.deepEqual(res.body.notSeen.customers.map((c) => c.name), ['Gus Reid', 'Dan Moss']);
-  for (const months of ['0', 'abc', '2.5']) {
+  for (const months of ['0', 'abc', '2.5', '1201', '99999999']) {
     const wrong = await returning(`period=last-12-months&months=${months}`);
     assert.equal(wrong.status, 400, months);
     assert.match(wrong.body.error, /whole number of months/);
@@ -221,4 +225,35 @@ test('Staff are refused, and signed out is 401', async () => {
     const out = await staffRequest(server.baseUrl, null, path);
     assert.equal(out.status, 401, path);
   }
+});
+
+test('came back is judged on each customer\'s first visit in the period; a month part-way into Pick dates counts a visitor from before as returning', async () => {
+  third = await staffSignup(server.baseUrl, { shopName: 'Third Cycles' });
+  await firstShopIsBolton(third);
+  const s = await seeder(third);
+  // Hal: away two years, then twice in a week. His first visit back is what counts: not in time.
+  const hal = await s.customer('Hal Ward');
+  await s.old('2024-03-01', 10, hal);
+  await s.old('2026-03-01', 10, hal);
+  await s.old('2026-03-08', 10, hal);
+  // Ivy: new in April 2026, back that month. New this period, so not one who had been before.
+  const ivy = await s.customer('Ivy Shaw');
+  await s.old('2026-04-01', 10, ivy);
+  await s.old('2026-04-20', 10, ivy);
+  // Kim: back in time in the 12 months before (9 months) and again in this period (8 months).
+  const kim = await s.customer('Kim Lowe');
+  await s.old('2024-08-01', 10, kim);
+  await s.old('2025-05-01', 10, kim);
+  await s.old('2026-01-01', 10, kim);
+  const year = (await returning('period=last-12-months', third)).body;
+  assert.deepEqual(year.figures.cameBack, { percent: 50, beforePercent: 100, diff: -50 }, 'Kim in time, Hal not');
+  assert.deepEqual([year.total.returning, year.total.new], [2, 1]);
+  // Jim: first on 3 February, again on 20 February. From 15 February he had been before.
+  const jim = await s.customer('Jim Pike');
+  await s.old('2026-02-03', 10, jim);
+  await s.old('2026-02-20', 10, jim);
+  const picked = (await returning('period=dates&from=2026-02-15&to=2026-05-31', third)).body;
+  const feb = picked.rows.find((r) => r.key === '2026-02');
+  assert.deepEqual([feb.returning, feb.new], [1, 0], 'Jim had been before the dates');
+  assert.equal(picked.figures.new.count, 1, 'Ivy');
 });

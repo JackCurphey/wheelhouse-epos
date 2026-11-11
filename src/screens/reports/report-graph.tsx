@@ -114,6 +114,14 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
 }
 
 /** A month of a stacked graph: the lower part and the upper part, counts. */
+// The striped upper part as drawn: rounded top corners, outlined on three
+// sides, with no line along the bottom where it meets the solid part.
+function upperPart(left: number, bottom: number, w: number, height: number): string {
+  const r = Math.min(4, height, w / 2);
+  const top = bottom - height;
+  return `M${left},${bottom} V${top + r} Q${left},${top} ${left + r},${top} H${left + w - r} Q${left + w},${top} ${left + w},${top + r} V${bottom}`;
+}
+
 export type StackRow = { key: string; label: string; notReached: boolean; lower: number; upper: number };
 
 /**
@@ -137,8 +145,8 @@ export function StackedGraph({ title, rows, keyLower, keyUpper, spoken }: { titl
     <figure className="m-0 flex flex-col gap-3" role="img" aria-label={spoken}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <figcaption className="text-size-15 font-bold">{title}</figcaption>
-        <span className="inline-flex flex-wrap items-center gap-3.5 text-xs text-[var(--wh-muted)]">
-          <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-3 w-3 rounded-sm bg-[var(--wh-ink)]" />{keyLower}</span>
+        <span className="inline-flex flex-wrap items-center gap-3.5 text-xs text-[var(--wh-ink)]">
+          <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-3 w-3 rounded-sm bg-[var(--wh-ink)] opacity-85" />{keyLower}</span>
           <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-3 w-3 rounded-sm border border-[var(--wh-ink)]" style={{ background: 'repeating-linear-gradient(45deg, var(--wh-input-border) 0 2px, var(--wh-panel) 2px 6px)' }} />{keyUpper}</span>
         </span>
       </div>
@@ -155,8 +163,8 @@ export function StackedGraph({ title, rows, keyLower, keyUpper, spoken }: { titl
           const up = h(r.upper);
           return (
             <g key={r.key} data-month={r.key}>
-              {!r.notReached && r.lower > 0 ? <rect data-part="lower" x={x(i) - barW / 2} y={base - low} width={barW} height={low} fill="var(--wh-ink)" /> : null}
-              {!r.notReached && r.upper > 0 ? <rect data-part="upper" x={x(i) - barW / 2} y={base - low - up} width={barW} height={up} fill={`url(#${stripes})`} stroke="var(--wh-ink)" /> : null}
+              {!r.notReached && r.lower > 0 ? <rect data-part="lower" x={x(i) - barW / 2} y={base - low} width={barW} height={low} fill="var(--wh-ink)" opacity="0.85" /> : null}
+              {!r.notReached && r.upper > 0 ? <path data-part="upper" d={upperPart(x(i) - barW / 2, base - low, barW, up)} fill={`url(#${stripes})`} stroke="var(--wh-ink)" /> : null}
               {i % step === 0 ? (
                 <>
                   <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{r.label}</text>

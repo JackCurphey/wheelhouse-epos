@@ -58,7 +58,7 @@ export function ReturningReportPage() {
     setParams({ period: value, ...keep });
   }
   function setMonths(n: string) {
-    setParams({ period, ...(period === 'dates' ? { from, to } : {}), months: n });
+    setParams({ period, ...(period === 'dates' ? { from, to } : {}), months: n }, { replace: true });
   }
 
   return (
@@ -73,7 +73,7 @@ export function ReturningReportPage() {
       </div>
       <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
       {returning.isError ? <Refusal error={returning.error} /> : null}
-      {report ? <Body report={report} onMonths={setMonths} /> : returning.isError ? null : <Note>Loading…</Note>}
+      {report ? <Body report={report} months={months || String(report.notSeen.months)} onMonths={setMonths} /> : returning.isError ? null : <Note>Loading…</Note>}
       {picking && report ? (
         <PickDates subtitle={`Returning customers · ${report.shopLine}`} today={report.today} from={from || report.today} to={to || report.today}
           onClose={() => setPicking(false)} onShow={(a, b) => { setPicking(false); setParams({ period: 'dates', from: a, to: b, ...keep }); }} />
@@ -87,21 +87,28 @@ const CELL = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-right whitespa
 const ROW_HEAD = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-left font-semibold whitespace-nowrap max-md:px-1';
 const TOTAL = 'px-1.5 py-2.5 max-md:px-1';
 
-// "Not seen for [n] months": the address changes once the box holds a whole number of months, 1 or more.
-function MonthsBox({ months, onMonths }: { months: number; onMonths: (n: string) => void }) {
-  const [text, setText] = useState(String(months));
+// "Not seen for [n] months": the address changes (in place, not a new history
+// entry) once the box holds a whole number of months from 1 to 1200. When the
+// address changes another way (Back, a link) the box follows it; leaving the
+// box with something else in it puts back the months shown.
+function MonthsBox({ months, onMonths }: { months: string; onMonths: (n: string) => void }) {
+  const [text, setText] = useState(months);
+  const [shown, setShown] = useState(months);
+  if (months !== shown) { setShown(months); setText(months); }
+  const good = (v: string) => /^\d{1,4}$/.test(v) && Number(v) >= 1 && Number(v) <= 1200;
   return (
     <label className="inline-flex items-center gap-2 text-sm font-semibold">
       Not seen for
-      <input type="text" inputMode="numeric" aria-label="Months not seen" value={text}
-        onChange={(e) => { setText(e.target.value); if (/^\d+$/.test(e.target.value) && Number(e.target.value) >= 1) onMonths(e.target.value); }}
+      <input type="text" inputMode="numeric" value={text}
+        onChange={(e) => { setText(e.target.value); if (good(e.target.value) && e.target.value !== months) onMonths(e.target.value); }}
+        onBlur={() => { if (!good(text)) setText(months); }}
         className="min-h-11 w-16 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 font-mono text-size-15 text-[var(--wh-ink)]" />
       months
     </label>
   );
 }
 
-function Body({ report, onMonths }: { report: ReturningReport; onMonths: (n: string) => void }) {
+function Body({ report, months, onMonths }: { report: ReturningReport; months: string; onMonths: (n: string) => void }) {
   const showGraphs = useShowGraphs();
   const { figures: f, period: p, total, notSeen } = report;
   const words = (diff: number) => compareWords(diff, p.against, 'count');
@@ -112,7 +119,7 @@ function Body({ report, onMonths }: { report: ReturningReport; onMonths: (n: str
   const graphRows = report.rows.map((r) => ({ key: r.key, label: r.label, notReached: r.notReached, lower: r.returning, upper: r.new }));
   return (
     <>
-      <div className="grid grid-cols-3 gap-2.5 max-md:grid-cols-1">
+      <div className="grid grid-cols-3 gap-2.5 max-md:grid-cols-2">
         <Figure name="Customers" value={count(f.customers.count)} words={words(f.customers.diff)} />
         <Figure name="New" value={count(f.new.count)} words={words(f.new.diff)} />
         <Figure name="Came back within 12 months" value={back.percent === null ? '—' : `${back.percent}%`} words={backWords} />
@@ -145,7 +152,7 @@ function Body({ report, onMonths }: { report: ReturningReport; onMonths: (n: str
       <Box>
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <BoxHeading>Not seen lately</BoxHeading>
-          <MonthsBox months={notSeen.months} onMonths={onMonths} />
+          <MonthsBox months={months} onMonths={onMonths} />
         </div>
         <Note>Customers who used to come in. “Happy to hear about offers” is what they said yes or no to.</Note>
         {notSeen.customers.length ? (

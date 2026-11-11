@@ -97,7 +97,9 @@ test('the stacked graph, Returning solid below New striped, described in words; 
   assert.ok(feb.querySelector('[data-part="lower"]') !== null);
   assert.ok(feb.querySelector('[data-part="upper"]') === null);
   assert.ok(mar.querySelector('[data-part="lower"]') === null);
-  assert.match(mar.querySelector('[data-part="upper"]').getAttribute('fill'), /^url\(#/);
+  const upper = mar.querySelector('[data-part="upper"]');
+  const pattern = upper.getAttribute('fill').match(/^url\(#(.+)\)$/)[1];
+  assert.ok(graph.querySelector(`pattern[id="${pattern}"]`) !== null, 'the stripes are there');
   assert.ok(ui.queryByText('A customer counts when they buy something or a repair is collected — in the shop or online. Sales with no customer on them are not counted.') !== null);
   const rows = within(ui.getByRole('table', { name: 'New and returning customers by month' })).getAllByRole('row')
     .map((r) => [...r.querySelectorAll('th,td')].map((c) => c.textContent));
@@ -111,7 +113,7 @@ test('Not seen lately: the months box, the note, names that open the customer, a
   const { ui, within, fireEvent, waitFor } = await openReports('/workshop/reports/returning', { answers: served() });
   const table = await ui.findByRole('table', { name: 'Not seen lately' });
   assert.ok(ui.queryByRole('heading', { level: 3, name: 'Not seen lately' }) !== null);
-  const box = ui.getByRole('textbox', { name: 'Months not seen' });
+  const box = ui.getByRole('textbox', { name: /^Not seen for/ });
   assert.equal(box.value, '6');
   assert.equal(box.getAttribute('inputmode'), 'numeric');
   assert.ok(ui.queryByText('Customers who used to come in. “Happy to hear about offers” is what they said yes or no to.') !== null);
@@ -126,6 +128,24 @@ test('Not seen lately: the months box, the note, names that open the customer, a
   fireEvent.change(box, { target: { value: '12' } });
   await waitFor(() => assert.equal(returningCalls().at(-1).query.get('months'), '12'));
   assert.equal(returningCalls().at(-1).query.get('period'), 'last-12-months');
+});
+
+test('the months box changes the address in place, follows the address when it changes, and puts back the months when left with something else', async () => {
+  const { ui, fireEvent, waitFor, act } = await openReports('/workshop/reports/returning', { answers: served() });
+  await ui.findByRole('table', { name: 'Not seen lately' });
+  const box = () => ui.getByRole('textbox', { name: /^Not seen for/ });
+  const entries = window.history.length;
+  fireEvent.change(box(), { target: { value: '12' } });
+  await waitFor(() => assert.match(window.location.search, /months=12/));
+  assert.equal(window.history.length, entries, 'no new history entry for each number typed');
+  // Back, or a link, changes the address: the box follows.
+  act(() => { window.history.pushState({}, '', '/workshop/reports/returning?months=3'); window.dispatchEvent(new window.PopStateEvent('popstate')); });
+  await waitFor(() => assert.equal(box().value, '3'));
+  // Something that isn't 1 to 1200 is put back when the box is left.
+  fireEvent.change(box(), { target: { value: 'abc' } });
+  fireEvent.blur(box());
+  assert.equal(box().value, '3');
+  assert.equal(returningCalls().at(-1).query.get('months'), '3');
 });
 
 test('with Show graphs off the graph goes and the figures and tables stay', async () => {

@@ -202,7 +202,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
 
 // Returning customers (openspec/changes/reports-ready-made, group 2; rp-returning): the
 // Owner opens it from its card, sees who came back, and widens "Not seen for", at a
-// computer and a phone width.
+// computer and a phone width; at a phone width the figures sit two by two.
 for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
   test(`on a ${size}, the Owner opens Returning customers and changes how long not seen`, async ({ page, context }) => {
     await page.setViewportSize(viewport);
@@ -229,7 +229,12 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await expect(page.getByRole('img', { name: 'New and returning customers by month: most returning in Feb, most new in Jun. The figures are in the table below.' })).toBeVisible();
     const lapsed = page.getByRole('table', { name: 'Not seen lately' });
     await expect(lapsed.getByRole('link')).toHaveText(['Ann Lee']);
-    await page.getByRole('textbox', { name: 'Months not seen' }).fill('2');
+    // On a phone the three figures sit two by two, as drawn.
+    const tops = (await Promise.all(['Customers', 'New', 'Came back within 12 months']
+      .map((n) => page.getByRole('group', { name: n, exact: true }).boundingBox()))).map((b) => Math.round(b!.y));
+    if (size === 'phone') expect([tops[0] === tops[1], tops[2] > tops[0]]).toEqual([true, true]);
+    else expect(new Set(tops).size).toBe(1);
+    await page.getByRole('textbox', { name: /^Not seen for/ }).fill('2');
     await expect(page).toHaveURL(/months=2/);
     await expect(lapsed.getByRole('link')).toHaveText(['Ben Shaw', 'Ann Lee']);
     await noSideScroll(page);
