@@ -86,12 +86,17 @@ test('a fold opens and closes on its own', async () => {
 });
 
 test('a room with one area shows that area’s words, no Jump to, and its folds as h3', async () => {
-  const t = await openSettings('/workshop/settings?room=office');
+  // Office has two areas since Your data (your-data-download group 3); Stockroom has one.
+  const t = await openSettings('/workshop/settings?room=stockroom');
   const { ui } = t;
-  assert.ok(ui.getByRole('heading', { level: 2, name: 'Office' }));
-  assert.ok(ui.getByText('The shop’s details, its sites and their opening hours.'));
+  assert.ok(ui.getByRole('heading', { level: 2, name: 'Stockroom' }));
+  assert.ok(ui.getByText('Stock adjustments, and each category’s details.'));
   assert.ok(ui.queryByRole('navigation', { name: 'Jump to' }) === null);
-  assert.ok(ui.getByRole('heading', { level: 3, name: /^Shop details/ }));
+  assert.ok(ui.getByRole('heading', { level: 3, name: /^Stock adjustments/ }));
+});
+
+test('Office: Shop details and Opening hours, each summed up', async () => {
+  const t = await openSettings('/workshop/settings?room=office');
   await summary(t, 'Shop details', 'North Street Cycles');
   await summary(t, 'Opening hours', 'Closed Sundays');
 });
@@ -105,7 +110,7 @@ test('Workshop: Online booking and Mechanics, each summed up', async () => {
 test('on a phone, Settings opens on the rooms, each with what’s in it; a room has ‹ Settings back', async () => {
   const first = await openSettings();
   const list = first.within(first.ui.getByRole('navigation', { name: 'Settings rooms' }));
-  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories, bike warranties', 'OfficeShop details, opening hours']);
+  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories, bike warranties', 'OfficeShop and sites, your data']);
   first.cleanup();
   shell?.queryClient.clear();
   uninstall?.();

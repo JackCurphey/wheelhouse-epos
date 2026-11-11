@@ -21,6 +21,7 @@ import { SigningInSettings, useSigningInSummary } from './signing-in-settings.ts
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
 import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
 import { BikeWarrantiesSettings, useBikeWarrantiesSummary } from './bike-warranties-settings.tsx';
+import { DownloadEverything } from './your-data-settings.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -1098,6 +1099,10 @@ function OwnerSettings() {
         { key: 'shop', title: 'Shop and sites', intro: 'The shop’s details, its sites and their opening hours.', folds: [
           { key: 'shop-details', title: 'Shop details', summary: details.data?.name ?? '', body: <ShopDetailsBox /> },
           { key: 'opening-hours', title: 'Opening hours', summary: closedDays(s?.openingHours), body: <HoursBox /> },
+        ] },
+        // set-data-export; Settings changes (set-data-history) waits for the activity log.
+        { key: 'data', title: 'Your data', intro: 'Take a copy of everything, and see who changed what in Settings.', folds: [
+          { key: 'download-everything', title: 'Download everything', summary: 'Customers, sales, stock, jobs', body: <DownloadEverything /> },
         ] },
       ],
     },
