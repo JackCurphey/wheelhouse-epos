@@ -59,10 +59,14 @@ DECLARE
 BEGIN
   FOR business IN SELECT id FROM shops ORDER BY id LOOP
     PERFORM set_config('app.current_shop_id', business.id::text, true);
-    IF NOT EXISTS (SELECT 1 FROM quick_button_groups) AND EXISTS (SELECT 1 FROM workshop_services WHERE active = 1) THEN
-      INSERT INTO quick_button_groups (name, position) VALUES ('Workshop', 0) RETURNING id INTO workshop;
-      INSERT INTO quick_buttons (group_id, service_id, position)
-        SELECT workshop, id, (row_number() OVER (ORDER BY name, id) - 1)::int FROM workshop_services WHERE active = 1;
+    -- shop_id named as well as set, so this stays one shop at a time even
+    -- for a role that row-level security doesn't apply to.
+    IF NOT EXISTS (SELECT 1 FROM quick_button_groups WHERE shop_id = business.id)
+       AND EXISTS (SELECT 1 FROM workshop_services WHERE active = 1 AND shop_id = business.id) THEN
+      INSERT INTO quick_button_groups (shop_id, name, position) VALUES (business.id, 'Workshop', 0) RETURNING id INTO workshop;
+      INSERT INTO quick_buttons (shop_id, group_id, service_id, position)
+        SELECT business.id, workshop, id, (row_number() OVER (ORDER BY name, id) - 1)::int
+          FROM workshop_services WHERE active = 1 AND shop_id = business.id;
     END IF;
   END LOOP;
   PERFORM set_config('app.current_shop_id', '', true);
