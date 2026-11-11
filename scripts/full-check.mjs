@@ -15,7 +15,8 @@
 // The three steps all run, even after one fails, so one turn in the queue gives
 // the whole picture; the run fails if any step did.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, rmdirSync, statSync } from 'node:fs';
+import { constants } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -29,7 +30,11 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 // /tmp, not os.tmpdir(): on a Mac that is a folder per user, and the lock is the Mac's.
 const LOCK = process.env.WHEELHOUSE_FULL_CHECK_LOCK || '/tmp/wheelhouse-full-run.lock';
 const OWNER = path.join(LOCK, 'owner.json');
+// Only the waiter holding this second folder may clear a stale lock (see clearStale).
+const TAKEOVER = `${LOCK}.takeover`;
 const POLL_MS = Number(process.env.WHEELHOUSE_FULL_CHECK_POLL_MS) || 30_000;
+// How long a stopped step gets to wind down before it is killed outright.
+const GRACE_MS = Number(process.env.WHEELHOUSE_FULL_CHECK_GRACE_MS) || 10_000;
 // A lock folder with no owner file yet is being taken right now, unless it is older than this.
 const HALF_MADE_MS = 60_000;
 
@@ -57,9 +62,28 @@ function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (err) { return err.code === 'EPERM'; }
 }
 
-function lockAge() {
-  try { return Date.now() - statSync(LOCK).mtimeMs; } catch { return 0; }
+// When the process with this number started, from ps; null if it can't tell.
+function startedAt(pid) {
+  const out = spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8' });
+  const when = new Date(out.stdout?.trim());
+  return out.status === 0 && !Number.isNaN(when.getTime()) ? when : null;
 }
+
+// The holder is alive if its process is, and that process is the one that took
+// the lock: a dead holder's number can be handed to a new process later, which
+// would otherwise hold the lock for as long as it runs. (2 s of slack: ps gives
+// whole seconds, and a hand-made lock's date too.)
+function holderAlive(owner) {
+  if (!alive(owner.pid)) return false;
+  const took = owner.started ? new Date(owner.started) : null;
+  const began = startedAt(owner.pid);
+  return !(took && began && began.getTime() > took.getTime() + 2000);
+}
+
+function ageOf(dir) {
+  try { return Date.now() - statSync(dir).mtimeMs; } catch { return 0; }
+}
+const lockAge = () => ageOf(LOCK);
 
 function describe(owner) {
   const since = owner.started ? new Date(owner.started) : null;
@@ -89,17 +113,28 @@ function tryTake() {
   return true;
 }
 
-// Moves a stale lock aside (a rename only one waiter can win), then removes it.
-// If the folder moved turns out to be a live run's (it took the lock between our
-// look and the rename), it is put back.
-function clearStale(stalePid) {
-  const aside = `${LOCK}.stale-${process.pid}-${Date.now()}`;
-  try { renameSync(LOCK, aside); } catch { return; }
-  const moved = readOwnerIn(aside);
-  if (moved && moved.pid !== stalePid && alive(moved.pid)) {
-    try { renameSync(aside, LOCK); return; } catch { /* a third run has it now; the moved one's own release copes */ }
+// Clears a stale lock. Several waiters can find the same stale lock at once, so
+// only the one that makes the takeover folder may clear it, and it looks again
+// first: by then another waiter may have cleared it and taken the lock itself,
+// its owner file not yet written. (Without this, two runs got in about one time
+// in five; review, 11 Nov.) A takeover folder over a minute old is left from a
+// waiter that died mid-takeover, and is removed.
+function clearStale(isStale) {
+  try {
+    mkdirSync(TAKEOVER);
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err;
+    if (ageOf(TAKEOVER) > HALF_MADE_MS) rmSync(TAKEOVER, { recursive: true, force: true });
+    return;
   }
-  rmSync(aside, { recursive: true, force: true });
+  try {
+    if (!isStale()) return;
+    const aside = `${LOCK}.stale-${process.pid}-${Date.now()}`;
+    try { renameSync(LOCK, aside); } catch { return; }
+    rmSync(aside, { recursive: true, force: true });
+  } finally {
+    try { rmdirSync(TAKEOVER); } catch { /* removed as left over by another waiter */ }
+  }
 }
 
 async function takeLock() {
@@ -107,14 +142,14 @@ async function takeLock() {
   for (;;) {
     if (tryTake()) return;
     const owner = readOwner();
-    if (owner && !alive(owner.pid)) {
+    if (owner && !holderAlive(owner)) {
       say(`the lock held by pid ${owner.pid} (${owner.branch || '[branch]'}) is stale: that process has gone. Taking it over.`);
-      clearStale(owner.pid);
+      clearStale(() => { const now = readOwner(); return now?.pid === owner.pid && !holderAlive(now); });
       continue;
     }
     if (!owner && lockAge() > HALF_MADE_MS) {
       say('the lock has no owner file and is over a minute old, so it is stale. Taking it over.');
-      clearStale(undefined);
+      clearStale(() => !readOwner() && lockAge() > HALF_MADE_MS);
       continue;
     }
     const line = owner ? describe(owner) : 'another run is taking the lock';
@@ -132,14 +167,22 @@ function releaseLock() {
 
 let current = null;
 
+// Each step runs in a process group of its own, so a stop reaches all of it
+// (npm, node --test, the test files, Playwright and its servers), and Ctrl-C is
+// passed on by this script rather than ending the step before the script knows.
 function run(command, args) {
   return new Promise((resolve) => {
+    const opts = { stdio: ['ignore', 'inherit', 'inherit'], detached: true };
     current = args
-      ? spawn(command, args, { cwd: process.cwd(), stdio: 'inherit' })
-      : spawn(command, { cwd: ROOT, stdio: 'inherit', shell: true });
+      ? spawn(command, args, { ...opts, cwd: process.cwd() })
+      : spawn(command, { ...opts, cwd: ROOT, shell: true });
     current.on('error', (err) => { say(`could not start ${command}: ${err.message}`); resolve(127); });
-    current.on('close', (code, signal) => { current = null; resolve(code ?? (signal ? 128 : 1)); });
+    current.on('close', (code, signal) => { current = null; resolve(code ?? 128 + (constants.signals[signal] || 0)); });
   });
+}
+
+function signalStep(signal) {
+  try { process.kill(-current.pid, signal); } catch { /* already gone */ }
 }
 
 const SIGNALS = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 };
@@ -147,14 +190,16 @@ const SIGNALS = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 };
 function main(argv) {
   process.on('exit', releaseLock);
   for (const [signal, code] of Object.entries(SIGNALS)) {
-    // The running step is stopped too, and given up to 10 s to finish stopping,
-    // so the next run in the queue doesn't start while it is still winding down.
+    // The running step is stopped too, and given up to 10 s to wind down before
+    // it is killed outright, so the next run in the queue never starts while it
+    // is still going.
     process.on(signal, () => {
       say(`stopped by ${signal}; letting the lock go.`);
       if (!current) process.exit(code);
-      current.once('close', () => process.exit(code));
-      current.kill(signal);
-      setTimeout(() => process.exit(code), 10_000);
+      const step = current;
+      step.once('close', () => process.exit(code));
+      signalStep(signal);
+      setTimeout(() => { if (current === step) signalStep('SIGKILL'); }, GRACE_MS);
     });
   }
   process.on('uncaughtException', (err) => { console.error(err); process.exit(1); });

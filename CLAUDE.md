@@ -168,14 +168,15 @@ design or debugging, then back with `/model sonnet`. Start a new session, or
   the tests for the files you changed; a change to a server route also
   counts as touching `server/server.js`. The full `npm test` runs once,
   before merging.
-- Full runs go through `npm run full-check` (Jack, 11 Nov): it waits its turn
-  for a lock shared by every worktree on the Mac (`/tmp/wheelhouse-full-run.lock`,
-  saying who holds it and since when), then runs `npm run lint`, `npm test` and
-  `npm run test:browser`, all three even if one fails, with a summary line
-  each. Two full runs at once overload the Mac and fail tests that pass alone.
-  A stress run queues the same way:
-  `npm run full-check -- --lock-only -- <command>`. A lock left by a process
-  that has gone is taken over by itself.
+- Full runs go through `npm run full-check` (Jack, 11 Nov), after `build` and
+  `migrate` as above: it waits its turn for a lock shared by every worktree on
+  the Mac (`/tmp/wheelhouse-full-run.lock`, saying who holds it and since
+  when), then runs `npm run lint`, `npm test` and `npm run test:browser`, all
+  three even if one fails, with a summary line each. Two full runs at once
+  overload the Mac and fail tests that pass alone. A stress run queues the same
+  way: `npm run full-check -- --lock-only -- <command>`. A lock left by a
+  process that has gone is taken over by the next run. Stop a run with Ctrl-C,
+  not `kill -9`, which leaves its tests running after the lock is free.
 
 ## Never
 
