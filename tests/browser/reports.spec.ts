@@ -165,3 +165,36 @@ test('the Owner downloads Sales as a spreadsheet and turns graphs off in Your se
   await expect(page.getByRole('table', { name: 'Sales by day' })).toBeVisible();
   await expect(page.getByRole('img', { name: /^Takings by day:/ })).toHaveCount(0);
 });
+
+// Workshop (openspec/changes/reports-ready-made, group 1; rp-workshop): the Owner opens it
+// from its card; at a phone width the four figures sit two by two.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Workshop from its card`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      // Two jobs booked in this week, one signed off; one booked in the same days last week.
+      for (const [bookedIn, signedOff] of [['2026-09-14T08:00:00Z', '2026-09-16T08:00:00Z'], ['2026-09-15T08:00:00Z', null], ['2026-09-08T08:00:00Z', null]] as const) {
+        await prepare("INSERT INTO workshop_jobs (title, job_date, booked_in_at, signed_off_at) VALUES ('Service', '2026-09-14', ?, ?)").run(bookedIn, signedOff);
+      }
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Workshop/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Workshop' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Jobs booked in' }).getByText('Up 1 on the same days last week')).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Booked in to ready' }).getByText('2 days')).toBeVisible();
+    await expect(page.getByRole('img', { name: /^Jobs finished by day: busiest day Wed 16 Sep; up 1 on the same days last week\./ })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'How full each mechanic was' }).getByText('Shared queue')).toBeVisible();
+    const boxes = await Promise.all(['Jobs booked in', 'Finished', 'Collected', 'Booked in to ready']
+      .map((n) => page.getByRole('group', { name: n, exact: true }).boundingBox()));
+    const tops = boxes.map((b) => Math.round(b!.y));
+    if (size === 'phone') expect([tops[0] === tops[1], tops[2] === tops[3], tops[2] > tops[0]]).toEqual([true, true, true]);
+    else expect(new Set(tops).size).toBe(1);
+    await noSideScroll(page);
+  });
+}
