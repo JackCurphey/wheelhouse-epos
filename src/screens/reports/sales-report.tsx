@@ -2,9 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
-import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { useShowGraphs } from '@/lib/your-settings.ts';
-import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
+import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, PeriodChips, Refusal } from './reports-bits.tsx';
 import { compareWords, count, longDate, money, type SalesReport } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
@@ -96,7 +95,7 @@ export function SalesReportPage() {
         </div>
         <DownloadButton path={`/api/reports/sales.csv?${query}`} />
       </div>
-      <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
+      <PeriodChips value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
       {sales.isError ? <Refusal error={sales.error} /> : null}
       {report ? <Body report={report} period={period} /> : sales.isError ? null : <Note>Loading…</Note>}
       {picking && report ? (
@@ -135,7 +134,7 @@ function Body({ report, period }: { report: SalesReport; period: string }) {
       </div>
       <Box>
         {showGraphs ? <ReportGraph title={title} rows={report.rows} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
+          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
         <SalesTable report={report} />
       </Box>
       <Note>Takings include VAT, take refunds off, and count online and Cycle to Work money; today counts so far.</Note>
@@ -148,9 +147,7 @@ function NothingToCompare({ report }: { report: SalesReport }) {
   return (
     <Box>
       <BoxHeading>Nothing to compare with yet</BoxHeading>
-      <Note>{report.firstSaleOn
-        ? `The shop started on Wheelhouse on ${longDate(report.firstSaleOn)}, so there’s no period before this one. Comparisons start once there is.`
-        : 'The shop has no sales yet, so there’s no period before this one. Comparisons start once there is.'}</Note>
+      <Note>{`The shop started on Wheelhouse on ${longDate(report.firstSaleOn ?? report.startedOn)}, so there’s no period before this one. Comparisons start once there is.`}</Note>
     </Box>
   );
 }

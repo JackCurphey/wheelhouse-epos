@@ -36,7 +36,7 @@ export const THIS_WEEK = {
     beforeTakingsPence: BEFORE[i] ?? 0, beforeSales: BEFORE_SALES[i] ?? 0,
   })),
   total: { label: 'So far', takingsPence: 8800, sales: 6, averagePence: 1467 },
-  empty: false, nothingBefore: false, firstSaleOn: '2026-08-20', shopLine: 'North Street Cycles, Bolton', today: '2026-09-17',
+  empty: false, nothingBefore: false, firstSaleOn: '2026-08-20', startedOn: '2026-08-12', shopLine: 'North Street Cycles, Bolton', today: '2026-09-17',
 };
 
 const MONTHS = ['2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
@@ -123,6 +123,7 @@ export const TAKINGS_WEEK = {
   },
   rows: [
     { kind: 'day', key: '2026-09-17', label: 'Thu 17 Sep', closed: false },
+    { kind: 'online', key: '2026-09-17', label: 'Thu 17 Sep · Online', onlinePence: 1250, soFar: true },
     { kind: 'day', key: '2026-09-16', label: 'Wed 16 Sep', closed: true, closeId: 31, takingsPence: 10000, bankedPence: 2500, differencePence: 0, closedByName: 'Jo Taylor', closedAt: '2026-09-16T16:30:00Z' },
     { kind: 'online', key: '2026-09-16', label: 'Wed 16 Sep · Online', onlinePence: 0 },
     { kind: 'day', key: '2026-09-15', label: 'Tue 15 Sep', closed: true, closeId: 30, takingsPence: 30000, bankedPence: 11500, differencePence: -500, closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z' },
