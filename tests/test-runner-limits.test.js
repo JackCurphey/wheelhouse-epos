@@ -1,5 +1,5 @@
-// npm test can't hang for hours: a test, or a hook, that never finishes fails
-// after the per-test limit, naming itself, and a file whose tests are done
+// npm test can't hang for hours: a test, a hook or a file that never finishes
+// fails at the limit, naming itself, and a file whose tests are done
 // exits even if something it opened is still running.
 //
 // Why: on 11 Nov two full runs were found stuck, one for 12 hours, one for 6,
@@ -21,8 +21,10 @@ test('npm test sets a per-test limit of a few minutes, and lets a finished file 
   const limit = flags.find((f) => f.startsWith('--test-timeout='));
   assert.ok(limit, script);
   const ms = Number(limit.split('=')[1]);
-  // Past the slowest real test (about 41 s under load), well short of hours.
-  assert.ok(ms >= 60_000 && ms <= 300_000, `--test-timeout ${ms}`);
+  // The limit is each file's as well as each test's (Node gives it to the run, and
+  // every file inherits it). The slowest file's tests took about 61 s on a Mac at load
+  // 27 (11 Nov); 5 minutes is well past that and still minutes, not hours.
+  assert.ok(ms >= 180_000 && ms <= 600_000, `--test-timeout ${ms}`);
   assert.ok(flags.includes('--test-force-exit'), script);
 });
 
@@ -44,7 +46,10 @@ test('a test that never finishes fails at the limit, by name', () => {
   assert.ok(out.signal !== 'SIGTERM' && out.took < 29_000, 'the run itself hung');
   assert.notEqual(out.status, 0);
   // One report style everywhere: CI's runner would otherwise pick another one.
-  assert.match(out.stdout, /^not ok \d+ - waits for something that never comes$/m);
+  // The limit is the file's as well as each test's, so on a slow machine the file
+  // can reach it first (CI, 11 Nov): either name says where the hang is.
+  assert.match(out.stdout, /^not ok \d+ - (waits for something that never comes|\S*hangs-in-a-test\.fixture\.mjs)$/m);
+  assert.match(out.stdout, /timed out after 1500ms/);
   assert.ok(out.took < 20_000, `took ${out.took} ms`);
 });
 

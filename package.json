@@ -14,7 +14,7 @@
     "gateway": "node server/gateway.js",
     "migrate": "node server/migrations/run-migrations.js",
     "pretest": "vite build --config vite.test.config.ts --logLevel warn && vite build --config vite.registry-test.config.ts --logLevel warn",
-    "test": "node --test --test-timeout=120000 --test-force-exit \"tests/**/*.test.js\"",
+    "test": "node --test --test-timeout=300000 --test-force-exit \"tests/**/*.test.js\"",
     "build": "vite build",
     "dev": "vite",
     "lint": "eslint .",

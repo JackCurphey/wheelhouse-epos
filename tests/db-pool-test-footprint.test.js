@@ -81,7 +81,7 @@ test('a real server’s lock waits are left as they were', () => {
 
 // Under test, a statement stops after 90 seconds.
 //
-// Why: a test stopped at npm test's two-minute limit leaves its statement running,
+// Why: a test stopped at npm test's five-minute limit leaves its statement running,
 // because Postgres only notices the process has gone when it next writes to it. On
 // 11 Nov one such statement (an UPDATE of move_rows) ran on for 20 minutes holding its
 // locks, and two other files then failed waiting for them. A statement that runs 90
