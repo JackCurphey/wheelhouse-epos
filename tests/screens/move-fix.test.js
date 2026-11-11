@@ -394,6 +394,8 @@ test('Leave it out pressed twice goes once', async () => {
 
 // Its line takes the focus as soon as the server answers, so the next row's button must work
 // from then, not only once the list has been read again (the keyboard browser test's flake, 11 Nov).
+// What the page did while the reads were held is noted, then the reads are let go and the page
+// settles before anything is asserted, so a failure fails at once and leaves nothing waiting (review).
 test('once a row is left out, the next row\'s Leave it out works straight away, before the list is read again', async () => {
   const view = await open();
   await toList(view);
@@ -403,13 +405,16 @@ test('once a row is left out, the next row\'s Leave it out works straight away, 
   const line = await view.findByText('A11 left out');
   await view.rtl.waitFor(() => assert.ok(document.activeElement === line));
   const next = view.getByRole('button', { name: 'Leave out Sam Patel' });
-  assert.equal(next.disabled, false, 'the next row\'s button works while the list is still being read');
-  assert.ok(view.queryByRole('button', { name: 'Leave out A11' }) === null, 'the row left out has gone from the list');
+  const workedWhileHeld = !next.disabled;
+  const goneWhileHeld = view.queryByRole('button', { name: 'Leave out A11' }) === null;
   view.rtl.fireEvent.click(next);
-  await view.rtl.waitFor(() => assert.equal(view.state.calls.length, 2));
-  assert.equal(view.state.calls[1].path, '/api/move/rows/12/leave-out');
+  const sentWhileHeld = view.state.calls.map((c) => c.path);
   view.state.hold = null;
   release();
+  await view.rtl.waitFor(() => assert.ok(view.queryByRole('button', { name: 'Leave out A11' }) === null));
+  assert.ok(workedWhileHeld, 'the next row\'s button works while the list is still being read');
+  assert.ok(goneWhileHeld, 'the row left out has gone from the list');
+  assert.deepEqual(sentWhileHeld, ['/api/move/rows/11/leave-out', '/api/move/rows/12/leave-out']);
   await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
 });
 
