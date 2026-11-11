@@ -350,3 +350,5 @@ GET /api/reports/days/:id
 GET /api/reports/sales.csv
 GET /api/reports/takings.csv
 GET /api/reports/days/:id/csv
+GET /api/reports/workshop
+GET /api/reports/workshop.csv
