@@ -1,0 +1,84 @@
+name: Board
+
+# The build board fills itself in (Jack, issue #669 change 4). Every night at
+# 02:30 UTC, half an hour before the daily Tests run, this adds a "done" row to
+# docs/build-progress/build-board.html for each pull request merged in the
+# last 14 days that is not on the board yet, and keeps one small pull request
+# (branch bot/board, rebuilt from main each night) open with the change. If
+# nothing differs from main it closes any open one. Nothing merges itself: a person
+# reads the pull request and merges it. The "who is on what" lines, the lead
+# and the asks stay hand-written. Also runnable by hand (Actions › Board ›
+# Run workflow). The script: scripts/board/update-board.mjs.
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+# One run at a time, so two never open the same pull request.
+concurrency:
+  group: board
+  cancel-in-progress: false
+
+jobs:
+  board:
+    # Only this repository: a fork's copy of this workflow does nothing.
+    if: github.repository == 'JackCurphey/wheelhouse-epos'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Fill in the board
+        id: board
+        run: node scripts/board/update-board.mjs
+
+      # A pull request opened by this workflow doesn't start the Tests
+      # workflow, so the board page is checked here before anything is pushed.
+      - name: Check the board page
+        if: steps.board.outputs.changed == 'true'
+        run: |
+          npm ci --no-audit --no-fund
+          node --test tests/build-board.test.js tests/board-update.test.js
+
+      # The branch is rebuilt from main every night and force-pushed, so the
+      # rows add up and never double while an earlier pull request is open.
+      # An open pull request from bot/board is updated, never duplicated; with
+      # nothing different from main, an open one is closed.
+      - name: Update the board pull request
+        env:
+          HIGHEST: ${{ steps.board.outputs.highest }}
+          CHANGED: ${{ steps.board.outputs.changed }}
+        run: |
+          DAY=$(date -u +%Y-%m-%d)
+          TITLE="Board: merged up to #$HIGHEST ($DAY)"
+          OPEN=$(gh pr list --head bot/board --state open --json number --jq '.[0].number // empty')
+          if [ "$CHANGED" != "true" ]; then
+            if [ -n "$OPEN" ]; then
+              gh pr close "$OPEN" --delete-branch --comment "Main already has everything the board run would add, so this is closed."
+            fi
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C bot/board
+          git add docs/build-progress/build-board.html
+          git commit -m "$TITLE"
+          git push --force origin HEAD:bot/board
+          BODY="Added by the nightly board run (scripts/board/update-board.mjs): a done row for each pull request merged in the last 14 days that is not on the board yet, review rows that have merged turned to done, and today's date. Nothing else on the board is touched. The \"Merged ...\" line (sub) and the lead are hand-written and still need a person if they are out of date. This branch is rebuilt from main every night, so hand edits pushed to it are lost: fix the board in an ordinary pull request instead. Merge this if it looks right."
+          if [ -n "$OPEN" ]; then
+            gh pr edit "$OPEN" --title "$TITLE" --body "$BODY"
+          else
+            gh pr create --base main --head bot/board --title "$TITLE" --body "$BODY"
+          fi

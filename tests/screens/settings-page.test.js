@@ -721,7 +721,7 @@ test('Use your own puts the cursor in the box once it has the words', async () =
 test('if the standard terms can’t be loaded, it says so', async () => {
   const { ui, fireEvent } = await openSettings();
   termsFail = true;
-  shell.queryClient.setDefaultOptions({ queries: { retry: false } });
+  shell.queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } });
   fireEvent.click(await ui.findByRole('button', { name: 'Use your own' }));
   assert.ok(await ui.findByText('Wheelhouse couldn’t load the standard terms to start from. Try again in a moment.'));
 });
