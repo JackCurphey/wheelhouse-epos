@@ -185,6 +185,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
 
     await page.goto(`${server!.baseUrl}/workshop/reports`);
     await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Workshop/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/workshop`);
     await expect(page.getByRole('heading', { level: 2, name: 'Workshop' })).toBeVisible();
     await expect(page.getByRole('group', { name: 'Jobs booked in' }).getByText('Up 1 on the same days last week')).toBeVisible();
     await expect(page.getByRole('group', { name: 'Booked in to ready' }).getByText('2 days')).toBeVisible();
