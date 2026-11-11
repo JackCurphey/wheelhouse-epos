@@ -30,7 +30,7 @@ const zipReply = () => ({
   blob: async () => new Blob(['PK']),
 });
 
-async function openOffice({ query = 'room=office', reply = zipReply } = {}) {
+async function openOffice({ query = 'room=office', reply = zipReply, leftOut = 0 } = {}) {
   downloads = 0;
   clicked = [];
   answer = reply;
@@ -40,6 +40,7 @@ async function openOffice({ query = 'room=office', reply = zipReply } = {}) {
     if (u.pathname === '/api/auth/me') return json(200, OWNER);
     if (u.pathname === '/api/shop-details') return json(200, DETAILS);
     if (u.pathname === '/api/settings/your-data/download') { downloads += 1; return answer(); }
+    if (u.pathname === '/api/settings/your-data') return json(200, { leftOut });
     return json(200, []);
   };
   uninstall = installDom(`http://localhost/workshop/settings?${query}`);
@@ -129,6 +130,20 @@ test('a shop name with ’ downloads by its own name, not the plain stand-in', a
   await unfold(t);
   t.fireEvent.click(await t.ui.findByRole('button', { name: 'Download everything' }));
   await t.waitFor(() => assert.deepEqual(clicked, [real]));
+});
+
+test('with Citrus Lime rows left out, the list gains Left out from Citrus Lime and how many (group 4)', async () => {
+  const t = await openOffice({ leftOut: 2 });
+  await unfold(t);
+  const list = await t.ui.findByRole('list', { name: 'What the download holds' });
+  await t.waitFor(() => assert.equal(t.within(list).getAllByRole('listitem').length, 5));
+  assert.deepEqual(t.within(list).getAllByRole('listitem').map((li) => li.textContent), ['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs', 'Left out from Citrus Lime · 2 rows']);
+});
+
+test('one row left out reads 1 row', async () => {
+  const t = await openOffice({ leftOut: 1 });
+  await unfold(t);
+  await t.ui.findByText('Left out from Citrus Lime · 1 row');
 });
 
 test('?room=office&fold=download-everything opens with it unfolded', async () => {

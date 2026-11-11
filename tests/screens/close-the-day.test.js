@@ -319,7 +319,7 @@ test('a closed day shows its saved report, not the live figures', async () => {
   const rows = report.getAllByRole('listitem').map(text);
   assert.ok(rows.includes('Cash £74.00'), rows.join(' | '));
   assert.ok(rows.includes('Cash difference £0.00'), rows.join(' | '));
-  assert.ok(t.ui.queryByText(/£999\.00|£1149\.00/) === null);
+  assert.ok(t.ui.queryByText(/£999\.00|£1,149\.00/) === null);
   assert.ok(t.ui.queryByRole('group', { name: 'How the till worked out what it expected' }) === null);
 });
 

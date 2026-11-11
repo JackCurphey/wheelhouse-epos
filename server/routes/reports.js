@@ -6,7 +6,7 @@
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { sendJson, ValidationError } from '../lib/http.js';
-import { currentShopToday } from '../workshop/jobs.js';
+import { currentShopToday, currentShopTimeZone } from '../workshop/jobs.js';
 import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
@@ -31,6 +31,12 @@ const dateLine = (iso) => {
 async function shopLine(ctx) {
   const sites = await prepare('SELECT name FROM sites ORDER BY id').all();
   return sites.length === 1 && sites[0].name ? `${ctx.shop.name}, ${sites[0].name}` : ctx.shop.name;
+}
+
+// The day the shop started on Wheelhouse, on its own clock ("The shop started on Wheelhouse on [date]", rp-sales-empty).
+async function startedOn(ctx) {
+  const timeZone = await currentShopTimeZone();
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ctx.shop.created_at));
 }
 
 // A spreadsheet answer: the file name says the report, the shop and the dates.
@@ -67,7 +73,7 @@ export function register(route) {
     try {
       const today = await currentShopToday();
       const report = await salesReport(asked(query), today);
-      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx), startedOn: await startedOn(ctx) });
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;

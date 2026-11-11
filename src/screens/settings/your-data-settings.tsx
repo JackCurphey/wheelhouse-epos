@@ -4,6 +4,8 @@
 // and the button. Owner only on the server. The waiting and failure states aren't drawn
 // (small one 8): they follow the customer's own copy (src/screens/book/account.tsx).
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api/client.ts';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 
@@ -20,6 +22,9 @@ function fileName(header: string | null): string {
 
 export function DownloadEverything() {
   const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
+  // The Citrus Lime rows left out, a fifth spreadsheet while there are any (group 4).
+  const leftOut = useQuery({ queryKey: ['your-data'], queryFn: () => apiGet<{ leftOut: number }>('/api/settings/your-data') }).data?.leftOut ?? 0;
+  const holds = leftOut > 0 ? [...HOLDS, `Left out from Citrus Lime · ${leftOut} ${leftOut === 1 ? 'row' : 'rows'}`] : HOLDS;
   const button = useRef<HTMLButtonElement>(null);
   // The button is greyed out while the zip is made, and Try again goes with the warning, so the
   // browser drops the focus to the top of the page: give it back to the button (review).
@@ -50,7 +55,7 @@ export function DownloadEverything() {
   return (
     <div className="flex flex-col gap-3">
       <ul aria-label="What the download holds" className="m-0 grid list-none grid-cols-1 gap-2 p-0 md:grid-cols-2">
-        {HOLDS.map((t) => (
+        {holds.map((t) => (
           <li key={t} className="flex min-h-12 items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3">
             <Check aria-hidden="true" className="size-4 shrink-0" />
             <span className="text-size-15 font-semibold">{t}</span>

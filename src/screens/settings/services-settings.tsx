@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button.tsx';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { RowSwitch } from './row-switch.tsx';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * Settings › Workshop › Services (openspec/changes/services-room; drawn as
@@ -20,7 +21,7 @@ const GROUPS = [{ value: 'full', label: 'Full service' }, { value: 'individual',
 const groupName = (kind: Kind) => (kind === 'full' ? 'Full service' : 'Individual service');
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 const words = (err: unknown) => (err instanceof ApiError && (err.status === 400 || err.status === 404) ? err.message : SAVE_FAILED);
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number) => poundsText(n);
 const timeLine = (minutes: number | null) => (minutes ? `${minutes} min in the diary` : '');
 // The row's line, as drawn: "60 min in the diary · reminder after [n] months".
 // With no time in the diary, the reminder starts the line, so it takes a capital.
