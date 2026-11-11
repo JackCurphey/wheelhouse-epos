@@ -9,4 +9,4 @@
 
 ## 2. Its own merge
 
-- [ ] 2.1 Self-review; `npm run full-check` on the final commit after merging the latest main; merge if clean.
+- [x] 2.1 Self-review; `npm run full-check` on the final commit after merging the latest main; merge if clean. The first queued run waited behind another session, then failed only in citrus-import (6 tests, "busy" 429s; the file passes alone 3 of 3); the second passed all three steps on e68c5ad4. Main then moved with code, so the final run is on the archive commit after merging it.
