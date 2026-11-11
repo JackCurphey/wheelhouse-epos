@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -285,18 +287,21 @@ export function MovePage() {
     );
   }
 
-  // Every row fixed or left out (mv-sorted). See them and Next: run alongside wait
-  // for what's behind them, Your data and WP-8.1 (design 14).
+  // Every row fixed or left out (mv-sorted). See them opens Settings › Office › Your data, whose
+  // download lists the rows left out (your-data-download group 4); Next: run alongside waits
+  // for WP-8.1 (design 14).
   const leftOut = sumOf(files, (f) => f.rowsLeftOut);
   if (allLooks === 0 && !moreSent && leftOut + sumOf(files, (f) => f.rowsFixed) > 0) {
     return (
       <Page>
         <Stages />
         <Card id="t-everything-s-sorted" title="Everything’s sorted" action={help('Everything’s sorted')}>
-          <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything that fitted is in. The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like.</p>
+          <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Everything that fitted is in. The ones you left out are listed under Settings › Office › Your data, to add by hand when you like.</p>
           {newsLine}
           <ul className="m-0 list-none p-0">
-            <Row title="Left out" sub={<>{n(leftOut)} {leftOut === 1 ? 'row' : 'rows'}</>} />
+            <Row title="Left out" sub={<>{n(leftOut)} {leftOut === 1 ? 'row' : 'rows'}</>}>
+              {leftOut > 0 ? <Link to={`${ROUTES.settings}?room=office&fold=download-everything`} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)] underline">See them</Link> : null}
+            </Row>
           </ul>
           <DropZone slim title="Drop more files here" onFiles={(f) => { setMoreSent(true); void onFiles(f); }} />
         </Card>
