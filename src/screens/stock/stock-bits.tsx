@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import { ROUTES } from '@/staff/routes.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * What the stock list and a product's page share (openspec/changes/stock-list):
@@ -60,7 +61,7 @@ export function rowLine(r: ListRow, picked = false): string {
     r.sizesRunningLow ? `${several(r.sizesRunningLow, 'size', 'sizes')} running low` : null].filter(Boolean).join(' · ');
 }
 export const mono = 'font-[family-name:var(--wh-font-mono)]';
-export const money = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+export const money = (pence: number) => poundsText(pence / 100);
 // A count as drawn: a true minus sign below zero.
 export const count = (n: number) => (n < 0 ? `−${-n}` : String(n));
 

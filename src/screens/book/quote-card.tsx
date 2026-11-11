@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { PinnedRoom } from './frame.tsx';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * The quote on the customer's booking link (journey 4; drawn by quoteCard,
@@ -38,7 +39,7 @@ type Quote = {
   totals?: { all: number; approved: number; pending: number; declined: number };
 };
 
-const money = (n: number) => `£${Number(n).toFixed(2)}`;
+const money = (n: number) => poundsText(Number(n));
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function sentLine(iso: string | null) {

@@ -53,10 +53,5 @@ export function parseTotal(text: string): { pence: number } | { invalid: true } 
   return Number.isSafeInteger(pence) ? { pence } : { invalid: true };
 }
 
-/** Pence as pounds: 20870 is "£208.70". Anything not whole pence is "", never "e+" or "NaN". */
-export function penceText(pence: number): string {
-  if (!Number.isSafeInteger(pence) || pence < 0) return '';
-  const pounds = Math.floor(pence / 100);
-  const rest = String(pence % 100).padStart(2, '0');
-  return `£${pounds}.${rest}`;
-}
+// Pence as pounds with the thousands comma lives with the other money text (src/lib/money.ts).
+export { penceText } from './money.ts';

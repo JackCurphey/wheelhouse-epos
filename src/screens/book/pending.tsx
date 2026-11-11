@@ -12,6 +12,7 @@ import { ChangeDate } from './change-date.tsx';
 import { bookingLinkPath, useBookingLink, type BookingLink, type ExpiredLink } from './pending-query.ts';
 import { dayLabel } from './date-rules.ts';
 import { pounds } from './deposit.tsx';
+import { poundsText } from '@/lib/money.ts';
 import {
   COPIED_MS, EXPIRED, bikeName, LOAD_FAILED, NOT_FOUND, answerLines, bikeRow, cancelSubline, cancelledLine, changeLine, cutOffText, depositBack, contactLine, declinedLine, dropOffLine, offerLine, pageHeading, requestedLine, serviceLines, statusText, totalLine, whenLine,
 } from './pending-rules.ts';
@@ -490,7 +491,7 @@ const datePlus = (date: string, n: number) => {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 };
 const clockOf = (iso: string) => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: LONDON }).format(new Date(iso));
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number) => poundsText(n);
 
 /**
  * Where the bike is (drawn as collect.mjs trackerDone, quote.mjs dq-in-shop):
