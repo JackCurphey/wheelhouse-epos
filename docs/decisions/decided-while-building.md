@@ -5107,6 +5107,34 @@ Decided here, for Jack to overrule.
    period before can touch a different number of calendar months than the
    range). Today's and the other comparisons are totalled the same way, so
    a sale outside opening hours is never left out. Found in review.
+### 11 Nov 2026: Reports page and Sales, the screens (`openspec/changes/reports-sales-and-takings` group 2, `rp-home`, `rp-sales`, `rp-sales-year`, `rp-sales-empty`, `rp-pick-dates`)
+
+1. **The Takings and cash-ups card is not on the Reports page yet.** The
+   spec lists both cards; Jack's answer 2 says only built reports get one,
+   and Takings and cash-ups is built in the third pull request, which adds
+   its card.
+2. **The chosen period is in the address** (`/workshop/reports/sales?period=last-month`,
+   and `from` and `to` for Pick dates), so Back and a bookmark work.
+   *Pattern:* the restock list's `?show=`.
+3. **A shop with no sales at all** reads "The shop has no sales yet, so
+   there's no period before this one. Comparisons start once there is."
+   The drawing's text needs a start date, and there is none.
+4. **A quiet period that isn't Today** reads "Nothing sold in this period"
+   (the drawing only shows Today's wording).
+5. **Amounts read "£45.00" with no comma for thousands**, as Today and the
+   rest of the staff app show money (`penceText`).
+6. **The period choices use the app's pill group** (one native radio per
+   choice, the chosen one outlined), not a new chip with a tick: the same
+   control as the other staff pages. The drawing's tick is not drawn.
+   *Pattern:* the restock list's pills.
+7. **Cancel on Pick dates** keeps the report that was showing; the chip
+   stays on the period it was on.
+8. **The graph's key** reads "This week so far" / "Same days last week"
+   (and the matching words for the other periods), and a day's label is on
+   two lines ("Tue" over "15 Sep"), as the drawing has it; "Not yet" takes
+   the place of the date line under a day to come.
+9. **The Sales answer carries the shop's today** so Pick dates can stop at
+   it. One more field on the first pull request's route.
 
 ### 11 Nov 2026: Left out from Citrus Lime (`openspec/changes/your-data-download` group 4, `set-data-export`, `mv-sorted`)
 
