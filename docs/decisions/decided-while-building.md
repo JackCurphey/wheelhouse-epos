@@ -5124,8 +5124,16 @@ Decided here, for Jack to overrule.
    wording was my own and the drawing wasn't silent.*
 4. **A quiet period that isn't Today** reads "Nothing sold in this period"
    (the drawing only shows Today's wording).
-5. **Amounts read "£45.00" with no comma for thousands**, as Today and the
-   rest of the staff app show money (`penceText`).
+5. **Amounts read "£1,234.50", with the thousands comma** (Jack decided this
+   on 11 Nov, his option 1, after I had followed the app's old "£1234.50"):
+   one helper, `src/lib/money.ts`, with en-GB grouping, used by every screen
+   in the staff app and the customer pages; the old app (`public/app.js`)
+   is left as it is. Typed boxes take plain `1234.50`, and spreadsheet files
+   keep plain numbers without a comma so Excel reads them as numbers. Boxes
+   that show a stored amount in a box (the end-of-day float, a spend limit)
+   show it with the comma; the box's own reading accepts commas that group
+   thousands. The server's own text (receipts, emails, messages) follows in
+   its own pull request.
 6. **The period choices are drawn as the drawing's chip:** the chosen one
    dark with a tick, the others plain (`reports.mjs:58-61`, `icon('check', 14)`;
    audit M3, "one chip look for every choice"). Each is still a native

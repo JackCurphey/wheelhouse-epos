@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FocusEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { penceText } from '@/lib/money.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -666,7 +667,7 @@ const AMOUNT_INVALID = 'Enter an amount from £0.01 to £10,000';
 /** The deposit as the Online booking fold's summary says it (settings-frame.mjs line 192). */
 function depositWords(s: WorkshopSettings): string {
   if (s.depositOn && s.depositKind === 'percent' && s.depositPercent) return `deposit ${s.depositPercent}%`;
-  if (s.depositOn && s.depositKind === 'fixed' && s.depositFixedPence) return `deposit £${poundsBox(s.depositFixedPence)}`;
+  if (s.depositOn && s.depositKind === 'fixed' && s.depositFixedPence) return `deposit ${penceText(s.depositFixedPence)}`;
   return 'no deposit';
 }
 
