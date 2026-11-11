@@ -24,7 +24,8 @@
     "docker:up": "docker compose up -d --wait",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "full-check": "node scripts/full-check.mjs"
   },
   "dependencies": {
     "jsbarcode": "3.12.3",
