@@ -8,8 +8,8 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Related tests: citrus-import, citrus-import-locks, delete-account, messaging-engine.
-- [ ] 2.2 `/review` and the risky-area-reviewer agent; findings fixed or written up.
+- [x] 2.1 Related tests: citrus-import, citrus-import-locks, delete-account, messaging-engine.
+- [x] 2.2 `/review` and the risky-area-reviewer agent; findings fixed or written up.
 - [ ] 2.3 `npm run full-check` passes on the final commit after merging main.
-- [ ] 2.4 CI run by hand on the branch (`gh workflow run test.yml --ref <branch>`) is green.
+- [x] 2.4 CI run by hand on the branch (`gh workflow run test.yml --ref <branch>`) is green.
 - [ ] 2.5 `openspec archive citrus-send-place` as the last commit.
