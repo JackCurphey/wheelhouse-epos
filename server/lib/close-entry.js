@@ -7,21 +7,23 @@ import { shopNow } from '../clock.js';
 import { effectiveHours, toMinutes } from '../capacity.js';
 import { currentShopTimeZone, toCapacitySettings } from '../workshop/jobs.js';
 
-// From an hour before closing (set-eod-close's drawn "1 hour before", until
-// that setting is built), all day when the opening hours say the shop is
-// shut today, and not once the day is closed. `hours` is today's
-// { open, close } or null; `minutes` is the shop's time of day.
-export function entryFor(hours, minutes, closed) {
+// From the shop's chosen minutes before closing, 0, 30 or 60 (set-eod-close;
+// owner-setup-till-payments-eod design 3), all day when the opening hours
+// say the shop is shut today, and not once the day is closed. `hours` is
+// today's { open, close } or null; `minutes` is the shop's time of day.
+// `before` left out is the old fixed hour.
+export function entryFor(hours, minutes, closed, before = 60) {
   const closesAt = hours ? hours.close : null;
   if (closed) return { show: false, closesAt };
-  return { show: hours ? minutes >= toMinutes(hours.close) - 60 : true, closesAt };
+  return { show: hours ? minutes >= toMinutes(hours.close) - before : true, closesAt };
 }
 
 /** The shop's today, its time of day, and whether "Close the day" shows now. */
 export async function closeEntryNow() {
   const now = shopNow(await currentShopTimeZone());
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  const shop = await prepare("SELECT close_entry_minutes FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
   const weekday = new Date(`${now.date}T12:00:00Z`).getUTCDay();
   const closed = !!(await prepare('SELECT 1 FROM day_closes WHERE day = ?').get(now.date));
-  return { day: now.date, entry: entryFor(effectiveHours(toCapacitySettings(settings), weekday), now.minutes, closed) };
+  return { day: now.date, entry: entryFor(effectiveHours(toCapacitySettings(settings), weekday), now.minutes, closed, shop.close_entry_minutes) };
 }
