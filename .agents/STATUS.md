@@ -182,9 +182,26 @@ here before starting it, so two people never build the same one):
   Merged 10 Nov: + Log a request and Send the copy on Privacy requests, and the
   `finish-customers` archive (#656). The gaps and defaults are in Jack's 9 Nov
   section of `decided-while-building.md`.
-  **Now (10 Nov):** `finish-customers` is built and archived; the till's half of
-  store credit and accounts is a later piece (answer 1). Next in the plan is
-  `finish-account` (WP-4.5, #646). WP-1.5 is in apart from piece 7, which
+  Merged 10 Nov, WP-4.5 `finish-account`: a receipt on the account, its server,
+  only to the customer it belongs to, with Email it to me at most 5 an hour (#657),
+  and Your receipt on screen for a till sale with a receipt number (#658); older
+  in-shop sales and repairs open no receipt until Mark's step C (answer 1); a
+  service reminder's own booking link, its server (#659, migration 129) and the
+  ready-filled booking it opens (#662); Edit your name and mobile, and Today's line
+  for a request to delete (#663); changing your email, confirmed by a code sent to
+  the new one (#665); the shop's own privacy notice in Settings › Shop details and
+  on the account, a receipt forgotten on sign-out, the walk against the drawings
+  and the `finish-account` archive (#666). Tests that failed only when several runs
+  share the Mac, fixed at their causes (#660). Jack's 10 Nov answers and the
+  `your-data-download` plan (#661, documents only), and its first part:
+  Settings › Office › Your data › Download everything, the Owner's zip with
+  Customers and Stock (#667). Each had `/review`; the gaps and defaults are in
+  Jack's 10 Nov sections of `decided-while-building.md`.
+  **Now (11 Nov):** `finish-account` is built and archived; receipts for older
+  in-shop sales wait for Mark's step C. Next is the rest of `your-data-download`
+  (#661: sales and refunds, workshop jobs, and the Citrus Lime import's left-out
+  rows, which bring back See them). Jack's answers and the reports plan are open
+  in #664. WP-1.5 is in apart from piece 7, which
   waits for a real export; WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
   a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
   store (WP-1.1, 1.2) stay Mark's.
