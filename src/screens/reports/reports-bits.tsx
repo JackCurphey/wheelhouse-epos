@@ -90,7 +90,7 @@ export function DownloadButton({ path }: { path: string }) {
 export function PeriodChips({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
   return (
     <fieldset className="m-0 min-w-0 border-0 p-0">
-      <legend className="mb-1.5 text-xs font-semibold text-[var(--wh-muted)]">Period</legend>
+      <legend className="sr-only">Period</legend>
       <div className="flex flex-wrap gap-1.5">
         {options.map((o) => {
           const on = o.value === value;

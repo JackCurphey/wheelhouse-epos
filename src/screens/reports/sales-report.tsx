@@ -134,7 +134,7 @@ function Body({ report, period }: { report: SalesReport; period: string }) {
       </div>
       <Box>
         {showGraphs ? <ReportGraph title={title} rows={report.rows} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
+          keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
         <SalesTable report={report} />
       </Box>
       <Note>Takings include VAT, take refunds off, and count online and Cycle to Work money; today counts so far.</Note>

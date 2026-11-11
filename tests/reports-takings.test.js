@@ -58,6 +58,12 @@ before(async () => {
   await runWithShop(owner.shop.id, async () => {
     await prepare("INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, for_day, checked_at) VALUES ('2026-09-13', ?, 15000, 15000, '2026-09-12', '2026-09-13T06:00:00Z')").run(owner.loginId);
     await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES ('2026-09-12T10:00:00Z', 20, 20, 'Cash', 20)").run();
+    // £30.00 paid online on that unclosed Saturday: it belongs to Saturday's close, not to today's "so far".
+    const online = await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method) VALUES ('2026-09-12T11:00:00Z', 30, 30, 'Shopify') RETURNING id").get();
+    await prepare("INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, 'Shopify', 30)").run(online.id);
+    // Wednesday 9 September was never closed either, counted on Saturday morning: £15.00 of cash on it.
+    await prepare("INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, for_day, checked_at) VALUES ('2026-09-12', ?, 15000, 15000, '2026-09-09', '2026-09-12T06:00:00Z')").run(owner.loginId);
+    await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES ('2026-09-09T10:00:00Z', 15, 15, 'Cash', 15)").run();
   });
   await close(owner, '2026-09-07', joLoginId, { takings: 15000, card: 9000, cash: 5000, other: 1000, online: 2000, expected: 5000, counted: 5000, banked: 3000 });
   await close(owner, '2026-09-08', joLoginId, { takings: 25000, card: 14000, cash: 10000, other: 1000, online: 0, expected: 10000, counted: 9800, banked: 8000 });
@@ -88,6 +94,7 @@ test('this week lists the closed days newest first, today as "Not closed yet", a
   const [today, todayOnline, wed, wedOnline, tue] = res.body.rows;
   assert.equal(today.closed, false);
   // Today's online money so far, from the sales no close has counted yet (rp-takings: "[£] so far").
+  // Not Saturday's £30.00 online: that is Saturday's, still waiting to be closed.
   assert.deepEqual([todayOnline.onlinePence, todayOnline.soFar], [1250, true]);
   assert.equal(wedOnline.soFar, undefined, 'a closed day\'s is as saved');
   assert.equal(today.takingsPence, undefined);
@@ -98,16 +105,19 @@ test('this week lists the closed days newest first, today as "Not closed yet", a
 });
 
 test('a past day nobody closed is its own row, "Not closed", with its takings so far and where to close it', async () => {
-  const res = await takings('period=dates&from=2026-09-11&to=2026-09-17');
+  const res = await takings('period=dates&from=2026-09-09&to=2026-09-17');
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const days = res.body.rows.filter((r) => r.kind === 'day').map((r) => [r.key, r.closed, r.past ?? false]);
-  assert.deepEqual(days, [['2026-09-17', false, false], ['2026-09-16', true, false], ['2026-09-15', true, false], ['2026-09-14', true, false], ['2026-09-12', false, true], ['2026-09-11', true, false]]);
+  assert.deepEqual(days, [['2026-09-17', false, false], ['2026-09-16', true, false], ['2026-09-15', true, false], ['2026-09-14', true, false], ['2026-09-12', false, true], ['2026-09-11', true, false], ['2026-09-10', true, false], ['2026-09-09', false, true]]);
+  // Wednesday 9th was never closed either: its £15.00 is its own, and Saturday's row doesn't count it again (£20.00).
+  const wed = res.body.rows.find((r) => r.key === '2026-09-09');
+  assert.deepEqual([wed.past, wed.takingsPence], [true, 1500]);
   const sunday = res.body.rows.find((r) => r.key === '2026-09-12');
   assert.deepEqual([sunday.label, sunday.takingsPence, sunday.closeDay], ['Sat 12 Sep', 2000, '2026-09-12']);
   // It has no Online row: nothing was closed to keep one.
   assert.equal(res.body.rows.some((r) => r.kind === 'online' && r.key === '2026-09-12'), false);
   // A day nobody closed isn't a closed day: the figures still add up closes only.
-  assert.equal(res.body.figures.takings.pence, 20000 + 30000 + 10000 + 99900);
+  assert.equal(res.body.figures.takings.pence, 20000 + 30000 + 10000 + 5000 + 99900);
   // This week has no such day.
   assert.equal((await takings('period=this-week')).body.rows.some((r) => r.past), false);
 });

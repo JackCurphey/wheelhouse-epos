@@ -5147,13 +5147,16 @@ Decided here, for Jack to overrule.
    (`reports.mjs:216-219`, `onlineRow('Thu 17 Sep', 'open', true)`): the
    online money in the sales no close has counted yet, worked out the way
    the close will keep it (a read-only helper beside the close's own
-   figures). Its spreadsheet cell reads "12.50 so far". *Put back to the
+   figures, starting after the latest unclosed day's morning count, since
+   that day's own late close takes the sales before it). Its spreadsheet cell
+   reads "12.50 so far". *Put back to the
    drawing on 11 Nov (Front desk, from an Opus review); I had left it out
    as "counting outside a close".*
 2. **A past day nobody closed is its own row reading "Not closed"** (Jack
    decided this on 11 Nov, his option 1, after I had left such a day out):
    with its takings so far (its sales up to the morning count that counted
-   it, as its late close works them out) and a "Close it" link to Close
+   it and after the count of an earlier unclosed day, as its late close
+   works them out, so two such days never count the same sale) and a "Close it" link to Close
    the day for that day, the same link Today's Needs attention gives. It has
    no Online row, since no close kept one, and isn't in the headline
    figures, which add up closed days. Only days counted with a later
@@ -5218,3 +5221,7 @@ Decided here, for Jack to overrule.
    picked range) names every few bars so the labels never run together. A
    phone's Takings table scrolls sideways inside
    its card rather than breaking each date over three lines.
+9. **Two small drawing details put back** (Opus drawing check, 11 Nov): the
+   12-month graph's key reads "The 12 months before" (`reports.mjs` lineGraph),
+   and the period group is named "Period" for a screen reader but shows no
+   heading above the chips (`reports.mjs:60`, `aria-label="Period"`).

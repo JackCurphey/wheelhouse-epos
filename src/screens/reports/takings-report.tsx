@@ -165,7 +165,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
       ) : (
         <Box>
           {showGraphs ? <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
+            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
           <ClosedDays rows={report.rows} onOpen={onOpen} />
         </Box>
       )}
