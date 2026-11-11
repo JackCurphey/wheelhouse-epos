@@ -10,6 +10,12 @@
 // failed that pass alone (10 Nov). Most of the connections held were idle.
 //
 // A real server keeps pg's default, so a busy shop isn't reconnecting.
+//
+// The .env first, as every server-side test loads it: the children below copy
+// this process's environment, so they reach the same database (with
+// WHEELHOUSE_ENV_FILE in a worktree). Without it, a shell with no DATABASE_URL
+// sent them to pg's default port 5432 and they failed with ECONNREFUSED (11 Nov).
+import '../server/load-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
