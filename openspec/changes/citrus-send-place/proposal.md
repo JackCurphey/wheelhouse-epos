@@ -19,7 +19,7 @@ The cause is in the app, not the test. A shop may send one file at a time: each 
 
 - The send gives up the shop's place **just before it answers**, whatever the answer is: taken (202), can't read (422), busy queue (429), reused key (409), or a refused request (400).
 - The place remembers **which send holds it**. The late let-go from `server.js` still runs, but it frees the place only if the same send still holds it, so it can't free the place a following send has just taken.
-- A send that fails with an error still gives the place up in `server.js`'s `finally`, as before.
+- A send that fails with an error (a body that isn't JSON, a database error) gives the place up before it rethrows, and `server.js`'s `finally` stays as a backstop.
 
 ## Out of scope
 

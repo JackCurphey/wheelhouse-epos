@@ -521,7 +521,7 @@ test('a shop\'s place is free again by the time its send is answered, whatever t
   registerMove((method, path, handler, options) => routes.set(`${method} ${path}`, { handler, options }));
   const { handler, options } = routes.get('POST /api/move/files');
   const shopId = owner.shop.id;
-  const request = (body) => Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), {
+  const request = (body) => Object.assign(Readable.from([Buffer.from(typeof body === 'string' ? body : JSON.stringify(body))]), {
     method: 'POST', url: '/api/move/files', headers: { cookie: owner.cookie, 'content-type': 'application/json' },
   });
   const response = (onEnd = () => {}) => ({
@@ -535,25 +535,38 @@ test('a shop\'s place is free again by the time its send is answered, whatever t
     400: { fileName: 'a.xlsx', dataBase64: '', requestKey: key() },
     422: { fileName: 'a.xlsx', dataBase64: '==', requestKey: key() },
   };
-  for (const [expected, body] of Object.entries(sends)) {
-    const req = request(body);
-    const letGo = await inShop(() => options.beforeBody(req, response(), shopId));
-    assert.equal(typeof letGo, 'function', `the ${expected} send gets the place`);
-    let next;
-    const nextReq = request({});
-    const nextRes = response();
-    const res = response(() => { next = inShop(() => options.beforeBody(nextReq, nextRes, shopId)); });
-    await inShop(() => handler(req, res, {}, new URLSearchParams(), () => {}, shopId));
-    assert.equal(res.statusCode, Number(expected), JSON.stringify(res.body));
-    const nextLetGo = await next;
+  try {
+    for (const [expected, body] of Object.entries(sends)) {
+      const req = request(body);
+      const letGo = await inShop(() => options.beforeBody(req, response(), shopId));
+      assert.equal(typeof letGo, 'function', `the ${expected} send gets the place`);
+      let next;
+      const nextReq = request({});
+      const nextRes = response();
+      const res = response(() => { next = inShop(() => options.beforeBody(nextReq, nextRes, shopId)); });
+      await inShop(() => handler(req, res, {}, new URLSearchParams(), () => {}, shopId));
+      assert.equal(res.statusCode, Number(expected), JSON.stringify(res.body));
+      const nextLetGo = await next;
+      letGo();
+      assert.equal(nextRes.statusCode, 0, `after a ${expected}, the next send was turned away: ${JSON.stringify(nextRes.body)}`);
+      assert.equal(typeof nextLetGo, 'function', `after a ${expected}, the next send gets the place`);
+      // The first send's late let-go must not free the place the next one now holds.
+      const third = response();
+      assert.equal(await inShop(() => options.beforeBody(request({}), third, shopId)), null);
+      assert.equal(third.statusCode, 429, `after a ${expected}, a third send at once is turned away`);
+      nextLetGo();
+    }
+    // A body that isn't JSON is answered by server.js, from the error: the place
+    // has gone before then too.
+    const garbled = request('{"fileName":');
+    const letGo = await inShop(() => options.beforeBody(garbled, response(), shopId));
+    await assert.rejects(inShop(() => handler(garbled, response(), {}, new URLSearchParams(), () => {}, shopId)), SyntaxError);
+    const after = response();
+    const afterLetGo = await inShop(() => options.beforeBody(request({}), after, shopId));
     letGo();
-    assert.equal(nextRes.statusCode, 0, `after a ${expected}, the next send was turned away: ${JSON.stringify(nextRes.body)}`);
-    assert.equal(typeof nextLetGo, 'function', `after a ${expected}, the next send gets the place`);
-    // The first send's late let-go must not free the place the next one now holds.
-    const third = response();
-    assert.equal(await inShop(() => options.beforeBody(request({}), third, shopId)), null);
-    assert.equal(third.statusCode, 429, `after a ${expected}, a third send at once is turned away`);
-    nextLetGo();
+    assert.equal(after.statusCode, 0, `after a body that isn't JSON, the next send was turned away: ${JSON.stringify(after.body)}`);
+    afterLetGo();
+  } finally {
+    await finish();
   }
-  await finish();
 });

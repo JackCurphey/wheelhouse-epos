@@ -98,6 +98,9 @@ export function register(route) {
       body = await readJsonBody(req, MAX_FILE_BODY_BYTES);
     } catch (err) {
       if (err.message === 'Payload too large') return answer(res, 422, CANT_READ);
+      // server.js answers the rest (a body that isn't JSON, a client gone), so
+      // the place goes here, before that answer, too.
+      giveUpPlace(shopId, req);
       throw err;
     }
     const key = readRequestKey(body);
@@ -138,6 +141,7 @@ export function register(route) {
       await dbExec('COMMIT');
     } catch (err) {
       await dbExec('ROLLBACK');
+      giveUpPlace(shopId, req);
       throw err;
     }
     wakeBringingAcross(shopId);

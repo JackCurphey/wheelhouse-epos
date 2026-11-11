@@ -28,5 +28,6 @@ Watched failing:
 
 ## Risks
 
-- A send whose handler throws after answering keeps the place until `finally`, as today. That is no worse than before.
+- A send that fails with an error (a body that isn't JSON, a database error after `ROLLBACK`) gives the place up before rethrowing, since `server.js` writes that answer. The body case is tested; the database-error case isn't, as there is no clean way to make the insert fail on purpose, so it rests on review.
+- The test covers the 202, one 400, the empty-file 422 and the body that isn't JSON. The 409, the queue-full 429, the too-big 422 and the other two 400s use the same `answer`/`refuse` and aren't tested one by one. Reverting one of them would bring back an occasional false "busy", never a place held for good, because `server.js`'s `finally` still frees it.
 - Two sends from one shop can now overlap only during the old send's connection hand-back, when it holds no file in memory. The one-file-in-memory rule still holds.

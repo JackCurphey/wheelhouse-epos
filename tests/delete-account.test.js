@@ -253,7 +253,7 @@ test('deleting Maya’s details: what identifies her goes, her sales and jobs st
 
 // Waits until some other connection is waiting on a lock this one holds
 // (pg_blocking_pids), instead of a fixed pause (review of #590-#592). Up to
-// 30 s: under a full run's load (about 20, 11 Nov) the request took longer than
+// 30 s: under a full run's load (about 20 test files at once, 11 Nov) the request took longer than
 // the old 5 s to reach the lock, and "Mark ready at the same moment" failed with
 // "nothing came to wait" (it passes alone). `pending`, the request that should
 // come to wait, ends the wait at once if it answers without ever waiting.
