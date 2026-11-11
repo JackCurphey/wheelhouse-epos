@@ -42,6 +42,12 @@ afterEach(async () => {
   rendered = false;
 });
 
+// Each test's first wait follows opening the page, which loads the signed-in check, the page and
+// its delivery first. Testing Library's default 1 s ran out on a busy machine (test-files-exit runs
+// this file with four others at once; 2 in 160 here under load). A passing run still goes on the
+// moment it shows.
+const OPENED = { timeout: 5000 };
+
 async function open(path, { me = OWNER, delivery, deliveries = [], status = 200 } = {}) {
   globalThis.fetch = async (url) => {
     const reply = (s, b) => ({ status: s, ok: s < 300, json: async () => b });
@@ -99,14 +105,14 @@ for (const [how, act] of [['checks in', (a) => a.checkIn('1234')], ['ends a chec
 // Owner; what the server sends decides.
 test('Delivery booked in with no costs sent shows no Owner’s links, whatever the sign-in says', async () => {
   const { ui } = await open(BOOKED, { me: OWNER, delivery: FOR_STAFF });
-  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.ok(ui.getByText('1 set aside as damaged — the owner will return it'));
   assert.ok(ui.queryByRole('link', { name: 'Open the order from [Supplier]' }) === null);
 });
 
 test('Delivery booked in, as the Owner: what happened, what was set aside and still to come, with their links', async () => {
   const { ui, within } = await open(BOOKED, { delivery: FOR_OWNER });
-  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.equal(within(ui.getByRole('main')).getByRole('status').textContent, '3 items booked in · stock updated');
   const rows = within(ui.getByRole('list', { name: 'Booked in' })).getAllByRole('listitem');
   assert.ok(rows[0].textContent.includes('1 set aside as damaged'), rows[0].textContent);
@@ -120,7 +126,7 @@ test('Delivery booked in, as the Owner: what happened, what was set aside and st
 
 test('Delivery booked in, as Staff: the owner will return it, and no links they can’t use', async () => {
   const { ui } = await open(BOOKED, { me: JO, delivery: FOR_STAFF });
-  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.ok(ui.getByText('1 set aside as damaged — the owner will return it'));
   assert.ok(ui.getByText('It isn’t in stock'));
   assert.ok(ui.getByRole('list', { name: 'Booked in' }).textContent.includes('4 still to come on the order'));
@@ -131,28 +137,28 @@ test('Delivery booked in, as Staff: the owner will return it, and no links they 
 
 test('Delivery booked in: one item says item; with nothing in stock it doesn’t say stock updated; nothing set aside or to come lists nothing', async () => {
   const one = await open(BOOKED, { delivery: { ...FOR_OWNER, items: 1, setAside: [], stillToCome: [] } });
-  await one.ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await one.ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.equal(one.within(one.ui.getByRole('main')).getByRole('status').textContent, '1 item booked in · stock updated');
   assert.ok(one.ui.queryByRole('list', { name: 'Booked in' }) === null);
   one.cleanup();
   shell.queryClient.clear();
   uninstall();
   const none = await open(BOOKED, { delivery: { ...FOR_OWNER, items: 0, lines: [], setAside: [{ ...FOR_OWNER.setAside[0], kind: 'wrong_item', qty: 2 }], stillToCome: [] } });
-  await none.ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await none.ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.equal(none.within(none.ui.getByRole('main')).getByRole('status').textContent, 'Nothing booked in');
   assert.ok(none.ui.getByText('2 set aside as a wrong item'));
 });
 
 test('a delivery with no supplier: its name and To return say none', async () => {
   const { ui } = await open(BOOKED, { delivery: { ...FOR_OWNER, supplierId: null, supplierName: null, stillToCome: [] } });
-  await ui.findByRole('heading', { level: 2, name: 'Booked in' });
+  await ui.findByRole('heading', { level: 2, name: 'Booked in' }, OPENED);
   assert.ok(ui.getByText('On To return'));
   assert.ok(ui.getByRole('link', { name: 'See what’s to return' }));
 });
 
 test('a delivery’s page, as the Owner: lines with costs, the booked-in cost, what was set aside', async () => {
   const { ui, within } = await open(PAGE, { delivery: FOR_OWNER });
-  await ui.findByRole('heading', { level: 2, name: '[Supplier] · 3 items' });
+  await ui.findByRole('heading', { level: 2, name: '[Supplier] · 3 items' }, OPENED);
   assert.ok(ui.getByText('Booked in Tue 1 Sep by Jack Lewis'));
   const items = within(ui.getByRole('list', { name: 'Items in this delivery' })).getAllByRole('listitem');
   assert.ok(items[0].textContent.includes('Shimano brake pads'));
@@ -172,7 +178,7 @@ test('a delivery’s page, as the Owner: lines with costs, the booked-in cost, w
 
 test('a delivery’s page, as Staff: no costs anywhere, and the note says why', async () => {
   const { ui, within } = await open(PAGE, { me: JO, delivery: FOR_STAFF });
-  await ui.findByRole('heading', { level: 2, name: '[Supplier] · 3 items' });
+  await ui.findByRole('heading', { level: 2, name: '[Supplier] · 3 items' }, OPENED);
   const items = within(ui.getByRole('list', { name: 'Items in this delivery' })).getAllByRole('listitem');
   assert.ok(items[0].textContent.includes('B05S-RX · 2'), items[0].textContent);
   const main = ui.getByRole('main').textContent;
@@ -185,7 +191,7 @@ test('a delivery’s page, as Staff: no costs anywhere, and the note says why', 
 
 test('a delivery’s page: an item sent back says Returned; none set aside shows no list; with no supplier or name it says less', async () => {
   const back = await open(PAGE, { delivery: { ...FOR_OWNER, setAside: [{ ...FOR_OWNER.setAside[0], returned: true, kind: 'wrong_item' }] } });
-  const aside = await back.ui.findByRole('list', { name: 'Set aside as problems' });
+  const aside = await back.ui.findByRole('list', { name: 'Set aside as problems' }, OPENED);
   assert.ok(aside.textContent.includes('Wrong item · 1'), aside.textContent);
   assert.ok(aside.textContent.includes('Returned'));
   assert.ok(!aside.textContent.includes('On To return'));
@@ -193,7 +199,7 @@ test('a delivery’s page: an item sent back says Returned; none set aside shows
   shell.queryClient.clear();
   uninstall();
   const bare = await open(PAGE, { delivery: { ...FOR_OWNER, items: 1, supplierId: null, supplierName: null, bookedBy: null, setAside: [] } });
-  await bare.ui.findByRole('heading', { level: 2, name: 'Delivery · 1 item' });
+  await bare.ui.findByRole('heading', { level: 2, name: 'Delivery · 1 item' }, OPENED);
   assert.ok(bare.ui.getByText('Booked in Tue 1 Sep'));
   assert.ok(bare.ui.queryByRole('list', { name: 'Set aside as problems' }) === null);
 });
@@ -201,13 +207,13 @@ test('a delivery’s page: an item sent back says Returned; none set aside shows
 for (const [name, path] of [['Delivery booked in', BOOKED], ['a delivery’s page', PAGE]]) {
   test(`${name}: not found says so, a failed load says try again, each with the way back`, async () => {
     const gone = await open(path, { status: 404 });
-    assert.equal((await gone.within(await gone.ui.findByRole('main')).findByRole('alert')).textContent, 'Delivery not found');
+    assert.equal((await gone.within(await gone.ui.findByRole('main', {}, OPENED)).findByRole('alert')).textContent, 'Delivery not found');
     assert.ok(gone.within(gone.ui.getByRole('main')).getByRole('link', { name: 'Deliveries and orders' }));
     gone.cleanup();
     shell.queryClient.clear();
     uninstall();
     const down = await open(path, { status: 500 });
-    assert.equal((await down.within(await down.ui.findByRole('main')).findByRole('alert', {}, { timeout: 15000 })).textContent, 'Wheelhouse couldn’t load this delivery. Try again in a moment.');
+    assert.equal((await down.within(await down.ui.findByRole('main', {}, OPENED)).findByRole('alert', {}, { timeout: 15000 })).textContent, 'Wheelhouse couldn’t load this delivery. Try again in a moment.');
   });
 }
 
@@ -220,7 +226,7 @@ const RECENT = [
 for (const [who, me] of [['the Owner', OWNER], ['Staff', JO]]) {
   test(`Recent deliveries on the hub, for ${who}: each with Open, last before any note`, async () => {
     const { ui, within } = await open('/workshop/deliveries', { me, deliveries: RECENT });
-    const list = await ui.findByRole('list', { name: 'Recent deliveries' });
+    const list = await ui.findByRole('list', { name: 'Recent deliveries' }, OPENED);
     const rows = within(list).getAllByRole('listitem');
     assert.ok(rows[0].textContent.includes('[Supplier 2] · 1 item'), rows[0].textContent);
     assert.ok(rows[0].textContent.includes('Booked in Tue 1 Sep by Jo Taylor'));
@@ -234,7 +240,7 @@ for (const [who, me] of [['the Owner', OWNER], ['Staff', JO]]) {
 
 test('with no deliveries there’s no Recent deliveries section; a failed load says so', async () => {
   const none = await open('/workshop/deliveries', { deliveries: [] });
-  await none.ui.findByRole('heading', { level: 2, name: 'Orders' });
+  await none.ui.findByRole('heading', { level: 2, name: 'Orders' }, OPENED);
   await none.waitFor(() => assert.ok(none.ui.queryByText('Loading…') === null));
   assert.ok(none.ui.queryByRole('heading', { level: 2, name: 'Recent deliveries' }) === null);
   none.cleanup();
