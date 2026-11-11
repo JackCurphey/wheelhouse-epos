@@ -109,3 +109,14 @@ Your settings SHALL have a Till block (signing in 6; `your-settings`, `yourSetti
 #### Scenario: No PIN yet
 - **WHEN** Jo Taylor has no PIN and presses Get your PIN
 - **THEN** "Your till PIN" shows four digits, with Keep this PIN, Give me a different one and Skip for now
+
+### Requirement: Show graphs in reports
+Your settings › Accessibility SHALL have "Show graphs in reports", for people who can see reports only (the Owner, until roles exist). It SHALL be on to start; turning it off SHALL hide the graph on every report for that person only, leaving the figures and tables.
+
+#### Scenario: Jack hides the graphs
+- **WHEN** Jack Lewis turns off "Show graphs in reports"
+- **THEN** his reports show no graphs, and it is saved on his login only
+
+#### Scenario: not shown to someone who can't see reports
+- **WHEN** Jo Taylor, Staff, opens Your settings
+- **THEN** "Show graphs in reports" is not there

@@ -11,6 +11,7 @@ import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
 import { closeOn } from './close-the-day.js';
+import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
 const OWNER_ONLY = "Only the shop's owner can see reports";
 
@@ -27,6 +28,13 @@ async function shopLine(ctx) {
   const sites = await prepare('SELECT name FROM sites ORDER BY id').all();
   return sites.length === 1 && sites[0].name ? `${ctx.shop.name}, ${sites[0].name}` : ctx.shop.name;
 }
+
+// A spreadsheet answer: the file name says the report, the shop and the dates.
+function sendCsv(res, name, csv) {
+  res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${name}.csv"` });
+  res.end(csv);
+}
+const dates = (p) => `${p.from}-to-${p.through}`;
 
 // A period asked for in the address, or a 400 saying what to fix.
 const asked = (query) => ({ period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to') });
@@ -84,5 +92,44 @@ export function register(route) {
     const close = row ? await closeOn(row.day) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
     sendJson(res, 200, { close });
+  });
+  // Download as spreadsheet: each report's table as shown, for the period chosen.
+  // screens: rp-sales
+  route('GET', '/api/reports/sales.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const report = await salesReport(asked(query), await currentShopToday());
+      sendCsv(res, `sales-${ctx.shop.slug}-${dates(report.period)}`, salesCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-takings
+  route('GET', '/api/reports/takings.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const report = await takingsReport(asked(query), await currentShopToday());
+      sendCsv(res, `takings-${ctx.shop.slug}-${dates(report.period)}`, takingsCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // A closed day's report, as saved. Its own path under the day, not ":id.csv",
+  // which "/api/reports/days/:id" would shadow.
+  // screens: rp-day
+  route('GET', '/api/reports/days/:id/csv', async (req, res, params) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
+    const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
+    const close = row ? await closeOn(row.day) : null;
+    if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
+    sendCsv(res, `day-${ctx.shop.slug}-${close.day}`, dayCsv(close));
   });
 }

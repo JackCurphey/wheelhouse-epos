@@ -85,11 +85,11 @@ export async function openReports(path, { who = OWNER, answers = {}, phone = fal
     const body = init.body ? JSON.parse(init.body) : undefined;
     const u = new URL(url, 'http://localhost');
     calls.push({ path: u.pathname, search: u.search, query: u.searchParams, method, body });
-    const reply = (status, b) => ({ status, ok: status < 300, json: async () => b, headers: new Headers(), blob: async () => new Blob([b]) });
+    const reply = (status, b, headers = {}) => ({ status, ok: status < 300, json: async () => b, headers: new Headers(headers), blob: async () => new Blob([b]) });
     if (u.pathname === '/api/auth/me') return reply(200, who);
     if (answers[u.pathname]) {
-      const [status, b] = await answers[u.pathname](u.searchParams, method, body);
-      return reply(status, b);
+      const [status, b, headers] = await answers[u.pathname](u.searchParams, method, body);
+      return reply(status, b, headers);
     }
     if (u.pathname === '/api/your-settings') return reply(200, { accessibility: { showLegend: true, showGraphs: true, ...accessibility } });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
