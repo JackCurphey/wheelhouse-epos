@@ -88,6 +88,13 @@ const TILL_AT = '(CASE WHEN t.made_offline THEN t.till_clock_at ELSE t.received_
 export async function onlineSoFar(day) {
   return (await takingsIn(await openSales(day))).onlinePence;
 }
+// What a day nobody closed has taken so far: its sales up to the morning count that counted it
+// (the same window its late close works from, unclosed-day design 4). Reports shows it on
+// the day's "Not closed" row, beside a link to close it.
+export async function takingsSoFarFor(day) {
+  const count = await countFor(day);
+  return (await takingsIn(await openSales(day, count?.checkedAt ?? null))).takingsPence;
+}
 const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till: { sql: 't.day_close_id = ?', args: [id] } });
 
 // Till money by how it was paid, from both sales records: the old record's

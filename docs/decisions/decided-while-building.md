@@ -5150,8 +5150,15 @@ Decided here, for Jack to overrule.
    figures). Its spreadsheet cell reads "12.50 so far". *Put back to the
    drawing on 11 Nov (Front desk, from an Opus review); I had left it out
    as "counting outside a close".*
-2. **A past day with no close has no row.** Only today gets "Not closed
-   yet"; a day nobody closed is already on Today's Needs attention.
+2. **A past day nobody closed is its own row reading "Not closed"** (Jack
+   decided this on 11 Nov, his option 1, after I had left such a day out):
+   with its takings so far (its sales up to the morning count that counted
+   it, as its late close works them out) and a "Close it" link to Close
+   the day for that day, the same link Today's Needs attention gives. It has
+   no Online row, since no close kept one, and isn't in the headline
+   figures, which add up closed days. Only days counted with a later
+   morning's float are listed (the days Close the day can close); today
+   keeps its "Not closed yet" row.
 3. **Beyond 62 days the rows are months** with their closed days added up,
    a "[n] closed days" line where Closed by would be, no Online row and
    nothing to open (answer 9).

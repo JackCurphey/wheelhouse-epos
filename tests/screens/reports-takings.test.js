@@ -113,3 +113,16 @@ test('a day that can\'t be opened says so, rather than showing nothing', async (
   const { ui } = await openReports('/workshop/reports/takings?day=777', { answers: served(gone) });
   assert.ok(await ui.findByText('That day isn’t closed') !== null);
 });
+
+test('a past day nobody closed is a "Not closed" row with its takings so far and a link to close it', async () => {
+  const withSaturday = () => ({ ...TAKINGS_WEEK, rows: [...TAKINGS_WEEK.rows, { kind: 'day', key: '2026-09-12', label: 'Sat 12 Sep', closed: false, past: true, takingsPence: 2000, closeDay: '2026-09-12' }] });
+  const { ui, within } = await openReports('/workshop/reports/takings', { answers: served({ '/api/reports/takings': () => [200, withSaturday()] }) });
+  const table = within(await ui.findByRole('table', { name: 'Closed days' }));
+  const row = rowsOf(table).find((r) => r[0] === 'Sat 12 Sep');
+  assert.deepEqual(row, ['Sat 12 Sep', '£20.00 so far', '—', '—', 'Not closedClose it']);
+  // Close it goes to Close the day for that day, as Today's "Close it" does.
+  const link = table.getByRole('link', { name: 'Close Saturday 12 September' });
+  assert.equal(link.getAttribute('href'), '/workshop/till/close?day=2026-09-12');
+  // Today's own row is still "Not closed yet", with no link.
+  assert.ok(table.queryAllByRole('link').length === 1);
+});

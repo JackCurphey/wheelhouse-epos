@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { dayLabel } from '@/screens/diary/rules.ts';
@@ -22,7 +23,7 @@ import { Figure, PERIODS } from './sales-report.tsx';
  * is, and so is the open day (?day=).
  */
 type Row =
-  | { kind: 'day'; key: string; label: string; closed: false }
+  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
   | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
   | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
@@ -66,10 +67,20 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
               );
             }
             if (r.kind === 'day' && !r.closed) {
+              // A past day nobody closed (Jack, 11 Nov): its takings so far and a link to Close the day for it, as Today's "Close it".
+              const past = r.past && r.closeDay;
               return (
                 <tr key={`d${r.key}`}>
                   <th scope="row" className={`${DAY} font-semibold`}>{r.label}</th>
-                  <td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not closed yet</td>
+                  <td className={CELL}>{past ? `${money(r.takingsPence ?? 0)} so far` : '—'}</td><td className={CELL}>—</td><td className={CELL}>—</td>
+                  <td className={CELL}>
+                    {past ? (
+                      <span className="inline-flex flex-wrap items-center justify-end gap-x-2">
+                        Not closed
+                        <Link to={`${ROUTES['eod-count']}?day=${r.closeDay}`} aria-label={`Close ${dayLabel(r.closeDay!)}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)] underline">Close it</Link>
+                      </span>
+                    ) : 'Not closed yet'}
+                  </td>
                 </tr>
               );
             }

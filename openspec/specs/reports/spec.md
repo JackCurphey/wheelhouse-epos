@@ -118,6 +118,13 @@ Takings and cash-ups SHALL open on This week, with the same periods as Sales, an
 - **WHEN** a day's cash was short
 - **THEN** its Cash difference shows with a minus sign, in the warning colour and in words for a screen reader
 
+### Requirement: A past day nobody closed shows as Not closed
+A past day in the period that nobody closed, and that Close the day can still close, SHALL be its own row in Takings and cash-ups reading "Not closed", with its takings so far and a "Close it" link to Close the day for that day. It SHALL have no Online row and SHALL NOT be in the headline figures. Today, not yet closed, keeps its "Not closed yet" row.
+
+#### Scenario: Saturday was never closed
+- **WHEN** Jack opens Takings and cash-ups for a period that includes Saturday 12 September, which nobody closed
+- **THEN** "Sat 12 Sep" reads "Not closed" with its takings so far (for example "£20.00 so far") and "Close it", which opens Close the day for that day
+
 ### Requirement: Each day's online money is its own row
 Each day SHALL have an "Online" row beside it, showing the online money that close kept apart from the tills, with "Not a till" and "—" in the cash columns; today, not yet closed, shows the online money so far ("[£] so far"). The page SHALL say "Online is what customers paid on the website, from your payment provider. It's separate from the tills: no till counts it, and it's in no till's close."
 
