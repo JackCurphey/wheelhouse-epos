@@ -13,6 +13,7 @@ import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { returningReport, returningCsv } from '../lib/report-customers.js';
 import { vatReport, vatCsv } from '../lib/report-vat.js';
+import { stockReport, stockCsv } from '../lib/report-stock.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
@@ -223,6 +224,38 @@ export function register(route) {
     try {
       const report = await vatReport(vatAsked(query), await currentShopToday());
       sendCsv(res, `vat-${ctx.shop.slug}-${dates(report.period)}`, vatCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // Margin and stock value, the stock half for now: what is on the shelves at
+  // what it cost, and the stock written off in the period. What things cost
+  // is behind canSeeCosts too (design 1).
+  // screens: rp-margin
+  route('GET', '/api/reports/margin', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await stockReport(asked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-margin
+  route('GET', '/api/reports/margin.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const report = await stockReport(asked(query), await currentShopToday());
+      sendCsv(res, `margin-${ctx.shop.slug}-${dates(report.period)}`, stockCsv(report));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;
