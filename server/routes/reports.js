@@ -10,6 +10,7 @@ import { currentShopToday, currentShopTimeZone } from '../workshop/jobs.js';
 import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
+import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
@@ -137,5 +138,34 @@ export function register(route) {
     const close = row ? await closeOn(row.day) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
     sendCsv(res, `day-${ctx.shop.slug}-${close.day}`, dayCsv(close));
+  });
+
+  // Workshop: jobs booked in, finished and collected, workshop takings, quotes
+  // and how full each mechanic was, for a period and the one before it.
+  // screens: rp-workshop
+  route('GET', '/api/reports/workshop', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await workshopReport(asked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-workshop
+  route('GET', '/api/reports/workshop.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const report = await workshopReport(asked(query), await currentShopToday());
+      sendCsv(res, `workshop-${ctx.shop.slug}-${dates(report.period)}`, workshopCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
   });
 }

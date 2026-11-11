@@ -2,6 +2,9 @@ import { poundsText } from '@/lib/money.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { money, type SalesRow } from './reports-format.ts';
 
+/** A bar or point: pence, or a count where the graph's scale is 'count' (Workshop's jobs finished). */
+export type GraphRow = Pick<SalesRow, 'key' | 'label' | 'notReached' | 'takingsPence' | 'beforeTakingsPence'>;
+
 /**
  * The graph above a report's table (reports.mjs `graph` and `lineGraph`;
  * decision 7; audit M1, M16, L7), in plain SVG: bars by day or hour with the
@@ -24,6 +27,8 @@ function niceMax(pence: number): number {
   return Math.ceil(pounds / step) * step * 100;
 }
 const scaleLabel = (pence: number) => poundsText(Math.round(pence / 100)).replace(/\.00$/, '');
+// A count's scale: an even number, so the middle gridline is a whole one.
+const niceCount = (n: number): number => (n <= 0 ? 2 : n <= 10 ? n + (n % 2) : niceMax(n * 100) / 100);
 
 export function graphWords({ title, rows, unitWord, diffPence, against }: { title: string; rows: SalesRow[]; unitWord: string; diffPence: number | null; against: string }): string {
   const reached = rows.filter((r) => !r.notReached && r.takingsPence !== null);
@@ -34,7 +39,7 @@ export function graphWords({ title, rows, unitWord, diffPence, against }: { titl
   return `${title}: ${parts.join('; ') || 'nothing sold'}. The figures are in the table below.`;
 }
 
-function Axis({ max, left, width }: { max: number; left: number; width: number }) {
+function Axis({ max, left, width, label }: { max: number; left: number; width: number; label: (n: number) => string }) {
   return (
     <>
       {[1, 0.5, 0].map((f) => {
@@ -42,7 +47,7 @@ function Axis({ max, left, width }: { max: number; left: number; width: number }
         return (
           <g key={f}>
             <line x1={left} x2={width} y1={y} y2={y} stroke="var(--wh-border)" strokeDasharray={f ? '3 3' : undefined} />
-            <text x={left - 6} y={y + 4} textAnchor="end" fontSize="12" fill="var(--wh-muted)">{scaleLabel(max * f)}</text>
+            <text x={left - 6} y={y + 4} textAnchor="end" fontSize="12" fill="var(--wh-muted)">{label(max * f)}</text>
           </g>
         );
       })}
@@ -64,14 +69,14 @@ const twoLines = (label: string): [string, string] => {
   return i < 0 ? [label, ''] : [label.slice(0, i), label.slice(i + 1)];
 };
 
-export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, showBefore }: {
-  title: string; rows: SalesRow[]; kind: 'bars' | 'line'; keyNow: string; keyBefore: string; spoken: string; showBefore: boolean;
+export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, showBefore, scale = 'money' }: {
+  title: string; rows: GraphRow[]; kind: 'bars' | 'line'; keyNow: string; keyBefore: string; spoken: string; showBefore: boolean; scale?: 'money' | 'count';
 }) {
   const phone = useMedia('(max-width: 767px)');
   const W = phone ? NARROW : WIDE;
   const LEFT = phone ? 36 : 44;
   const biggest = Math.max(0, ...rows.flatMap((r) => [r.takingsPence ?? 0, showBefore ? r.beforeTakingsPence : 0]));
-  const max = niceMax(biggest);
+  const max = scale === 'count' ? niceCount(biggest) : niceMax(biggest);
   const slot = (W - LEFT) / rows.length;
   const x = (i: number) => LEFT + slot * i + slot / 2;
   const y = (pence: number) => TOP + H - (pence / max) * H;
@@ -85,7 +90,7 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
         <Key now={keyNow} before={keyBefore} dashed />
       </div>
       <svg aria-hidden="true" viewBox={`0 0 ${W} ${TOP + H + 40}`} className="h-auto w-full overflow-visible">
-        <Axis max={max} left={LEFT} width={W} />
+        <Axis max={max} left={LEFT} width={W} label={scale === 'count' ? (n) => String(Math.round(n)) : scaleLabel} />
         {kind === 'bars' ? rows.map((r, i) => (
           <g key={String(r.key)}>
             {showBefore ? <rect x={x(i) - barW / 2 - 3} y={y(r.beforeTakingsPence)} width={barW + 6} height={Math.max(0, TOP + H - y(r.beforeTakingsPence))} fill="none" stroke="var(--wh-muted)" strokeDasharray="3 3" /> : null}
