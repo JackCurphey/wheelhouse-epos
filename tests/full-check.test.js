@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, existsSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,6 +103,34 @@ test('a lock whose process has gone is taken over', async () => {
     assert.equal(out.code, 0, out.out);
     assert.deepEqual(logLines(s.log), ['ran']);
     assert.match(out.out, /stale/);
+    assert.ok(!existsSync(s.lock), 'the lock was left behind');
+  } finally {
+    run?.child.kill('SIGKILL');
+    rmSync(s.dir, { recursive: true, force: true });
+  }
+});
+
+// Before the script, sessions queued by hand on the same folder, writing a plain
+// `owner` file: "<pid> <worktree> <branch> <date>" (11 Nov). The script honours
+// those too, rather than calling them stale a minute in.
+test('a hand-made lock with a plain owner file is waited for while its process lives, and taken over once it has gone', async () => {
+  const s = scratch();
+  let run;
+  try {
+    mkdirSync(s.lock);
+    utimesSync(s.lock, new Date(Date.now() - 5 * 60_000), new Date(Date.now() - 5 * 60_000));
+    writeFileSync(path.join(s.lock, 'owner'), `${process.pid} /elsewhere/worktree claude/by-hand Wed Nov 11 16:37:10 GMT 2026\n`);
+    run = start(['--lock-only', '--', process.execPath, '-e', `require('fs').appendFileSync(${JSON.stringify(s.log)}, 'ran\\n')`], { lock: s.lock });
+    await until(() => /holds the full-run lock/.test(run.output()), 'the run to say it is waiting');
+    assert.match(run.output(), new RegExp(`claude/by-hand in /elsewhere/worktree \\(pid ${process.pid}`));
+    await new Promise((r) => setTimeout(r, 500));
+    assert.deepEqual(logLines(s.log), [], 'the run took a live hand-made lock');
+    const gone = spawn(process.execPath, ['-e', '0']);
+    await new Promise((r) => gone.on('close', r));
+    writeFileSync(path.join(s.lock, 'owner'), `${gone.pid} /elsewhere/worktree claude/by-hand Wed Nov 11 16:37:10 GMT 2026\n`);
+    const out = await run.done;
+    assert.equal(out.code, 0, out.out);
+    assert.deepEqual(logLines(s.log), ['ran']);
     assert.ok(!existsSync(s.lock), 'the lock was left behind');
   } finally {
     run?.child.kill('SIGKILL');

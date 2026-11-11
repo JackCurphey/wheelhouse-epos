@@ -40,9 +40,18 @@ function git(...args) {
   return out.status === 0 ? out.stdout.trim() : '';
 }
 
-function readOwner() {
-  try { return JSON.parse(readFileSync(OWNER, 'utf8')); } catch { return null; }
+// owner.json, or the plain `owner` file sessions wrote when they queued by hand
+// on the same folder before this script (11 Nov): "<pid> <worktree> <branch> <date>".
+function readOwnerIn(dir) {
+  try { return JSON.parse(readFileSync(path.join(dir, 'owner.json'), 'utf8')); } catch { /* try the plain one */ }
+  try {
+    const [pid, worktree, branch, ...date] = readFileSync(path.join(dir, 'owner'), 'utf8').trim().split(/\s+/);
+    if (!/^\d+$/.test(pid)) return null;
+    const started = new Date(date.join(' '));
+    return { pid: Number(pid), worktree, branch, started: Number.isNaN(started.getTime()) ? null : started.toISOString() };
+  } catch { return null; }
 }
+const readOwner = () => readOwnerIn(LOCK);
 
 function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (err) { return err.code === 'EPERM'; }
@@ -53,9 +62,11 @@ function lockAge() {
 }
 
 function describe(owner) {
-  const since = new Date(owner.started);
-  const mins = Math.round((Date.now() - since.getTime()) / 60_000);
-  return `${owner.branch || '[branch]'} in ${owner.worktree} (pid ${owner.pid}, commit ${owner.commit || '[commit]'}) holds the full-run lock, since ${since.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} (${mins} min)`;
+  const since = owner.started ? new Date(owner.started) : null;
+  const when = since
+    ? `since ${since.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} (${Math.round((Date.now() - since.getTime()) / 60_000)} min)`
+    : 'since [time]';
+  return `${owner.branch || '[branch]'} in ${owner.worktree || '[worktree]'} (pid ${owner.pid}, commit ${owner.commit || '[commit]'}) holds the full-run lock, ${when}`;
 }
 
 let held = false;
@@ -84,8 +95,7 @@ function tryTake() {
 function clearStale(stalePid) {
   const aside = `${LOCK}.stale-${process.pid}-${Date.now()}`;
   try { renameSync(LOCK, aside); } catch { return; }
-  let moved = null;
-  try { moved = JSON.parse(readFileSync(path.join(aside, 'owner.json'), 'utf8')); } catch { /* half made */ }
+  const moved = readOwnerIn(aside);
   if (moved && moved.pid !== stalePid && alive(moved.pid)) {
     try { renameSync(aside, LOCK); return; } catch { /* a third run has it now; the moved one's own release copes */ }
   }
