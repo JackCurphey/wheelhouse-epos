@@ -66,11 +66,39 @@ test('deleting a job stops its messages still waiting to go, and leaves a sent o
   const ready = finished.body.readyMessage;
   assert.ok(ready?.id, `setup: Bike ready queued, ${JSON.stringify(finished.body)}`);
   job = await step(finished.body, 'collect');
-  // Its minute is up but the timer hasn't claimed it yet.
-  const due = await addMessage(customer.id, job.id, 'intended', new Date(Date.now() - 1000).toISOString());
+  // Its minute is up but the timer hasn't claimed it yet. This server's timer
+  // is kept off, but other test files' servers share the database and their
+  // timers go round every shop (the CI failure on #678). So it's written not
+  // yet due, and made due under a lock on its own row that the delete queues
+  // behind: a timer looking meanwhile sees it not due, and one looking after
+  // queues behind the delete and finds it stopped.
+  const due = await addMessage(customer.id, job.id, 'intended', new Date(Date.now() + 3_600_000).toISOString());
   const sent = await addMessage(customer.id, job.id, 'delivered', new Date(Date.now() - 60_000).toISOString());
-
-  const del = await staff(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' });
+  const holder = await admin();
+  const watcher = await admin();
+  let del;
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SET LOCAL lock_timeout = '10s'");
+    const { rows: [{ pid }] } = await holder.query('SELECT pg_backend_pid() AS pid');
+    await holder.query('SELECT id FROM customer_messages WHERE id = $1 FOR UPDATE', [due]);
+    await holder.query('UPDATE customer_messages SET send_after = $1 WHERE id = $2', [new Date(Date.now() - 1000).toISOString(), due]);
+    let answered = false;
+    const deleting = staff(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' }).finally(() => { answered = true; });
+    // Until the delete is waiting on the row (or has answered without needing it).
+    for (let tries = 0; !answered; tries++) {
+      const { rows: [{ n }] } = await watcher.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [pid]);
+      if (n > 0) break;
+      assert.ok(tries < 200, 'setup: the delete reaches the message within 10 seconds');
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await holder.query('COMMIT');
+    del = await deleting;
+  } finally {
+    await holder.query('ROLLBACK').catch(() => {});
+    await holder.end();
+    await watcher.end();
+  }
   assert.equal(del.status, 200, JSON.stringify(del.body));
 
   for (const [name, id] of [['Bike ready in its minute', ready.id], ['the message whose minute is up', due]]) {
