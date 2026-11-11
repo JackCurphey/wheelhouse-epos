@@ -44,16 +44,18 @@ const CELL = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-right whitespa
 const ROW_HEAD = 'border-b border-[var(--wh-border)] px-1.5 py-2 text-left font-semibold max-md:px-1';
 const TOTAL = 'px-1.5 py-2.5 whitespace-nowrap max-md:px-1';
 
-function Table({ label, columns, rows, total }: { label: string; columns: string[]; rows: React.ReactNode[][]; total: string[] }) {
+// left: columns set as text, as the drawing's table() marks them (the links column).
+function Table({ label, columns, rows, total, left = [] }: { label: string; columns: string[]; rows: React.ReactNode[][]; total: string[]; left?: number[] }) {
+  const align = (i: number) => (i === 0 || left.includes(i) ? 'text-left' : 'text-right');
   return (
     <div className="overflow-x-auto">
       <table aria-label={label} className="w-full border-collapse text-sm max-md:text-size-13">
-        <thead><tr>{columns.map((c, i) => <th key={i} scope="col" className={`${HEAD} ${i === 0 ? 'text-left' : 'text-right'}`}>{c}</th>)}</tr></thead>
+        <thead><tr>{columns.map((c, i) => <th key={i} scope="col" className={`${HEAD} ${align(i)}`}>{c}</th>)}</tr></thead>
         <tbody>
           {rows.map(([name, ...cells], r) => (
-            <tr key={r}><th scope="row" className={ROW_HEAD}>{name}</th>{cells.map((c, i) => <td key={i} className={CELL}>{c}</td>)}</tr>
+            <tr key={r}><th scope="row" className={ROW_HEAD}>{name}</th>{cells.map((c, i) => <td key={i} className={`${CELL} ${align(i + 1)}`}>{c}</td>)}</tr>
           ))}
-          <tr className="font-bold"><th scope="row" className={`${TOTAL} text-left`}>{total[0]}</th>{total.slice(1).map((c, i) => <td key={i} className={`${TOTAL} text-right`}>{c}</td>)}</tr>
+          <tr className="font-bold"><th scope="row" className={`${TOTAL} text-left`}>{total[0]}</th>{total.slice(1).map((c, i) => <td key={i} className={`${TOTAL} ${align(i + 1)}`}>{c}</td>)}</tr>
         </tbody>
       </table>
     </div>
@@ -115,7 +117,7 @@ function Body({ report }: { report: StockReport }) {
           rows={writtenOff.rows.map((r) => [r.label, count(r.items), signed(r.valuePence), COUNTS[r.key]
             ? <Link to={ROUTES.stocktake} aria-label={COUNTS[r.key]} className="inline-flex min-h-11 items-center px-1 text-sm font-semibold text-[var(--wh-ink)] underline">See the counts</Link>
             : null])}
-          total={['All', count(writtenOff.all.items), signed(writtenOff.all.valuePence), '']} />
+          total={['All', count(writtenOff.all.items), signed(writtenOff.all.valuePence), '']} left={[3]} />
       </Box>
     </>
   );

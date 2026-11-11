@@ -83,6 +83,8 @@ test('Stock written off: the eight rows signed, the All row, and each stock take
   ]);
   assert.equal(off.getByRole('link', { name: 'See the stock takes counted under' }).getAttribute('href'), '/workshop/stocktake');
   assert.equal(off.getByRole('link', { name: 'See the stock takes counted over' }).getAttribute('href'), '/workshop/stocktake');
+  // The links column is set as text, on the left, as the drawing's table() marks column 3.
+  assert.ok(off.getByRole('link', { name: 'See the stock takes counted under' }).closest('td').className.includes('text-left'));
 });
 
 test('the written-off note names the period chosen', async () => {

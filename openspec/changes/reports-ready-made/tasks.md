@@ -31,7 +31,7 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 - [x] 4.1 Tests first (`tests/reports-stock.test.js`): stock value as `stock_qty × cost_pence` by the top level of the Stockroom category, products without stock left out, products with stock and no cost counted apart; stock takes applied in the period, counted under and over at their kept cost; adjustments by each reason at their `value_pence`, signed by the change; the All rows; another shop's stock never counts; Staff refused. Verify: each fails first.
 - [x] 4.2 `server/lib/report-stock.js` and `GET /api/reports/margin` with `.csv` giving the stock tables (`// screens: rp-margin`). Verify: 4.1 passes.
-- [x] 4.3 Tests first (screen and browser tests): the Margin and stock value card; On the shelves today with its value, the line about products with no cost, the table; Stock written off with the eight rows and their links to the counts and the products; Download. Verify: each fails first.
+- [x] 4.3 Tests first (screen and browser tests): the Margin and stock value card; On the shelves today with its value, the line about products with no cost, the table; Stock written off with the eight rows and their links to the counts and the products (the products links wait for a shop-wide stock history: gap 2 of 11 Nov in `docs/decisions/decided-while-building/2026-11-jack.md`); Download. Verify: each fails first.
 - [x] 4.4 `src/screens/reports/margin-report.tsx` (stock half), the card. Verify: 4.3 passes.
 
 ## 5. Each sale line keeps its cost, and Margin (PR 5, about 550 lines; risky: migration and money)
