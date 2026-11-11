@@ -37,6 +37,12 @@ afterEach(async () => {
   rendered = false;
 });
 
+// Each test's first wait follows opening the page: the signed-in check, the page itself and its
+// list all load first (the first test also starts everything cold). Testing Library's default 1 s
+// ran out on a busy machine (CI on #678, inside test-files-exit, which runs five files at once).
+// A passing run still goes on the moment the page shows.
+const OPENED = { timeout: 5000 };
+
 async function open(path, { me = OWNER, list = LIST } = {}) {
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
@@ -74,7 +80,7 @@ const posts = (end) => calls.filter((c) => c.method === 'POST' && c.url.endsWith
 
 test('the list: a group per supplier, its columns, every line ticked, and opening marks it seen', async () => {
   const { screen, waitFor, within } = await open('/workshop/deliveries/restock');
-  const first = await screen.findByRole('region', { name: '[Supplier]' });
+  const first = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   assert.ok(screen.getByRole('heading', { name: 'Tick what to reorder' }));
   assert.ok(within(first).getByText('Shimano brake pads'));
   assert.ok(within(first).getByText(/B05S-RX · for job WH-1042/));
@@ -91,7 +97,7 @@ test('the list: a group per supplier, its columns, every line ticked, and openin
 
 test('the pills, and ?show= picking one', async () => {
   const { screen, fireEvent, within } = await open('/workshop/deliveries/restock?show=fast');
-  await screen.findByRole('region', { name: '[Supplier]' });
+  await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   assert.ok(screen.getByText('[Product]'));
   assert.ok(screen.queryByText('Shimano brake pads') === null, 'running low only: not on Selling fast');
   assert.ok(screen.queryByRole('region', { name: '[Supplier 2]' }) === null, 'a group with nothing shown goes');
@@ -104,7 +110,7 @@ test('the pills, and ?show= picking one', async () => {
 
 test('unticking: the group’s count follows, and the group tick unticks them all', async () => {
   const { screen, fireEvent, within } = await open('/workshop/deliveries/restock');
-  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  const g = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   fireEvent.click(within(g).getByRole('checkbox', { name: 'Include [Product]' }));
   assert.ok(within(g).getByText('1 ticked'));
   assert.equal(within(g).getByRole('checkbox', { name: 'Include everything from [Supplier]' }).checked, false);
@@ -116,14 +122,14 @@ test('unticking: the group’s count follows, and the group tick unticks them al
 
 test('the count never goes below 1', async () => {
   const { screen, fireEvent, within } = await open('/workshop/deliveries/restock?show=customers');
-  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  const g = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   fireEvent.click(within(g).getByRole('button', { name: 'One fewer: Reorder Shimano brake pads' }));
   assert.equal(within(g).getByRole('textbox', { name: 'How many: Reorder Shimano brake pads' }).value, '1');
 });
 
 test('Download sends only the ticked lines, at their counts, and saves the file', async () => {
   const { screen, fireEvent, within, waitFor } = await open('/workshop/deliveries/restock');
-  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  const g = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   fireEvent.click(within(g).getByRole('checkbox', { name: 'Include [Product]' }));
   fireEvent.click(within(g).getByRole('button', { name: 'One more: Reorder Shimano brake pads' }));
   fireEvent.click(within(g).getByRole('button', { name: 'Download for [Supplier]’s basket' }));
@@ -134,7 +140,7 @@ test('Download sends only the ticked lines, at their counts, and saves the file'
 
 test('Add to an order sends a job’s line with its job, the rest plain, and opens the order', async () => {
   const { screen, fireEvent, within, waitFor } = await open('/workshop/deliveries/restock');
-  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  const g = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   fireEvent.click(within(g).getByRole('button', { name: 'Add to an order' }));
   await waitFor(() => assert.equal(posts('/api/restock/add-to-order').length, 1));
   assert.deepEqual(posts('/api/restock/add-to-order')[0].body, {
@@ -147,7 +153,7 @@ test('Add to an order sends a job’s line with its job, the rest plain, and ope
 
 test('a supplier not in the suppliers list: no Add to an order, said why, still downloadable', async () => {
   const { screen, within } = await open('/workshop/deliveries/restock');
-  const g = await screen.findByRole('region', { name: '[Supplier 2]' });
+  const g = await screen.findByRole('region', { name: '[Supplier 2]' }, OPENED);
   assert.ok(within(g).queryByRole('button', { name: 'Add to an order' }) === null);
   assert.ok(within(g).getByText('[Supplier 2] isn’t in your suppliers yet'));
   assert.ok(within(g).getByRole('button', { name: 'Download for [Supplier 2]’s basket' }));
@@ -155,18 +161,18 @@ test('a supplier not in the suppliers list: no Add to an order, said why, still 
 
 test('nothing to reorder', async () => {
   const { screen } = await open('/workshop/deliveries/restock', { list: { ...LIST, groups: [], counts: { low: 0, fast: 0, customers: 0 } } });
-  assert.ok(await screen.findByText('Nothing to reorder.'));
+  assert.ok(await screen.findByText('Nothing to reorder.', {}, OPENED));
 });
 
 test('Jo is told it’s the owner’s', async () => {
   const { screen } = await open('/workshop/deliveries/restock', { me: JO });
-  assert.ok(await screen.findByText('The restock list is for the shop’s owner for now.'));
+  assert.ok(await screen.findByText('The restock list is for the shop’s owner for now.', {}, OPENED));
   assert.equal(calls.filter((c) => c.url.includes('/api/restock')).length, 0);
 });
 
 test('Deliveries and orders: the Restock list section, its counts and links', async () => {
   const { screen, within } = await open('/workshop/deliveries');
-  const card = await screen.findByRole('region', { name: 'Restock list' });
+  const card = await screen.findByRole('region', { name: 'Restock list' }, OPENED);
   await within(card).findByText('2 products at or under their low-stock level');
   assert.ok(within(card).getByText('1 product sold more than usual in the last 28 days'));
   assert.ok(within(card).getByText('1 product a job is waiting for, or an online order is ordering in'));
@@ -182,7 +188,7 @@ test('Deliveries and orders: the Restock list section, its counts and links', as
 
 test('Jo’s Deliveries and orders has no Restock list', async () => {
   const { screen } = await open('/workshop/deliveries', { me: JO });
-  await screen.findByRole('heading', { name: 'A delivery arrived?' });
+  await screen.findByRole('heading', { name: 'A delivery arrived?' }, OPENED);
   assert.ok(screen.queryByRole('region', { name: 'Restock list' }) === null);
 });
 
@@ -192,7 +198,7 @@ test('a refused download shows the server’s words', async () => {
   globalThis.fetch = async (url, init) => (String(url).endsWith('/api/restock/download')
     ? { status: 400, ok: false, headers: { get: () => null }, json: async () => ({ error: 'Product 11 not found' }) }
     : real(url, init));
-  const g = await screen.findByRole('region', { name: '[Supplier]' });
+  const g = await screen.findByRole('region', { name: '[Supplier]' }, OPENED);
   fireEvent.click(within(g).getByRole('button', { name: 'Download for [Supplier]’s basket' }));
   assert.equal((await within(g).findByRole('alert')).textContent, 'Product 11 not found');
 });
