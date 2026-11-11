@@ -22,8 +22,10 @@ hand. Jack chose on 11 Nov to have a queue do it instead.
 - The lock is let go on exit, on Ctrl-C (or another stop signal) and on errors.
 - `npm run full-check -- --lock-only -- <command>` takes the lock for any other
   command, such as a stress run, so those queue too.
-- A paragraph in CLAUDE.md's "Testing and environment" says full runs go
-  through `npm run full-check` (a project rules file).
+- A paragraph for CLAUDE.md's "Testing and environment", saying full runs go
+  through `npm run full-check`, was drafted but left out: CLAUDE.md is changed
+  only on Jack's own word, and this request came through another session. The
+  wording is in the pull request for him to approve.
 - No behaviour a shop would see changes (`skip_specs`).
 
 ## Lane, drawings and decisions
@@ -41,4 +43,4 @@ hand. Jack chose on 11 Nov to have a queue do it instead.
 ## Impact
 
 - `scripts/full-check.mjs` (new), `tests/full-check.test.js` (new),
-  `package.json` (the `full-check` script), `CLAUDE.md`.
+  `package.json` (the `full-check` script).
