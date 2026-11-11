@@ -1,3 +1,4 @@
+import { poundsText } from '@/lib/money.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { money, type SalesRow } from './reports-format.ts';
 
@@ -22,7 +23,7 @@ function niceMax(pence: number): number {
   const step = 10 ** Math.floor(Math.log10(pounds));
   return Math.ceil(pounds / step) * step * 100;
 }
-const scaleLabel = (pence: number) => `£${Math.round(pence / 100)}`;
+const scaleLabel = (pence: number) => poundsText(Math.round(pence / 100)).replace(/\.00$/, '');
 
 export function graphWords({ title, rows, unitWord, diffPence, against }: { title: string; rows: SalesRow[]; unitWord: string; diffPence: number | null; against: string }): string {
   const reached = rows.filter((r) => !r.notReached && r.takingsPence !== null);

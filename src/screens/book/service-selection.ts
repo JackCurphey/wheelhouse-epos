@@ -1,5 +1,6 @@
 import type { PortalFullService, PortalService, ServicesResponse } from './services-query.ts';
 import type { BookingDraft } from './draft.tsx';
+import { poundsText } from '../../lib/money.ts';
 
 /**
  * The service list's rules, kept apart from the screens so they can be tested
@@ -72,7 +73,7 @@ export function includesLine(full: PortalFullService): string | null {
 /** Pounds, with pence only when there are any: £80, £22.50. Summed in pence to avoid float drift. */
 export function formatMoney(amount: number): string {
   const pence = Math.round(amount * 100);
-  return pence % 100 === 0 ? `£${pence / 100}` : `£${(pence / 100).toFixed(2)}`;
+  return pence % 100 === 0 ? poundsText(pence / 100).replace(/\.00$/, '') : poundsText(pence / 100);
 }
 
 export const formatFrom = (price: number) => `From ${formatMoney(price)}`;
