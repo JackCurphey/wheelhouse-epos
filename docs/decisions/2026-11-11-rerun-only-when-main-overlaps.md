@@ -39,6 +39,5 @@ once both are in, when the clash isn't in files they share. The nightly CI
 run and the 7:30 test check run everything on main, and catch it the next
 morning; a failed nightly run is fixed first thing, as before.
 
-**Not yet in CLAUDE.md.** Rule 4 of "Allowed without asking" still says the
-local runs pass on the final commit after merging the latest main. Changing
-it waits for Jack's own word, since this answer came through another session.
+**In CLAUDE.md:** rule 4 of "Allowed without asking" points here (Jack said
+"Yes, make them" on 11 Nov).
