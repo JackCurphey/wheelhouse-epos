@@ -51,7 +51,7 @@ export function register(route) {
     try {
       const today = await currentShopToday();
       const report = await salesReport(asked(query), today);
-      sendJson(res, 200, { ...report, shopLine: await shopLine(ctx) });
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;
