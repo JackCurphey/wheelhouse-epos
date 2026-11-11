@@ -12,18 +12,27 @@ import '../server/load-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import net from 'node:net';
 import { startLiveServer, testServerEnv } from './helpers/liveServer.js';
 
 // On every address, as a Wheelhouse server listens, or on 127.0.0.1 only, as
 // tests' own small stand-in servers do. On a Mac the second can share a port
 // with a server on every address, and then takes its 127.0.0.1 requests.
-// `body` lets it pass for another Wheelhouse test server, which answers /app.js
-// with the same file as ours.
-const APP_JS = readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
-function standIn(host, body = 'not this test’s server') {
+// `kind` makes it pass for another Wheelhouse test server (its /healthz answers
+// as ours does), answer everything with 201 (like a test's pretend Twilio), or
+// be a bare connection that closes at once (like a test's database relay).
+const WHEELHOUSE = (req, res) => {
+  if (req.url === '/healthz') { res.setHeader('content-type', 'application/json'); return res.end('{"status":"ok"}'); }
+  res.end('not this test’s server');
+};
+const KINDS = {
+  plain: (req, res) => res.end('not this test’s server'),
+  wheelhouse: WHEELHOUSE,
+  created: (req, res) => { res.statusCode = 201; res.end('{}'); },
+};
+function standIn(host, kind = 'plain') {
   return new Promise((resolve) => {
-    const s = createServer((req, res) => res.end(req.url === '/app.js' ? body : 'not this test’s server'));
+    const s = kind === 'relay' ? net.createServer((c) => c.destroy()) : createServer(KINDS[kind]);
     if (host) s.listen(0, host, () => resolve(s));
     else s.listen(0, () => resolve(s));
   });
@@ -36,19 +45,23 @@ async function freePort() {
   return port;
 }
 
-for (const [where, host, body] of [
-  ['by another server on every address', undefined, undefined],
-  ['by another Wheelhouse test server, which serves the same app.js', undefined, APP_JS],
-  ['on 127.0.0.1 only (a test’s stand-in)', '127.0.0.1', undefined],
+for (const [where, host, kind] of [
+  ['by another server on every address', undefined, 'plain'],
+  ['by another Wheelhouse test server, whose /healthz answers as ours does', undefined, 'wheelhouse'],
+  ['on 127.0.0.1 only (a test’s stand-in)', '127.0.0.1', 'plain'],
+  ['on 127.0.0.1 by one answering everything with 201 (a pretend Twilio)', '127.0.0.1', 'created'],
+  ['on 127.0.0.1 by a bare connection that closes (a database relay)', '127.0.0.1', 'relay'],
 ]) {
   test(`a port taken in the gap ${where}: the server starts on another, and the helper talks only to its own server`, async () => {
-    const taken = await standIn(host, body);
+    const taken = await standIn(host, kind);
+    const began = Date.now();
     const takenPort = taken.address().port;
     const offered = [takenPort];
     let live;
     try {
       live = await startLiveServer({ pickPort: async () => offered.shift() ?? freePort() });
       assert.notEqual(new URL(live.baseUrl).port, String(takenPort), 'it used the taken port');
+      assert.ok(Date.now() - began < 20_000, `took ${Date.now() - began} ms: it waited out the taken port instead of trying another`);
       assert.equal(await (await fetch(`${live.baseUrl}/no-such-page`)).text() === 'not this test’s server', false, 'it is talking to the other server');
     } finally {
       await live?.stop();

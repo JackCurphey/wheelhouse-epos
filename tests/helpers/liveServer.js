@@ -10,14 +10,11 @@
 // This pattern was proven in tests/static-cache.test.js first; it is lifted
 // here so workshop and portal tests can share one copy.
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-// What a Wheelhouse server answers for /app.js (server.js serves public/ as it is).
-const APP_JS = readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -31,12 +28,17 @@ function freePort() {
 }
 
 // Ready means this child said it is listening ("Wheelhouse running at
-// http://localhost:<port>", server.js's listen callback) and then served
-// /app.js. Before 12 Nov any answer on the port counted, so a file whose port
-// had been taken in the gap after freePort() ran against another file's server.
+// http://localhost:<port>", server.js's listen callback) and then its /healthz
+// answered {"status":"ok"}. Before 12 Nov any answer on the port counted, so a
+// file whose port had been taken in the gap after freePort() ran against
+// another file's server. Once ours is listening, any other answer means another
+// server holds the port on 127.0.0.1 (which a Mac allows beside ours, listening
+// on every address), and the start is tried again on a fresh port.
 async function waitForServer(child, baseUrl, timeoutMs, listening) {
   const deadline = Date.now() + timeoutMs;
+  const notOurs = (what) => Object.assign(new Error(`another server holds ${baseUrl}: ${what}`), { notOurs: true });
   let lastErr;
+  let refused = 0;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
       throw Object.assign(new Error(`server exited early with code ${child.exitCode}`), { exitedEarly: true });
@@ -45,19 +47,27 @@ async function waitForServer(child, baseUrl, timeoutMs, listening) {
       await new Promise((r) => setTimeout(r, 50));
       continue;
     }
+    let res;
     try {
-      const res = await fetch(`${baseUrl}/app.js`);
-      if (res.status === 200) {
-        // A small stand-in server on 127.0.0.1 can share the port with ours
-        // (which listens on every address) and take these requests.
-        if ((await res.text()) !== APP_JS) throw Object.assign(new Error(`another server answers on ${baseUrl}`), { notOurs: true });
-        return;
-      }
+      res = await fetch(`${baseUrl}/healthz`);
     } catch (err) {
-      if (err.notOurs) throw err;
+      // Ours is listening, so a connection that keeps failing is someone else's.
       lastErr = err;
+      if (++refused >= 10) throw notOurs(`its connections fail (${err.cause?.code ?? err.message})`);
+      await new Promise((r) => setTimeout(r, 200));
+      continue;
     }
-    await new Promise((r) => setTimeout(r, 200));
+    const text = await res.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch { /* not ours */ }
+    if (res.status === 200 && body?.status === 'ok') return;
+    // Ours with its database not answering yet: wait, as before.
+    if (res.status === 503 && body?.status === 'error') {
+      lastErr = new Error(`/healthz: ${text}`);
+      await new Promise((r) => setTimeout(r, 200));
+      continue;
+    }
+    throw notOurs(`/healthz answered ${res.status} ${text.slice(0, 80)}`);
   }
   throw new Error(`server did not start in ${timeoutMs}ms: ${lastErr}`);
 }
