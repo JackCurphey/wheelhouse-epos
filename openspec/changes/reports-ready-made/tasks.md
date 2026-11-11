@@ -25,7 +25,7 @@ Each pull request: tests first, each watched failing for the right reason (break
 - [x] 3.3 Tests first (`tests/reports-vat.test.js`, `tests/report-periods.test.js` for quarters): This VAT quarter and Last VAT quarter for each of the three start months, and calendar quarters when not said; till lines grouped by rate with Sales before VAT and VAT charged, 20%, 5% and 0% named, another rate on its own row; old-record sales in "VAT not recorded" with their takings; the quarter before; the Total row; no Refunds row; `needsQuarter` true while not said; another shop's sales never count; Staff refused. Verify: each fails first.
 - [x] 3.4 Quarters in `server/lib/report-periods.js`; `server/lib/report-vat.js`; `GET /api/reports/vat` with `.csv` (`// screens: rp-vat, rp-vat-first`). Verify: 3.3 passes.
 - [x] 3.5 Tests first (screen and browser tests): the VAT card; "When does your VAT quarter start?" on first opening, Save keeping it and not asking again, Not now showing calendar quarters with a line saying so and asking next time; the Sales table, the "VAT not recorded" line, the Stock purchases box with no figure, the drawn note, no graph and no "Change what's shown"; the VAT quarter choice in Settings › Shop and sites › Shop details. Verify: each fails first.
-- [ ] 3.6 `src/screens/reports/vat-report.tsx` with the box, the card, the Shop details choice. Verify: 3.5 passes. `/review` and `risky-area-reviewer`; hand-run CI green.
+- [x] 3.6 `src/screens/reports/vat-report.tsx` with the box, the card, the Shop details choice. Verify: 3.5 passes. `/review` and `risky-area-reviewer`; hand-run CI green.
 
 ## 4. Stock value and stock written off (PR 4, about 450 lines)
 
