@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 // A pretend server holding the list, as the routes answer (whole list on each change).
-async function render(start = DRAWN, refuse = null) {
+async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: false, accountsOn: false, accountLimitPence: null }) {
   calls = [];
   let ways = start.map((w) => ({ ...w }));
   let nextId = 20;
@@ -53,7 +53,7 @@ async function render(start = DRAWN, refuse = null) {
       return reply(200, { ways });
     }
     if (u.pathname === '/api/payment-ways-other') return reply(200, { ways });
-    if (u.pathname === '/api/payment-settings') return reply(200, { storeCreditOn: false, accountsOn: false, accountLimitPence: null });
+    if (u.pathname === '/api/payment-settings') return reply(200, payment);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
     if (u.pathname.startsWith('/api/')) return reply(200, []);
@@ -88,6 +88,12 @@ test('Ways to pay shows Cash first, Always on, with no switch, and no Card, Gift
   for (const name of ['Cash', 'Card', 'Gift cards', 'Deposits']) assert.ok(r.ui.queryByRole('switch', { name }) === null, `no ${name} switch`);
 });
 
+test('the Ways to pay summary starts with Cash and names what is on, in the drawing’s words', async () => {
+  const r = await render(DRAWN, null, { storeCreditOn: true, accountsOn: true, accountLimitPence: null });
+  const fold = await r.ui.findByRole('button', { name: /^Ways to pay/ });
+  await r.waitFor(() => assert.match(fold.textContent, /Cash, store credit and customer accounts$/));
+});
+
 test('the Other ways to pay fold shows the rows with their lines, Remove, the Add box, the note and the summary', async () => {
   const r = await render();
   const fold = await openFold(r, 'Other ways to pay');
@@ -116,6 +122,7 @@ test('Jack adds Bank transfer: it goes at the end, Saved shows with Undo, and Un
   assert.equal(box.value, '', 'the box empties for the next one');
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Undo' }));
   await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Bank transfer' }) === null));
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'New way to pay'));
   assert.deepEqual(writes(), ['POST /api/payment-ways-other {"name":"Bank transfer"}', 'DELETE /api/payment-ways-other/20 {}']);
 });
 
@@ -124,13 +131,25 @@ test('Jack removes Payment link: it goes, Saved shows with Undo, and Undo puts i
   await openFold(r, 'Other ways to pay');
   r.fireEvent.click(await r.ui.findByRole('button', { name: 'Remove Payment link' }));
   await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Payment link' }) === null));
+  // No row after it, so the focus goes to the Add box (as Storage slots' Remove).
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'New way to pay'));
   assert.ok(r.ui.getAllByRole('status').some((el) => /^Saved\.\s*Undo$/.test(el.textContent)), 'Saved · Undo');
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Undo' }));
   assert.ok(await r.ui.findByRole('button', { name: 'Remove Payment link' }));
+  // Undo puts the focus on the restored row's Remove.
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Remove Payment link'));
   assert.deepEqual(writes(), [
     'DELETE /api/payment-ways-other/13 {}',
     'POST /api/payment-ways-other {"name":"Payment link","note":"Needs setting up with [payment provider] first","position":2}',
   ]);
+});
+
+test('after Remove, the focus goes to the next row’s Remove', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  r.fireEvent.click(await r.ui.findByRole('button', { name: 'Remove Finance' }));
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Finance' }) === null));
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Remove Cycle to Work'));
 });
 
 test('a name already on the list shows the server’s words and keeps what was typed; an empty list reads None', async () => {

@@ -17,12 +17,16 @@ export const PAYMENT_SETTINGS_KEY = ['payment-settings'];
 export const usePaymentSettings = () => useQuery({ queryKey: PAYMENT_SETTINGS_KEY, queryFn: () => apiGet<PaymentSettings>('/api/payment-settings') });
 const words = (err: unknown) => (err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
 
-/** The fold's summary: the ways switched on, or that none are. */
+/**
+ * The fold's summary: the built ways that are on, Cash first as it's always on, in the drawing's
+ * words (settings-frame.mjs payFolds, "Cash, card and 4 more"): "Cash", "Cash and store credit",
+ * "Cash, store credit and customer accounts".
+ */
 export function useWaysToPaySummary(): string {
   const settings = usePaymentSettings();
   if (!settings.data) return '';
-  const on = [settings.data.storeCreditOn ? 'Store credit' : null, settings.data.accountsOn ? 'Customer accounts' : null].filter(Boolean);
-  return on.length ? `${on.join(' and ')} on` : 'None switched on yet';
+  const on = ['Cash', settings.data.storeCreditOn ? 'store credit' : null, settings.data.accountsOn ? 'customer accounts' : null].filter(Boolean);
+  return on.length > 1 ? `${on.slice(0, -1).join(', ')} and ${on[on.length - 1]}` : 'Cash';
 }
 
 // A way to pay: its switch, what it is underneath, then its one setting when on (setup.mjs way()).
