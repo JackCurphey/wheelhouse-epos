@@ -29,6 +29,17 @@ export function installDom(url = 'http://localhost/workshop') {
 // A fresh instance of a built module, so module-level state (the app shell's
 // router) is created again under the current DOM.
 let generation = 0;
-export function importFresh(path) {
-  return import(`${path}?fresh=${++generation}`);
+//
+// An app shell's module-level QueryClient is told never to schedule React
+// Query's five-minute clean-up timer (gcTime). Left alone, every screen that
+// stops watching a query starts one, and the test file's process then stays
+// alive ~300 s after its last test. Tests only; production keeps the default.
+export async function importFresh(path) {
+  const mod = await import(`${path}?fresh=${++generation}`);
+  const client = mod.queryClient;
+  if (client && typeof client.setDefaultOptions === 'function') {
+    const defaults = client.getDefaultOptions();
+    client.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, gcTime: Infinity } });
+  }
+  return mod;
 }

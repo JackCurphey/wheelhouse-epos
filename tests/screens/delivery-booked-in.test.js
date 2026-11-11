@@ -75,7 +75,7 @@ for (const [how, act] of [['checks in', (a) => a.checkIn('1234')], ['ends a chec
     const { createElement } = await import('react');
     const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
     const { useCheckinActions } = await importFresh(new URL('../../.test-build/lib/till-checkin.js', import.meta.url).href);
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
     const secret = { bookedCost: 57.1, totalCost: 57.1 };
     const KEYS = [['deliveries', 77], ['deliveries', 'recent'], ['purchase-orders'], ['purchase-order', 7], ['po-products', 'pads'],
       ['product', 1], ['products', 'pads'], ['stock', ''], ['stock-takes'], ['stock-take-check', 5], ['needs-attention']];
