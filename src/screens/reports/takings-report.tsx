@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
-import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { dayLabel } from '@/screens/diary/rules.ts';
 import { clock } from '@/screens/diary/when.ts';
 import { Report, type Close } from '@/screens/till/close-the-day.tsx';
 import { useShowGraphs } from '@/lib/your-settings.ts';
-import { Box, BackToReports, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
+import { Box, BackToReports, DownloadButton, Note, Page, PeriodChips, Refusal } from './reports-bits.tsx';
 import { compareWords, differenceText, money, type SalesRow } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
@@ -23,9 +23,9 @@ import { Figure, PERIODS } from './sales-report.tsx';
  * is, and so is the open day (?day=).
  */
 type Row =
-  | { kind: 'day'; key: string; label: string; closed: false }
+  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
   | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
-  | { kind: 'online'; key: string; label: string; onlinePence: number }
+  | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
 type Takings = {
@@ -62,15 +62,25 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
               return (
                 <tr key={`o${r.key}`}>
                   <th scope="row" className={`${DAY} font-normal`}>{r.label}</th>
-                  <td className={CELL}>{money(r.onlinePence)}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
+                  <td className={CELL}>{money(r.onlinePence)}{r.soFar ? ' so far' : ''}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
                 </tr>
               );
             }
             if (r.kind === 'day' && !r.closed) {
+              // A past day nobody closed (Jack, 11 Nov): its takings so far and a link to Close the day for it, as Today's "Close it".
+              const past = r.past && r.closeDay;
               return (
                 <tr key={`d${r.key}`}>
                   <th scope="row" className={`${DAY} font-semibold`}>{r.label}</th>
-                  <td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not closed yet</td>
+                  <td className={CELL}>{past ? `${money(r.takingsPence ?? 0)} so far` : '—'}</td><td className={CELL}>—</td><td className={CELL}>—</td>
+                  <td className={CELL}>
+                    {past ? (
+                      <span className="inline-flex flex-wrap items-center justify-end gap-x-2">
+                        Not closed
+                        <Link to={`${ROUTES['eod-count']}?day=${r.closeDay}`} aria-label={`Close ${dayLabel(r.closeDay!)}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)] underline">Close it</Link>
+                      </span>
+                    ) : 'Not closed yet'}
+                  </td>
                 </tr>
               );
             }
@@ -122,7 +132,7 @@ export function TakingsReportPage() {
         </div>
         <DownloadButton path={`/api/reports/takings.csv?${query}`} />
       </div>
-      <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={(v) => (v === 'dates' ? setPicking(true) : setParams({ period: v }))} options={PERIODS} />
+      <PeriodChips value={picking ? 'dates' : period} onChange={(v) => (v === 'dates' ? setPicking(true) : setParams({ period: v }))} options={PERIODS} />
       {takings.isError ? <Refusal error={takings.error} /> : null}
       {report ? <Body report={report} onOpen={(id) => setParams({ ...keep(), day: String(id) })} period={period} /> : takings.isError ? null : <Note>Loading…</Note>}
       {picking && report ? (
@@ -155,7 +165,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
       ) : (
         <Box>
           {showGraphs ? <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
+            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
           <ClosedDays rows={report.rows} onOpen={onOpen} />
         </Box>
       )}
