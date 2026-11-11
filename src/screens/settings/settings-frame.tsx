@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ROUTES } from '@/staff/routes.ts';
+import { SavedNoteArea } from './saved-note.tsx';
 
 /**
  * The Settings frame (WP-1.3; drawn in docs/design/user-journeys/generator/settings-frame.mjs,
@@ -110,7 +111,9 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
   // A computer opens on the first room; a phone on the list of rooms.
   const room = asked ?? rooms[0];
   if (!room) return null;
+  // The one "Saved" note any fold can show, at the foot of the page (saved-note.tsx).
   return (
+    <SavedNoteArea>
     <div className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
       <nav aria-label="Settings" className="hidden w-[190px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
         {rooms.map((r) => (
@@ -139,5 +142,6 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
         <RoomPage key={room.key} room={room} fold={params.get('fold')} />
       </div>
     </div>
+    </SavedNoteArea>
   );
 }

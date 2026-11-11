@@ -33,6 +33,10 @@ test('at closing time: from 17:30, not during the day', () => {
   assert.deepEqual(entryFor(HOURS, at(17, 30), false, 0), { show: true, closesAt: '17:30' });
 });
 
+test('the shop’s choice must be given: no caller gets the old fixed hour by accident', () => {
+  for (const before of [undefined, null, 45, '30']) assert.throws(() => entryFor(HOURS, at(17, 0), false, before), /0, 30 or 60/, String(before));
+});
+
 test('shut today means all day, whatever the shop chose; closed means not shown', () => {
   for (const before of [0, 30, 60]) {
     assert.deepEqual(entryFor(null, at(7, 0), false, before), { show: true, closesAt: null });

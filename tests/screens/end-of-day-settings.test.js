@@ -55,6 +55,8 @@ async function open(fold) {
   return { ...rtl, ui, calls, state };
 }
 const puts = (t) => t.calls.filter((c) => c.method === 'PUT' && c.url === '/api/end-of-day-settings').map((c) => c.body);
+// Settings' one "Saved" note (settings-frame.mjs toastHtml), shared by every fold.
+const noteArea = (t) => t.ui.container.querySelector('[data-saved-note]');
 const chosen = (group) => [...group.querySelectorAll('[role="radio"]')].map((r) => `${r.textContent}${r.getAttribute('aria-checked') === 'true' ? ' (chosen)' : ''}`);
 
 test('Close the day: the three choices, the note, Change opening hours, and 30 minutes before to start', async () => {
@@ -74,14 +76,26 @@ test('Close the day: choosing saves at once, with Saved and Undo, and the summar
   const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
   const group = await t.ui.findByRole('radiogroup', { name: 'Show “Close the day” in the till bar' });
   await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  // The page's one note area is there before anything is saved, empty, so a
+  // screen reader announces the words swapped into it; it isn't in a fold.
+  const area = noteArea(t);
+  assert.ok(area !== null, 'the note area is always on the page');
+  assert.equal(area.getAttribute('role'), 'status');
+  assert.equal(area.textContent, '');
+  assert.ok(area.closest('section') === null, 'the note floats over the page, not inside the fold');
   t.fireEvent.click(t.within(group).getByRole('radio', { name: '1 hour before' }));
   await t.waitFor(() => assert.match(fold.textContent, /1 hour before closing/));
-  const note = await t.ui.findByText('Saved');
-  const undo = t.within(note.closest('[role="status"]')).getByRole('button', { name: 'Undo' });
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.ok(noteArea(t) === area, 'the same area, its words swapped in');
+  assert.ok(area.querySelector('svg') !== null, 'a tick before the words');
+  const undo = t.within(area).getByRole('button', { name: 'Undo' });
   assert.deepEqual(puts(t), [{ closeEntryMinutes: 60 }]);
   t.fireEvent.click(undo);
   await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
   assert.deepEqual(puts(t), [{ closeEntryMinutes: 60 }, { closeEntryMinutes: 30 }]);
+  // The Undo, once saved, is confirmed: "Saved", with nothing more to undo.
+  await t.waitFor(() => assert.ok(t.within(area).queryByRole('button', { name: 'Undo' }) === null));
+  assert.equal(area.textContent, 'Saved');
   t.fireEvent.click(t.within(group).getByRole('radio', { name: 'At closing time' }));
   await t.waitFor(() => assert.match(fold.textContent, /At closing time/));
 });
@@ -91,16 +105,18 @@ test('Close the day: a save that fails says so, keeps the choice, and Try again 
   const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
   const group = await t.ui.findByRole('radiogroup', { name: 'Show “Close the day” in the till bar' });
   await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  const area = noteArea(t);
   t.state.offline = true;
   t.fireEvent.click(t.within(group).getByRole('radio', { name: 'At closing time' }));
-  const failed = await t.ui.findByText(FAILED);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  assert.ok(area.querySelector('svg') !== null, 'a warning before the words');
   assert.deepEqual(chosen(group), ['At closing time (chosen)', '30 minutes before', '1 hour before'], 'the change is kept here');
-  assert.ok(t.ui.queryByText('Saved') === null);
+  assert.ok(t.within(area).queryByRole('button', { name: 'Undo' }) === null);
   t.state.offline = false;
-  t.fireEvent.click(t.within(failed.closest('[role="alert"]')).getByRole('button', { name: 'Try again' }));
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Try again' }));
   await t.waitFor(() => assert.match(fold.textContent, /At closing time/));
-  assert.ok(await t.ui.findByText('Saved'));
-  assert.ok(t.ui.queryByText(FAILED) === null);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.ok(noteArea(t) === area);
   assert.equal(t.state.closeEntryMinutes, 0);
 });
 
@@ -115,9 +131,11 @@ test('Counting the cash: Count first on to start; off saves, with Saved and Undo
   await t.waitFor(() => assert.match(fold.textContent, /Show the expected amount/));
   assert.equal(t.ui.getByRole('switch', { name: 'Count first' }).getAttribute('aria-checked'), 'false');
   assert.deepEqual(puts(t), [{ countFirst: false }]);
-  const note = await t.ui.findByText('Saved');
-  t.fireEvent.click(t.within(note.closest('[role="status"]')).getByRole('button', { name: 'Undo' }));
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Undo' }));
   await t.waitFor(() => assert.equal(t.ui.getByRole('switch', { name: 'Count first' }).getAttribute('aria-checked'), 'true'));
   await t.waitFor(() => assert.match(fold.textContent, /Count first/));
   assert.deepEqual(puts(t), [{ countFirst: false }, { countFirst: true }]);
+  await t.waitFor(() => assert.equal(area.textContent, 'Saved'));
 });

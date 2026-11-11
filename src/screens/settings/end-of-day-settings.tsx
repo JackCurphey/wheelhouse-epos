@@ -7,6 +7,7 @@ import { buttonVariants } from '@/components/ui/button.tsx';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { RowSwitch } from './row-switch.tsx';
+import { useSavedNote } from './saved-note.tsx';
 
 /**
  * Settings › Front desk › End of day › Float (drawn as set-eod in
@@ -21,49 +22,38 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 // set-save-failed (owner setup decision 17): a change that can't be saved says so, and keeps it.
 const NO_INTERNET = 'Not saved — no internet connection. Your change is kept here.';
 
-type Saving = { ok: true; undo: () => void } | { ok: false; text: string; retry: () => void };
 /**
  * One End of day setting saved the moment it's chosen, as Signing in saves,
- * with "Saved" and Undo after (set-till-quick-saved), or a failed save kept
- * on screen with Try again (set-save-failed). Undo saves the value before.
+ * with Settings' note after (saved-note.tsx): "Saved" with Undo
+ * (set-till-quick-saved), or a failed save kept on screen with Try again
+ * (set-save-failed). Undo saves the value before, and is confirmed "Saved".
  */
 function useSaveNow<V extends number | boolean>(key: 'closeEntryMinutes' | 'countFirst') {
   const queryClient = useQueryClient();
+  const showNote = useSavedNote();
   const settings = useEndOfDay();
   const stored = settings.data?.[key] as V | undefined;
   const [kept, setKept] = useState<V | null>(null);
-  const [note, setNote] = useState<Saving | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function save(next: V, before: V | undefined) {
     setSaving(true);
     setKept(next);
-    setNote(null);
+    showNote(null);
     try {
       queryClient.setQueryData(KEY, await apiMutate<EndOfDay>('/api/end-of-day-settings', { [key]: next }, { method: 'PUT' }));
       // The till's Close the day reads the new setting.
       void queryClient.invalidateQueries({ queryKey: ['close-the-day'] });
       setKept(null);
-      setNote(before === undefined ? null : { ok: true, undo: () => void save(before, undefined) });
+      showNote(before === undefined ? { text: 'Saved' } : { text: 'Saved', action: { label: 'Undo', run: () => void save(before, undefined) } });
     } catch (err) {
       const text = !(err instanceof ApiError) ? NO_INTERNET : err.status < 500 && err.hasServerMessage ? err.message : SAVE_FAILED;
-      setNote({ ok: false, text, retry: () => void save(next, before) });
+      showNote({ text, failed: true, action: { label: 'Try again', run: () => void save(next, before) } });
     } finally {
       setSaving(false);
     }
   }
-  return { value: kept ?? stored, ready: !!settings.data, saving, note, change: (next: V) => void save(next, stored) };
-}
-
-/** "Saved" with Undo, or what went wrong with Try again (settings-frame.mjs toastHtml). */
-function SavedNote({ note, saving }: { note: Saving | null; saving: boolean }) {
-  if (!note) return null;
-  return (
-    <div role={note.ok ? 'status' : 'alert'} className="flex items-center gap-3 self-start rounded-lg bg-[var(--wh-ink)] py-1 pr-1 pl-3.5 text-sm font-semibold text-[var(--wh-panel)]">
-      <span>{note.ok ? 'Saved' : note.text}</span>
-      <button type="button" disabled={saving} onClick={note.ok ? note.undo : note.retry} className="min-h-11 border-0 bg-transparent px-3 text-sm font-bold whitespace-nowrap text-[var(--wh-panel)] underline">{note.ok ? 'Undo' : 'Try again'}</button>
-    </div>
-  );
+  return { value: kept ?? stored, ready: !!settings.data, saving, change: (next: V) => void save(next, stored) };
 }
 
 // Settings › End of day › Close the day (set-eod-close; cash-up decision 5;
@@ -97,7 +87,6 @@ export function CloseEntrySettings() {
       </div>
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Owners and managers see it on every till from then on. Closing time comes from the opening hours.</p>
       <div><Link to={`${ROUTES.settings}?room=office&fold=opening-hours`} className={buttonVariants({ variant: 'default' })}>Change opening hours</Link></div>
-      <SavedNote note={s.note} saving={s.saving} />
     </div>
   );
 }
@@ -117,7 +106,6 @@ export function CountFirstSettings() {
     <div className="flex flex-col gap-2">
       <RowSwitch label="Count first" on={s.value === true} disabled={s.saving || !s.ready} onChange={(next) => s.change(next)} />
       <p className="m-0 text-sm text-[var(--wh-muted)]">Count the cash before seeing what the till expects.</p>
-      <SavedNote note={s.note} saving={s.saving} />
     </div>
   );
 }

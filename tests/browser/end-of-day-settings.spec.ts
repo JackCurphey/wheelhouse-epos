@@ -46,7 +46,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(choices.getByRole('radio', { name: '30 minutes before' })).toHaveAttribute('aria-checked', 'true');
     await choices.getByRole('radio', { name: '1 hour before' }).click();
     await expect(closeFold).toContainText('1 hour before closing');
-    await expect(page.getByRole('status').filter({ hasText: 'Saved' }).getByRole('button', { name: 'Undo' })).toBeVisible();
+    // The note floats at the foot of the page, as drawn: 24px up on a computer, 12px on a phone.
+    const note = page.locator('[data-saved-note][role="status"] > *');
+    await expect(note.getByRole('button', { name: 'Undo' })).toBeVisible();
+    await expect(note).toContainText('Saved');
+    const box = (await note.boundingBox())!;
+    expect(Math.round(viewport.height - (box.y + box.height))).toBe(viewport.width < 768 ? 12 : 24);
     expect((await staffRequest(server!.baseUrl, owner.cookie, '/api/end-of-day-settings')).body.closeEntryMinutes).toBe(60);
     await expect(page.getByRole('link', { name: 'Change opening hours' })).toBeVisible();
 

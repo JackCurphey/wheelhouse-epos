@@ -11,8 +11,9 @@ import { currentShopTimeZone, toCapacitySettings } from '../workshop/jobs.js';
 // owner-setup-till-payments-eod design 3), all day when the opening hours
 // say the shop is shut today, and not once the day is closed. `hours` is
 // today's { open, close } or null; `minutes` is the shop's time of day.
-// `before` left out is the old fixed hour.
-export function entryFor(hours, minutes, closed, before = 60) {
+// `before` must be given, so no caller gets the old fixed hour by accident.
+export function entryFor(hours, minutes, closed, before) {
+  if (![0, 30, 60].includes(before)) throw new Error('Close the day shows 0, 30 or 60 minutes before closing');
   const closesAt = hours ? hours.close : null;
   if (closed) return { show: false, closesAt };
   return { show: hours ? minutes >= toMinutes(hours.close) - before : true, closesAt };
