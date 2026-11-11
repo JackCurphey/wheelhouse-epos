@@ -252,12 +252,20 @@ test('deleting Maya’s details: what identifies her goes, her sales and jobs st
 // while the deletion is asked for; the deletion must wait and then see it.
 
 // Waits until some other connection is waiting on a lock this one holds
-// (pg_blocking_pids), instead of a fixed pause (review of #590-#592).
-async function blockedBy(conn) {
+// (pg_blocking_pids), instead of a fixed pause (review of #590-#592). Up to
+// 30 s: under a full run's load (about 20, 11 Nov) the request took longer than
+// the old 5 s to reach the lock, and "Mark ready at the same moment" failed with
+// "nothing came to wait" (it passes alone). `pending`, the request that should
+// come to wait, ends the wait at once if it answers without ever waiting.
+async function blockedBy(conn, pending) {
   const { rows: [{ pid }] } = await conn.query('SELECT pg_backend_pid() AS pid');
-  for (let i = 0; i < 250; i += 1) {
+  let answered = null;
+  if (typeof pending?.then === 'function') pending.then((r) => { answered = `it answered without waiting: ${JSON.stringify(r?.status ?? r)}`; }, (e) => { answered = `it failed without waiting: ${e.message}`; });
+  const end = Date.now() + 30_000;
+  while (Date.now() < end) {
     const { rows: [{ n }] } = await conn.query('SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [pid]);
     if (n > 0) return;
+    if (answered) throw new Error(`nothing came to wait on this connection’s lock: ${answered}`);
     await new Promise((r) => setTimeout(r, 20));
   }
   throw new Error('nothing came to wait on this connection’s lock');
@@ -289,7 +297,7 @@ test('a sale being made while her details are deleted: the deletion waits, and t
       // The sale's receipt, sent to her, in the same transaction.
       await conn.query("INSERT INTO customer_messages (customer_id, sale_id, body, status, intent_state, channel, to_address) VALUES ($1, $2, '[Receipt]', 'sent', 'delivered', 'email', 'kim@example.test')", [kim.id, id]);
       const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-      await blockedBy(conn);
+      await blockedBy(conn, deleting);
       const before = await Promise.race([deleting.then(() => 'done'), new Promise((r) => setTimeout(() => r('waiting'), 50))]);
       assert.equal(before, 'waiting', 'the deletion waits for the sale');
       await conn.query('COMMIT');
@@ -317,7 +325,7 @@ test('a booking taking her bike in while her details are deleted: the deletion w
     [ana.id],
     async (conn) => {
       const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-      await blockedBy(conn);
+      await blockedBy(conn, deleting);
       await conn.query('COMMIT');
       return deleting;
     },
@@ -332,7 +340,7 @@ test('a merge holding her record while her details are deleted: the deletion wai
   const [req] = await openFor(bo.id);
   const res = await holding('SELECT id FROM customers WHERE id = $1 FOR UPDATE', [bo.id], async (conn) => {
     const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-    await blockedBy(conn);
+    await blockedBy(conn, deleting);
     const before = await Promise.race([deleting.then(() => 'done'), new Promise((r) => setTimeout(() => r('waiting'), 50))]);
     assert.equal(before, 'waiting');
     await conn.query("UPDATE customers SET notes = '[Merged note]' WHERE id = $1", [bo.id]);
@@ -365,7 +373,7 @@ test('a merge into hers that lands while the deletion waits is cleared too', asy
   const [req] = await openFor(eve.id);
   const res = await holding('SELECT id FROM customers WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[eve.id, twin.id]], async (conn) => {
     const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-    await blockedBy(conn);
+    await blockedBy(conn, deleting);
     // What a merge of the twin into her writes, before it commits.
     await conn.query('UPDATE customers SET active = 0, merged_into_id = $1 WHERE id = $2', [eve.id, twin.id]);
     await conn.query("INSERT INTO customer_merges (kept_id, other_id, other_was_id, other_name, moved) VALUES ($1, $2, $2, '[Twin name]', '{}'::jsonb)", [eve.id, twin.id]);
@@ -386,7 +394,7 @@ test('an Undo of a merge into hers at the same moment: no deadlock, both go thro
   const res = await holding('SELECT id FROM customer_merges WHERE id = $1 FOR UPDATE', [merged.body.id], async (conn) => {
     // Undo has its merge record; the deletion starts; Undo goes on to the customers.
     const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-    await blockedBy(conn);
+    await blockedBy(conn, deleting);
     undoStep = await conn.query('SELECT id FROM customers WHERE id = ANY($1::int[]) ORDER BY id FOR UPDATE', [[ivy.id, twin.id]]).then(() => 'locked', (err) => err.message);
     await conn.query(undoStep === 'locked' ? 'COMMIT' : 'ROLLBACK');
     return deleting;
@@ -409,7 +417,7 @@ test('a job’s order paid at the till at the same moment: the payment goes thro
     async (conn) => {
       // The payment has its sale; the deletion starts; the payment then moves the job on.
       const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
-      await blockedBy(conn);
+      await blockedBy(conn, deleting);
       payment = await conn.query('SELECT id FROM workshop_jobs WHERE id = $1 FOR UPDATE', [job.id]).then(() => 'paid', (err) => err.message);
       await conn.query(payment === 'paid' ? 'COMMIT' : 'ROLLBACK');
       return deleting;
@@ -445,7 +453,7 @@ test('Mark ready at the same moment: the deletion waits for the job, no deadlock
   const res = await holding('SELECT id FROM workshop_jobs WHERE id = $1 FOR UPDATE', [job.id], async (conn) => {
     const deleting = staff(`/api/privacy-requests/${req.id}/delete`, { method: 'POST', body: {} });
     // The deletion is waiting for the job Mark ready holds...
-    await blockedBy(conn);
+    await blockedBy(conn, deleting);
     // ...which then queues Bike ready for her.
     marked = await conn.query("INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, to_address) VALUES ($1, $2, '[Bike ready text]', 'sent', 'intended', 'sms', '07700 900 142')", [lia.id, job.id])
       .then(() => 'marked', (err) => err.message);
@@ -622,7 +630,7 @@ async function deletingHer(c, { jobId = null } = {}, during) {
     if (jobId) await conn.query('SELECT id FROM workshop_jobs WHERE id = $1 FOR UPDATE', [jobId]);
     await conn.query('SELECT id FROM customers WHERE id = $1 FOR UPDATE', [c.id]);
     const action = during();
-    await blockedBy(conn);
+    await blockedBy(conn, action);
     await conn.query("UPDATE customers SET name = '', email = '', phone = '', active = 0, update_channel = NULL, service_reminders = false, review_requests = false, marketing_permission = false, reminders_said_yes_at = NULL, reminders_said_yes_via = NULL, deleted_at = now() WHERE id = $1", [c.id]);
     await conn.query('UPDATE workshop_jobs SET link_token_hash = NULL WHERE customer_id = $1', [c.id]);
     await conn.query('DELETE FROM customer_sessions WHERE customer_login_id = $1', [c.loginId]);
@@ -714,7 +722,7 @@ for (const [what, lockCustomers] of [
     const res = await holding(lockCustomers, [[dee.id, twin.id]], async (conn) => {
       const note = portal(`/booking-links/${code}/notes`, { method: 'POST', body: { text: '[Her note]' } });
       // The note holds its job and waits on her record...
-      await blockedBy(conn);
+      await blockedBy(conn, note);
       // ...while the merge moves her job.
       moved = await conn.query('UPDATE workshop_jobs SET customer_id = $1 WHERE id = $2', [twin.id, job.id]).then(() => 'moved', (err) => err.message);
       await conn.query(moved === 'moved' ? 'COMMIT' : 'ROLLBACK');

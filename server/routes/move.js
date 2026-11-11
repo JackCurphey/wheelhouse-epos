@@ -73,8 +73,10 @@ async function readRowRequest(req, res, params) {
 const readDecided = (d) => ({ shared: d?.shared === true, notSameAs: Array.isArray(d?.notSameAs) ? d.notSameAs.filter((id) => Number.isInteger(id) && Math.abs(id) < 2 ** 31) : [] });
 
 // One send at a time per shop, as each holds a whole file in memory: a stalled
-// upload holds up only its own shop, until its connection ends.
-const sendingShops = new Set();
+// upload holds up only its own shop, until its connection ends. Each shop's
+// place holds the request that took it, so only that request gives it up.
+const sendingShops = new Map();
+const giveUpPlace = (shopId, req) => { if (sendingShops.get(shopId) === req) sendingShops.delete(shopId); };
 
 export function register(route) {
   route('GET', '/api/move', async (req, res) => {
@@ -84,11 +86,17 @@ export function register(route) {
   });
 
   route('POST', '/api/move/files', async (req, res, params, query, afterRelease, shopId) => {
+    // The shop's one-at-a-time place (beforeBody below) is given up before the
+    // answer goes, not after: server.js lets it go only once this request's
+    // connection is back in the pool, a round trip later, so a shop sending its
+    // next file as soon as the last was taken was told "busy" (seen under load,
+    // 11 Nov). By then this send's own work is done or undone.
+    const answer = (...args) => { giveUpPlace(shopId, req); return sendJson(...args); };
     let body;
     try {
       body = await readJsonBody(req, MAX_FILE_BODY_BYTES);
     } catch (err) {
-      if (err.message === 'Payload too large') return sendJson(res, 422, CANT_READ);
+      if (err.message === 'Payload too large') return answer(res, 422, CANT_READ);
       throw err;
     }
     const key = readRequestKey(body);
@@ -96,7 +104,7 @@ export function register(route) {
     if (!key.value) return badRequest(res, 'A request key is required');
     if (typeof body.dataBase64 !== 'string' || !body.dataBase64) return badRequest(res, 'No file received');
     const bytes = Buffer.from(body.dataBase64, 'base64');
-    if (bytes.length === 0 || bytes.length > MAX_FILE_BYTES) return sendJson(res, 422, CANT_READ);
+    if (bytes.length === 0 || bytes.length > MAX_FILE_BYTES) return answer(res, 422, CANT_READ);
     const fileName = String(body.fileName ?? '').replaceAll('\u0000', '').toWellFormed().trim().slice(-MAX_NAME).toWellFormed();
 
     const ctx = await currentSession(req);
@@ -115,7 +123,7 @@ export function register(route) {
         if (n > MAX_WAITING_A_SHOP) {
           await dbExec('ROLLBACK');
           res.setHeader('Retry-After', '5');
-          return sendJson(res, 429, BUSY);
+          return answer(res, 429, BUSY);
         }
         await prepare('INSERT INTO move_file_bytes (file_id, bytes) VALUES (?, ?) RETURNING file_id').get(made.id, bytes);
         file = made;
@@ -123,7 +131,7 @@ export function register(route) {
         file = await prepare('SELECT * FROM move_files WHERE request_key_hash = ?').get(keyHash);
         if (file.request_body_hash !== bodyHash) {
           await dbExec('ROLLBACK');
-          return sendJson(res, 409, REUSED_KEY);
+          return answer(res, 409, REUSED_KEY);
         }
       }
       await dbExec('COMMIT');
@@ -132,7 +140,7 @@ export function register(route) {
       throw err;
     }
     wakeBringingAcross(shopId);
-    sendJson(res, 202, serializeFile(file));
+    answer(res, 202, serializeFile(file));
   }, {
     maxBody: MAX_FILE_BODY_BYTES,
     upload: true,
@@ -144,8 +152,8 @@ export function register(route) {
         sendJson(res, 429, BUSY);
         return null;
       }
-      sendingShops.add(shopId);
-      return () => sendingShops.delete(shopId);
+      sendingShops.set(shopId, req);
+      return () => giveUpPlace(shopId, req);
     },
   });
 
