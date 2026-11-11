@@ -40,6 +40,8 @@ export const ROUTES = {
   'rp-workshop': '/workshop/reports/workshop',
   // Returning customers (rp-returning): new and returning customers by month, and who hasn't been in lately.
   'rp-returning': '/workshop/reports/returning',
+  // VAT (rp-vat): sales by VAT rate for the shop's VAT quarter; asks for the quarter the first time (rp-vat-first).
+  'rp-vat': '/workshop/reports/vat',
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',
