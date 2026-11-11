@@ -5225,3 +5225,17 @@ Decided here, for Jack to overrule.
    12-month graph's key reads "The 12 months before" (`reports.mjs` lineGraph),
    and the period group is named "Period" for a screen reader but shows no
    heading above the chips (`reports.mjs:60`, `aria-label="Period"`).
+### 11 Nov 2026: Left out from Citrus Lime (`openspec/changes/your-data-download` group 4, `set-data-export`, `mv-sorted`)
+
+Decided here, for Jack to overrule.
+
+1. **The fold's line for the rows left out is a fifth ticked row under the
+   four**, "Left out from Citrus Lime · [n] rows", shown only while there
+   are any; the drawing has the four rows only. In the spreadsheet,
+   Citrus Lime's own columns follow in Citrus Lime's order for each kind
+   of file. *Pattern:* the four drawn rows.
+2. **Touches answer 3 (the shared-contact rule), no change to it:** a row
+   left out that only shares an email or phone with a customer whose
+   details were later deleted stays, with its reason, so that email or
+   phone is in this spreadsheet too. Their own rows go at the deletion,
+   as before.
