@@ -98,6 +98,7 @@ test('This week counts each sale once, from both records, on the shop\'s day', a
   const res = await sales('period=this-week');
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const { period, rows, total, figures } = res.body;
+  assert.equal(res.body.today, '2026-09-17', 'the screen needs the shop\'s today to limit Pick dates');
   assert.equal(period.label, 'So far: Mon 14 – Thu 17 September');
   assert.equal(period.against, 'the same days last week');
   const by = Object.fromEntries(rows.map((r) => [r.key, r]));
