@@ -70,7 +70,11 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 4. Merge your own pull request once `npm test` and `npm run test:browser`
    have passed locally on its final commit (after merging the latest main) and
    you have read your own diff against the spec and the drawings (a
-   self-review). CI runs once a day, not on each pull request (Jack, 28 Oct,
+   self-review). If main moves after a clean full run, and what it brings in
+   doesn't overlap your files, touch a risky area or change test
+   infrastructure, lint plus your related tests on the merged commit are
+   enough (Jack, 11 Nov, `docs/decisions/2026-11-11-rerun-only-when-main-overlaps.md`).
+   CI runs once a day, not on each pull request (Jack, 28 Oct,
    `docs/decisions/2026-10-28-ci-once-a-day.md`); in a risky area, also run it
    by hand on the branch (`gh workflow run test.yml --ref <branch>`) and merge
    when it is green. **Four risky areas also need `/review` run first**, and go in the weekly
@@ -150,6 +154,14 @@ design or debugging, then back with `/model sonnet`. Start a new session, or
 
 - The app runs on `localhost:8080`; Postgres via `docker compose` on port
   5433. `npm test` hangs silently without compose Postgres up.
+- Full runs go through `npm run full-check` (Jack, 11 Nov): it waits its
+  turn for a lock shared by every worktree on the Mac
+  (`/tmp/wheelhouse-full-run.lock`, saying who holds it and since when), then
+  runs `npm run lint`, `npm test` and `npm run test:browser`, all three even if
+  one fails. Two full runs at once overload the Mac and fail tests that pass
+  alone. A stress run queues the same way:
+  `npm run full-check -- --lock-only -- <command>`. Stop a run with Ctrl-C,
+  not `kill -9`, which leaves its tests running after the lock is free.
 - Server tests pin the clock to 1 Sep 2026 (`WHEELHOUSE_TEST_CLOCK`); never
   add fixed test dates before it. Customer tests need `npm run pretest` first.
 - Compare DOM query results with `assert.ok(x === null)`: `assert.equal` on a

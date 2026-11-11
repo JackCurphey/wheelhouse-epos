@@ -85,3 +85,49 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await noSideScroll(page);
   });
 }
+
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Takings and cash-ups, then a closed day's report`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    // Monday and Tuesday closed, as Close the day saves them; today not closed.
+    await runWithShop(owner.shop.id, async () => {
+      for (const [day, takings, cash, counted, banked, online] of [['2026-09-14', 20000, 7000, 7000, 5000, 3000], ['2026-09-15', 30000, 14000, 13500, 11500, 2500]] as const) {
+        const check = await prepare('INSERT INTO float_checks (day, login_id, expected_pence, counted_pence) VALUES (?, ?, 15000, 15000) RETURNING id').get(day, owner.loginId);
+        await prepare(
+          `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence, paid_outs_pence, expected_pence, counted_pence,
+             float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence)
+           VALUES (?, ?, ?, ?, 15000, ?, ?, 0, ?, ?, 15000, ?, ?, ?, 0, ?)`
+        ).run(day, owner.loginId, `${day}T16:30:00Z`, check.id, cash, cash, cash, counted, banked, takings, takings - cash, online);
+      }
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Takings and cash-ups/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Takings and cash-ups' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Closed days’ takings' }).getByText('£500.00')).toBeVisible();
+    const table = page.getByRole('table', { name: 'Closed days' });
+    await expect(table.getByRole('row', { name: /^Thu 17 Sep — — — Not closed yet$/ })).toBeVisible();
+    await expect(table.getByRole('row', { name: /^Tue 15 Sep · Online £25\.00 — — Not a till$/ })).toBeVisible();
+    await expect(table.getByText('−£5.00')).toBeVisible();
+    await noSideScroll(page);
+
+    await table.getByRole('button', { name: /^Tue 15 Sep/ }).click();
+    const report = page.getByRole('dialog', { name: 'Tue 15 September' });
+    await expect(report.getByText(/^Closed by Jack Lewis at \d\d:\d\d$/)).toBeVisible();
+    await expect(report.getByText('Banked')).toBeVisible();
+    await expect(report.getByText('£115.00')).toBeVisible();
+    await expect(report.getByRole('button', { name: 'Print' })).toBeVisible();
+    await noSideScroll(page);
+    await report.getByRole('button', { name: 'Close' }).click();
+    await expect(report).toBeHidden();
+
+    // A bookmark to the address alone.
+    await page.goto(`${server!.baseUrl}/workshop/reports/takings?period=this-week`);
+    await expect(page.getByRole('table', { name: 'Closed days' })).toBeVisible();
+  });
+}

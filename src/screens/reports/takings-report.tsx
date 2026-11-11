@@ -1,0 +1,159 @@
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api/client.ts';
+import { PillGroup } from '@/components/ui/pill-group.tsx';
+import { dayLabel } from '@/screens/diary/rules.ts';
+import { clock } from '@/screens/diary/when.ts';
+import { Report, type Close } from '@/screens/till/close-the-day.tsx';
+import { Box, BackToReports, Note, Page, Refusal } from './reports-bits.tsx';
+import { compareWords, differenceText, money, type SalesRow } from './reports-format.ts';
+import { ReportGraph, graphWords } from './report-graph.tsx';
+import { PickDates } from './pick-dates.tsx';
+import { Figure, PERIODS } from './sales-report.tsx';
+
+/**
+ * Takings and cash-ups (rp-takings and rp-day in generator/reports.mjs; Cash-up
+ * 6, audit H1, M12, M17, L3; Jack's answers 4, 5 and 9 of 10 Nov;
+ * openspec/changes/reports-sales-and-takings): the closed days of a period as
+ * they were saved at each close, one row per closed day (no till), today as
+ * "Not closed yet", each day's online money as a row of its own, and each closed
+ * day opening its end-of-day report. The period is in the address, as Sales'
+ * is, and so is the open day (?day=).
+ */
+type Row =
+  | { kind: 'day'; key: string; label: string; closed: false }
+  | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
+  | { kind: 'online'; key: string; label: string; onlinePence: number }
+  | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
+type Figures = { pence: number; beforePence: number; diffPence: number | null };
+type Takings = {
+  period: { period: string; from: string; to: string; through: string; soFar: boolean; unit: 'day' | 'month'; label: string; against: string };
+  figures: { takings: Figures; card: Figures; cash: Figures; other: Figures; online: Figures; cashDifference: Figures };
+  rows: Row[]; bars: SalesRow[]; empty: boolean; nothingBefore: boolean; shopLine: string; today: string;
+};
+
+const KEY_NOW: Record<string, string> = { 'this-week': 'Closed days this week', 'this-month': 'Closed days this month', 'last-month': 'Closed days last month' };
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// A cash difference in the warning colour with a minus sign when short, and in words for a screen reader.
+function Difference({ pence }: { pence: number }) {
+  if (pence < 0) return <span className="font-bold text-[var(--wh-warn-ink)]">{differenceText(pence)}<span className="sr-only"> short</span></span>;
+  return <span>{differenceText(pence)}{pence > 0 ? <span className="sr-only"> over</span> : null}</span>;
+}
+
+const CELL = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-right max-md:px-1 max-md:text-size-13';
+const HEAD = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-right text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
+
+function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => void }) {
+  return (
+    <div className="overflow-x-auto">
+      <table aria-label="Closed days" className="w-full border-collapse text-sm max-md:text-size-13">
+        <thead><tr>
+          <th scope="col" className={`${HEAD} text-left`}>Day</th><th scope="col" className={HEAD}>Takings</th>
+          <th scope="col" className={HEAD}>Cash banked</th><th scope="col" className={HEAD}>Cash difference</th><th scope="col" className={HEAD}>Closed by</th>
+        </tr></thead>
+        <tbody>
+          {rows.map((r) => {
+            if (r.kind === 'online') {
+              return (
+                <tr key={`o${r.key}`}>
+                  <th scope="row" className={`${CELL} text-left font-normal`}>{r.label}</th>
+                  <td className={CELL}>{money(r.onlinePence)}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
+                </tr>
+              );
+            }
+            if (r.kind === 'day' && !r.closed) {
+              return (
+                <tr key={`d${r.key}`}>
+                  <th scope="row" className={`${CELL} text-left font-semibold`}>{r.label}</th>
+                  <td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not closed yet</td>
+                </tr>
+              );
+            }
+            const open = r.kind === 'day'
+              ? <button type="button" onClick={() => onOpen(r.closeId)} className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-[var(--wh-ink)]">{r.label}<span aria-hidden="true" className="text-[var(--wh-muted)]">›</span></button>
+              : <span className="font-semibold">{r.label}</span>;
+            return (
+              <tr key={`${r.kind}${r.key}`}>
+                <th scope="row" className={`${CELL} text-left`}>{open}</th>
+                <td className={CELL}>{money(r.takingsPence)}</td><td className={CELL}>{money(r.bankedPence)}</td>
+                <td className={CELL}><Difference pence={r.differencePence} /></td>
+                <td className={CELL}>{r.kind === 'day' ? r.closedByName : `${r.closedDays} closed days`}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DayReport({ id, onClose }: { id: number; onClose: () => void }) {
+  const day = useQuery({ queryKey: ['reports-day', id], queryFn: () => apiGet<{ close: Close }>(`/api/reports/days/${id}`), retry: false });
+  if (day.isError) return <Refusal error={day.error} />;
+  if (!day.data) return null;
+  const { close } = day.data;
+  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay />;
+}
+
+export function TakingsReportPage() {
+  const [params, setParams] = useSearchParams();
+  const period = params.get('period') ?? 'this-week';
+  const from = params.get('from') ?? '';
+  const to = params.get('to') ?? '';
+  const openDay = Number(params.get('day')) || null;
+  const [picking, setPicking] = useState(false);
+  const query = new URLSearchParams({ period, ...(period === 'dates' ? { from, to } : {}) }).toString();
+  const takings = useQuery({ queryKey: ['reports-takings', query], queryFn: () => apiGet<Takings>(`/api/reports/takings?${query}`), retry: false });
+  const report = takings.data;
+  const keep = () => { const next: Record<string, string> = { period }; if (period === 'dates') { next.from = from; next.to = to; } return next; };
+
+  return (
+    <Page>
+      <BackToReports />
+      <div className="flex min-w-0 flex-col gap-1">
+        <h2 className="m-0 text-xl font-bold">Takings and cash-ups</h2>
+        {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
+      </div>
+      <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={(v) => (v === 'dates' ? setPicking(true) : setParams({ period: v }))} options={PERIODS} />
+      {takings.isError ? <Refusal error={takings.error} /> : null}
+      {report ? <Body report={report} onOpen={(id) => setParams({ ...keep(), day: String(id) })} period={period} /> : takings.isError ? null : <Note>Loading…</Note>}
+      {picking && report ? (
+        <PickDates subtitle={`Takings and cash-ups · ${report.shopLine}`} today={report.today} from={from || report.today} to={to || report.today}
+          onClose={() => setPicking(false)} onShow={(a, b) => { setPicking(false); setParams({ period: 'dates', from: a, to: b }); }} />
+      ) : null}
+      {openDay ? <DayReport id={openDay} onClose={() => setParams(keep())} /> : null}
+    </Page>
+  );
+}
+
+function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number) => void; period: string }) {
+  const { figures: f, period: p } = report;
+  const words = (g: Figures) => compareWords(g.diffPence, p.against, 'money');
+  const title = 'Takings by closed day';
+  const spoken = graphWords({ title, rows: report.bars, unitWord: p.unit === 'month' ? 'month' : 'day', diffPence: f.takings.diffPence, against: p.against });
+  return (
+    <>
+      <div className="grid grid-cols-3 gap-2.5 max-md:grid-cols-2">
+        <Figure name="Closed days’ takings" value={money(f.takings.pence)} words={words(f.takings)} />
+        <Figure name="Card" value={money(f.card.pence)} words={words(f.card)} />
+        <Figure name="Cash" value={money(f.cash.pence)} words={words(f.cash)} />
+        <Figure name="Other" value={money(f.other.pence)} words="Gift cards, store credit and customer accounts" />
+        <Figure name="Online" value={money(f.online.pence)} words="Paid on the website · separate from the tills" />
+        <Figure name="Cash differences" value={<Difference pence={f.cashDifference.pence} />} words={words(f.cashDifference)} />
+      </div>
+      {report.empty ? (
+        <Box><div className="flex flex-col items-center gap-2 px-3 py-9 text-center"><span className="text-size-17 font-bold">No days closed in this period</span></div></Box>
+      ) : (
+        <Box>
+          <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
+            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} />
+          <ClosedDays rows={report.rows} onOpen={onOpen} />
+        </Box>
+      )}
+      <Note>Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.</Note>
+      <Note>Open a closed day for its end-of-day report.</Note>
+    </>
+  );
+}

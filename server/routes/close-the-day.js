@@ -252,7 +252,8 @@ async function lateDay(day, count) {
   return { start, carriedPence, base: count.by.pence - carriedPence };
 }
 
-async function closeOn(day) {
+// The saved close for a day, as the end-of-day report shows it (Reports reads it too).
+export async function closeOn(day) {
   const r = await prepare(`SELECT c.*, to_char(c.day, 'YYYY-MM-DD') AS day_text, l.name AS closed_by_name
     FROM day_closes c JOIN logins l ON l.id = c.login_id WHERE c.day = ?`).get(day);
   if (!r) return null;

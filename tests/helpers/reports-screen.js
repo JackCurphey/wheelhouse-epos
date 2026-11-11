@@ -105,3 +105,44 @@ export async function openReports(path, { who = OWNER, answers = {}, phone = fal
   const ui = rtl.render(createElement(shell.AppShell));
   return { ...rtl, ui };
 }
+
+// Takings and cash-ups on Thursday 17 September: Monday to Wednesday closed, today not yet.
+const bar = (key, label, takings, before, notReached = false) => ({
+  key, label, notReached, takingsPence: notReached ? null : takings, sales: null, averagePence: null, beforeTakingsPence: before, beforeSales: 0,
+});
+export const TAKINGS_WEEK = {
+  period: { period: 'this-week', from: '2026-09-14', to: '2026-09-20', through: '2026-09-17', soFar: true, unit: 'day', label: 'So far: Mon 14 – Thu 17 September', against: 'the same days last week' },
+  before: { from: '2026-09-07', to: '2026-09-09' },
+  figures: {
+    takings: { pence: 60000, beforePence: 40000, diffPence: 20000 },
+    card: { pence: 33000, beforePence: 23000, diffPence: 10000 },
+    cash: { pence: 24500, beforePence: 15000, diffPence: 9500 },
+    other: { pence: 2500, beforePence: 2000, diffPence: 500 },
+    online: { pence: 5500, beforePence: 2000, diffPence: 3500 },
+    cashDifference: { pence: -500, beforePence: -200, diffPence: -300 },
+  },
+  rows: [
+    { kind: 'day', key: '2026-09-17', label: 'Thu 17 Sep', closed: false },
+    { kind: 'day', key: '2026-09-16', label: 'Wed 16 Sep', closed: true, closeId: 31, takingsPence: 10000, bankedPence: 2500, differencePence: 0, closedByName: 'Jo Taylor', closedAt: '2026-09-16T16:30:00Z' },
+    { kind: 'online', key: '2026-09-16', label: 'Wed 16 Sep · Online', onlinePence: 0 },
+    { kind: 'day', key: '2026-09-15', label: 'Tue 15 Sep', closed: true, closeId: 30, takingsPence: 30000, bankedPence: 11500, differencePence: -500, closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z' },
+    { kind: 'online', key: '2026-09-15', label: 'Tue 15 Sep · Online', onlinePence: 2500 },
+    { kind: 'day', key: '2026-09-14', label: 'Mon 14 Sep', closed: true, closeId: 29, takingsPence: 20000, bankedPence: 5000, differencePence: 0, closedByName: 'Jo Taylor', closedAt: '2026-09-14T16:30:00Z' },
+    { kind: 'online', key: '2026-09-14', label: 'Mon 14 Sep · Online', onlinePence: 3000 },
+  ],
+  bars: [
+    bar('2026-09-14', 'Mon 14 Sep', 20000, 15000), bar('2026-09-15', 'Tue 15 Sep', 30000, 25000), bar('2026-09-16', 'Wed 16 Sep', 10000, 0),
+    bar('2026-09-17', 'Thu 17 Sep', 0, 5000), bar('2026-09-18', 'Fri 18 Sep', 0, 0, true), bar('2026-09-19', 'Sat 19 Sep', 0, 0, true), bar('2026-09-20', 'Sun 20 Sep', 0, 0, true),
+  ],
+  empty: false, nothingBefore: false, firstCloseOn: '2026-09-07', shopLine: 'North Street Cycles, Bolton', today: '2026-09-17',
+};
+
+// Tuesday's close, as /api/reports/days/30 gives it (the Close shape of close-the-day).
+export const TUESDAY_CLOSE = {
+  close: {
+    id: 30, day: '2026-09-15', closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z',
+    floatStart: { pence: 15000, how: 'counted', expectedPence: 15000, byName: 'Jo Taylor', at: '2026-09-15T07:30:00Z' },
+    cashPence: 14000, drawerCashPence: 14000, paidOutsPence: 0, expectedPence: 14000, countedPence: 13500, differencePence: -500, reason: '',
+    floatPence: 15000, bankedPence: 11500, leftPence: 15000, topUpPence: 1500, takingsPence: 30000, cardPence: 15000, otherPence: 1000, onlinePence: 2500, countedBy: null,
+  },
+};
