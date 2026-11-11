@@ -209,8 +209,7 @@ function PrivacyNoticeSetting() {
  * receipt. The Paid box's Print, Email and Text choices come later.
  */
 function ReceiptsBox() {
-  const { details, valueOf, setTyped, save, saveQuarter, note } = useShopDetails();
-  const quarter = details.data?.vatQuarterStartMonth ?? null;
+  const { details, valueOf, setTyped, save, note } = useShopDetails();
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor="receipt-footer" className="text-sm font-semibold">Words at the bottom</label>
