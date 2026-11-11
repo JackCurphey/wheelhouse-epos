@@ -19,7 +19,7 @@ export function penceText(pence: number): string {
 export function poundsText(pounds: number): string {
   const pence = Math.round(Math.abs(pounds) * 100);
   const text = penceText(pence);
-  return pounds < 0 && pence > 0 ? `−${text}` : text;
+  return pounds < 0 && pence > 0 && text !== '' ? `−${text}` : text;
 }
 
 /** Pence as plain pounds and pence for a box someone types in: 123450 is "1234.50", no comma. */

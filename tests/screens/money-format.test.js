@@ -63,3 +63,16 @@ test('stock lists and the reports tables', async () => {
   assert.equal(reports.differenceText(-123450), '−£1,234.50');
   assert.equal(reports.compareWords(123450, 'last week', 'money'), 'Up £1,234.50 on last week');
 });
+
+test('the booking details summary shows a spending limit with the comma too', async () => {
+  const { summaryLines } = await import(new URL('../../.test-build/screens/book/details-rules.js', import.meta.url).href);
+  const services = { shopName: 'North Street Cycles', showPrices: false, full: [], categories: [], uncategorised: [{ id: 1, name: 'Standard service', price: 80, minutes: 60 }] };
+  const lines = summaryLines(services, { limitOn: true, limitText: '1500', serviceIds: [1] }, 'Mon 5 Oct, 10:00');
+  assert.ok(lines.includes('Extra work: go ahead if the whole bill is no more than £1,500'), JSON.stringify(lines));
+  assert.ok(summaryLines(services, { limitOn: true, limitText: '200', serviceIds: [1] }, 'x').includes('Extra work: go ahead if the whole bill is no more than £200'));
+});
+
+test('a figure that is not a number shows nothing, not a lone minus sign', () => {
+  assert.equal(poundsText(-Infinity), '');
+  assert.equal(poundsText(NaN), '');
+});

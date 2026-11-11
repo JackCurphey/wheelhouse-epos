@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FocusEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
-import { penceText } from '@/lib/money.ts';
+import { penceInput, penceText } from '@/lib/money.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button.tsx';
@@ -661,7 +661,7 @@ function ConfirmSetting() {
 
 // Pounds typed, whole pence saved: 1p to £10,000 (deposit-settings design 1).
 const penceFromPounds = (pounds: number) => { const p = Math.round(pounds * 100); return Math.abs(p - pounds * 100) < 1e-6 && p >= 1 && p <= 1_000_000 ? p : null; };
-const poundsBox = (pence: number) => (pence / 100).toFixed(2);
+const poundsBox = penceInput;
 const AMOUNT_INVALID = 'Enter an amount from £0.01 to £10,000';
 
 /** The deposit as the Online booking fold's summary says it (settings-frame.mjs line 192). */
