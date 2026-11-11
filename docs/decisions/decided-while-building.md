@@ -5087,6 +5087,12 @@ Decided here, for Jack to overrule.
    hour rounded up (09:00 to 17:30 is 9 to 18), and are widened to include
    any hour with a sale, so the table always adds up to the headline figure.
    Answer 7 says "across the shop's opening hours".
-5. **A week that is over** (Sunday) reads "Mon 14 – Sun 20 September",
-   compared with "last week" in full; the drawing only shows a week in
-   progress.
+5. **A period still counts "so far" until its last day is over:** on a
+   Sunday, the week reads "So far: Mon 14 – Sun 20 September", against the
+   same days last week (the whole of it). The spec says a period that
+   hasn't ended says "So far".
+6. **A picked range over 62 days is shown by month, and its comparison is
+   the total of the whole period before it,** not month against month (the
+   period before can touch a different number of calendar months than the
+   range). Today's and the other comparisons are totalled the same way, so
+   a sale outside opening hours is never left out. Found in review.

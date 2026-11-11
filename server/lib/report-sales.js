@@ -16,7 +16,7 @@ const BUCKET_SQL = {
 // Sales and their money for each bucket between two shop days (inclusive).
 async function grouped(unit, from, to, timeZone) {
   const rows = await prepare(
-    `SELECT ${BUCKET_SQL[unit]} AS bucket, count(*)::int AS sales, COALESCE(sum(total_pence), 0)::int AS pence
+    `SELECT ${BUCKET_SQL[unit]} AS bucket, count(*)::int AS sales, COALESCE(sum(total_pence), 0)::bigint::float8 AS pence
        FROM all_sales
       WHERE made_at >= (?::date)::timestamp AT TIME ZONE ? AND made_at < (?::date + 1)::timestamp AT TIME ZONE ?
       GROUP BY 1`
@@ -73,8 +73,11 @@ export async function salesReport(choice, today) {
   const sum = (list, k) => list.reduce((n, r) => n + (r[k] ?? 0), 0);
   const takings = sum(rows, 'takingsPence');
   const count = sum(rows, 'sales');
-  const beforeTakings = sum(rows, 'beforeTakingsPence');
-  const beforeCount = sum(rows, 'beforeSales');
+  // The period before is added up from everything it holds, not from the rows,
+  // so a sale outside the opening hours or a month the rows don't line up with
+  // still counts in the comparison (review).
+  const beforeTakings = [...before.values()].reduce((n, r) => n + r.pence, 0);
+  const beforeCount = [...before.values()].reduce((n, r) => n + r.sales, 0);
 
   const firstSaleOn = await firstSaleDay(timeZone);
   const nothingBefore = !firstSaleOn || firstSaleOn >= period.from;

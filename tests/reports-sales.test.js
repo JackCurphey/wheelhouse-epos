@@ -62,10 +62,20 @@ before(async () => {
   await mine.till('2026-09-08T10:00:00Z', 5000);
   await mine.till('2026-09-10T10:00:00Z', 2000);
   await mine.till('2026-09-11T10:00:00Z', 99900);   // Friday: not "the same days"
+  // Last Thursday (10 Sep) also had a sale at 20:30 local, after closing time.
+  await mine.till('2026-09-10T19:30:00Z', 1000);
+  // Pennies for the rounding test, after the shop's first sale: 3p, 3p and 4p on 25 Aug, 2p and 3p on 26 Aug.
+  await mine.till('2026-08-25T10:00:00Z', 3);
+  await mine.till('2026-08-25T11:00:00Z', 3);
+  await mine.till('2026-08-25T12:00:00Z', 4);
+  await mine.till('2026-08-26T10:00:00Z', 2);
+  await mine.till('2026-08-26T11:00:00Z', 3);
   // The shop's first sale, in August.
   await mine.old('2026-08-20T10:00:00Z', 5);
   // Another shop, on the same days.
-  await (await seed(other)).till('2026-09-15T10:00:00Z', 77700);
+  const theirs = await seed(other);
+  await theirs.till('2026-09-15T10:00:00Z', 77700);
+  await theirs.till('2026-07-02T10:00:00Z', 700);
 });
 
 after(async () => {
@@ -112,10 +122,10 @@ test('This week counts each sale once, from both records, on the shop\'s day', a
 
 test('each figure is compared with the same days last week', async () => {
   const { figures } = (await sales('period=this-week')).body;
-  // Last week, Mon to Thu: £100 + £50 + £20 = £170 in 3 sales, average £56.67. The Friday is left out.
-  assert.deepEqual(figures.takings, { pence: 8800, beforePence: 17000, diffPence: -8200 });
-  assert.deepEqual(figures.sales, { count: 6, beforeCount: 3, diff: 3 });
-  assert.deepEqual(figures.average, { pence: 1467, beforePence: 5667, diffPence: -4200 });
+  // Last week, Mon to Thu: £100 + £50 + £20 + £10 = £180 in 4 sales, average £45. The Friday is left out.
+  assert.deepEqual(figures.takings, { pence: 8800, beforePence: 18000, diffPence: -9200 });
+  assert.deepEqual(figures.sales, { count: 6, beforeCount: 4, diff: 2 });
+  assert.deepEqual(figures.average, { pence: 1467, beforePence: 4500, diffPence: -3033 });
 });
 
 test('Last 12 months is by month, with the same figures in the table', async () => {
@@ -125,10 +135,10 @@ test('Last 12 months is by month, with the same figures in the table', async () 
   assert.equal(period.label, 'October 2025 – September 2026');
   assert.equal(rows.length, 12);
   const by = Object.fromEntries(rows.map((r) => [r.key, r]));
-  assert.equal(by['2026-08'].takingsPence, 500);
-  assert.equal(by['2026-09'].takingsPence, 8800 + 17000 + 99900);
+  assert.equal(by['2026-08'].takingsPence, 500 + 15);
+  assert.equal(by['2026-09'].takingsPence, 8800 + 18000 + 99900);
   assert.equal(total.label, '12 months');
-  assert.equal(total.takingsPence, 500 + 8800 + 17000 + 99900);
+  assert.equal(total.takingsPence, 515 + 8800 + 18000 + 99900);
   assert.equal(res.body.figures.takings.pence, total.takingsPence);
 });
 
@@ -139,12 +149,12 @@ test('Today is by hour on the shop\'s clock', async () => {
   assert.deepEqual([nine.takingsPence, nine.sales], [4000, 1]);
   assert.equal(res.body.figures.takings.pence, 4000);
   assert.equal(res.body.period.against, 'last Thursday');
-  assert.equal(res.body.figures.takings.beforePence, 2000); // last Thursday, 10 Sep
+  assert.equal(res.body.figures.takings.beforePence, 3000); // last Thursday, 10 Sep: £20 and the £10 after closing
 });
 
 test('Pick dates shows the range against the same number of days before it', async () => {
   const res = await sales('period=dates&from=2026-09-07&to=2026-09-10');
-  assert.equal(res.body.figures.takings.pence, 17000);
+  assert.equal(res.body.figures.takings.pence, 18000);
   assert.equal(res.body.rows.length, 4);
   const wrong = await sales('period=dates&from=2026-09-10&to=2026-09-07');
   assert.equal(wrong.status, 400);
@@ -185,4 +195,39 @@ test('Staff are refused, and signed out is 401', async () => {
     const out = await staffRequest(server.baseUrl, null, path);
     assert.equal(out.status, 401, path);
   }
+});
+
+test('Average sale is rounded to the penny, half up', async () => {
+  // 25 Aug: 3p + 3p + 4p = 10p over 3 sales is 3.33p, which rounds down to 3p.
+  const down = await sales('period=dates&from=2026-08-25&to=2026-08-25');
+  assert.deepEqual([down.body.figures.takings.pence, down.body.figures.average.pence], [10, 3]);
+  // 26 Aug: 2p + 3p = 5p over 2 sales is 2.5p, which rounds up to 3p.
+  const half = await sales('period=dates&from=2026-08-26&to=2026-08-26');
+  assert.equal(half.body.figures.average.pence, 3);
+});
+
+test('This month and Last month are served, each against its comparison', async () => {
+  const month = await sales('period=this-month');
+  assert.equal(month.body.period.against, 'the same days last month');
+  assert.equal(month.body.figures.takings.pence, 8800 + 18000 + 99900);
+  assert.equal(month.body.figures.takings.beforePence, 0, 'nothing sold on 1 to 17 August');
+  const last = await sales('period=last-month');
+  assert.equal(last.body.rows.length, 31);
+  assert.equal(last.body.figures.takings.pence, 515);
+});
+
+test('a picked range over 62 days is by month and keeps every sale of the period before', async () => {
+  // 5 Jul to 17 Sep is 75 days: the 75 days before run from 21 Apr to 4 Jul and
+  // touch four calendar months, though the range has three (review).
+  const res = await sales('period=dates&from=2026-07-05&to=2026-09-17', other);
+  assert.equal(res.body.period.unit, 'month');
+  assert.deepEqual(res.body.rows.map((r) => r.key), ['2026-07', '2026-08', '2026-09']);
+  assert.equal(res.body.figures.takings.pence, 77700);
+  assert.equal(res.body.figures.takings.beforePence, 700, 'the 2 July sale is in the period before');
+});
+
+test('another shop\'s sales never set this shop\'s first-sale day', async () => {
+  const res = await sales('period=today', other);
+  assert.equal(res.body.firstSaleOn, '2026-07-02');
+  assert.equal((await sales('period=today')).body.firstSaleOn, '2026-08-20');
 });

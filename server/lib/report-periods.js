@@ -84,13 +84,13 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
   } else if (period === 'this-week') {
     const end = addDays(monday, 6);
     const elapsed = daysBetween(monday, today);
-    const soFar = today < end;
+    const soFar = today <= end; // today is still counting until it is over
     const beforeFrom = addDays(monday, -7);
     result = {
       from: monday, to: end, through: today, soFar, unit: 'day',
-      label: `${soFar ? 'So far: ' : ''}${rangeLabelShort(monday, soFar ? today : end, true)}`,
-      against: soFar ? 'the same days last week' : 'last week',
-      before: { from: beforeFrom, to: addDays(beforeFrom, soFar ? elapsed : 6) },
+      label: `So far: ${rangeLabelShort(monday, today, true)}`,
+      against: 'the same days last week',
+      before: { from: beforeFrom, to: addDays(beforeFrom, elapsed) },
       buckets: dayBuckets(monday, end, today, beforeFrom),
     };
   } else if (period === 'this-month') {
@@ -98,13 +98,13 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
     const end = monthEnd(today);
     const beforeFrom = addMonths(first, -1);
     const beforeEnd = monthEnd(beforeFrom);
-    const soFar = today < end;
+    const soFar = today <= end;
     const same = addDays(beforeFrom, daysBetween(first, today));
     result = {
       from: first, to: end, through: today, soFar, unit: 'day',
-      label: soFar ? `So far: ${rangeLabelShort(first, today, false)}` : `${monthLabel(first)}`,
-      against: soFar ? 'the same days last month' : 'the month before',
-      before: { from: beforeFrom, to: soFar ? (same > beforeEnd ? beforeEnd : same) : beforeEnd },
+      label: `So far: ${rangeLabelShort(first, today, false)}`,
+      against: 'the same days last month',
+      before: { from: beforeFrom, to: same > beforeEnd ? beforeEnd : same },
       buckets: dayBuckets(first, end, today, beforeFrom),
     };
   } else if (period === 'last-month') {
@@ -121,7 +121,7 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
     const end = monthEnd(today);
     const beforeFrom = addMonths(first, -12);
     result = {
-      from: first, to: end, through: today, soFar: today < end, unit: 'month',
+      from: first, to: end, through: today, soFar: today <= end, unit: 'month',
       label: `${monthLabel(first)} – ${monthLabel(today)}`,
       against: 'the 12 months before', before: { from: beforeFrom, to: addDays(first, -1) },
       buckets: monthBuckets(first, end, today, beforeFrom),

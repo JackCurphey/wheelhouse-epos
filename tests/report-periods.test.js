@@ -29,11 +29,11 @@ test('This week on a Monday is that one day against last Monday', () => {
   assert.equal(p.label, 'So far: Mon 14 September');
 });
 
-test('This week on a Sunday is the whole week, no longer "so far"', () => {
+test('This week on a Sunday is the whole week, still "so far" until the day is over', () => {
   const p = periodFor({ period: 'this-week', today: '2026-09-20' });
   assert.equal(p.through, '2026-09-20');
-  assert.equal(p.soFar, false);
-  assert.equal(p.label, 'Mon 14 – Sun 20 September');
+  assert.equal(p.soFar, true);
+  assert.equal(p.label, 'So far: Mon 14 – Sun 20 September');
   assert.deepEqual([p.before.from, p.before.to], ['2026-09-07', '2026-09-13']);
   assert.ok(p.buckets.every((b) => !b.notReached));
 });
