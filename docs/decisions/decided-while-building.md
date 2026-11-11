@@ -5049,3 +5049,14 @@ Decided here, for Jack to overrule.
    from Customers without deleting their details) has no row, as a deleted
    one has none. *Pattern:* the Customers list, which shows only those not
    removed.
+
+### 11 Nov 2026: Download everything's button while it works, and when it fails (`openspec/changes/your-data-download` group 3, `set-data-export`)
+
+Decided here, for Jack to overrule.
+
+1. **While the zip is made, the button reads "Preparing your download…"**,
+   greyed out and read out to screen readers; **if it doesn't start, a
+   warning reads "The download didn’t start." with Try again**, and the
+   button works again. The drawing shows only the resting button (small
+   one 8). *Pattern:* the customer's own copy on their account
+   (`ac-download-failed`).
