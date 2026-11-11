@@ -83,11 +83,17 @@ test('Close the day: choosing saves at once, with Saved and Undo, and the summar
   assert.equal(area.getAttribute('role'), 'status');
   assert.equal(area.textContent, '');
   assert.ok(area.closest('section') === null, 'the note floats over the page, not inside the fold');
+  const space = () => t.ui.container.querySelector('[data-saved-note-space]');
+  assert.ok(space() === null, 'no space under the page without a note');
   t.fireEvent.click(t.within(group).getByRole('radio', { name: '1 hour before' }));
   await t.waitFor(() => assert.match(fold.textContent, /1 hour before closing/));
   await t.waitFor(() => assert.match(area.textContent, /^Saved/));
   assert.ok(noteArea(t) === area, 'the same area, its words swapped in');
   assert.ok(area.querySelector('svg') !== null, 'a tick before the words');
+  // While the note shows, space under the page lets the last fold scroll clear of it.
+  assert.ok(space() !== null, 'space under the page while the note shows');
+  assert.equal(space().getAttribute('aria-hidden'), 'true');
+  assert.ok(!area.contains(space()), 'the space isn’t read out with the note');
   const undo = t.within(area).getByRole('button', { name: 'Undo' });
   assert.deepEqual(puts(t), [{ closeEntryMinutes: 60 }]);
   t.fireEvent.click(undo);
