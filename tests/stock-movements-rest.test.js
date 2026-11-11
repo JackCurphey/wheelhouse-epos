@@ -334,7 +334,12 @@ test('a failed delivery’s record leaves no lock limit on the connection it use
   try {
     for (let i = 0; i < pool.totalCount; i += 1) clients.push(await pool.connect());
     assert.ok(clients.length > 0);
-    for (const client of clients) assert.equal((await client.query('SHOW lock_timeout')).rows[0].lock_timeout, '0');
+    // Each back to what it opened with (pg_settings' reset_val): none for a real server,
+    // a minute under test (server/db.js).
+    for (const client of clients) {
+      const { setting, reset_val: opened } = (await client.query("SELECT setting, reset_val FROM pg_settings WHERE name = 'lock_timeout'")).rows[0];
+      assert.equal(setting, opened);
+    }
   } finally {
     for (const client of clients) client.release();
   }
