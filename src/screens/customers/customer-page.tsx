@@ -19,6 +19,7 @@ import { AccountDialog, entryWords, type Entry } from './account-dialog.tsx';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { dayYear, warrantyText, type BikeWarranty } from '@/lib/warranty-words.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
@@ -51,7 +52,7 @@ type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
 const SHOWN = 8;
 const mono = 'font-[family-name:var(--wh-font-mono)]';
-const money = (pounds: number) => `£${pounds.toFixed(2)}`;
+const money = (n: number) => poundsText(n);
 const newJobHref = (id: number) => `${ROUTES.diary}?customer=${id}`;
 // Old and till sales are numbered apart, so a sale's key carries its record (review).
 const rowKey = (i: Item) => `${i.kind}${i.kind === 'sale' ? i.source : ''}${i.id}`;

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { shortDate } from '@/screens/diary/when.ts';
 import { printReceipt, type ReceiptSale, type ShopDetails } from '@/screens/till/receipt.tsx';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * A sale from a customer's history (cs-sale in customer.mjs; customer service
@@ -23,7 +24,7 @@ type Sale = ReceiptSale & {
 const mono = 'font-[family-name:var(--wh-font-mono)]';
 // "[date], [time]" in the shop's clock (design 2, review).
 const when = (at: string) => `${shortDate(at)}, ${new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}`;
-const money = (pounds: number) => `£${pounds.toFixed(2)}`;
+const money = (n: number) => poundsText(n);
 
 export function SaleDialog({ id, source, receiptNumber, onClose }: { id: number; source: 'old' | 'till'; receiptNumber: number | null; onClose: () => void }) {
   const queryClient = useQueryClient();
