@@ -14,7 +14,7 @@ export const SHARED = { id: 13, report: 'customers', why: 'Shares contact detail
 export const PADS = { id: 14, report: 'price_list', why: 'No price', seen: 'seen-14', fields: { 'Item Lookup Code': 'B05S-RX', Description: 'Shimano brake pads', 'Qty On Hand': '6' } };
 export const BIKE = { id: 15, report: 'bikes', why: 'The customer on this bike isn’t in the customers file', seen: 'seen-15', fields: { Description: '[Bike]', 'Customer Name': '[Customer name]' } };
 export const BARCODE = { id: 16, report: 'barcodes', why: 'The product isn’t in the products file', seen: 'seen-16', fields: { ILC: '[Product code]', Alias: '[Barcode]' } };
-export const SORTED_NOTE = 'Everything that fitted is in. The ones you left out are kept, and will be listed under Settings › Office › Your data, to add by hand when you like.';
+export const SORTED_NOTE = 'Everything that fitted is in. The ones you left out are listed under Settings › Office › Your data, to add by hand when you like.';
 
 let current;
 afterEach(async () => {
