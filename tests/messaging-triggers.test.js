@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import pg from 'pg';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -251,8 +252,10 @@ test('with Don’t close things by themselves on, Bike ready is held until Send 
     assert.equal(ready.held, true);
     assert.equal(ready.sendAfter, null);
     assert.deepEqual(await held(ready.id), { held: true, intent_state: 'intended' });
-    // Past the sender's round (every 5 seconds), it still hasn't gone.
-    await new Promise((done) => setTimeout(done, 6_000));
+    // A sender's round for this shop leaves it waiting. Run here rather than
+    // waited for: the server's round visits every shop in the shared test
+    // database, and with hundreds it may not reach this one in any fixed wait.
+    await sendDueForShop(owner.shop.id);
     assert.equal((await held(ready.id)).intent_state, 'intended');
     const listed = (await staff(`/api/messages?jobId=${job.id}&limit=200`)).body.find((m) => m.id === ready.id);
     assert.equal(listed.held, true);
@@ -262,6 +265,7 @@ test('with Don’t close things by themselves on, Bike ready is held until Send 
     let state;
     for (let i = 0; i < 40 && state !== 'delivered'; i += 1) {
       await new Promise((done) => setTimeout(done, 250));
+      await sendDueForShop(owner.shop.id);
       state = (await held(ready.id)).intent_state;
     }
     assert.equal(state, 'delivered');
@@ -312,6 +316,7 @@ test('a held Bike ready whose bike has gone is stopped on the sender’s next ro
     let state;
     for (let i = 0; i < 40 && state !== 'undone'; i += 1) {
       await new Promise((done) => setTimeout(done, 250));
+      await sendDueForShop(owner.shop.id);
       state = (await held(ready.id)).intent_state;
     }
     assert.equal(state, 'undone');

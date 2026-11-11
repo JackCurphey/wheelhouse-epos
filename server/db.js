@@ -37,6 +37,9 @@ const BIGINT_OID = 20;
 types.setTypeParser(NUMERIC_OID, (value) => (value === null ? null : parseFloat(value)));
 types.setTypeParser(BIGINT_OID, (value) => (value === null ? null : parseInt(value, 10)));
 
+// A test process (node --test) or a test server (tests/helpers/liveServer.js).
+const UNDER_TEST = Boolean(process.env.NODE_TEST_CONTEXT) || process.env.NODE_ENV === 'test';
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,
@@ -66,7 +69,12 @@ export const pool = new Pool({
   // own against one local Postgres of 100 connections; held idle for 10
   // seconds, two full runs at once used them all up and test servers failed
   // to start (tests/db-pool-test-footprint.test.js). A real server keeps 10s.
-  idleTimeoutMillis: process.env.NODE_TEST_CONTEXT || process.env.NODE_ENV === 'test' ? 1000 : 10000,
+  idleTimeoutMillis: UNDER_TEST ? 1000 : 10000,
+  // Under test, a lock wait gives up after a minute instead of never. Test runs
+  // from several sessions share one database, and full runs hung for hours (11
+  // Nov) with nothing to say where; now the statement fails and names itself.
+  // A statement's own SET LOCAL lock_timeout still wins. A real server: unchanged.
+  ...(UNDER_TEST ? { options: '-c lock_timeout=60000' } : {}),
 });
 
 // pg-pool emits 'error' on the POOL (not the individual client) whenever an

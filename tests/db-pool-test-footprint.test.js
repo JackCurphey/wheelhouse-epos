@@ -53,3 +53,28 @@ test('a test server (NODE_ENV=test, as tests/helpers/liveServer.js starts it) do
 test('a real server keeps pg’s 10 seconds', () => {
   assert.equal(idleTimeoutWith(withoutTestMarks()), 10000);
 });
+
+// Under test, a wait for a lock gives up after a minute instead of never.
+//
+// Why: test runs from several sessions share one database, some tests change a
+// shared table's shape mid-run (a trigger, a constraint), and nothing limited a
+// lock wait. Full runs hung for hours (11 Nov) with no failure to say where. The
+// longest wait a test means to cause is seconds; a minute is far past it, and a
+// test that meets it now fails, naming the statement. A real server waits as before.
+function lockTimeoutWith(env) {
+  const out = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `const { pool } = await import(${JSON.stringify(DB)}); const { rows } = await pool.query('SHOW lock_timeout'); process.stdout.write(rows[0].lock_timeout); await pool.end();`], {
+    cwd: ROOT, env, encoding: 'utf8',
+  });
+  assert.equal(out.status, 0, out.stderr);
+  return out.stdout;
+}
+
+test('in a test process or a test server, a lock wait gives up after a minute', () => {
+  assert.equal(lockTimeoutWith({ ...withoutTestMarks(), NODE_TEST_CONTEXT: 'child' }), '1min');
+  assert.equal(lockTimeoutWith({ ...withoutTestMarks(), NODE_ENV: 'test' }), '1min');
+});
+
+test('a real server’s lock waits are left as they were', () => {
+  assert.equal(lockTimeoutWith(withoutTestMarks()), '0');
+});
