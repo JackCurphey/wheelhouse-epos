@@ -5078,3 +5078,32 @@ Decided here, for Jack to overrule.
    button works again. The drawing shows only the resting button (small
    one 8). *Pattern:* the customer's own copy on their account
    (`ac-download-failed`).
+
+### 11 Nov 2026: Reports, periods and Sales on the server (`openspec/changes/reports-sales-and-takings` group 1, `rp-home`, `rp-sales`, `rp-sales-year`, `rp-sales-empty`, `rp-pick-dates`; WP-5.3 part 1)
+
+1. **The shop's name line** ("North Street Cycles, Bolton") adds the site's
+   name only when the shop has one site; with several it shows the shop's
+   name alone until the shop switcher (WP-5.2) says which one. The drawing
+   shows "Bolton" from the shop menu, which isn't built. *Pattern:* the
+   sidebar's shop block, which shows the shop's name.
+2. **"Compared with nothing"** (the shop has no sale before the period's
+   first day): every comparison is empty (`null`), not "up £x on £0", and
+   the report names the day of the shop's first sale. The spec says
+   "Nothing to compare with yet" and the date; a shop's very first week
+   would otherwise read as a rise of 100%.
+3. **A period's last 12 months label and total** read "12 months" on the
+   total row; a finished period's total row reads "Total" (the drawing only
+   shows "So far" and "12 months"). *Pattern:* the drawing's own total rows.
+4. **Today's graph hours** run from the shop's opening hour to its closing
+   hour rounded up (09:00 to 17:30 is 9 to 18), and are widened to include
+   any hour with a sale, so the table always adds up to the headline figure.
+   Answer 7 says "across the shop's opening hours".
+5. **A period still counts "so far" until its last day is over:** on a
+   Sunday, the week reads "So far: Mon 14 – Sun 20 September", against the
+   same days last week (the whole of it). The spec says a period that
+   hasn't ended says "So far".
+6. **A picked range over 62 days is shown by month, and its comparison is
+   the total of the whole period before it,** not month against month (the
+   period before can touch a different number of calendar months than the
+   range). Today's and the other comparisons are totalled the same way, so
+   a sale outside opening hours is never left out. Found in review.
