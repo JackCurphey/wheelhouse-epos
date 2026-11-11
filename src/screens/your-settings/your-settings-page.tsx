@@ -29,6 +29,9 @@ const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: '
   { key: 'reduceMotion', label: 'Reduce motion', hint: 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.' },
   { key: 'noAutoClose', label: 'Don’t close things by themselves', hint: 'Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.' },
   { key: 'largerText', label: 'Larger text', hint: 'Makes text across Wheelhouse a step larger.', preview: 'text' },
+  // Show graphs in reports, on to start, for the people who can see reports: the Owner until roles
+  // (reports.mjs settingsGraphs; reports-sales-and-takings, Jack's answer 11).
+  { key: 'showGraphs', label: 'Show graphs in reports', hint: 'A graph above each report. The figures are always in the table below it, for screen readers too.' },
 ];
 
 function Switch({ label, on, disabled, onChange }: { label: string; on: boolean; disabled: boolean; onChange: () => void }) {
@@ -113,9 +116,9 @@ export function YourSettingsPage() {
   const a11y = settings.data?.accessibility;
   // Folded sidebar, last as drawn: its hint for a tablet, where the rail is always there; not on a phone, where the menu opens the rooms.
   // Not on a phone, where the diary has no legend (diary-legend-box design 2).
-  const rows = isPhone ? ROWS.filter((r) => r.key !== 'showLegend') : [...ROWS, { key: 'foldedSidebar' as const, label: 'Folded sidebar', hint: isTablet
+  const rows = (isPhone ? ROWS.filter((r) => r.key !== 'showLegend') : [...ROWS, { key: 'foldedSidebar' as const, label: 'Folded sidebar', hint: isTablet
     ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.'
-    : 'Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.' }];
+    : 'Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.' }]).filter((r) => r.key !== 'showGraphs' || user.isOwner);
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="ys-title" className="md:max-w-[560px] max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:rounded-none">
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-3.5 pr-3.5 pl-[22px]">
