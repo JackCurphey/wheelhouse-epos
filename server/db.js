@@ -74,10 +74,11 @@ export const pool = new Pool({
   // from several sessions share one database, and full runs hung for hours (11
   // Nov) with nothing to say where; now the statement fails and names itself.
   // A statement's own SET LOCAL lock_timeout still wins. A real server: unchanged.
-  // A statement also stops after 90 seconds, and within 5 once its test process
-  // has gone: a test stopped at npm test's limit otherwise left its statement
-  // running, holding its locks, for as long as it took (20 minutes, 11 Nov).
-  ...(UNDER_TEST ? { options: '-c lock_timeout=60000 -c statement_timeout=90000 -c client_connection_check_interval=5000' } : {}),
+  // A statement also stops after 90 seconds: a test stopped at npm test's limit
+  // otherwise left its statement running, holding its locks, for as long as it
+  // took (20 minutes, 11 Nov). (client_connection_check_interval, which would end
+  // it as soon as the process went, broke the move-fix browser test 2 runs in 3.)
+  ...(UNDER_TEST ? { options: '-c lock_timeout=60000 -c statement_timeout=90000' } : {}),
 });
 
 // pg-pool emits 'error' on the POOL (not the individual client) whenever an
