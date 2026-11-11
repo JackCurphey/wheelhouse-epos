@@ -9,7 +9,8 @@ import { RowSwitch } from './row-switch.tsx';
  * decisions 6 and 8; openspec/changes/finish-customers, design 8): the two rows this piece needs,
  * Store credit and Customer accounts, each switched on or off as you go; an "on" Customer accounts
  * shows its one setting, Most a customer can owe, saved in whole pence when the box is left, as the
- * Float box saves. Cash, card, gift cards and deposits come with their own pieces.
+ * Float box saves. Cash comes first, "Always on", with nothing to switch (owner-setup-till-payments-eod,
+ * design 4); card, gift cards and deposits come with their own pieces (Jack's answer 3, 11 Nov).
  */
 export type PaymentSettings = { storeCreditOn: boolean; accountsOn: boolean; accountLimitPence: number | null };
 export const PAYMENT_SETTINGS_KEY = ['payment-settings'];
@@ -73,6 +74,10 @@ export function WaysToPaySettings() {
   if (settings.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the ways to pay. Try again in a moment.</p>;
   return (
     <div className="grid items-start gap-2 md:grid-cols-2">
+      <div className="flex flex-col gap-0.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3">
+        <span className="text-size-15 font-bold">Cash</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">Always on</span>
+      </div>
       <Way sub="Earned back on sales, and given on refunds without a receipt"
         toggle={<RowSwitch label="Store credit" on={Boolean(s?.storeCreditOn)} disabled={!s} onChange={(on) => void save({ storeCreditOn: on })} />} />
       <Way sub="Pay later, settled from the customer’s page"
