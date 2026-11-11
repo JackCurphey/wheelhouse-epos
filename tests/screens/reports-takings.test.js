@@ -38,12 +38,14 @@ test('the table lists each closed day newest first, today as "Not closed yet", a
   const table = within(await ui.findByRole('table', { name: 'Closed days' }));
   assert.deepEqual(table.getAllByRole('columnheader').map((h) => h.textContent), ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by']);
   const rows = rowsOf(table);
-  assert.deepEqual(rows[1].slice(0, 1).concat(rows[1].slice(1)), ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
-  assert.deepEqual(rows[2].slice(1), ['£100.00', '£25.00', '£0.00', 'Jo Taylor']);
-  assert.deepEqual(rows[3], ['Wed 16 Sep · Online', '£0.00', '—', '—', 'Not a till']);
-  assert.deepEqual(rows[4].slice(1), ['£300.00', '£115.00', '−£5.00 short', 'Jack Lewis']);
-  assert.deepEqual(rows[5], ['Tue 15 Sep · Online', '£25.00', '—', '—', 'Not a till']);
-  assert.equal(rows.length, 8);
+  assert.deepEqual(rows[1], ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
+  // Today's online money so far, as drawn ("[£] so far"; rp-takings).
+  assert.deepEqual(rows[2], ['Thu 17 Sep · Online', '£12.50 so far', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[3].slice(1), ['£100.00', '£25.00', '£0.00', 'Jo Taylor']);
+  assert.deepEqual(rows[4], ['Wed 16 Sep · Online', '£0.00', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[5].slice(1), ['£300.00', '£115.00', '−£5.00 short', 'Jack Lewis']);
+  assert.deepEqual(rows[6], ['Tue 15 Sep · Online', '£25.00', '—', '—', 'Not a till']);
+  assert.equal(rows.length, 9);
   // A short day stands out in words for a screen reader and in the warning colour.
   const short = table.getByText('−£5.00');
   assert.ok(short.className.includes('wh-warn-ink'));
@@ -89,7 +91,7 @@ test('a month of days beyond 62 shows a row per month that opens nothing', async
   });
   const { ui, within } = await openReports('/workshop/reports/takings?period=dates&from=2026-06-30&to=2026-09-17', { answers: served({ '/api/reports/takings': () => [200, months()] }) });
   const table = within(await ui.findByRole('table', { name: 'Closed days' }));
-  assert.deepEqual(rowsOf(table)[1], ['Sep', '£2049.00', '£500.00', '−£5.00 short', '7 closed days']);
+  assert.deepEqual(rowsOf(table)[1], ['Sep', '£2,049.00', '£500.00', '−£5.00 short', '7 closed days']);
   assert.equal(table.queryAllByRole('button').length, 0);
 });
 function bar2(key, label, takings, before) { return { key, label, notReached: false, takingsPence: takings, sales: null, averagePence: null, beforeTakingsPence: before, beforeSales: 0 }; }
@@ -110,4 +112,17 @@ test('a day that can\'t be opened says so, rather than showing nothing', async (
   const gone = { '/api/reports/days/777': () => [404, { error: 'That day isn’t closed' }] };
   const { ui } = await openReports('/workshop/reports/takings?day=777', { answers: served(gone) });
   assert.ok(await ui.findByText('That day isn’t closed') !== null);
+});
+
+test('a past day nobody closed is a "Not closed" row with its takings so far and a link to close it', async () => {
+  const withSaturday = () => ({ ...TAKINGS_WEEK, rows: [...TAKINGS_WEEK.rows, { kind: 'day', key: '2026-09-12', label: 'Sat 12 Sep', closed: false, past: true, takingsPence: 2000, closeDay: '2026-09-12' }] });
+  const { ui, within } = await openReports('/workshop/reports/takings', { answers: served({ '/api/reports/takings': () => [200, withSaturday()] }) });
+  const table = within(await ui.findByRole('table', { name: 'Closed days' }));
+  const row = rowsOf(table).find((r) => r[0] === 'Sat 12 Sep');
+  assert.deepEqual(row, ['Sat 12 Sep', '£20.00 so far', '—', '—', 'Not closedClose it']);
+  // Close it goes to Close the day for that day, as Today's "Close it" does.
+  const link = table.getByRole('link', { name: 'Close Saturday 12 September' });
+  assert.equal(link.getAttribute('href'), '/workshop/till/close?day=2026-09-12');
+  // Today's own row is still "Not closed yet", with no link.
+  assert.ok(table.queryAllByRole('link').length === 1);
 });

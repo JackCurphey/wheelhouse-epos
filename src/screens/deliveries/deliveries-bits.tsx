@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ROUTES } from '@/staff/routes.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * Pieces shared by Deliveries and orders, New order and an order
@@ -18,7 +19,7 @@ export type Order = {
 };
 
 export const mono = 'font-[family-name:var(--wh-font-mono)]';
-export const money = (pounds: number) => `£${pounds.toFixed(2)}`;
+export const money = (pounds: number) => poundsText(pounds);
 export const orderHref = (id: number) => ROUTES['rs-order-ordered'].replace(':id', String(id));
 export const ONLY_OWNER = 'Orders are for the shop’s owner for now.';
 
