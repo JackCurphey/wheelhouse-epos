@@ -5116,17 +5116,22 @@ Decided here, for Jack to overrule.
 2. **The chosen period is in the address** (`/workshop/reports/sales?period=last-month`,
    and `from` and `to` for Pick dates), so Back and a bookmark work.
    *Pattern:* the restock list's `?show=`.
-3. **A shop with no sales at all** reads "The shop has no sales yet, so
-   there's no period before this one. Comparisons start once there is."
-   The drawing's text needs a start date, and there is none.
+3. **A shop with no sales at all** reads the drawn "The shop started on
+   Wheelhouse on [date], so there's no period before this one. Comparisons
+   start once there is." (`reports.mjs:182`), with the day the shop was
+   made (`shops.created_at`, on its own clock) as the date. *Put back to
+   the drawing on 11 Nov (Front desk, from an Opus review); my first
+   wording was my own and the drawing wasn't silent.*
 4. **A quiet period that isn't Today** reads "Nothing sold in this period"
    (the drawing only shows Today's wording).
 5. **Amounts read "£45.00" with no comma for thousands**, as Today and the
    rest of the staff app show money (`penceText`).
-6. **The period choices use the app's pill group** (one native radio per
-   choice, the chosen one outlined), not a new chip with a tick: the same
-   control as the other staff pages. The drawing's tick is not drawn.
-   *Pattern:* the restock list's pills.
+6. **The period choices are drawn as the drawing's chip:** the chosen one
+   dark with a tick, the others plain (`reports.mjs:58-61`, `icon('check', 14)`;
+   audit M3, "one chip look for every choice"). Each is still a native
+   radio, so the arrow keys and screen readers work. *Put back to the
+   drawing on 11 Nov (Front desk, from an Opus review); I had used the
+   restock list's pills instead and wrongly said the tick wasn't drawn.*
 7. **Cancel on Pick dates** keeps the report that was showing; the chip
    stays on the period it was on.
 8. **The graph's key** reads "This week so far" / "Same days last week"
@@ -5138,12 +5143,25 @@ Decided here, for Jack to overrule.
 
 ### 11 Nov 2026: Takings and cash-ups, the server and the screens (`openspec/changes/reports-sales-and-takings` group 3, `rp-takings`, `rp-day`)
 
-1. **Today's Online row is not shown.** A day's online money is what its
-   close saved (answer 5), and today has no close yet, so today shows only
-   "Not closed yet". The drawing's "[£] so far" for today would mean counting
-   online money outside a close. *Pattern:* the close's own online line.
-2. **A past day with no close has no row.** Only today gets "Not closed
-   yet"; a day nobody closed is already on Today's Needs attention.
+1. **Today's Online row reads "[£] so far", as drawn**
+   (`reports.mjs:216-219`, `onlineRow('Thu 17 Sep', 'open', true)`): the
+   online money in the sales no close has counted yet, worked out the way
+   the close will keep it (a read-only helper beside the close's own
+   figures, starting after the latest unclosed day's morning count, since
+   that day's own late close takes the sales before it). Its spreadsheet cell
+   reads "12.50 so far". *Put back to the
+   drawing on 11 Nov (Front desk, from an Opus review); I had left it out
+   as "counting outside a close".*
+2. **A past day nobody closed is its own row reading "Not closed"** (Jack
+   decided this on 11 Nov, his option 1, after I had left such a day out):
+   with its takings so far (its sales up to the morning count that counted
+   it and after the count of an earlier unclosed day, as its late close
+   works them out, so two such days never count the same sale) and a "Close it" link to Close
+   the day for that day, the same link Today's Needs attention gives. It has
+   no Online row, since no close kept one, and isn't in the headline
+   figures, which add up closed days. Only days counted with a later
+   morning's float are listed (the days Close the day can close); today
+   keeps its "Not closed yet" row.
 3. **Beyond 62 days the rows are months** with their closed days added up,
    a "[n] closed days" line where Closed by would be, no Online row and
    nothing to open (answer 9).
@@ -5188,9 +5206,11 @@ Decided here, for Jack to overrule.
 4. **A file shows what the screen shows:** a day to come, today's "Not
    closed yet" row and an Online row's cash columns are "—", and a cash
    difference is a signed amount ("-5.00"), not words and colour.
-5. **"Show graphs in reports" sits after Larger text and before Folded
-   sidebar,** for the Owner only (the only person who sees reports until
-   roles). The drawing places it among the other rows and doesn't say where.
+5. **"Show graphs in reports" is the last row in Accessibility,** after
+   Folded sidebar, as drawn (`app-map.mjs:196-197`, `rows.push(...)`), for
+   the Owner only (the only person who sees reports until roles). *Put back
+   to the drawing on 11 Nov (Front desk, from an Opus review); I had put it
+   before Folded sidebar and said the drawing didn't say where.*
 6. **While Your settings is still loading, the graph shows;** it goes only
    once the person's own switch says off.
 7. **A download that fails says why under the button,** in the server's words
@@ -5201,3 +5221,21 @@ Decided here, for Jack to overrule.
    picked range) names every few bars so the labels never run together. A
    phone's Takings table scrolls sideways inside
    its card rather than breaking each date over three lines.
+9. **Two small drawing details put back** (Opus drawing check, 11 Nov): the
+   12-month graph's key reads "The 12 months before" (`reports.mjs` lineGraph),
+   and the period group is named "Period" for a screen reader but shows no
+   heading above the chips (`reports.mjs:60`, `aria-label="Period"`).
+### 11 Nov 2026: Left out from Citrus Lime (`openspec/changes/your-data-download` group 4, `set-data-export`, `mv-sorted`)
+
+Decided here, for Jack to overrule.
+
+1. **The fold's line for the rows left out is a fifth ticked row under the
+   four**, "Left out from Citrus Lime · [n] rows", shown only while there
+   are any; the drawing has the four rows only. In the spreadsheet,
+   Citrus Lime's own columns follow in Citrus Lime's order for each kind
+   of file. *Pattern:* the four drawn rows.
+2. **Touches answer 3 (the shared-contact rule), no change to it:** a row
+   left out that only shares an email or phone with a customer whose
+   details were later deleted stays, with its reason, so that email or
+   phone is in this spreadsheet too. Their own rows go at the deletion,
+   as before.

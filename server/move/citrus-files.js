@@ -26,6 +26,9 @@ const HEADING_ROWS = 20;
 const MAX_KEPT_CHARS = 64_000_000;
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
+/** The columns a report keeps, in Citrus Lime's own order (for Settings › Your data's download). */
+export const keptColumns = (report) => REPORTS[report]?.keeps ?? [];
+
 /**
  * @param {string[][]} rows a file's rows
  * @returns {{ report: string, rows: string[], storeName: string } | null} each

@@ -9,6 +9,7 @@ import { prepare } from './db.js';
 import { csvOf } from './lib/csv.js';
 import { shopZone } from './privacy-requests.js';
 import { currentMoment } from './clock.js';
+import { keptColumns } from './move/citrus-files.js';
 import { receiptLabel } from './till/money.js';
 import { linePence } from './workshop/quotes.js';
 
@@ -204,12 +205,39 @@ async function jobsFile(zone) {
   ])]);
 }
 
+// The Citrus Lime import's rows the owner left out (design 7; Jack's 10 Nov answer 1). Deleting a
+// customer's details deletes their own left-out rows (move/bring-customers.js forgetForMove); a
+// row only sharing their email or phone stays, with its reason (answer 3), and is listed. An
+// emptied row ('{}', as move/bring-across.js leaves rows brought in) would have nothing to list.
+const LEFT_OUT = "FROM move_rows r JOIN move_files f ON f.id = r.file_id WHERE r.state = 'left_out' AND r.data <> '{}'::jsonb";
+
+/** How many rows were left out of the Citrus Lime import, for GET /api/settings/your-data. */
+export async function leftOutCount() {
+  const { n } = await prepare(`SELECT count(*)::int AS n ${LEFT_OUT}`).get();
+  return n;
+}
+
+/**
+ * Left out from Citrus Lime.csv: the file, why it needed a look, then every Citrus Lime column
+ * those rows have, file by file in Citrus Lime's own order. Null when none are left out: no fifth file.
+ */
+async function leftOutFile() {
+  const rows = await prepare(`SELECT f.file_name, f.report, r.why, r.data ${LEFT_OUT} ORDER BY r.file_id, r.id`).all();
+  if (rows.length === 0) return null;
+  const cols = [...new Set(rows.flatMap((r) => [...keptColumns(r.report), ...Object.keys(r.data)].filter((c) => c in r.data)))];
+  return csvOf([
+    ['File', 'Why', ...cols],
+    ...rows.map((r) => [r.file_name, r.why, ...cols.map((c) => (r.data[c] == null ? '' : String(r.data[c])))]),
+  ]);
+}
+
 /** The zip's name and files, for GET /api/settings/your-data/download. */
 export async function shopDataCopy() {
   const zone = await shopZone();
   const { name, day } = await prepare(
     `SELECT name, to_char((?::timestamptz AT TIME ZONE ?)::date, ${DAY}) AS day FROM shops WHERE id = current_setting('app.current_shop_id')::int`
   ).get(currentMoment().toISOString(), zone);
+  const leftOut = await leftOutFile();
   return {
     name: `${name} data ${day}.zip`,
     files: [
@@ -217,6 +245,7 @@ export async function shopDataCopy() {
       { name: 'Sales and refunds.csv', content: await salesFile(zone) },
       { name: 'Stock.csv', content: await stockFile() },
       { name: 'Workshop jobs.csv', content: await jobsFile(zone) },
+      ...(leftOut ? [{ name: 'Left out from Citrus Lime.csv', content: leftOut }] : []),
     ],
   };
 }

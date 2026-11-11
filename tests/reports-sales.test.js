@@ -175,8 +175,11 @@ test('a period with no sales says so, and the shop\'s first sale is named when n
   assert.equal(first.body.firstSaleOn, '2026-08-20');
   assert.equal(first.body.figures.takings.diffPence, null, 'no comparison with nothing');
   // A shop with no sales at all.
+  await pool.query("UPDATE shops SET created_at = '2026-08-30T23:30:00Z' WHERE id = $1", [fresh.shop.id]);
   const none = await sales('period=today', fresh);
   assert.equal(none.body.empty, true);
+  // The day the shop started on Wheelhouse, for "The shop started on Wheelhouse on [date]" (rp-sales-empty).
+  assert.equal(none.body.startedOn, '2026-08-31', '23:30 UTC is already the 31st on the shop\'s clock');
   assert.equal(none.body.nothingBefore, true);
   assert.equal(none.body.firstSaleOn, null);
 });
