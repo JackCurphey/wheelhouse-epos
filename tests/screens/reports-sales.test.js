@@ -58,6 +58,9 @@ test('Last 12 months is a line by month with the 12 months before, and its table
   const graph = ui.getByRole('img', { name: /^Takings by month: busiest month .*; up £200\.00 on the 12 months before\. The figures are in the table below\.$/ });
   assert.ok(graph.querySelector('polyline') !== null, 'a line, not bars');
   assert.equal(graph.querySelectorAll('polyline').length, 2, 'this period and the 12 months before it');
+  // The key words as drawn (reports.mjs lineGraph): "Last 12 months" and "The 12 months before".
+  assert.ok(within(graph).queryByText('Last 12 months') !== null);
+  assert.ok(within(graph).queryByText('The 12 months before') !== null);
   const rows = within(ui.getByRole('table', { name: 'Takings by month' })).getAllByRole('row');
   assert.equal(rows.length, 14);
   assert.deepEqual([...rows[13].querySelectorAll('th,td')].map((c) => c.textContent), ['12 months', '£1200.00', '48', '£25.00']);
@@ -103,7 +106,7 @@ test('nothing sold: says so, and says there is nothing to compare with when noth
   const empty = () => ({
     ...THIS_WEEK,
     period: { ...THIS_WEEK.period, period: 'today', label: 'Thursday 17 September, so far', against: 'last Thursday', unit: 'hour' },
-    rows: [], empty: true, nothingBefore: true, firstSaleOn: null,
+    rows: [], empty: true, nothingBefore: true, firstSaleOn: null, startedOn: '2026-08-30',
     figures: { takings: { pence: 0, beforePence: 0, diffPence: null }, sales: { count: 0, beforeCount: 0, diff: null }, average: { pence: null, beforePence: null, diffPence: null } },
     total: { label: 'So far', takingsPence: 0, sales: 0, averagePence: null },
   });
@@ -111,7 +114,7 @@ test('nothing sold: says so, and says there is nothing to compare with when noth
   assert.ok(await ui.findByText('Nothing sold yet today') !== null);
   assert.ok(ui.queryByText('Sales show here as soon as the first one goes through a till.') !== null);
   assert.ok(ui.queryByText('Nothing to compare with yet') !== null);
-  assert.ok(ui.queryByText('The shop has no sales yet, so there’s no period before this one. Comparisons start once there is.') !== null);
+  assert.ok(ui.queryByText('The shop started on Wheelhouse on 30 August 2026, so there’s no period before this one. Comparisons start once there is.') !== null);
   // No £0.00 comparisons, no table.
   assert.ok(ui.queryByText(/on last Thursday/) === null);
   assert.ok(ui.queryByRole('table') === null);
@@ -131,4 +134,21 @@ test('a server refusal is shown in its own words', async () => {
   assert.ok(await ui.findByText("Only the shop's owner can see reports") !== null);
   assert.ok(ui.queryByRole('table') === null);
   assert.ok(LAST_12);
+});
+
+test('the chosen period is dark with a tick, the others plain (audit M3)', async () => {
+  const { ui } = await openReports('/workshop/reports/sales', { answers: served() });
+  await ui.findByRole('table', { name: 'Sales by day' });
+  const chip = (name) => ui.getByRole('radio', { name }).labels[0];
+  assert.ok(chip('This week').querySelector('svg') !== null, 'a tick on the chosen one');
+  assert.ok(chip('This week').className.includes('bg-[var(--wh-ink)]'), 'dark');
+  assert.ok(chip('Today').querySelector('svg') === null);
+  assert.ok(!chip('Today').className.includes('bg-[var(--wh-ink)]'));
+});
+
+test('the group is named Period for a screen reader but shows no heading, as drawn', async () => {
+  const { ui } = await openReports('/workshop/reports/sales', { answers: served() });
+  await ui.findByRole('table', { name: 'Sales by day' });
+  assert.ok(ui.getByRole('group', { name: 'Period' }) !== null);
+  assert.ok(ui.getByText('Period', { selector: 'legend' }).className.includes('sr-only'));
 });
