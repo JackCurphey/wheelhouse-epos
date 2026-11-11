@@ -29,7 +29,6 @@ async function shopLine(ctx) {
   return sites.length === 1 && sites[0].name ? `${ctx.shop.name}, ${sites[0].name}` : ctx.shop.name;
 }
 
-// A period asked for in the address, or a 400 saying what to fix.
 // A spreadsheet answer: the file name says the report, the shop and the dates.
 function sendCsv(res, name, csv) {
   res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="${name}.csv"` });
@@ -37,6 +36,7 @@ function sendCsv(res, name, csv) {
 }
 const dates = (p) => `${p.from}-to-${p.through}`;
 
+// A period asked for in the address, or a 400 saying what to fix.
 const asked = (query) => ({ period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to') });
 
 export function register(route) {

@@ -98,12 +98,12 @@ test('takings.csv is the closed-days table as shown, with each day\'s Online row
   assert.match(res.headers.get('content-disposition'), /filename="takings-north-street-cycles-[0-9a-f]{8}-2026-09-14-to-2026-09-17\.csv"/);
   const rows = cells(text);
   assert.deepEqual(rows[0], ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by']);
-  assert.deepEqual(rows[1], ['Thu 17 Sep', '', '', '', 'Not closed yet']);
+  assert.deepEqual(rows[1], ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
   // The name starts with an apostrophe, so a spreadsheet shows it as text, not a formula.
   assert.deepEqual(rows[2], ['Tue 15 Sep', '300.00', '115.00', '-5.00', "'=SUM(1+1)"]);
-  assert.deepEqual(rows[3], ['Tue 15 Sep · Online', '25.00', '', '', 'Not a till']);
+  assert.deepEqual(rows[3], ['Tue 15 Sep · Online', '25.00', '—', '—', 'Not a till']);
   assert.deepEqual(rows[4], ['Mon 14 Sep', '200.00', '50.00', '0.00', 'Jack Lewis']);
-  assert.deepEqual(rows[5], ['Mon 14 Sep · Online', '30.00', '', '', 'Not a till']);
+  assert.deepEqual(rows[5], ['Mon 14 Sep · Online', '30.00', '—', '—', 'Not a till']);
 });
 
 test('the closed day\'s .csv is that day\'s report as saved', async () => {

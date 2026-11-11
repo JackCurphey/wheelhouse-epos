@@ -75,6 +75,8 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
   const x = (i: number) => LEFT + slot * i + slot / 2;
   const y = (pence: number) => TOP + H - (pence / max) * H;
   const barW = Math.min(56, slot * 0.6);
+  // A month or a long picked range has too many bars to name each: name every few, so the labels never run together.
+  const step = Math.max(1, Math.ceil(30 / slot));
   return (
     <figure className="m-0 flex flex-col gap-3" role="img" aria-label={spoken}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -87,8 +89,12 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
           <g key={String(r.key)}>
             {showBefore ? <rect x={x(i) - barW / 2 - 3} y={y(r.beforeTakingsPence)} width={barW + 6} height={Math.max(0, TOP + H - y(r.beforeTakingsPence))} fill="none" stroke="var(--wh-muted)" strokeDasharray="3 3" /> : null}
             {r.notReached ? null : <rect x={x(i) - barW / 2} y={y(r.takingsPence ?? 0)} width={barW} height={Math.max(1, TOP + H - y(r.takingsPence ?? 0))} fill="var(--wh-ink)" />}
-            <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{twoLines(r.label)[0]}</text>
-            <text x={x(i)} y={TOP + H + 30} textAnchor="middle" fontSize="12" fill="var(--wh-muted)">{r.notReached ? 'Not yet' : twoLines(r.label)[1]}</text>
+            {i % step === 0 ? (
+              <>
+                <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{twoLines(r.label)[0]}</text>
+                <text x={x(i)} y={TOP + H + 30} textAnchor="middle" fontSize="12" fill="var(--wh-muted)">{r.notReached ? 'Not yet' : twoLines(r.label)[1]}</text>
+              </>
+            ) : null}
           </g>
         )) : (
           <>

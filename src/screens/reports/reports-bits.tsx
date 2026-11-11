@@ -65,7 +65,8 @@ export function DownloadButton({ path }: { path: string }) {
       document.body.append(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      // Not at once: some browsers cancel the download if its address goes in the same breath.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch {
       setProblem('Wheelhouse couldn’t make the file. Try again in a moment.');
     } finally {

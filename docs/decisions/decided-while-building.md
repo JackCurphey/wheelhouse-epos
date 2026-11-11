@@ -5185,9 +5185,9 @@ Decided here, for Jack to overrule.
    who closed it first, then the rows its report shows (Takings, Card, Cash,
    Gift cards…, Float at the start, Cash difference, Banked, Online). *Pattern:*
    Close the day's report rows.
-4. **A file shows what the screen shows:** a day to come is "—", today's
-   "Not closed yet" row has empty cells, and a cash difference is a signed
-   amount ("-5.00"), not words.
+4. **A file shows what the screen shows:** a day to come, today's "Not
+   closed yet" row and an Online row's cash columns are "—", and a cash
+   difference is a signed amount ("-5.00"), not words and colour.
 5. **"Show graphs in reports" sits after Larger text and before Folded
    sidebar,** for the Owner only (the only person who sees reports until
    roles). The drawing places it among the other rows and doesn't say where.
@@ -5197,5 +5197,7 @@ Decided here, for Jack to overrule.
    for a refusal, and the report stays.
 8. **The graph is drawn narrower on a phone** (340 wide, not 700) so its text
    stays readable, with every other month named on the 12-month line, as the
-   drawing's phone board does. A phone's Takings table scrolls sideways inside
+   drawing's phone board does; a bar graph with many bars (a month, a long
+   picked range) names every few bars so the labels never run together. A
+   phone's Takings table scrolls sideways inside
    its card rather than breaking each date over three lines.

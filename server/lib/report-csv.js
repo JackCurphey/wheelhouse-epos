@@ -22,8 +22,8 @@ export function takingsCsv(report) {
   return csvOf([
     ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by'],
     ...report.rows.map((r) => {
-      if (r.kind === 'online') return [r.label, pounds(r.onlinePence), '', '', 'Not a till'];
-      if (!r.closed) return [r.label, '', '', '', 'Not closed yet'];
+      if (r.kind === 'online') return [r.label, pounds(r.onlinePence), '—', '—', 'Not a till'];
+      if (!r.closed) return [r.label, '—', '—', '—', 'Not closed yet'];
       return [r.label, pounds(r.takingsPence), pounds(r.bankedPence), pounds(r.differencePence), r.kind === 'month' ? `${r.closedDays} closed days` : r.closedByName];
     }),
   ]);

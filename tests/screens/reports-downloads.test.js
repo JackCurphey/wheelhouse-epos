@@ -105,3 +105,31 @@ test('Staff do not see it', async () => {
   await dialog.findByRole('switch', { name: 'Reduce motion' });
   assert.ok(dialog.queryByRole('switch', { name: 'Show graphs in reports' }) === null);
 });
+
+test('a download that fails to reach the server says so, and the report stays', async () => {
+  const { ui, fireEvent } = await openReports('/workshop/reports/takings', { answers: served({ '/api/reports/takings.csv': () => { throw new Error('offline'); } }) });
+  await ui.findByRole('table', { name: 'Closed days' });
+  watchDownloads();
+  fireEvent.click(ui.getByRole('button', { name: 'Download as spreadsheet' }));
+  assert.ok(await ui.findByText('Wheelhouse couldn’t make the file. Try again in a moment.') !== null);
+  assert.ok(ui.queryByRole('table', { name: 'Closed days' }) !== null);
+});
+
+test('on a phone Takings and cash-ups and a closed day also say just "Download"', async () => {
+  const { ui, within, fireEvent } = await openReports('/workshop/reports/takings', { answers: served(), phone: true });
+  const table = within(await ui.findByRole('table', { name: 'Closed days' }));
+  assert.ok(ui.queryByRole('button', { name: 'Download' }) !== null);
+  fireEvent.click(table.getByRole('button', { name: /^Tue 15 Sep/ }));
+  const box = within(await ui.findByRole('dialog', { name: 'Tue 15 September' }));
+  assert.ok(await box.findByRole('button', { name: 'Download' }) !== null);
+});
+
+test('a month of bars names every few, so the labels never run together', async () => {
+  const days = Array.from({ length: 31 }, (_, i) => ({ key: `2026-08-${String(i + 1).padStart(2, '0')}`, label: `Day ${i + 1} Aug`, notReached: false, takingsPence: 1000 * (i + 1), sales: 1, averagePence: 1000, beforeTakingsPence: 500, beforeSales: 1 }));
+  const month = () => ({ ...salesFor(new URLSearchParams('period=last-month')), period: { period: 'last-month', from: '2026-08-01', to: '2026-08-31', through: '2026-08-31', soFar: false, unit: 'day', label: 'August 2026', against: 'the month before' }, rows: days });
+  const { ui, within } = await openReports('/workshop/reports/sales?period=last-month', { answers: { '/api/reports/sales': () => [200, month()] }, phone: true });
+  const graph = within(await ui.findByRole('img', { name: /^Takings by day:/ }));
+  const named = [...document.querySelectorAll('figure svg text')].filter((t) => /^Day$/.test(t.textContent));
+  assert.ok(named.length > 0 && named.length < 31, `named ${named.length} of 31`);
+  assert.ok(graph);
+});
