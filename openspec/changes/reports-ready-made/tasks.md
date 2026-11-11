@@ -15,8 +15,8 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 - [x] 2.1 Tests first (`tests/reports-returning.test.js`): a visit from an old-record sale, a till sale and a repair collected, each with its customer; a sale with no customer not counted; a deleted customer left out; New on the first visit's month, Returning after; Customers once each; Came back within 12 months as a whole percent; compared with the 12 (or 24) months before; Not seen lately with the months (6 to start, set by `?months=`), most recently seen first, Spent in the period, Yes or No from `marketing_permission`; another shop's customers never count; Staff refused. Verify: each fails first.
 - [x] 2.2 `server/lib/report-customers.js` and `GET /api/reports/returning` with `.csv` (`// screens: rp-returning`). Verify: 2.1 passes.
-- [ ] 2.3 Tests first (screen and browser tests): the card; Last 12 months, Last 24 months, Pick dates; the three figures; the two-part bars with stripes (not colour alone) and the spoken description; the table by month; Not seen lately with the months box, each name opening the customer's page, and no Message button (answer 4); the drawn note; Download. Verify: each fails first.
-- [ ] 2.4 `src/screens/reports/returning-report.tsx`, the card. Verify: 2.3 passes.
+- [x] 2.3 Tests first (screen and browser tests): the card; Last 12 months, Last 24 months, Pick dates; the three figures; the two-part bars with stripes (not colour alone) and the spoken description; the table by month; Not seen lately with the months box, each name opening the customer's page, and no Message button (answer 4); the drawn note; Download. Verify: each fails first.
+- [x] 2.4 `src/screens/reports/returning-report.tsx`, the card. Verify: 2.3 passes.
 
 ## 3. VAT and the VAT quarter (PR 3, about 550 lines; risky: migration)
 
