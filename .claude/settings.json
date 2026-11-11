@@ -1,4 +1,6 @@
 {
+  "model": "sonnet",
+  "autoCompactWindow": 200000,
   "enabledPlugins": {
     "bencium-impact-designer@bencium-marketplace": true,
     "design-audit@bencium-marketplace": true,
