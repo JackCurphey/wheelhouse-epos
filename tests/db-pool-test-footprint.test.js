@@ -78,3 +78,32 @@ test('in a test process or a test server, a lock wait gives up after a minute', 
 test('a real server’s lock waits are left as they were', () => {
   assert.equal(lockTimeoutWith(withoutTestMarks()), '0');
 });
+
+// Under test, a statement stops after 90 seconds, and stops soon after its test
+// process has gone.
+//
+// Why: a test stopped at npm test's two-minute limit leaves its statement running,
+// because Postgres only notices the process has gone when it next writes to it. On
+// 11 Nov one such statement (an UPDATE of move_rows) ran on for 20 minutes holding its
+// locks, and two other files then failed waiting for them. A statement that runs 90
+// seconds now fails, naming itself, before the test's own limit. A real server: unchanged.
+function settingWith(env, name) {
+  const out = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `const { pool } = await import(${JSON.stringify(DB)}); const { rows } = await pool.query('SELECT current_setting($1) AS v', [${JSON.stringify(name)}]); process.stdout.write(rows[0].v); await pool.end();`], {
+    cwd: ROOT, env, encoding: 'utf8',
+  });
+  assert.equal(out.status, 0, out.stderr);
+  return out.stdout;
+}
+
+test('under test, a statement stops after 90 seconds, and once its process has gone', () => {
+  for (const env of [{ ...withoutTestMarks(), NODE_TEST_CONTEXT: 'child' }, { ...withoutTestMarks(), NODE_ENV: 'test' }]) {
+    assert.equal(settingWith(env, 'statement_timeout'), '90s');
+    assert.equal(settingWith(env, 'client_connection_check_interval'), '5s');
+  }
+});
+
+test('a real server’s statements run as long as they did', () => {
+  assert.equal(settingWith(withoutTestMarks(), 'statement_timeout'), '0');
+  assert.equal(settingWith(withoutTestMarks(), 'client_connection_check_interval'), '0');
+});
