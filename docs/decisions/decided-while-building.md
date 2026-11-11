@@ -5049,3 +5049,61 @@ Decided here, for Jack to overrule.
    from Customers without deleting their details) has no row, as a deleted
    one has none. *Pattern:* the Customers list, which shows only those not
    removed.
+
+### 10 Nov 2026: Download everything's Sales and refunds and Workshop jobs (`openspec/changes/your-data-download` group 2, `set-data-export`)
+
+Decided here, for Jack to overrule.
+
+1. **A Shopify refund has no amount.** Wheelhouse records only what came
+   back into stock from a Shopify refund, not the money. Its rows say
+   "Refund", the item, a minus quantity and "Shopify refund #[n]", with the
+   money cells empty rather than 0. *Pattern:* design 3's "cells Wheelhouse
+   never stored stay empty, not 0".
+2. **A job has no due date.** "Due" is the day the job is booked for, and
+   "Booked in" when the bike was booked in at the counter (empty until then).
+   *Pattern:* the diary, which places a job on its booked day.
+3. **Quoted, Final and Deposit.** "Quoted (£)" is the job's latest quote,
+   all its lines; "Final (£)" what the job was paid at the till, empty until
+   then; "Deposit (£)" an online deposit held, taken or later refunded (the
+   refund itself is a row in Sales and refunds). *Pattern:* the job page,
+   which shows one total, and the quote's own lines.
+
+### 11 Nov 2026: Download everything's button while it works, and when it fails (`openspec/changes/your-data-download` group 3, `set-data-export`)
+
+Decided here, for Jack to overrule.
+
+1. **While the zip is made, the button reads "Preparing your download…"**,
+   greyed out and read out to screen readers; **if it doesn't start, a
+   warning reads "The download didn’t start." with Try again**, and the
+   button works again. The drawing shows only the resting button (small
+   one 8). *Pattern:* the customer's own copy on their account
+   (`ac-download-failed`).
+
+### 11 Nov 2026: Reports, periods and Sales on the server (`openspec/changes/reports-sales-and-takings` group 1, `rp-home`, `rp-sales`, `rp-sales-year`, `rp-sales-empty`, `rp-pick-dates`; WP-5.3 part 1)
+
+1. **The shop's name line** ("North Street Cycles, Bolton") adds the site's
+   name only when the shop has one site; with several it shows the shop's
+   name alone until the shop switcher (WP-5.2) says which one. The drawing
+   shows "Bolton" from the shop menu, which isn't built. *Pattern:* the
+   sidebar's shop block, which shows the shop's name.
+2. **"Compared with nothing"** (the shop has no sale before the period's
+   first day): every comparison is empty (`null`), not "up £x on £0", and
+   the report names the day of the shop's first sale. The spec says
+   "Nothing to compare with yet" and the date; a shop's very first week
+   would otherwise read as a rise of 100%.
+3. **A period's last 12 months label and total** read "12 months" on the
+   total row; a finished period's total row reads "Total" (the drawing only
+   shows "So far" and "12 months"). *Pattern:* the drawing's own total rows.
+4. **Today's graph hours** run from the shop's opening hour to its closing
+   hour rounded up (09:00 to 17:30 is 9 to 18), and are widened to include
+   any hour with a sale, so the table always adds up to the headline figure.
+   Answer 7 says "across the shop's opening hours".
+5. **A period still counts "so far" until its last day is over:** on a
+   Sunday, the week reads "So far: Mon 14 – Sun 20 September", against the
+   same days last week (the whole of it). The spec says a period that
+   hasn't ended says "So far".
+6. **A picked range over 62 days is shown by month, and its comparison is
+   the total of the whole period before it,** not month against month (the
+   period before can touch a different number of calendar months than the
+   range). Today's and the other comparisons are totalled the same way, so
+   a sale outside opening hours is never left out. Found in review.
