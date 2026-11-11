@@ -354,3 +354,5 @@ GET /api/reports/workshop
 GET /api/reports/workshop.csv
 GET /api/reports/returning
 GET /api/reports/returning.csv
+GET /api/reports/vat
+GET /api/reports/vat.csv
