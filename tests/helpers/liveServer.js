@@ -10,11 +10,14 @@
 // This pattern was proven in tests/static-cache.test.js first; it is lifted
 // here so workshop and portal tests can share one copy.
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+// What a Wheelhouse server answers for /app.js (server.js serves public/ as it is).
+const APP_JS = readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -27,20 +30,31 @@ function freePort() {
   });
 }
 
-async function waitForServer(child, baseUrl, timeoutMs) {
+// Ready means this child said it is listening ("Wheelhouse running at
+// http://localhost:<port>", server.js's listen callback) and then served
+// /app.js. Before 12 Nov any answer on the port counted, so a file whose port
+// had been taken in the gap after freePort() ran against another file's server.
+async function waitForServer(child, baseUrl, timeoutMs, listening) {
   const deadline = Date.now() + timeoutMs;
   let lastErr;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
-      throw new Error(`server exited early with code ${child.exitCode}`);
+      throw Object.assign(new Error(`server exited early with code ${child.exitCode}`), { exitedEarly: true });
+    }
+    if (!listening()) {
+      await new Promise((r) => setTimeout(r, 50));
+      continue;
     }
     try {
       const res = await fetch(`${baseUrl}/app.js`);
       if (res.status === 200) {
-        await res.arrayBuffer();
+        // A small stand-in server on 127.0.0.1 can share the port with ours
+        // (which listens on every address) and take these requests.
+        if ((await res.text()) !== APP_JS) throw Object.assign(new Error(`another server answers on ${baseUrl}`), { notOurs: true });
         return;
       }
     } catch (err) {
+      if (err.notOurs) throw err;
       lastErr = err;
     }
     await new Promise((r) => setTimeout(r, 200));
@@ -57,8 +71,24 @@ export const TEST_CLOCK_PIN = '2026-09-01T06:00:00Z';
 
 // Returns { baseUrl, stop }. Call stop() in an after() hook - a leaked child
 // keeps its port and its database connections.
-export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
-  const port = await freePort();
+//
+// A port can be taken between freePort() letting it go and the server
+// listening on it (another file's server, or any listen(0) the system hands
+// it to). The server then dies with EADDRINUSE, or, where the other listens on
+// 127.0.0.1 only, starts but another server answers; either way the start is
+// tried again on a fresh port, up to five times.
+// `pickPort` is for tests of this helper (tests/live-server-port.test.js).
+export async function startLiveServer({ timeoutMs = 30000, env = {}, pickPort = freePort } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await startOnce({ timeoutMs, env, port: await pickPort() });
+    } catch (err) {
+      if (!(err.portTaken && attempt < 5)) throw err;
+    }
+  }
+}
+
+async function startOnce({ timeoutMs, env, port }) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
@@ -80,11 +110,16 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
     stderr += d;
     process.stderr.write(`[server] ${d}`);
   });
+  // Read, too, so a server that logs a lot never blocks on a full pipe.
+  let stdout = '';
+  child.stdout.on('data', (d) => { stdout += d; });
+  const listening = () => stdout.includes(`Wheelhouse running at http://localhost:${port}`);
 
   try {
-    await waitForServer(child, baseUrl, timeoutMs);
+    await waitForServer(child, baseUrl, timeoutMs, listening);
   } catch (err) {
     child.kill('SIGKILL');
+    if (err.notOurs || (err.exitedEarly && /EADDRINUSE/.test(stderr))) err.portTaken = true;
     throw err;
   }
 
