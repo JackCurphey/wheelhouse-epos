@@ -10,6 +10,8 @@ import { request as httpRequest } from 'node:http';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { bringBatch, readNextFile, startBringingAcross, wakeBringingAcross } from '../server/move/bring-across.js';
+import { Readable } from 'node:stream';
+import { register as registerMove } from '../server/routes/move.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
@@ -506,4 +508,52 @@ test('asked not to, the timer doesn\'t look at every shop at the start; a failed
     console.error = realError;
     await stop();
   }
+});
+
+// The route as server.js runs it, in this process: its one-at-a-time place is
+// taken by beforeBody, the handler answers, and server.js gives the place up only
+// after this request's connection is back in the pool. Here that last step waits
+// until the shop's next send has been looked at, the slowest it can be: a shop
+// sending its next file the moment the last was answered was told "busy" on a
+// busy Mac (11 Nov), because the place was still held after the answer went.
+test('a shop\'s place is free again by the time its send is answered, whatever the answer', async () => {
+  const routes = new Map();
+  registerMove((method, path, handler, options) => routes.set(`${method} ${path}`, { handler, options }));
+  const { handler, options } = routes.get('POST /api/move/files');
+  const shopId = owner.shop.id;
+  const request = (body) => Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), {
+    method: 'POST', url: '/api/move/files', headers: { cookie: owner.cookie, 'content-type': 'application/json' },
+  });
+  const response = (onEnd = () => {}) => ({
+    statusCode: 0, headersSent: false, destroyed: false, headers: {},
+    setHeader(name, value) { this.headers[name] = value; },
+    writeHead(status) { this.statusCode = status; this.headersSent = true; },
+    end(body) { this.body = body ? JSON.parse(body) : null; onEnd(); },
+  });
+  const sends = {
+    202: { fileName: 'a.xlsx', dataBase64: priceList(line()).toString('base64'), requestKey: key() },
+    400: { fileName: 'a.xlsx', dataBase64: '', requestKey: key() },
+    422: { fileName: 'a.xlsx', dataBase64: '==', requestKey: key() },
+  };
+  for (const [expected, body] of Object.entries(sends)) {
+    const req = request(body);
+    const letGo = await inShop(() => options.beforeBody(req, response(), shopId));
+    assert.equal(typeof letGo, 'function', `the ${expected} send gets the place`);
+    let next;
+    const nextReq = request({});
+    const nextRes = response();
+    const res = response(() => { next = inShop(() => options.beforeBody(nextReq, nextRes, shopId)); });
+    await inShop(() => handler(req, res, {}, new URLSearchParams(), () => {}, shopId));
+    assert.equal(res.statusCode, Number(expected), JSON.stringify(res.body));
+    const nextLetGo = await next;
+    letGo();
+    assert.equal(nextRes.statusCode, 0, `after a ${expected}, the next send was turned away: ${JSON.stringify(nextRes.body)}`);
+    assert.equal(typeof nextLetGo, 'function', `after a ${expected}, the next send gets the place`);
+    // The first send's late let-go must not free the place the next one now holds.
+    const third = response();
+    assert.equal(await inShop(() => options.beforeBody(request({}), third, shopId)), null);
+    assert.equal(third.statusCode, 429, `after a ${expected}, a third send at once is turned away`);
+    nextLetGo();
+  }
+  await finish();
 });
