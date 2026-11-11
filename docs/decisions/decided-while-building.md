@@ -5086,6 +5086,10 @@ Decided here, for Jack to overrule.
 1. **The fold's line for the rows left out is a fifth ticked row under the
    four**, "Left out from Citrus Lime · [n] rows", shown only while there
    are any; the drawing has the four rows only. In the spreadsheet,
-   Citrus Lime's own columns follow in the order Wheelhouse stored them
-   (shorter names first), not necessarily the order of the original file,
-   which isn't kept. *Pattern:* the four drawn rows.
+   Citrus Lime's own columns follow in Citrus Lime's order for each kind
+   of file. *Pattern:* the four drawn rows.
+2. **Touches answer 3 (the shared-contact rule), no change to it:** a row
+   left out that only shares an email or phone with a customer whose
+   details were later deleted stays, with its reason, so that email or
+   phone is in this spreadsheet too. Their own rows go at the deletion,
+   as before.

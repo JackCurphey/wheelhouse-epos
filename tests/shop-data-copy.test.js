@@ -383,38 +383,43 @@ async function leftOutShop(t) {
   return { shop, file, row };
 }
 
-test('Left out from Citrus Lime: a fifth spreadsheet with the file, why, and Citrus Lime’s own columns; emptied rows and other states are not in it', async (t) => {
+test('Left out from Citrus Lime: a fifth spreadsheet with the file, why, and Citrus Lime’s own columns in its order; other states are not in it; another shop never sees them', async (t) => {
   const { shop, file, row } = await leftOutShop(t);
   const people = await file('Customers.csv', 'customers');
   const prices = await file('Price list.csv', 'price_list');
-  await row(people.id, 'left_out', { Name: '[Customer name]', Email: '[email]' }, 'No name');
-  await row(prices.id, 'left_out', { Description: '[Product]', 'Retail Price': '[price]' }, 'No price');
+  // Stored as JSONB, whose own key order (shorter first) isn't Citrus Lime's.
+  await row(people.id, 'left_out', { 'Last Name': '[Last name]', 'First Name': '[Left out elsewhere]', Email: '[email]' }, 'No name');
+  await row(prices.id, 'left_out', { Price: '[price]', Description: '[Product]' }, 'No price');
   await row(people.id, 'left_out', {}, null);
-  await row(people.id, 'look', { Name: '[Another]' }, 'Looks like the same person');
-  await row(people.id, 'in', { Name: '[In]' });
+  await row(people.id, 'look', { 'First Name': '[Another]' }, 'Looks like the same person');
+  await row(people.id, 'in', { 'First Name': '[In]' });
 
   const { res, body } = await download(shop.cookie);
   assert.equal(res.status, 200, body.toString());
   const files = filesOf(body, t);
   assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Left out from Citrus Lime.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
   const csv = files['Left out from Citrus Lime.csv'];
-  assert.ok(csv.startsWith('﻿File,Why'), csv.slice(0, 40));
-  const rows = rowsOf(csv);
-  assert.deepEqual(rows, [
-    { File: 'Customers.csv', Why: 'No name', Name: '[Customer name]', Email: '[email]', Description: '', 'Retail Price': '' },
-    { File: 'Price list.csv', Why: 'No price', Name: '', Email: '', Description: '[Product]', 'Retail Price': '[price]' },
+  assert.ok(csv.startsWith('\uFEFFFile,Why,First Name,Last Name,Email,Description,Price\r\n'), csv.slice(0, 80));
+  assert.deepEqual(rowsOf(csv), [
+    { File: 'Customers.csv', Why: 'No name', 'First Name': '[Left out elsewhere]', 'Last Name': '[Last name]', Email: '[email]', Description: '', Price: '' },
+    { File: 'Price list.csv', Why: 'No price', 'First Name': '', 'Last Name': '', Email: '', Description: '[Product]', Price: '[price]' },
   ]);
-
   const count = await staffRequest(server.baseUrl, shop.cookie, '/api/settings/your-data');
   assert.equal(count.status, 200, JSON.stringify(count.body));
   assert.deepEqual(count.body, { leftOut: 2 });
+
+  // Design 2: another shop's rows never appear — the owner's shop, while this one's rows exist.
+  const mine = await staff('/api/settings/your-data');
+  assert.deepEqual(mine.body, { leftOut: 0 });
+  const own = await filesFor(t);
+  assert.deepEqual(Object.keys(own).sort(), ['Customers.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
+  assert.ok(!Object.values(own).some((c) => c.includes('[Left out elsewhere]')));
 });
 
-test('Left out from Citrus Lime: none left out, no fifth file and a count of 0; staff are refused the count', async () => {
-  const count = await staff('/api/settings/your-data');
-  assert.equal(count.status, 200, JSON.stringify(count.body));
-  assert.deepEqual(count.body, { leftOut: 0 });
-  const worker = await staffLogin(owner.shop.id);
-  const refused = await staffRequest(server.baseUrl, worker.cookie, '/api/settings/your-data');
+test('Left out from Citrus Lime: the count is the Owner’s only', async () => {
+  const sam = await staffLogin(owner.shop.id);
+  const refused = await staffRequest(server.baseUrl, sam.cookie, '/api/settings/your-data');
   assert.equal(refused.status, 403);
+  const nobody = await fetch(`${server.baseUrl}/api/settings/your-data`);
+  assert.equal(nobody.status, 401);
 });
