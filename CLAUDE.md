@@ -117,6 +117,20 @@ Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.
 
+## Models and sessions
+
+To make Claude's allowance go further (issue #669), sessions here start on
+Sonnet (`.claude/settings.json`). Switch to Opus with `/model opus` for hard
+design or debugging, then back with `/model sonnet`. Start a new session, or
+`/clear`, after each piece.
+
+- Reading, searching, or checking whether something exists: the `reader`
+  agent (Haiku). Don't read the plans, STATUS or `decided-while-building.md`
+  in full in the main session; send `reader` for the part you need.
+- Self-review before merging: the `reviewer` agent (Sonnet).
+- A change in one of the four risky areas: the `risky-area-reviewer` agent
+  (Opus) as well as `/review`.
+
 ## Testing and environment
 
 - The app runs on `localhost:8080`; Postgres via `docker compose` on port
