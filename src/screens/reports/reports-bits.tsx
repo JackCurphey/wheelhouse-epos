@@ -1,7 +1,10 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ApiError, serverSaid } from '@/lib/api/client.ts';
 import { ROUTES } from '@/staff/routes.ts';
+import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useMedia } from '@/screens/diary/diary-bits.tsx';
 
 /** The page's width and spacing, as the other staff pages have it. */
 export function Page({ children }: { children: ReactNode }) {
@@ -34,4 +37,75 @@ export function BackToReports() {
 export function Refusal({ error }: { error: unknown }) {
   const words = serverSaid(error) ? error.message : error instanceof ApiError || error instanceof Error ? 'Something went wrong showing this report. Try again.' : 'Something went wrong.';
   return <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{words}</p>;
+}
+
+/**
+ * "Download as spreadsheet" (reports.mjs `DL`; Jack's answer 10): asks the server for
+ * the report's file and hands it to the browser under the name the server gave it. On
+ * a phone it says just "Download", so it fits beside the title.
+ */
+export function DownloadButton({ path }: { path: string }) {
+  const phone = useMedia('(max-width: 767px)');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  async function download() {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const res = await fetch(path);
+      if (!res.ok) {
+        const words = res.status < 500 ? await res.json().then((b: { error?: unknown }) => (typeof b?.error === 'string' ? b.error : null), () => null) : null;
+        setProblem(words ?? 'Wheelhouse couldn’t make the file. Try again in a moment.');
+        return;
+      }
+      const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'report.csv';
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      // Not at once: some browsers cancel the download if its address goes in the same breath.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      setProblem('Wheelhouse couldn’t make the file. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button variant="default" className="min-h-11" disabled={busy} onClick={() => void download()}>{phone ? 'Download' : 'Download as spreadsheet'}</Button>
+      {problem ? <p role="alert" className="m-0 text-size-13-5 font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * The period choices (reports.mjs `chip` and `periodGroup`; audit M3: "one chip look for every
+ * choice: the chosen one dark with a tick"): native radios, so the arrow keys and screen
+ * readers work, each drawn as a rounded chip.
+ */
+export function PeriodChips({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return (
+    <fieldset className="m-0 min-w-0 border-0 p-0">
+      <legend className="sr-only">Period</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <label
+              key={o.value}
+              className={`relative inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--wh-ink)] px-3.5 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)] ${on ? 'bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'bg-transparent text-[var(--wh-ink)]'}`}
+            >
+              <input type="radio" name="period" value={o.value} checked={on} onChange={() => onChange(o.value)} className="sr-only" />
+              {on ? <Check size={14} aria-hidden="true" /> : null}
+              {o.label}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
 }

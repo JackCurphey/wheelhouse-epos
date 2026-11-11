@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { ROUTES } from '@/staff/routes.ts';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
-import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { dayLabel } from '@/screens/diary/rules.ts';
 import { clock } from '@/screens/diary/when.ts';
 import { Report, type Close } from '@/screens/till/close-the-day.tsx';
-import { Box, BackToReports, Note, Page, Refusal } from './reports-bits.tsx';
+import { useShowGraphs } from '@/lib/your-settings.ts';
+import { Box, BackToReports, DownloadButton, Note, Page, PeriodChips, Refusal } from './reports-bits.tsx';
 import { compareWords, differenceText, money, type SalesRow } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
@@ -22,9 +23,9 @@ import { Figure, PERIODS } from './sales-report.tsx';
  * is, and so is the open day (?day=).
  */
 type Row =
-  | { kind: 'day'; key: string; label: string; closed: false }
+  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
   | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
-  | { kind: 'online'; key: string; label: string; onlinePence: number }
+  | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
 type Takings = {
@@ -43,31 +44,43 @@ function Difference({ pence }: { pence: number }) {
 }
 
 const CELL = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-right max-md:px-1 max-md:text-size-13';
-const HEAD = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-right text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
+const HEAD = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
+// A row's day: left-aligned and kept on one line, so a phone's table scrolls sideways rather than breaking the date.
+const DAY = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-left whitespace-nowrap max-md:px-1 max-md:text-size-13';
 
 function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => void }) {
   return (
     <div className="overflow-x-auto">
       <table aria-label="Closed days" className="w-full border-collapse text-sm max-md:text-size-13">
         <thead><tr>
-          <th scope="col" className={`${HEAD} text-left`}>Day</th><th scope="col" className={HEAD}>Takings</th>
-          <th scope="col" className={HEAD}>Cash banked</th><th scope="col" className={HEAD}>Cash difference</th><th scope="col" className={HEAD}>Closed by</th>
+          <th scope="col" className={`${HEAD} text-left`}>Day</th><th scope="col" className={`${HEAD} text-right`}>Takings</th>
+          <th scope="col" className={`${HEAD} text-right`}>Cash banked</th><th scope="col" className={`${HEAD} text-right`}>Cash difference</th><th scope="col" className={`${HEAD} text-right`}>Closed by</th>
         </tr></thead>
         <tbody>
           {rows.map((r) => {
             if (r.kind === 'online') {
               return (
                 <tr key={`o${r.key}`}>
-                  <th scope="row" className={`${CELL} text-left font-normal`}>{r.label}</th>
-                  <td className={CELL}>{money(r.onlinePence)}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
+                  <th scope="row" className={`${DAY} font-normal`}>{r.label}</th>
+                  <td className={CELL}>{money(r.onlinePence)}{r.soFar ? ' so far' : ''}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
                 </tr>
               );
             }
             if (r.kind === 'day' && !r.closed) {
+              // A past day nobody closed (Jack, 11 Nov): its takings so far and a link to Close the day for it, as Today's "Close it".
+              const past = r.past && r.closeDay;
               return (
                 <tr key={`d${r.key}`}>
-                  <th scope="row" className={`${CELL} text-left font-semibold`}>{r.label}</th>
-                  <td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not closed yet</td>
+                  <th scope="row" className={`${DAY} font-semibold`}>{r.label}</th>
+                  <td className={CELL}>{past ? `${money(r.takingsPence ?? 0)} so far` : '—'}</td><td className={CELL}>—</td><td className={CELL}>—</td>
+                  <td className={CELL}>
+                    {past ? (
+                      <span className="inline-flex flex-wrap items-center justify-end gap-x-2">
+                        Not closed
+                        <Link to={`${ROUTES['eod-count']}?day=${r.closeDay}`} aria-label={`Close ${dayLabel(r.closeDay!)}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)] underline">Close it</Link>
+                      </span>
+                    ) : 'Not closed yet'}
+                  </td>
                 </tr>
               );
             }
@@ -76,7 +89,7 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
               : <span className="font-semibold">{r.label}</span>;
             return (
               <tr key={`${r.kind}${r.key}`}>
-                <th scope="row" className={`${CELL} text-left`}>{open}</th>
+                <th scope="row" className={DAY}>{open}</th>
                 <td className={CELL}>{money(r.takingsPence)}</td><td className={CELL}>{money(r.bankedPence)}</td>
                 <td className={CELL}><Difference pence={r.differencePence} /></td>
                 <td className={CELL}>{r.kind === 'day' ? r.closedByName : `${r.closedDays} closed days`}</td>
@@ -94,7 +107,7 @@ function DayReport({ id, onClose }: { id: number; onClose: () => void }) {
   if (day.isError) return <Refusal error={day.error} />;
   if (!day.data) return null;
   const { close } = day.data;
-  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay />;
+  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay actions={<DownloadButton path={`/api/reports/days/${id}/csv`} />} />;
 }
 
 export function TakingsReportPage() {
@@ -112,11 +125,14 @@ export function TakingsReportPage() {
   return (
     <Page>
       <BackToReports />
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="m-0 text-xl font-bold">Takings and cash-ups</h2>
-        {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
+      <div className="flex flex-wrap items-end justify-between gap-2.5">
+        <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-1">
+          <h2 className="m-0 text-xl font-bold">Takings and cash-ups</h2>
+          {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
+        </div>
+        <DownloadButton path={`/api/reports/takings.csv?${query}`} />
       </div>
-      <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={(v) => (v === 'dates' ? setPicking(true) : setParams({ period: v }))} options={PERIODS} />
+      <PeriodChips value={picking ? 'dates' : period} onChange={(v) => (v === 'dates' ? setPicking(true) : setParams({ period: v }))} options={PERIODS} />
       {takings.isError ? <Refusal error={takings.error} /> : null}
       {report ? <Body report={report} onOpen={(id) => setParams({ ...keep(), day: String(id) })} period={period} /> : takings.isError ? null : <Note>Loading…</Note>}
       {picking && report ? (
@@ -129,6 +145,7 @@ export function TakingsReportPage() {
 }
 
 function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number) => void; period: string }) {
+  const showGraphs = useShowGraphs();
   const { figures: f, period: p } = report;
   const words = (g: Figures) => compareWords(g.diffPence, p.against, 'money');
   const title = 'Takings by closed day';
@@ -147,8 +164,8 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         <Box><div className="flex flex-col items-center gap-2 px-3 py-9 text-center"><span className="text-size-17 font-bold">No days closed in this period</span></div></Box>
       ) : (
         <Box>
-          <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
-            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} />
+          {showGraphs ? <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
+            keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
           <ClosedDays rows={report.rows} onOpen={onOpen} />
         </Box>
       )}
