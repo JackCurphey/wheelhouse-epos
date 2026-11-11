@@ -13,7 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
-import { startLiveServer } from './helpers/liveServer.js';
+import { startLiveServer, testServerEnv } from './helpers/liveServer.js';
 
 // On every address, as a Wheelhouse server listens, or on 127.0.0.1 only, as
 // tests' own small stand-in servers do. On a Mac the second can share a port
@@ -62,4 +62,15 @@ test('a server that dies at start for another reason still fails at once, naming
     startLiveServer({ env: { DATABASE_URL: 'postgres://nobody@127.0.0.1:1/none' }, timeoutMs: 20000 }),
     /server exited early with code 1/,
   );
+});
+
+// The messages timer goes through every shop in the shared database each
+// round: hundreds (938 on 11 Nov) at about 6 ms each. Every test server ran it
+// every 5 seconds, dozens at once in a full run, for nothing: the tests that
+// want it set their own (WH_MESSAGES_TICK_MS 100 or 200), and the rest put their
+// messages in as they want them. It also slowed the rounds those tests wait
+// for (messaging-engine failed under load, 11 Nov). Off unless a test asks.
+test('a test server’s messages timer is off unless the test sets one', () => {
+  assert.equal(testServerEnv(4000).WH_MESSAGES_TICK_MS, '3600000');
+  assert.equal(testServerEnv(4000, { WH_MESSAGES_TICK_MS: '100' }).WH_MESSAGES_TICK_MS, '100');
 });

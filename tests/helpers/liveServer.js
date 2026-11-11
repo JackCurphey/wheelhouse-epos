@@ -88,20 +88,34 @@ export async function startLiveServer({ timeoutMs = 30000, env = {}, pickPort = 
   }
 }
 
+// What a test server runs with: this process's environment, then these, then
+// the test's own `env`.
+export function testServerEnv(port, env = {}) {
+  return {
+    ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN,
+    // The pretend payment provider and pretend WorkOS, as a developer's .env
+    // asks for (deposit-settings design 3; staff-signin-workos design 7).
+    PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
+    // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
+    WHEELHOUSE_DEV_AUTOLOGIN: '',
+    // Says what this is, for what only runs in tests and development (the pretend help inbox).
+    NODE_ENV: 'test',
+    // Test servers share a database: one mustn't pick up another test's waiting
+    // Citrus Lime file. A test that wants the timer sets its own.
+    WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off',
+    // The same for the messages timer: each round goes through every shop in
+    // the shared database (hundreds), and dozens of test servers ran one every
+    // 5 s for nothing (tests/live-server-port.test.js). A test that sends sets its own.
+    WH_MESSAGES_TICK_MS: '3600000',
+    ...env,
+  };
+}
+
 async function startOnce({ timeoutMs, env, port }) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
-    // The pretend payment provider and pretend WorkOS, as a developer's .env
-    // asks for (deposit-settings design 3; staff-signin-workos design 7).
-    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
-      // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
-      WHEELHOUSE_DEV_AUTOLOGIN: '',
-      // Says what this is, for what only runs in tests and development (the pretend help inbox).
-      NODE_ENV: 'test',
-      // Test servers share a database: one mustn't pick up another test's waiting
-      // Citrus Lime file. A test that wants the timer sets its own.
-      WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off', ...env },
+    env: testServerEnv(port, env),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Kept as well as shown, for a test that checks what the server logged.
