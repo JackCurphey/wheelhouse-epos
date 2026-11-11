@@ -78,5 +78,10 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await expect(page.getByText(/10 – 17 September, against the same number of days just before/)).toBeVisible();
     await expect(page.getByRole('group', { name: 'Takings', exact: true }).getByText('£50.00', { exact: true })).toBeVisible();
     await noSideScroll(page);
+
+    // The address alone opens a period (a bookmark): last month is the one August sale.
+    await page.goto(`${server!.baseUrl}/workshop/reports/sales?period=last-month`);
+    await expect(page.getByRole('group', { name: 'Takings', exact: true }).getByText('£7.00', { exact: true })).toBeVisible();
+    await noSideScroll(page);
   });
 }
