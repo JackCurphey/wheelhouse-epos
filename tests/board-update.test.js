@@ -171,3 +171,41 @@ test('the workflow rebuilds one fixed branch from main each night and updates it
   assert.ok(/gh pr close/.test(WORKFLOW), 'closes the open one when nothing differs from main');
   assert.ok(/ref: main/.test(WORKFLOW), 'starts from main');
 });
+
+test('only real status pull requests are skipped: "Status page for jobs" is a piece of work', () => {
+  const prs = [
+    pr(51, 'Status page for jobs'),
+    pr(52, 'Status 26 Oct: the overnight runner'),
+    pr(53, 'Status, 11 Nov'),
+    pr(54, 'Status: caught up to #667'),
+  ];
+  assert.deepEqual(run(FIXTURE, prs).added, [51]);
+});
+
+test('a review row whose number GitHub cannot find is warned about and skipped, not fatal', () => {
+  const warnings = [];
+  const view = (n) => {
+    if (n === 31) throw new Error('no pull request found');
+    return { state: n === 30 ? 'MERGED' : 'OPEN' };
+  };
+  const merged = board.fetchMergedAmong([30, 31, 32], view, (m) => warnings.push(m));
+  assert.deepEqual(merged, [30]);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /#31/);
+});
+
+test('a full page of merged pull requests is warned about, since the list may be cut short', () => {
+  const warnings = [];
+  const full = Array.from({ length: board.LIST_LIMIT }, (_, i) => pr(1000 + i, `PR ${i}`));
+  assert.equal(board.fetchMerged('2030-02-24', () => full, (m) => warnings.push(m)).length, board.LIST_LIMIT);
+  assert.equal(warnings.length, 1);
+  board.fetchMerged('2030-02-24', () => full.slice(1), (m) => warnings.push(m));
+  assert.equal(warnings.length, 1, 'no warning below the limit');
+});
+
+test('the workflow checks the board page before pushing, and says the branch is the bot’s', () => {
+  const check = WORKFLOW.indexOf('node --test tests/build-board.test.js tests/board-update.test.js');
+  assert.ok(check > 0, 'runs the board tests');
+  assert.ok(check < WORKFLOW.indexOf('git push --force'), 'before it pushes');
+  assert.match(WORKFLOW, /hand edits .*are lost/i, 'the pull request says not to edit the branch by hand');
+});

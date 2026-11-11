@@ -44,6 +44,14 @@ jobs:
         id: board
         run: node scripts/board/update-board.mjs
 
+      # A pull request opened by this workflow doesn't start the Tests
+      # workflow, so the board page is checked here before anything is pushed.
+      - name: Check the board page
+        if: steps.board.outputs.changed == 'true'
+        run: |
+          npm ci --no-audit --no-fund
+          node --test tests/build-board.test.js tests/board-update.test.js
+
       # The branch is rebuilt from main every night and force-pushed, so the
       # rows add up and never double while an earlier pull request is open.
       # An open pull request from bot/board is updated, never duplicated; with
@@ -68,7 +76,7 @@ jobs:
           git add docs/build-progress/build-board.html
           git commit -m "$TITLE"
           git push --force origin HEAD:bot/board
-          BODY="Added by the nightly board run (scripts/board/update-board.mjs): a done row for each pull request merged in the last 14 days that is not on the board yet, review rows that have merged turned to done, and today's date. Nothing else on the board is touched. The \"Merged ...\" line (sub) and the lead are hand-written and still need a person if they are out of date. This branch is rebuilt from main every night. Merge it if it looks right."
+          BODY="Added by the nightly board run (scripts/board/update-board.mjs): a done row for each pull request merged in the last 14 days that is not on the board yet, review rows that have merged turned to done, and today's date. Nothing else on the board is touched. The \"Merged ...\" line (sub) and the lead are hand-written and still need a person if they are out of date. This branch is rebuilt from main every night, so hand edits pushed to it are lost: fix the board in an ordinary pull request instead. Merge this if it looks right."
           if [ -n "$OPEN" ]; then
             gh pr edit "$OPEN" --title "$TITLE" --body "$BODY"
           else

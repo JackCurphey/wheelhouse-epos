@@ -56,7 +56,9 @@ function piecesRange(html) {
 }
 
 export function isUpkeep(pr) {
-  if (/^status\b/i.test(pr.title) || /^board:/i.test(pr.title)) return true;
+  // Status pull requests are titled "Status, 11 Nov", "Status 26 Oct: ..." or
+  // "Status: ..."; "Status page for jobs" is a piece of work.
+  if (/^status(?:[,:]|\s+\d)/i.test(pr.title) || /^board:/i.test(pr.title)) return true;
   const branch = pr.headRefName || '';
   if (branch === 'bot/board' || /^(dependabot|renovate)\//.test(branch)) return true;
   if (/^bump\s/i.test(pr.title)) return true;
@@ -143,21 +145,38 @@ export function updateBoard(html, prs, { today = new Date(), mergedReview = [] }
   return { html: out, added, flipped, highest: Math.max(floor, ...added) };
 }
 
-// Pull requests merged into main since `since` (YYYY-MM-DD).
-export function fetchMerged(since) {
-  const json = execFileSync('gh', [
+export const LIST_LIMIT = 200;
+
+function ghList(since) {
+  return JSON.parse(execFileSync('gh', [
     'pr', 'list', '--state', 'merged', '--base', 'main',
     '--search', `merged:>=${since}`,
-    '--json', 'number,title,mergedAt,headRefName,author,files', '--limit', '200',
-  ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  return JSON.parse(json);
+    '--json', 'number,title,mergedAt,headRefName,author,files', '--limit', String(LIST_LIMIT),
+  ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
 }
 
-// Which of these pull requests have merged, whatever the date.
-export function fetchMergedAmong(numbers) {
+function ghView(n) {
+  return JSON.parse(execFileSync('gh', ['pr', 'view', String(n), '--json', 'state'], { encoding: 'utf8', timeout: 30_000 }));
+}
+
+// Pull requests merged into main since `since` (YYYY-MM-DD). A full page may
+// mean the list was cut short, so it says so.
+export function fetchMerged(since, list = ghList, warn = console.warn) {
+  const prs = list(since);
+  if (prs.length >= LIST_LIMIT) warn(`Warning: ${prs.length} pull requests merged since ${since}, the most one list returns; some may be missing.`);
+  return prs;
+}
+
+// Which of these pull requests have merged, whatever the date. A number GitHub
+// can't find (a review row pointing at an issue, say) is warned about and skipped.
+export function fetchMergedAmong(numbers, view = ghView, warn = console.warn) {
   return numbers.filter((n) => {
-    const json = execFileSync('gh', ['pr', 'view', String(n), '--json', 'state'], { encoding: 'utf8' });
-    return JSON.parse(json).state === 'MERGED';
+    try {
+      return view(n).state === 'MERGED';
+    } catch (error) {
+      warn(`Warning: could not look up #${n} (${error.message.split('\n')[0]}); its review row is left alone.`);
+      return false;
+    }
   });
 }
 
