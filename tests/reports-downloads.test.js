@@ -48,6 +48,10 @@ before(async () => {
   assert.equal(evil.status, 201, JSON.stringify(evil.body));
   evilLoginId = evil.body.loginId;
 
+  await runWithShop(owner.shop.id, async () => {
+    const sale = await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method) VALUES ('2026-09-17T09:30:00Z', 12.5, 12.5, 'Shopify') RETURNING id").get();
+    await prepare("INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, 'Shopify', 12.5)").run(sale.id);
+  });
   ids.mon = await seedClose(owner, '2026-09-14', owner.loginId, { takings: 20000, card: 12000, cash: 7000, other: 1000, online: 3000, expected: 7000, counted: 7000, banked: 5000 });
   ids.tue = await seedClose(owner, '2026-09-15', evilLoginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, expected: 14000, counted: 13500, banked: 11500 });
   await runWithShop(owner.shop.id, async () => {
@@ -77,7 +81,8 @@ test('sales.csv is the Sales table as shown: header, a row a day, the total, in 
   assert.deepEqual(rows[0], ['Day', 'Takings', 'Sales', 'Average']);
   assert.deepEqual(rows[2], ['Tue 15 Sep', '25.50', '1', '25.50']);
   assert.deepEqual(rows[5], ['Fri 18 Sep', '—', '—', '—'], 'days to come, as on screen');
-  assert.deepEqual(rows.at(-1), ['So far', '80.50', '3', '26.83']);
+  // Thursday's £12.50 Shopify sale is a sale too: £80.50 + £12.50 over 4 sales.
+  assert.deepEqual(rows.at(-1), ['So far', '93.00', '4', '23.25']);
   // The same figures as the JSON the screen reads.
   const json = (await as(owner)('/api/reports/sales?period=this-week')).body;
   const pounds = (p) => (p === null ? '—' : (p / 100).toFixed(2));
@@ -99,11 +104,12 @@ test('takings.csv is the closed-days table as shown, with each day\'s Online row
   const rows = cells(text);
   assert.deepEqual(rows[0], ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by']);
   assert.deepEqual(rows[1], ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
+  assert.deepEqual(rows[2], ['Thu 17 Sep · Online', '12.50 so far', '—', '—', 'Not a till']);
   // The name starts with an apostrophe, so a spreadsheet shows it as text, not a formula.
-  assert.deepEqual(rows[2], ['Tue 15 Sep', '300.00', '115.00', '-5.00', "'=SUM(1+1)"]);
-  assert.deepEqual(rows[3], ['Tue 15 Sep · Online', '25.00', '—', '—', 'Not a till']);
-  assert.deepEqual(rows[4], ['Mon 14 Sep', '200.00', '50.00', '0.00', 'Jack Lewis']);
-  assert.deepEqual(rows[5], ['Mon 14 Sep · Online', '30.00', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[3], ['Tue 15 Sep', '300.00', '115.00', '-5.00', "'=SUM(1+1)"]);
+  assert.deepEqual(rows[4], ['Tue 15 Sep · Online', '25.00', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[5], ['Mon 14 Sep', '200.00', '50.00', '0.00', 'Jack Lewis']);
+  assert.deepEqual(rows[6], ['Mon 14 Sep · Online', '30.00', '—', '—', 'Not a till']);
 });
 
 test('the closed day\'s .csv is that day\'s report as saved', async () => {

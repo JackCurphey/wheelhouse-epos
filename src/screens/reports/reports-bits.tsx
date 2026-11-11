@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { ApiError, serverSaid } from '@/lib/api/client.ts';
 import { ROUTES } from '@/staff/routes.ts';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 
@@ -78,5 +79,33 @@ export function DownloadButton({ path }: { path: string }) {
       <Button variant="default" className="min-h-11" disabled={busy} onClick={() => void download()}>{phone ? 'Download' : 'Download as spreadsheet'}</Button>
       {problem ? <p role="alert" className="m-0 text-size-13-5 font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
     </div>
+  );
+}
+
+/**
+ * The period choices (reports.mjs `chip` and `periodGroup`; audit M3: "one chip look for every
+ * choice: the chosen one dark with a tick"): native radios, so the arrow keys and screen
+ * readers work, each drawn as a rounded chip.
+ */
+export function PeriodChips({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+  return (
+    <fieldset className="m-0 min-w-0 border-0 p-0">
+      <legend className="mb-1.5 text-xs font-semibold text-[var(--wh-muted)]">Period</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <label
+              key={o.value}
+              className={`relative inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--wh-ink)] px-3.5 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)] ${on ? 'bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'bg-transparent text-[var(--wh-ink)]'}`}
+            >
+              <input type="radio" name="period" value={o.value} checked={on} onChange={() => onChange(o.value)} className="sr-only" />
+              {on ? <Check size={14} aria-hidden="true" /> : null}
+              {o.label}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }

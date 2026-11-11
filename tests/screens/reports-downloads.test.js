@@ -94,6 +94,10 @@ test('Your settings › Accessibility shows "Show graphs in reports" to the Owne
   const dialog = within(await ui.findByRole('dialog', { name: 'Your settings' }));
   const toggle = await dialog.findByRole('switch', { name: 'Show graphs in reports' });
   assert.equal(toggle.getAttribute('aria-checked'), 'true', 'on to start');
+  // Last in the Accessibility list, after Folded sidebar, as drawn (app-map.mjs ys-graphs).
+  const names = dialog.getAllByRole('switch').map((el) => el.getAttribute('aria-label'));
+  assert.equal(names.at(-1), 'Show graphs in reports');
+  assert.equal(names.at(-2), 'Folded sidebar');
   assert.ok(dialog.queryByText('A graph above each report. The figures are always in the table below it, for screen readers too.') !== null);
   fireEvent.click(toggle);
   await waitFor(() => assert.deepEqual(puts, [{ accessibility: { showGraphs: false } }]));

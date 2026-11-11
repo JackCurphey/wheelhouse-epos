@@ -16,7 +16,7 @@ export type SalesReport = {
   };
   rows: SalesRow[];
   total: { label: string; takingsPence: number; sales: number; averagePence: number | null };
-  empty: boolean; nothingBefore: boolean; firstSaleOn: string | null; shopLine: string; today: string;
+  empty: boolean; nothingBefore: boolean; firstSaleOn: string | null; startedOn: string; shopLine: string; today: string;
 };
 
 /** Pence as pounds and pence, "£45.00"; "—" for a figure that has no value (a day not reached). */

@@ -49,6 +49,11 @@ before(async () => {
   ids.tue = await close(owner, '2026-09-15', owner.loginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, expected: 14000, counted: 13500, banked: 11500 });
   ids.wed = await close(owner, '2026-09-16', joLoginId, { takings: 10000, card: 6000, cash: 3500, other: 500, online: 0, expected: 3500, counted: 3500, banked: 2500 });
   // The same days last week (Mon 7, Tue 8, Thu 10), and the Friday after them.
+  // Online money taken today, not yet in any close: £12.50 paid through Shopify.
+  await runWithShop(owner.shop.id, async () => {
+    const sale = await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method) VALUES ('2026-09-17T09:30:00Z', 12.5, 12.5, 'Shopify') RETURNING id").get();
+    await prepare("INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, 'Shopify', 12.5)").run(sale.id);
+  });
   await close(owner, '2026-09-07', joLoginId, { takings: 15000, card: 9000, cash: 5000, other: 1000, online: 2000, expected: 5000, counted: 5000, banked: 3000 });
   await close(owner, '2026-09-08', joLoginId, { takings: 25000, card: 14000, cash: 10000, other: 1000, online: 0, expected: 10000, counted: 9800, banked: 8000 });
   await close(owner, '2026-09-10', joLoginId, { takings: 5000, card: 3000, cash: 1500, other: 500, online: 100, expected: 1500, counted: 1500, banked: 500 });
@@ -70,18 +75,21 @@ test('this week lists the closed days newest first, today as "Not closed yet", a
   assert.equal(res.body.today, '2026-09-17');
   const shape = res.body.rows.map((r) => [r.kind, r.key, r.label]);
   assert.deepEqual(shape, [
-    ['day', '2026-09-17', 'Thu 17 Sep'],
+    ['day', '2026-09-17', 'Thu 17 Sep'], ['online', '2026-09-17', 'Thu 17 Sep · Online'],
     ['day', '2026-09-16', 'Wed 16 Sep'], ['online', '2026-09-16', 'Wed 16 Sep · Online'],
     ['day', '2026-09-15', 'Tue 15 Sep'], ['online', '2026-09-15', 'Tue 15 Sep · Online'],
     ['day', '2026-09-14', 'Mon 14 Sep'], ['online', '2026-09-14', 'Mon 14 Sep · Online'],
   ]);
-  const [today, wed, wedOnline, tue] = res.body.rows;
+  const [today, todayOnline, wed, wedOnline, tue] = res.body.rows;
   assert.equal(today.closed, false);
+  // Today's online money so far, from the sales no close has counted yet (rp-takings: "[£] so far").
+  assert.deepEqual([todayOnline.onlinePence, todayOnline.soFar], [1250, true]);
+  assert.equal(wedOnline.soFar, undefined, 'a closed day\'s is as saved');
   assert.equal(today.takingsPence, undefined);
   assert.deepEqual([wed.closeId, wed.closed, wed.takingsPence, wed.bankedPence, wed.differencePence, wed.closedByName], [ids.wed, true, 10000, 2500, 0, 'Jo Taylor']);
   assert.deepEqual([tue.takingsPence, tue.bankedPence, tue.differencePence, tue.closedByName], [30000, 11500, -500, 'Jack Lewis']);
   assert.equal(wedOnline.onlinePence, 0);
-  assert.equal(res.body.rows[4].onlinePence, 2500);
+  assert.equal(res.body.rows[5].onlinePence, 2500);
 });
 
 test('the headline figures add up the closes and compare with the same closed days last week', async () => {
@@ -102,7 +110,8 @@ test('Today is the one day against the same weekday last week, as one bar', asyn
   assert.equal(res.body.period.unit, 'day');
   assert.equal(res.body.bars.length, 1);
   assert.deepEqual([res.body.bars[0].key, res.body.bars[0].takingsPence, res.body.bars[0].beforeTakingsPence], ['2026-09-17', 0, 5000]);
-  assert.deepEqual(res.body.rows.map((r) => [r.kind, r.closed]), [['day', false]]);
+  assert.deepEqual(res.body.rows.map((r) => r.kind), ['day', 'online']);
+  assert.equal(res.body.rows[0].closed, false);
   assert.equal(res.body.figures.takings.beforePence, 5000, 'a single day against a single day');
 });
 

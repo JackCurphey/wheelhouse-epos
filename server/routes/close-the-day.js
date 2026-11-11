@@ -83,6 +83,11 @@ async function openSales(day, upTo = null) {
 // made offline (third review, 27 Oct).
 const OLD_AT = 's.created_at';
 const TILL_AT = '(CASE WHEN t.made_offline THEN t.till_clock_at ELSE t.received_at END)';
+// Online money taken so far today: what the next close would keep apart, from the
+// sales no close has counted yet. Reports shows it as "[£] so far" (rp-takings).
+export async function onlineSoFar(day) {
+  return (await takingsIn(await openSales(day))).onlinePence;
+}
 const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till: { sql: 't.day_close_id = ?', args: [id] } });
 
 // Till money by how it was paid, from both sales records: the old record's

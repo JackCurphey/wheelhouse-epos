@@ -38,12 +38,14 @@ test('the table lists each closed day newest first, today as "Not closed yet", a
   const table = within(await ui.findByRole('table', { name: 'Closed days' }));
   assert.deepEqual(table.getAllByRole('columnheader').map((h) => h.textContent), ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by']);
   const rows = rowsOf(table);
-  assert.deepEqual(rows[1].slice(0, 1).concat(rows[1].slice(1)), ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
-  assert.deepEqual(rows[2].slice(1), ['£100.00', '£25.00', '£0.00', 'Jo Taylor']);
-  assert.deepEqual(rows[3], ['Wed 16 Sep · Online', '£0.00', '—', '—', 'Not a till']);
-  assert.deepEqual(rows[4].slice(1), ['£300.00', '£115.00', '−£5.00 short', 'Jack Lewis']);
-  assert.deepEqual(rows[5], ['Tue 15 Sep · Online', '£25.00', '—', '—', 'Not a till']);
-  assert.equal(rows.length, 8);
+  assert.deepEqual(rows[1], ['Thu 17 Sep', '—', '—', '—', 'Not closed yet']);
+  // Today's online money so far, as drawn ("[£] so far"; rp-takings).
+  assert.deepEqual(rows[2], ['Thu 17 Sep · Online', '£12.50 so far', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[3].slice(1), ['£100.00', '£25.00', '£0.00', 'Jo Taylor']);
+  assert.deepEqual(rows[4], ['Wed 16 Sep · Online', '£0.00', '—', '—', 'Not a till']);
+  assert.deepEqual(rows[5].slice(1), ['£300.00', '£115.00', '−£5.00 short', 'Jack Lewis']);
+  assert.deepEqual(rows[6], ['Tue 15 Sep · Online', '£25.00', '—', '—', 'Not a till']);
+  assert.equal(rows.length, 9);
   // A short day stands out in words for a screen reader and in the warning colour.
   const short = table.getByText('−£5.00');
   assert.ok(short.className.includes('wh-warn-ink'));

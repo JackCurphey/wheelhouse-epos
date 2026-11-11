@@ -103,7 +103,7 @@ test('nothing sold: says so, and says there is nothing to compare with when noth
   const empty = () => ({
     ...THIS_WEEK,
     period: { ...THIS_WEEK.period, period: 'today', label: 'Thursday 17 September, so far', against: 'last Thursday', unit: 'hour' },
-    rows: [], empty: true, nothingBefore: true, firstSaleOn: null,
+    rows: [], empty: true, nothingBefore: true, firstSaleOn: null, startedOn: '2026-08-30',
     figures: { takings: { pence: 0, beforePence: 0, diffPence: null }, sales: { count: 0, beforeCount: 0, diff: null }, average: { pence: null, beforePence: null, diffPence: null } },
     total: { label: 'So far', takingsPence: 0, sales: 0, averagePence: null },
   });
@@ -111,7 +111,7 @@ test('nothing sold: says so, and says there is nothing to compare with when noth
   assert.ok(await ui.findByText('Nothing sold yet today') !== null);
   assert.ok(ui.queryByText('Sales show here as soon as the first one goes through a till.') !== null);
   assert.ok(ui.queryByText('Nothing to compare with yet') !== null);
-  assert.ok(ui.queryByText('The shop has no sales yet, so there’s no period before this one. Comparisons start once there is.') !== null);
+  assert.ok(ui.queryByText('The shop started on Wheelhouse on 30 August 2026, so there’s no period before this one. Comparisons start once there is.') !== null);
   // No £0.00 comparisons, no table.
   assert.ok(ui.queryByText(/on last Thursday/) === null);
   assert.ok(ui.queryByRole('table') === null);
@@ -131,4 +131,14 @@ test('a server refusal is shown in its own words', async () => {
   assert.ok(await ui.findByText("Only the shop's owner can see reports") !== null);
   assert.ok(ui.queryByRole('table') === null);
   assert.ok(LAST_12);
+});
+
+test('the chosen period is dark with a tick, the others plain (audit M3)', async () => {
+  const { ui } = await openReports('/workshop/reports/sales', { answers: served() });
+  await ui.findByRole('table', { name: 'Sales by day' });
+  const chip = (name) => ui.getByRole('radio', { name }).labels[0];
+  assert.ok(chip('This week').querySelector('svg') !== null, 'a tick on the chosen one');
+  assert.ok(chip('This week').className.includes('bg-[var(--wh-ink)]'), 'dark');
+  assert.ok(chip('Today').querySelector('svg') === null);
+  assert.ok(!chip('Today').className.includes('bg-[var(--wh-ink)]'));
 });

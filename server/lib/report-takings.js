@@ -7,6 +7,7 @@
 // months, their closed days added up (answer 9).
 import { prepare } from '../db.js';
 import { periodFor, addDays } from './report-periods.js';
+import { onlineSoFar } from '../routes/close-the-day.js';
 
 const CLOSES = `SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.closed_at, COALESCE(l.name, 'Unknown') AS closed_by_name,
     c.takings_pence, c.card_pence, c.cash_pence, c.other_pence, c.online_pence,
@@ -68,6 +69,8 @@ export async function takingsReport(choice, today) {
       rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: c.online_pence });
     } else if (b.key === today) {
       rows.push({ kind: 'day', key: b.key, label: b.label, closed: false });
+      // Today's online money so far, as drawn ("[£] so far"): not yet in any close.
+      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: await onlineSoFar(today), soFar: true });
     }
   }
 

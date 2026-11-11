@@ -119,7 +119,7 @@ Takings and cash-ups SHALL open on This week, with the same periods as Sales, an
 - **THEN** its Cash difference shows with a minus sign, in the warning colour and in words for a screen reader
 
 ### Requirement: Each day's online money is its own row
-Each closed day SHALL have an "Online" row beside it, showing the online money that close kept apart from the tills, with "Not a till" and "—" in the cash columns (today, not yet closed, has none), and the page SHALL say "Online is what customers paid on the website, from your payment provider. It's separate from the tills: no till counts it, and it's in no till's close."
+Each day SHALL have an "Online" row beside it, showing the online money that close kept apart from the tills, with "Not a till" and "—" in the cash columns; today, not yet closed, shows the online money so far ("[£] so far"). The page SHALL say "Online is what customers paid on the website, from your payment provider. It's separate from the tills: no till counts it, and it's in no till's close."
 
 #### Scenario: Tuesday's online money
 - **WHEN** Tuesday's close kept £[£] of online money apart

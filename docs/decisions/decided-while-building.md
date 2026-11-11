@@ -5116,17 +5116,22 @@ Decided here, for Jack to overrule.
 2. **The chosen period is in the address** (`/workshop/reports/sales?period=last-month`,
    and `from` and `to` for Pick dates), so Back and a bookmark work.
    *Pattern:* the restock list's `?show=`.
-3. **A shop with no sales at all** reads "The shop has no sales yet, so
-   there's no period before this one. Comparisons start once there is."
-   The drawing's text needs a start date, and there is none.
+3. **A shop with no sales at all** reads the drawn "The shop started on
+   Wheelhouse on [date], so there's no period before this one. Comparisons
+   start once there is." (`reports.mjs:182`), with the day the shop was
+   made (`shops.created_at`, on its own clock) as the date. *Put back to
+   the drawing on 11 Nov (Front desk, from an Opus review); my first
+   wording was my own and the drawing wasn't silent.*
 4. **A quiet period that isn't Today** reads "Nothing sold in this period"
    (the drawing only shows Today's wording).
 5. **Amounts read "£45.00" with no comma for thousands**, as Today and the
    rest of the staff app show money (`penceText`).
-6. **The period choices use the app's pill group** (one native radio per
-   choice, the chosen one outlined), not a new chip with a tick: the same
-   control as the other staff pages. The drawing's tick is not drawn.
-   *Pattern:* the restock list's pills.
+6. **The period choices are drawn as the drawing's chip:** the chosen one
+   dark with a tick, the others plain (`reports.mjs:58-61`, `icon('check', 14)`;
+   audit M3, "one chip look for every choice"). Each is still a native
+   radio, so the arrow keys and screen readers work. *Put back to the
+   drawing on 11 Nov (Front desk, from an Opus review); I had used the
+   restock list's pills instead and wrongly said the tick wasn't drawn.*
 7. **Cancel on Pick dates** keeps the report that was showing; the chip
    stays on the period it was on.
 8. **The graph's key** reads "This week so far" / "Same days last week"
@@ -5138,10 +5143,13 @@ Decided here, for Jack to overrule.
 
 ### 11 Nov 2026: Takings and cash-ups, the server and the screens (`openspec/changes/reports-sales-and-takings` group 3, `rp-takings`, `rp-day`)
 
-1. **Today's Online row is not shown.** A day's online money is what its
-   close saved (answer 5), and today has no close yet, so today shows only
-   "Not closed yet". The drawing's "[£] so far" for today would mean counting
-   online money outside a close. *Pattern:* the close's own online line.
+1. **Today's Online row reads "[£] so far", as drawn**
+   (`reports.mjs:216-219`, `onlineRow('Thu 17 Sep', 'open', true)`): the
+   online money in the sales no close has counted yet, worked out the way
+   the close will keep it (a read-only helper beside the close's own
+   figures). Its spreadsheet cell reads "12.50 so far". *Put back to the
+   drawing on 11 Nov (Front desk, from an Opus review); I had left it out
+   as "counting outside a close".*
 2. **A past day with no close has no row.** Only today gets "Not closed
    yet"; a day nobody closed is already on Today's Needs attention.
 3. **Beyond 62 days the rows are months** with their closed days added up,
@@ -5188,9 +5196,11 @@ Decided here, for Jack to overrule.
 4. **A file shows what the screen shows:** a day to come, today's "Not
    closed yet" row and an Online row's cash columns are "—", and a cash
    difference is a signed amount ("-5.00"), not words and colour.
-5. **"Show graphs in reports" sits after Larger text and before Folded
-   sidebar,** for the Owner only (the only person who sees reports until
-   roles). The drawing places it among the other rows and doesn't say where.
+5. **"Show graphs in reports" is the last row in Accessibility,** after
+   Folded sidebar, as drawn (`app-map.mjs:196-197`, `rows.push(...)`), for
+   the Owner only (the only person who sees reports until roles). *Put back
+   to the drawing on 11 Nov (Front desk, from an Opus review); I had put it
+   before Folded sidebar and said the drawing didn't say where.*
 6. **While Your settings is still loading, the graph shows;** it goes only
    once the person's own switch says off.
 7. **A download that fails says why under the button,** in the server's words
