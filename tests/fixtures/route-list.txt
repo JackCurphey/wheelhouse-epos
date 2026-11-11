@@ -344,3 +344,5 @@ GET /api/bike-warranties
 POST /api/bike-warranties
 PUT /api/bike-warranties/:id
 PUT /api/products/:id/warranty
+GET /api/reports/home
+GET /api/reports/sales
