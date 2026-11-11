@@ -87,7 +87,8 @@ async function heldButtons(groupId) {
 }
 async function heldGroups(shopId) {
   await db.prepare('SELECT id FROM shops WHERE id = ? FOR UPDATE').get(shopId);
-  const rows = await db.prepare('SELECT id, position, lower(name) AS key FROM quick_button_groups FOR UPDATE').all();
+  // In id order, as a button's move takes two groups, so the two can't deadlock.
+  const rows = await db.prepare('SELECT id, position, lower(name) AS key FROM quick_button_groups ORDER BY id FOR UPDATE').all();
   return rows.sort((a, b) => a.position - b.position || a.id - b.id);
 }
 
