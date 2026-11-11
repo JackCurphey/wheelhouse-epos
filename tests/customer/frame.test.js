@@ -49,7 +49,7 @@ async function renderFrame(
     { path: '/book/:shopSlug/problem', Component: () => h(BookFrame, props, h('p', null, 'Screen body')) },
     { path: '/book/:shopSlug', Component: () => h('p', null, 'First screen') },
   ], { initialEntries: [path] });
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   return render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
 }
 

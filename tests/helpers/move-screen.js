@@ -39,6 +39,8 @@ export async function open({ files = [FILE()], rows = [NO_NAME, SAME], total, an
   globalThis.fetch = async (url, options = {}) => {
     const path = new URL(url, 'http://localhost').pathname;
     if (path === '/api/auth/me') return json(200, OWNER);
+    // `state.hold`, while set, keeps the page's reads of the move waiting (a slow refresh).
+    if ((path === '/api/move' || path === '/api/move/look') && state.hold) await state.hold;
     if (path === '/api/move') return json(200, { files: state.files, ...(helpOffered === undefined ? {} : { helpOffered }) });
     if (path === '/api/move/look') return json(200, { rows: state.rows, total: total ?? state.rows.length });
     if (path === '/api/move/files') {

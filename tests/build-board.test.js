@@ -54,8 +54,24 @@ test('the board shows Release 2 as six slices, each with its own bar', () => {
   // Every work package is in a slice or in the Not in a slice fold, once.
   const ids = [...doc.querySelectorAll('#ov-slices li[data-id], #ov-outside li[data-id]')].map((li) => li.dataset.id);
   assert.equal(new Set(ids).size, ids.length, 'no package twice');
-  assert.equal(ids.length, 38, 'all 38 work packages');
-  assert.ok(doc.querySelectorAll('#ov-outside li').length === 8, 'eight packages in no slice');
+  // The counts are not typed in here: a fixed 38 and 8 failed every time a
+  // package was added or moved. What matters is that each package is a real
+  // WP-x.y id, the board still tracks a plausible number of them, and some sit
+  // outside the slices (so the fold is not silently empty).
+  for (const id of ids) assert.match(id, /^WP-\d+\.\d+$/, `${id} is not a work package id`);
+  assert.ok(ids.length >= 30, `only ${ids.length} work packages on the board`);
+  assert.ok(doc.querySelectorAll('#ov-outside li').length >= 1, 'the Not in a slice fold has packages');
+  // Nothing may be dropped: every package the build plan defines is on the
+  // board. The board may carry extras (WP-0.4, WP-0.5). The walk-through ids
+  // (WP-W.*) are not packages the board tracks. WP-8.2 and WP-8.3 are left off
+  // on purpose: running alongside and the switch-over moved after Release 2
+  // (Jack, 18 Oct answer, #256), so "they aren't counted" (board, WP-8.1).
+  const NOT_COUNTED = new Set(['WP-8.2', 'WP-8.3']);
+  const plan = readFileSync(new URL('../docs/superpowers/plans/2026-10-03-release-2-build-plan.md', import.meta.url), 'utf8');
+  const defined = [...plan.matchAll(/^- \*\*(WP-\d+\.\d+)\b/gm)].map((m) => m[1]);
+  assert.ok(defined.length >= 30, `found only ${defined.length} packages in the build plan`);
+  const missing = defined.filter((id) => !NOT_COUNTED.has(id) && !ids.includes(id));
+  assert.deepEqual(missing, [], `the build plan's packages missing from the board: ${missing.join(', ')}`);
 });
 
 // Release 2 overall (Jack, 29 Oct, "count every item"): the slice bar's rule
