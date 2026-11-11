@@ -83,7 +83,9 @@ export function SavedNoteArea({ room, className, children }: { room: string; cla
               {note.text}
             </span>
             {note.action ? (
-              <button type="button" disabled={note.busy} onClick={note.action.run} className="min-h-11 rounded-[8px] border-0 bg-[rgba(255,255,255,0.14)] px-3.5 text-sm font-bold whitespace-nowrap text-white disabled:opacity-60">
+              // Pressing it keeps focus where it was, so a box being typed in
+              // isn't left (and saved) before the click lands.
+              <button type="button" disabled={note.busy} onMouseDown={(e) => e.preventDefault()} onClick={note.action.run} className="min-h-11 rounded-[8px] border-0 bg-[rgba(255,255,255,0.14)] px-3.5 text-sm font-bold whitespace-nowrap text-white disabled:opacity-60">
                 {note.action.label}
               </button>
             ) : null}

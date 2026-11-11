@@ -234,6 +234,47 @@ test('after a refusal the server explains, its words show with no Try again; a s
   assert.ok(t.within(area).getByRole('button', { name: 'Try again' }));
 });
 
+test('Float: a failed float goes back to the saved one once a newer note replaces its own', async () => {
+  const t = await open('float');
+  const fold = await t.ui.findByRole('button', { name: /^Float/ });
+  await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
+  const box = await t.ui.findByLabelText('Leave this much in the drawer each night');
+  const sw = await openBoth(t);
+  const area = noteArea(t);
+  t.state.offline = true;
+  t.fireEvent.change(box, { target: { value: '175.00' } });
+  t.fireEvent.blur(box);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  assert.equal(box.value, '175.00', 'kept while its failed note shows');
+  t.state.offline = false;
+  t.fireEvent.click(sw);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  await t.waitFor(() => assert.equal(box.value, '£150.00', 'the saved float once the failed note is gone'));
+  t.fireEvent.blur(box);
+  assert.deepEqual(puts(t).filter((b) => 'floatPence' in b), [{ floatPence: 17500 }], 'leaving the box doesn’t save the old typing');
+});
+
+test('Float: Undo with unsaved typing in the box does the undo, and drops the typing', async () => {
+  const t = await open('float');
+  const fold = await t.ui.findByRole('button', { name: /^Float/ });
+  await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
+  const box = await t.ui.findByLabelText('Leave this much in the drawer each night');
+  const area = noteArea(t);
+  box.focus();
+  t.fireEvent.change(box, { target: { value: '200.00' } });
+  t.fireEvent.blur(box);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  box.focus();
+  t.fireEvent.change(box, { target: { value: '250.00' } });
+  // A real click: the press first, which moves focus off the box unless it is held back.
+  const undo = t.within(area).getByRole('button', { name: 'Undo' });
+  if (t.fireEvent.mouseDown(undo)) { undo.focus(); t.fireEvent.blur(box, { relatedTarget: undo }); }
+  t.fireEvent.click(undo);
+  await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
+  assert.deepEqual(puts(t), [{ floatPence: 20000 }, { floatPence: 15000 }]);
+  assert.equal(box.value, '£150.00');
+});
+
 test('Float: Saved with Undo, a failed save kept with Try again, and no inline note', async () => {
   const t = await open('float');
   const fold = await t.ui.findByRole('button', { name: /^Float/ });

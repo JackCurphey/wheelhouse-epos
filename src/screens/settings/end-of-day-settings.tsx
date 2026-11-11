@@ -29,7 +29,7 @@ const NO_INTERNET = 'Not saved — no internet connection. Your change is kept h
  * only when a retry could work (no connection, or a fault on the server).
  * `done(ok, kept)` says whether it saved, and whether the change stays on screen.
  */
-function useEndOfDaySave(control: (body: Partial<EndOfDay>) => HTMLElement | null) {
+function useEndOfDaySave(control: (body: Partial<EndOfDay>) => HTMLElement | null, onAction?: (kind: 'undo' | 'retry') => void) {
   const queryClient = useQueryClient();
   const note = useSavedNote();
   const mine = useRef({});
@@ -46,12 +46,12 @@ function useEndOfDaySave(control: (body: Partial<EndOfDay>) => HTMLElement | nul
       void queryClient.invalidateQueries({ queryKey: ['close-the-day'] });
       void queryClient.invalidateQueries({ queryKey: ['float-check'] });
       done(true, false);
-      note.show({ text: 'Saved', owner: mine.current, back, action: undo ? { label: 'Undo', run: () => void put(undo, null, done) } : undefined });
+      note.show({ text: 'Saved', owner: mine.current, back, action: undo ? { label: 'Undo', run: () => { onAction?.('undo'); void put(undo, null, done); } } : undefined });
     } catch (err) {
       const retry = !(err instanceof ApiError) || err.status >= 500;
       const text = !(err instanceof ApiError) ? NO_INTERNET : !retry && err.hasServerMessage ? err.message : SAVE_FAILED;
       done(false, retry);
-      note.show({ text, failed: true, owner: mine.current, back, action: retry ? { label: 'Try again', run: () => void put(body, undo, done) } : undefined });
+      note.show({ text, failed: true, owner: mine.current, back, action: retry ? { label: 'Try again', run: () => { onAction?.('retry'); void put(body, undo, done); } } : undefined });
     } finally {
       setSaving(false);
     }
@@ -155,17 +155,25 @@ export function useFloatSummary(): string {
  * night, which the morning's float check asks for. Saved in whole pence when
  * the box is left, as the Receipts box saves, with Settings' note after
  * (set-save-failed draws it on this fold). Undo puts back a float that was set.
+ * As with the choices, a float that failed stays in the box while its own
+ * note shows, and goes back to the saved one once a newer note replaces it.
+ * Undo or Try again drops any typing since.
  */
 export function FloatSettings() {
   const settings = useEndOfDay();
   const box = useRef<HTMLInputElement>(null);
   const [typed, setTyped] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const [bad, setBad] = useState(false);
   const stored = settings.data?.floatPence ?? null;
-  const s = useEndOfDaySave(() => box.current);
+  const s = useEndOfDaySave(() => box.current, (kind) => {
+    setTyped(kind === 'retry' ? failed : null);
+    if (kind === 'undo') setFailed(null);
+  });
+  const stale = failed !== null && typed === failed && !s.saving && !s.noteIsMine;
 
   function save() {
-    if (typed === null) return;
+    if (typed === null || stale) return;
     const read = parseTotal(typed);
     // The counter's own words for a total that isn't pounds and pence.
     if (read === null || 'invalid' in read) { setBad(true); return; }
@@ -173,7 +181,7 @@ export function FloatSettings() {
     if (read.pence === stored) { setTyped(null); return; }
     const sent = typed;
     void s.put({ floatPence: read.pence }, stored === null ? null : { floatPence: stored }, (ok, stays) => {
-      if (ok || !stays) setTyped((t) => (t === sent ? null : t));
+      if (ok || !stays) { setTyped((t) => (t === sent ? null : t)); setFailed(null); } else setFailed(sent);
     });
   }
 
@@ -185,10 +193,10 @@ export function FloatSettings() {
           ref={box}
           id="eod-float"
           inputMode="decimal"
-          value={typed ?? (stored === null ? '' : penceText(stored))}
+          value={typed !== null && !stale ? typed : stored === null ? '' : penceText(stored)}
           disabled={!settings.data}
           aria-invalid={bad ? true : undefined}
-          onChange={(e) => { setTyped(e.target.value); setBad(false); }}
+          onChange={(e) => { setTyped(e.target.value); setFailed(null); setBad(false); }}
           onBlur={save}
           className="min-h-11 w-[140px] rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-right font-mono text-base"
         />
