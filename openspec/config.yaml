@@ -18,7 +18,13 @@ context: |
   decisions and drawings it follows; anything that would contradict one stops
   and asks Jack. The drawings (docs/design/user-journeys/generator/, screen
   ids in journeys.mjs) are the design authority; where they are silent, follow
-  the closest built pattern and log it in docs/decisions/decided-while-building.md.
+  the closest built pattern and log it in your own month's file in
+  docs/decisions/decided-while-building/ (its README gives the format).
+
+  A small piece (under about 200 changed lines, outside the four risky areas)
+  has a proposal and tasks only: skip_specs: true in .openspec.yaml, no
+  design.md, archived with --skip-specs (Jack, 11 Nov,
+  docs/decisions/2026-11-11-speeding-up-the-build.md point 5).
 
   Never invent data: example data comes from the drawings; unknowns stay as
   bracketed placeholders like [n]. There is no official Wheelhouse logo.
@@ -29,7 +35,8 @@ context: |
 
 rules:
   proposal:
-    - Name the work package (e.g. WP-1.3), who is taking it, and whether it touches a risky area
+    - "First line: WP: WP-x.y (the work package it belongs to), or WP: none"
+    - Say who is taking it, whether it touches a risky area, and whether it is a small piece (proposal and tasks only)
     - List the drawings (screen ids) and decisions it follows, with file paths
     - State what is out of scope
   specs:
@@ -38,4 +45,4 @@ rules:
   tasks:
     - Tests first, each watched failing for the right reason before the code
     - Keep each pull request to about 250-600 changed lines
-    - End with npm test and npm run test:browser passing, and a fresh review
+    - End with npm test and npm run test:browser passing, and a self-review with the reviewer agent (risky-area-reviewer and /review in a risky area)
