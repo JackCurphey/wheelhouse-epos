@@ -24,7 +24,8 @@ afterEach(async () => {
 
 async function open(fold) {
   const calls = [];
-  const state = { floatPence: 15000, closeEntryMinutes: 30, countFirst: true, offline: false };
+  // `hold`: a promise the next save waits on; `refuse`: the server's words for a 400; `down`: a 500.
+  const state = { floatPence: 15000, closeEntryMinutes: 30, countFirst: true, offline: false, hold: null, refuse: null, down: false };
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -34,7 +35,10 @@ async function open(fold) {
     const u = new URL(url, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, JACK);
     if (u.pathname === '/api/end-of-day-settings' && method === 'PUT') {
+      if (state.hold) await state.hold;
       if (state.offline) throw new TypeError('Failed to fetch');
+      if (state.refuse) return reply(400, { error: state.refuse });
+      if (state.down) return reply(500, { error: 'Internal error' });
       Object.assign(state, body);
     }
     if (u.pathname === '/api/end-of-day-settings') return reply(200, { floatPence: state.floatPence, closeEntryMinutes: state.closeEntryMinutes, countFirst: state.countFirst });
@@ -46,7 +50,7 @@ async function open(fold) {
     if (u.pathname === '/api/workshop-jobs') return reply(200, []);
     return reply(404, { error: 'Not found' });
   };
-  const uninstall = installDom(`http://localhost/workshop/settings?room=front-desk&fold=${fold}`);
+  const uninstall = installDom(`http://localhost/workshop/settings?room=front-desk${fold ? `&fold=${fold}` : ''}`);
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
   const shell = await importFresh(SHELL);
@@ -115,7 +119,7 @@ test('Close the day: a save that fails says so, keeps the choice, and Try again 
   t.state.offline = true;
   t.fireEvent.click(t.within(group).getByRole('radio', { name: 'At closing time' }));
   await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
-  assert.ok(area.querySelector('svg') !== null, 'a warning before the words');
+  assert.ok(area.querySelector('svg.lucide-circle-alert') !== null, 'the circle with “!” before the words, as drawn (icon alert)');
   assert.deepEqual(chosen(group), ['At closing time (chosen)', '30 minutes before', '1 hour before'], 'the change is kept here');
   assert.ok(t.within(area).queryByRole('button', { name: 'Undo' }) === null);
   t.state.offline = false;
@@ -144,4 +148,114 @@ test('Counting the cash: Count first on to start; off saves, with Saved and Undo
   await t.waitFor(() => assert.match(fold.textContent, /Count first/));
   assert.deepEqual(puts(t), [{ countFirst: false }, { countFirst: true }]);
   await t.waitFor(() => assert.equal(area.textContent, 'Saved'));
+});
+
+const pill = (t, name) => t.within(t.ui.getByRole('radiogroup', { name: 'Show “Close the day” in the till bar' })).getByRole('radio', { name });
+async function openBoth(t) {
+  const count = await t.ui.findByRole('button', { name: /^Counting the cash/ });
+  if (count.getAttribute('aria-expanded') !== 'true') t.fireEvent.click(count);
+  return t.ui.findByRole('switch', { name: 'Count first' });
+}
+
+test('a failed choice isn’t left stuck: a newer note shows what the server holds, and tapping the kept choice saves it again', async () => {
+  const t = await open('close-the-day');
+  const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
+  await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  const sw = await openBoth(t);
+  const area = noteArea(t);
+  // Close the day fails, then Count first saves: the fold goes back to what the server holds.
+  t.state.offline = true;
+  t.fireEvent.click(pill(t, 'At closing time'));
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  assert.equal(pill(t, 'At closing time').getAttribute('aria-checked'), 'true', 'kept while its failed note shows');
+  t.state.offline = false;
+  t.fireEvent.click(sw);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.equal(pill(t, '30 minutes before').getAttribute('aria-checked'), 'true', 'the server’s choice once the failed note is gone');
+  assert.equal(pill(t, 'At closing time').getAttribute('aria-checked'), 'false');
+  // Fails again; tapping the same, kept choice saves it again.
+  t.state.offline = true;
+  t.fireEvent.click(pill(t, 'At closing time'));
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  t.state.offline = false;
+  t.fireEvent.click(pill(t, 'At closing time'));
+  await t.waitFor(() => assert.equal(t.state.closeEntryMinutes, 0));
+  await t.waitFor(() => assert.match(fold.textContent, /At closing time/));
+  assert.deepEqual(puts(t).filter((b) => 'closeEntryMinutes' in b), [{ closeEntryMinutes: 0 }, { closeEntryMinutes: 0 }, { closeEntryMinutes: 0 }]);
+});
+
+test('a save in progress leaves the note in place with its button off, and focus goes back to the setting', async () => {
+  const t = await open('close-the-day');
+  const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
+  await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  const area = noteArea(t);
+  t.fireEvent.click(pill(t, '1 hour before'));
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  let release;
+  t.state.hold = new Promise((r) => { release = r; });
+  const undo = t.within(area).getByRole('button', { name: 'Undo' });
+  undo.focus();
+  t.fireEvent.click(undo);
+  await t.waitFor(() => assert.equal(t.within(area).getByRole('button', { name: 'Undo' }).disabled, true));
+  assert.match(area.textContent, /^Saved/, 'the note stays while saving');
+  assert.ok(document.activeElement === pill(t, '30 minutes before'), `focus back on the setting, not ${document.activeElement?.outerHTML.slice(0, 80)}`);
+  t.state.hold = null;
+  release();
+  await t.waitFor(() => assert.ok(t.within(area).queryByRole('button', { name: 'Undo' }) === null));
+  assert.ok(document.activeElement === pill(t, '30 minutes before'));
+});
+
+test('the note doesn’t follow you to another room', async () => {
+  const t = await open('close-the-day');
+  const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
+  await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  const area = noteArea(t);
+  t.fireEvent.click(pill(t, '1 hour before'));
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  t.fireEvent.click(t.ui.getByRole('link', { name: 'Change opening hours' }));
+  await t.ui.findByRole('heading', { level: 2, name: 'Office' });
+  await t.waitFor(() => assert.equal(noteArea(t).textContent, ''));
+  assert.ok(t.ui.queryByRole('button', { name: 'Undo' }) === null);
+});
+
+test('after a refusal the server explains, its words show with no Try again; a server fault offers Try again', async () => {
+  const t = await open('close-the-day');
+  const fold = await t.ui.findByRole('button', { name: /^Close the day/ });
+  await t.waitFor(() => assert.match(fold.textContent, /30 minutes before closing/));
+  const area = noteArea(t);
+  t.state.refuse = 'Choose at closing time, 30 minutes before or 1 hour before';
+  t.fireEvent.click(pill(t, '1 hour before'));
+  await t.waitFor(() => assert.match(area.textContent, /^Choose at closing time/));
+  assert.ok(t.within(area).queryByRole('button') === null, 'no Try again after a 400');
+  t.state.refuse = null;
+  t.state.down = true;
+  t.fireEvent.click(pill(t, 'At closing time'));
+  await t.waitFor(() => assert.match(area.textContent, /^Wheelhouse couldn’t save that/));
+  assert.ok(t.within(area).getByRole('button', { name: 'Try again' }));
+});
+
+test('Float: Saved with Undo, a failed save kept with Try again, and no inline note', async () => {
+  const t = await open('float');
+  const fold = await t.ui.findByRole('button', { name: /^Float/ });
+  await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
+  const box = await t.ui.findByLabelText('Leave this much in the drawer each night');
+  const area = noteArea(t);
+  t.fireEvent.change(box, { target: { value: '200.00' } });
+  t.fireEvent.blur(box);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.ok(t.ui.queryByText('Saved.') === null, 'no inline Saved line');
+  await t.waitFor(() => assert.match(fold.textContent, /£200\.00/));
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Undo' }));
+  await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
+  assert.deepEqual(puts(t), [{ floatPence: 20000 }, { floatPence: 15000 }]);
+  t.state.offline = true;
+  t.fireEvent.change(box, { target: { value: '175.00' } });
+  t.fireEvent.blur(box);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  assert.ok(t.ui.queryByRole('alert') === null, 'no inline red alert');
+  assert.equal(box.value, '175.00', 'the change is kept here');
+  t.state.offline = false;
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Try again' }));
+  await t.waitFor(() => assert.match(fold.textContent, /£175\.00/));
+  assert.equal(t.state.floatPence, 17500);
 });

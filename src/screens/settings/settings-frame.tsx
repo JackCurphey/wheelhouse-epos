@@ -111,10 +111,9 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
   // A computer opens on the first room; a phone on the list of rooms.
   const room = asked ?? rooms[0];
   if (!room) return null;
-  // The one "Saved" note any fold can show, at the foot of the page (saved-note.tsx).
+  // The page, with the one "Saved" note any fold can show (saved-note.tsx); a new room starts with none.
   return (
-    <SavedNoteArea>
-    <div className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
+    <SavedNoteArea room={room.key} className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
       <nav aria-label="Settings" className="hidden w-[190px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
         {rooms.map((r) => (
           <Link key={r.key} to={roomHref(r.key)} aria-current={r.key === room.key ? 'page' : undefined}
@@ -141,7 +140,6 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
         {asked ? <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center self-start text-sm font-semibold md:hidden"><span aria-hidden="true">‹&nbsp;</span>Settings</Link> : null}
         <RoomPage key={room.key} room={room} fold={params.get('fold')} />
       </div>
-    </div>
     </SavedNoteArea>
   );
 }

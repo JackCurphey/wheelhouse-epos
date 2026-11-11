@@ -46,12 +46,30 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(choices.getByRole('radio', { name: '30 minutes before' })).toHaveAttribute('aria-checked', 'true');
     await choices.getByRole('radio', { name: '1 hour before' }).click();
     await expect(closeFold).toContainText('1 hour before closing');
-    // The note floats at the foot of the page, as drawn: 24px up on a computer, 12px on a phone.
+    // The note sits as drawn (settings-frame.mjs toastHtml) inside the Settings
+    // content area: on a computer 24px above its foot and centred over it; on a
+    // phone 12px inside it at each side and at the foot. The content area's
+    // foot is the screen's less the main area's padding (18px on a computer,
+    // 14px on a phone) and Settings' own (1.25rem, 1rem: about 20px and 16px,
+    // read from the page since it follows the text size).
     const note = page.locator('[data-saved-note][role="status"] > *');
     await expect(note.getByRole('button', { name: 'Undo' })).toBeVisible();
     await expect(note).toContainText('Saved');
     const box = (await note.boundingBox())!;
-    expect(Math.round(viewport.height - (box.y + box.height))).toBe(viewport.width < 768 ? 12 : 24);
+    const content = await page.locator('[data-settings-frame]').evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      return { left: r.left + parseFloat(s.paddingLeft), right: r.right - parseFloat(s.paddingRight), pad: parseFloat(s.paddingBottom) };
+    });
+    const below = viewport.height - (box.y + box.height);
+    if (viewport.width < 768) {
+      expect(below).toBeCloseTo(14 + content.pad + 12, 0);
+      expect(Math.round(box.x - content.left)).toBe(12);
+      expect(Math.round(content.right - (box.x + box.width))).toBe(12);
+    } else {
+      expect(below).toBeCloseTo(18 + content.pad + 24, 0);
+      expect(Math.abs(Math.round(box.x + box.width / 2 - (content.left + content.right) / 2))).toBeLessThanOrEqual(1);
+    }
     expect((await staffRequest(server!.baseUrl, owner.cookie, '/api/end-of-day-settings')).body.closeEntryMinutes).toBe(60);
     await expect(page.getByRole('link', { name: 'Change opening hours' })).toBeVisible();
 

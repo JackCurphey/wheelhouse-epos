@@ -163,7 +163,7 @@ export function CloseTheDayPage() {
             <Note>{blind ? 'Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.' : 'Count the drawer and fill in how many of each.'}</Note>
             {/* Count first off (eod-count-shown): what the till expects, before counting. */}
             {!blind && expected !== null ? (
-              <div data-row className="flex items-baseline justify-between gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3.5 py-2.5">
+              <div data-row className="flex items-baseline justify-between gap-3 rounded-[8px] bg-[var(--wh-surface-muted)] px-3.5 py-2.5">
                 <span className="text-size-15">The till expects</span>
                 <span className="font-mono text-lg">{penceText(expected)}</span>
               </div>
