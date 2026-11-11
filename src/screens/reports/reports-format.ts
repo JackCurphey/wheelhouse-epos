@@ -37,3 +37,6 @@ export function longDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 }
+
+/** A cash difference: "−£5.00" when short, "£2.00" when over, "£0.00" when exact. */
+export const differenceText = (pence: number): string => (pence < 0 ? `−${penceText(-pence)}` : penceText(pence));

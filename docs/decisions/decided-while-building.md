@@ -5135,3 +5135,39 @@ Decided here, for Jack to overrule.
    the place of the date line under a day to come.
 9. **The Sales answer carries the shop's today** so Pick dates can stop at
    it. One more field on the first pull request's route.
+
+### 11 Nov 2026: Takings and cash-ups, the server and the screens (`openspec/changes/reports-sales-and-takings` group 3, `rp-takings`, `rp-day`)
+
+1. **Today's Online row is not shown.** A day's online money is what its
+   close saved (answer 5), and today has no close yet, so today shows only
+   "Not closed yet". The drawing's "[£] so far" for today would mean counting
+   online money outside a close. *Pattern:* the close's own online line.
+2. **A past day with no close has no row.** Only today gets "Not closed
+   yet"; a day nobody closed is already on Today's Needs attention.
+3. **Beyond 62 days the rows are months** with their closed days added up,
+   a "[n] closed days" line where Closed by would be, no Online row and
+   nothing to open (answer 9).
+4. **Today on Takings and cash-ups** is that one day against the same weekday
+   last week, as Sales' Today is; its graph is one bar.
+5. **The notes use "your payment provider"**, not the drawing's bracketed
+   "[payment provider]": the shop's provider is real, not example data.
+   "A manager can reopen it from there, with a reason" is left out until
+   Reopen this day is built (part 4).
+6. **Left off the tiles and table for now:** the Cycle to Work tile (WP-7.1)
+   and the Sent to Xero column (part 4). The headline tiles compare Closed
+   days' takings, Card, Cash and Cash differences with the same days last
+   week, and Other and Online show the drawing's words, as drawn.
+7. **A day's report is headed "Tue 15 September"** (short weekday, as the
+   drawing's "Wed 16 September") with "Closed by Jack Lewis at 17:30", and its
+   online line says "on Tuesday 15 September", since it isn't today. The
+   body is Close the day's own, shared (`Report`), unchanged in look.
+8. **The open day is in the address** (`?day=[close id]`), so it can be
+   linked and Back closes it.
+9. **A cash difference reads "−£5.00" with "short" for a screen reader**
+   (and "over" for an excess); no difference reads "£0.00". Warning colour
+   for short. *Pattern:* Close the day's "£5.00 short".
+10. **While today is open, "the same days last week" stops a day short.**
+    On a Thursday with no close, This week's four days are Monday to
+    Wednesday's closes, so the comparison is last Monday to Wednesday, not
+    last Thursday's close against nothing. Found in review. Today on its own
+    still compares one day with the same weekday last week.

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
@@ -16,7 +16,7 @@ import { PickDates } from './pick-dates.tsx';
  * in words, a graph and the table below it. The period is in the address
  * (?period=, and from and to for Pick dates), so Back and a bookmark work.
  */
-const PERIODS = [
+export const PERIODS = [
   { value: 'today', label: 'Today' }, { value: 'this-week', label: 'This week' }, { value: 'this-month', label: 'This month' },
   { value: 'last-month', label: 'Last month' }, { value: 'last-12-months', label: 'Last 12 months' }, { value: 'dates', label: 'Pick dates' },
 ];
@@ -30,7 +30,7 @@ const UNIT_WORD = { day: 'day', month: 'month', hour: 'hour' } as const;
 const COLUMN = { day: 'Day', month: 'Month', hour: 'Hour' } as const;
 const TABLE_TITLE = { day: 'Sales by day', month: 'Takings by month', hour: 'Sales by hour' } as const;
 
-function Figure({ name, value, words }: { name: string; value: string; words: string | null }) {
+export function Figure({ name, value, words }: { name: string; value: ReactNode; words: string | null }) {
   return (
     <div role="group" aria-label={name} className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3">
       <span className="text-size-13-5 text-[var(--wh-muted)]">{name}</span>
