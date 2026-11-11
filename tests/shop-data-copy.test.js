@@ -368,3 +368,53 @@ test("another shop's sales and jobs never appear", async (t) => {
   const files = await filesFor(t);
     assert.ok(!files['Workshop jobs.csv'].includes('[their job]'));
 });
+
+// Left out from Citrus Lime (group 4; Jack's 10 Nov answer 1): the import's rows the owner left
+// out, a fifth spreadsheet only while there are any, with how many in GET /api/settings/your-data.
+async function leftOutShop(t) {
+  const shop = await staffSignup(server.baseUrl, { shopName: 'Left Out Cycles' });
+  t.after(() => deleteTestShop(shop.shop.id));
+  const file = (name, report) => runWithShop(shop.shop.id, () => prepare(
+    "INSERT INTO move_files (file_name, report, state) VALUES (?, ?, 'done') RETURNING id"
+  ).get(name, report));
+  const row = (fileId, state, data, why = null) => runWithShop(shop.shop.id, () => prepare(
+    'INSERT INTO move_rows (file_id, state, data, why) VALUES (?, ?, ?::jsonb, ?)'
+  ).run(fileId, state, JSON.stringify(data), why));
+  return { shop, file, row };
+}
+
+test('Left out from Citrus Lime: a fifth spreadsheet with the file, why, and Citrus Lime’s own columns; emptied rows and other states are not in it', async (t) => {
+  const { shop, file, row } = await leftOutShop(t);
+  const people = await file('Customers.csv', 'customers');
+  const prices = await file('Price list.csv', 'price_list');
+  await row(people.id, 'left_out', { Name: '[Customer name]', Email: '[email]' }, 'No name');
+  await row(prices.id, 'left_out', { Description: '[Product]', 'Retail Price': '[price]' }, 'No price');
+  await row(people.id, 'left_out', {}, null);
+  await row(people.id, 'look', { Name: '[Another]' }, 'Looks like the same person');
+  await row(people.id, 'in', { Name: '[In]' });
+
+  const { res, body } = await download(shop.cookie);
+  assert.equal(res.status, 200, body.toString());
+  const files = filesOf(body, t);
+  assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Left out from Citrus Lime.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
+  const csv = files['Left out from Citrus Lime.csv'];
+  assert.ok(csv.startsWith('﻿File,Why'), csv.slice(0, 40));
+  const rows = rowsOf(csv);
+  assert.deepEqual(rows, [
+    { File: 'Customers.csv', Why: 'No name', Name: '[Customer name]', Email: '[email]', Description: '', 'Retail Price': '' },
+    { File: 'Price list.csv', Why: 'No price', Name: '', Email: '', Description: '[Product]', 'Retail Price': '[price]' },
+  ]);
+
+  const count = await staffRequest(server.baseUrl, shop.cookie, '/api/settings/your-data');
+  assert.equal(count.status, 200, JSON.stringify(count.body));
+  assert.deepEqual(count.body, { leftOut: 2 });
+});
+
+test('Left out from Citrus Lime: none left out, no fifth file and a count of 0; staff are refused the count', async () => {
+  const count = await staff('/api/settings/your-data');
+  assert.equal(count.status, 200, JSON.stringify(count.body));
+  assert.deepEqual(count.body, { leftOut: 0 });
+  const worker = await staffLogin(owner.shop.id);
+  const refused = await staffRequest(server.baseUrl, worker.cookie, '/api/settings/your-data');
+  assert.equal(refused.status, 403);
+});

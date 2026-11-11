@@ -5078,3 +5078,14 @@ Decided here, for Jack to overrule.
    button works again. The drawing shows only the resting button (small
    one 8). *Pattern:* the customer's own copy on their account
    (`ac-download-failed`).
+
+### 11 Nov 2026: Left out from Citrus Lime (`openspec/changes/your-data-download` group 4, `set-data-export`, `mv-sorted`)
+
+Decided here, for Jack to overrule.
+
+1. **The fold's line for the rows left out is a fifth ticked row under the
+   four**, "Left out from Citrus Lime · [n] rows", shown only while there
+   are any; the drawing has the four rows only. In the spreadsheet,
+   Citrus Lime's own columns follow in the order Wheelhouse stored them
+   (shorter names first), not necessarily the order of the original file,
+   which isn't kept. *Pattern:* the four drawn rows.

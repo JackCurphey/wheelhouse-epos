@@ -10,7 +10,7 @@ import { limitLockWait } from '../lib/stock.js';
 import { isPence } from './float-check.js';
 import { zipFiles } from '../lib/zip.js';
 import { currentMoment } from '../clock.js';
-import { shopDataCopy } from '../shop-data-copy.js';
+import { shopDataCopy, leftOutCount } from '../shop-data-copy.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -274,6 +274,12 @@ export function register(route) {
   // one zip of spreadsheets, made on request. The Owner only until roles are built; not
   // recorded until the activity log exists.
   // screens: set-data-export
+  // How many Citrus Lime rows were left out, for the fold's fifth line (group 4).
+  route('GET', '/api/settings/your-data', async (req, res) => {
+    if (await ownerOnly(req, res, "Only the shop's owner can see the shop's data")) return;
+    sendJson(res, 200, { leftOut: await leftOutCount() });
+  });
+
   route('GET', '/api/settings/your-data/download', async (req, res) => {
     if (await ownerOnly(req, res, "Only the shop's owner can download the shop's data")) return;
     const copy = await shopDataCopy();
