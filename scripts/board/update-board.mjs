@@ -1,9 +1,11 @@
 // Fills in the mechanical part of the build board from what has merged.
 // Adds one "done" row to BOARD.pieces for each pull request merged into main
-// since the day before the board's `updated` date (chosen by merge date, so a
-// pull request opened early and merged late is still picked up) and not yet on
-// the board by number, turns a
-// "review" row for a merged pull request into "done", and sets `updated`.
+// in the last 14 days that is not already on the board by number (chosen by
+// merge date, so a pull request opened early and merged late is still picked
+// up, and a hand-made status pull request that moves `updated` can't hide
+// any). Turns a "review" row whose pull request has merged, on whatever date,
+// into "done", and sets `updated` to today. Skips status and board pull
+// requests, bot authors, dependency-update branches and "Bump" titles.
 // Everything else in BOARD (the lead, the asks, who is on what, the slices) is
 // written by hand and is never touched: this makes surgical text edits, it
 // does not re-write the object. `sub` (the "Merged 3 to 10 Nov..." line) names
@@ -55,30 +57,42 @@ function piecesRange(html) {
 
 export function isUpkeep(pr) {
   if (/^status\b/i.test(pr.title) || /^board:/i.test(pr.title)) return true;
-  if (/^bot\/board-/.test(pr.headRefName || '')) return true;
+  const branch = pr.headRefName || '';
+  if (branch === 'bot/board' || /^(dependabot|renovate)\//.test(branch)) return true;
+  if (/^bump\s/i.test(pr.title)) return true;
+  const who = pr.author || {};
+  if (who.is_bot || /\[bot\]$/.test(who.login || '')) return true;
   const files = (pr.files || []).map((f) => f.path);
   return files.length > 0 && files.every((f) => UPKEEP_FILES.has(f));
 }
 
-const quote = (s) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\s+/g, ' ').trim()}'`;
+// One safe single-quoted JavaScript string. `<` becomes \x3c so a title can't
+// close the script block (</script>) or open a comment (<!--); whitespace
+// including newlines collapses to one space.
+const flat = (s) => s.replace(/\s+/g, ' ').trim();
+const quote = (s) => `'${flat(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c')}'`;
 
-// The first day to look at: the day before the board's `updated` date, as
-// YYYY-MM-DD (UTC). Gives a day's slack for a pull request merged late.
-export function sinceDay(html) {
-  const m = /^ {2}updated: '(\d{1,2}) (\w{3}) (\d{4})',$/m.exec(html);
-  const month = m ? MONTHS.indexOf(m[2]) : -1;
-  if (month < 0) throw new Error('Could not read the updated date in BOARD');
-  return new Date(Date.UTC(Number(m[3]), month, Number(m[1]) - 1)).toISOString().slice(0, 10);
+// How far back to look for merged pull requests: 14 days before today, as
+// YYYY-MM-DD (UTC).
+export function lookBackDay(today) {
+  return new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
+}
+
+// The numbers of the pieces marked "review", to ask GitHub whether they merged.
+export function reviewNumbers(html) {
+  const { open, close } = piecesRange(html);
+  return [...html.slice(open, close).matchAll(/status: 'review'.*\bpr: (\d+)\b/g)].map((m) => Number(m[1]));
 }
 
 // Returns { html, added, flipped, highest }. `prs` is gh's list of merged pull
-// requests: { number, title, mergedAt, headRefName, files: [{ path }] }.
-export function updateBoard(html, prs, { today = new Date() } = {}) {
+// requests: { number, title, mergedAt, headRefName, author, files: [{ path }] };
+// `mergedReview` is the numbers of "review" rows' pull requests known to have merged.
+export function updateBoard(html, prs, { today = new Date(), mergedReview = [] } = {}) {
   const board = evaluate(html);
   const onBoard = new Set(board.pieces.map((p) => p.pr).filter(Number.isInteger));
   const floor = Math.max(0, ...onBoard);
-  const since = `${sinceDay(html)}T00:00:00Z`;
-  const merged = new Set(prs.map((p) => p.number));
+  const since = `${lookBackDay(today)}T00:00:00Z`;
+  const merged = new Set([...mergedReview, ...prs.map((p) => p.number)]);
   let out = html;
 
   // A "review" row whose pull request has now merged is done.
@@ -123,16 +137,28 @@ export function updateBoard(html, prs, { today = new Date() } = {}) {
   for (const n of [...added, ...flipped]) {
     if (!check.pieces.some((p) => p.pr === n && p.status === 'done')) throw new Error(`#${n} did not land as a done row`);
   }
+  for (const p of fresh) {
+    if (check.pieces.find((x) => x.pr === p.number).what !== flat(p.title)) throw new Error(`#${p.number}'s title did not survive`);
+  }
   return { html: out, added, flipped, highest: Math.max(floor, ...added) };
 }
 
+// Pull requests merged into main since `since` (YYYY-MM-DD).
 export function fetchMerged(since) {
   const json = execFileSync('gh', [
     'pr', 'list', '--state', 'merged', '--base', 'main',
     '--search', `merged:>=${since}`,
-    '--json', 'number,title,mergedAt,headRefName,files', '--limit', '200',
+    '--json', 'number,title,mergedAt,headRefName,author,files', '--limit', '200',
   ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(json);
+}
+
+// Which of these pull requests have merged, whatever the date.
+export function fetchMergedAmong(numbers) {
+  return numbers.filter((n) => {
+    const json = execFileSync('gh', ['pr', 'view', String(n), '--json', 'state'], { encoding: 'utf8' });
+    return JSON.parse(json).state === 'MERGED';
+  });
 }
 
 function main(argv) {
@@ -140,7 +166,7 @@ function main(argv) {
   const i = argv.indexOf('--today');
   const today = i >= 0 ? new Date(`${argv[i + 1]}T12:00:00Z`) : new Date();
   const before = readFileSync(BOARD_FILE, 'utf8');
-  const result = updateBoard(before, fetchMerged(sinceDay(before)), { today });
+  const result = updateBoard(before, fetchMerged(lookBackDay(today)), { today, mergedReview: fetchMergedAmong(reviewNumbers(before)) });
   const changed = result.html !== before;
   const titles = new Map(fetchTitles(result.html));
   if (!changed) console.log(`The board is up to date (highest pull request on it: #${result.highest}).`);
