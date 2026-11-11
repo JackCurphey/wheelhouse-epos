@@ -45,6 +45,8 @@ Create a `.env` file in this folder with a password for each database role:
 POSTGRES_SUPERUSER_PASSWORD=pick-something
 POSTGRES_PASSWORD=pick-something-else
 DATABASE_URL=postgres://epos_app:pick-something-else@127.0.0.1:5433/epos
+# Optional: tests that make a throwaway database need superuser access.
+ADMIN_DATABASE_URL=postgres://postgres:pick-something@127.0.0.1:5433/postgres
 ```
 
 Then start everything and apply the schema:
