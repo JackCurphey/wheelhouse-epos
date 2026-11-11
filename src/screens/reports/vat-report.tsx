@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
 import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
-import { money } from './reports-format.ts';
+import { money, VAT_QUARTER_MONTHS } from './reports-format.ts';
 import { PickDates } from './pick-dates.tsx';
 
 /**
@@ -35,7 +35,6 @@ const PERIODS = [
   { value: 'dates', label: 'Pick dates' },
 ];
 const PERIOD_WORDS: Record<string, string> = { 'this-vat-quarter': 'this VAT quarter, ', 'last-vat-quarter': 'last VAT quarter, ' };
-const STARTS = ['January, April, July, October', 'February, May, August, November', 'March, June, September, December'];
 const CHIP = 'inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold whitespace-nowrap max-md:whitespace-normal';
 const ON = 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]';
 const OFF = 'border-[var(--wh-border)] bg-[var(--wh-panel)]';
@@ -108,9 +107,8 @@ function QuarterQuestion({ onNotNow, onSaved }: { onNotNow: () => void; onSaved:
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
         <RadioPillGroup aria-label="Months your VAT quarters start" className="flex flex-col items-start gap-1.5">
-          {STARTS.map((words, i) => {
-            const value = (i + 1) as 1 | 2 | 3;
-            return <button key={words} type="button" role="radio" aria-checked={month === value} onClick={() => setMonth(value)} className={`${CHIP} ${month === value ? ON : OFF}`}>{words}</button>;
+          {VAT_QUARTER_MONTHS.map(([value, words]) => {
+            return <button key={value} type="button" role="radio" aria-checked={month === value} onClick={() => setMonth(value)} className={`${CHIP} ${month === value ? ON : OFF}`}>{words}</button>;
           })}
         </RadioPillGroup>
         <Note>It’s on your VAT registration, or ask your accountant.</Note>

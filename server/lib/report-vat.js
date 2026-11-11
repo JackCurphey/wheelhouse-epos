@@ -74,7 +74,7 @@ export async function vatReport({ period = 'this-vat-quarter', from, to }, today
 }
 
 // Said under the old record's row, on screen and in the download.
-export const NOT_RECORDED_LINE = 'These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.';
+const NOT_RECORDED_LINE = 'These sales were made before Wheelhouse kept VAT on each sale. Take their VAT from your accounts software or ask your accountant.';
 
 const pounds = (pence) => (pence / 100).toFixed(2);
 

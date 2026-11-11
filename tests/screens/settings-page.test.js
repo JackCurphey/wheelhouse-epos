@@ -163,6 +163,17 @@ test('Shop details has the months the VAT quarters start in; picking one saves i
   await waitFor(() => assert.equal(months[1].getAttribute('aria-checked'), 'true'));
 });
 
+test('a second VAT quarter pick while the first is saving sends nothing, so the pill shown is the month saved', async () => {
+  const { ui, within, fireEvent, waitFor } = await openSettings({ room: 'office' });
+  await ui.findByLabelText('Shop name');
+  const months = within(ui.getByRole('radiogroup', { name: 'VAT quarter starts' })).getAllByRole('radio');
+  fireEvent.click(months[1]);
+  fireEvent.click(months[2]);
+  assert.ok(has(await ui.findByText('Saved.')));
+  await waitFor(() => assert.equal(months[1].getAttribute('aria-checked'), 'true'));
+  assert.deepEqual(calls.filter((c) => c.method === 'PUT' && c.url === '/api/shop-details').map((c) => c.body), [{ vatQuarterStartMonth: 2 }]);
+});
+
 test('a box saves when it’s left, only if it changed, and says Saved', async () => {
   const { ui, fireEvent, waitFor } = await openSettings({ room: 'office' });
   const address = await ui.findByLabelText('Address');

@@ -26,6 +26,7 @@ import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { VAT_QUARTER_MONTHS } from '@/screens/reports/reports-format.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -73,8 +74,11 @@ function useShopDetails() {
   }
 
   // The VAT quarter's months, saved when picked (reports-ready-made design 4).
+  // One save at a time, so a second quick pick can't land before the first.
+  const savingQuarter = useRef(false);
   async function saveQuarter(month: 1 | 2 | 3) {
-    if (details.data?.vatQuarterStartMonth === month) return;
+    if (savingQuarter.current || details.data?.vatQuarterStartMonth === month) return;
+    savingQuarter.current = true;
     setNote(null);
     try {
       const saved = await apiMutate<ShopDetails>('/api/shop-details', { vatQuarterStartMonth: month }, { method: 'PUT' });
@@ -83,13 +87,14 @@ function useShopDetails() {
       setNote({ ok: true, text: 'Saved.' });
     } catch (err) {
       setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    } finally {
+      savingQuarter.current = false;
     }
   }
 
   return { details, valueOf, setTyped, save, saveQuarter, note };
 }
 
-const VAT_QUARTERS: [1 | 2 | 3, string][] = [[1, 'January, April, July, October'], [2, 'February, May, August, November'], [3, 'March, June, September, December']];
 
 /**
  * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
@@ -119,7 +124,7 @@ function ShopDetailsBox() {
       <div className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3">
         <span id="shop-vat-quarter" className="shrink-0 text-size-15 font-semibold md:w-40">VAT quarter starts</span>
         <RadioPillGroup pickOnMove={false} aria-labelledby="shop-vat-quarter" className="flex flex-wrap gap-2">
-          {VAT_QUARTERS.map(([month, words]) => (
+          {VAT_QUARTER_MONTHS.map(([month, words]) => (
             <button key={month} type="button" role="radio" aria-checked={quarter === month} disabled={!details.data} onClick={() => void saveQuarter(month)}
               className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${quarter === month ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{words}</button>
           ))}

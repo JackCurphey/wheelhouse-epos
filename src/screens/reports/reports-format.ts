@@ -40,3 +40,6 @@ export function longDate(iso: string): string {
 
 /** A cash difference: "−£5.00" when short, "£2.00" when over, "£0.00" when exact. */
 export const differenceText = (pence: number): string => (pence < 0 ? `−${penceText(-pence)}` : penceText(pence));
+
+/** The months each VAT quarter can start on, as the popup and Shop details word them (1, 2 or 3). */
+export const VAT_QUARTER_MONTHS: [1 | 2 | 3, string][] = [[1, 'January, April, July, October'], [2, 'February, May, August, November'], [3, 'March, June, September, December']];
