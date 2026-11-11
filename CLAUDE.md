@@ -10,12 +10,13 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 ## Start of every session
 
-1. Read the top of `.agents/STATUS.md` (where things stand, what's next).
-2. If building, read `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
-   (what is built, in which stage). Use it, and the split plan
-   (`docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`), for
-   what depends on what only; how work is shared is the next step, and how
-   each piece is specified and built is below.
+1. Read only the "Start here" section at the top of `.agents/STATUS.md` (who
+   is on what, and what's next). The rest of STATUS, and `.agents/ARCHIVE.md`,
+   is history: send the `reader` agent for a part of it when you need one.
+2. If building, read only the build plan's entry for your piece in
+   `docs/superpowers/plans/2026-10-03-release-2-build-plan.md` (search for its
+   `WP-` id), and what it depends on. Don't read the build plan or the split
+   plan in full (Jack, 11 Nov, `docs/decisions/2026-11-11-speeding-up-the-build.md`).
 3. **Two people build at once, by feature, not by layer** (Mark, 21 Oct,
    `openspec/changes/working-agreement/`; Jack is told by an issue and can
    overrule it). Whoever starts a piece takes it from the drawing through the
@@ -53,9 +54,10 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
   `journeys.mjs`), published as claude.ai canvases listed in `.agents/STATUS.md`.
 - Personas for walk-throughs: `docs/design/user-journeys/personas.md`;
   the method: `docs/design/user-journeys/ux-walkthrough-script.md`.
-- Gaps the drawings didn't cover, decided while building:
-  `docs/decisions/decided-while-building.md` ("Decided here, for Jack to
-  overrule"), with the screen id, what was decided and the pattern followed.
+- Gaps the drawings didn't cover, decided while building, for Jack to
+  overrule: from 12 Nov, one file per person per month in
+  `docs/decisions/decided-while-building/` (its README gives the format);
+  before that, `docs/decisions/decided-while-building.md`, which stays as it is.
 
 ## Allowed without asking (once the build has started)
 
@@ -63,7 +65,8 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    week's theme.
 2. Make the database changes the plan lists.
 3. Where a drawing is silent, follow the closest pattern already built, log
-   it in `decided-while-building.md`, and carry on.
+   it in your own month's file in `docs/decisions/decided-while-building/`,
+   and carry on.
 4. Merge your own pull request once `npm test` and `npm run test:browser`
    have passed locally on its final commit (after merging the latest main) and
    you have read your own diff against the spec and the drawings (a
@@ -81,14 +84,16 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    merged.
 6. Add a small, well-known dependency when a piece needs it; say so in the
    pull request.
-7. Keep the build board artifact (https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
-   source `docs/build-progress/build-board.html`, edit only its `BOARD` block)
-   and `.agents/STATUS.md` current with **one status pull request a day**,
-   made by whoever finishes last, covering both people's merges. STATUS has
-   one "Jack is on" and one "Mark is on" block; the "Check #" list is one
-   checklist issue, not a paragraph. Feature pull requests don't touch `STATUS.md` or the board.
-   `decided-while-building.md` has a section per person; append only to
-   your own.
+7. The build board (`docs/build-progress/build-board.html`, published as
+   https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by) fills itself in: each
+   night `.github/workflows/board.yml` adds what has merged and opens a
+   pull request with it; merge it. Its hand-written parts (slices, what's
+   next, what's waiting) are changed by hand when they change, in any pull
+   request. There is no daily status pull request (Jack, 11 Nov,
+   `docs/decisions/2026-11-11-speeding-up-the-build.md` point 4); until the
+   board workflow is merged, the daily one carries on. STATUS's "Start here"
+   section is changed in the pull request that takes or finishes a piece.
+   Append only to your own file in `docs/decisions/decided-while-building/`.
 
 ## Always stop and ask Jack
 
@@ -103,16 +108,25 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 ## How each piece is built
 
 OpenSpec change (`/opsx:propose`: proposal, specs, design, tasks, citing
-the drawings and Jack's decisions) → tests first, each watched failing for the right reason
-→ build to the drawings → self-review (and `/review` in a risky area) → `npm test` and
+the drawings and Jack's decisions; its first line is `WP: WP-x.y`, the work
+package it belongs to, or `WP: none`) → tests first, each watched failing for the right reason
+→ build to the drawings, running only the related test files while you go →
+self-review with the `reviewer` agent (and `/review` plus
+`risky-area-reviewer` in a risky area) → `npm test` and
 `npm run test:browser` pass locally → pull request → `/opsx:archive` as the
 last commit in that pull request, before it merges, so `openspec/specs/`
 describes what was built → merge when the local runs pass on that final
 commit (and, in a risky area, the hand-run CI is green). A failed nightly run
 on main is fixed first thing, before new work.
-The board and STATUS catch up in the day's status pull request. Where a
-piece has a server and a screen part, one person builds both; the contract
-in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines.
+
+**A small piece** (under about 200 changed lines, outside the four risky
+areas) has a proposal and `tasks.md` only: set `skip_specs: true` in the
+change's `.openspec.yaml`, write no `design.md`, and archive it with
+`openspec archive <name> --skip-specs` (Jack, 11 Nov, point 5). Risky areas
+keep the full version at any size.
+
+Where a piece has a server and a screen part, one person builds both; the
+contract in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines; a small piece can be smaller.
 Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.
@@ -125,8 +139,9 @@ design or debugging, then back with `/model sonnet`. Start a new session, or
 `/clear`, after each piece.
 
 - Reading, searching, or checking whether something exists: the `reader`
-  agent (Haiku). Don't read the plans, STATUS or `decided-while-building.md`
-  in full in the main session; send `reader` for the part you need.
+  agent (Haiku). Don't read the plans, STATUS, ARCHIVE or the old
+  `decided-while-building.md` in full in the main session; send `reader` for
+  the part you need.
 - Self-review before merging: the `reviewer` agent (Sonnet).
 - A change in one of the four risky areas: the `risky-area-reviewer` agent
   (Opus) as well as `/review`.
@@ -142,6 +157,17 @@ design or debugging, then back with `/model sonnet`. Start a new session, or
 - A worktree needs its own `.env` (gitignored), or server-booting tests fail
   with `ECONNREFUSED`.
 - Use a scratch database to test migrations from empty.
+- Before a full `npm test`, run `npm run build` and `npm run migrate`, as CI
+  does; without them, tests fail on a missing `public/dist` manifest or
+  missing tables. Four tests also need `ADMIN_DATABASE_URL`, the compose
+  Postgres superuser:
+  `postgres://postgres:<POSTGRES_SUPERUSER_PASSWORD>@127.0.0.1:5433/postgres`.
+- While building, run only the related test files:
+  `node --test --test-force-exit tests/<a>.test.js tests/<b>.test.js`
+  (screen, customer and registry tests need `npm run pretest` first). Pick
+  the tests for the files you changed; a change to a server route also
+  counts as touching `server/server.js`. The full `npm test` runs once,
+  before merging.
 
 ## Never
 
