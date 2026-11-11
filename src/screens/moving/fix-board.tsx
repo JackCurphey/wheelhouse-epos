@@ -170,7 +170,11 @@ export function FixBoard({ count, kinds, listKey, action, news, onNews, onDoneFo
   });
   const [open, setOpen] = useState<{ row: LookRow; title: string } | null>(null);
   const [leaving, setLeaving] = useState<number | null>(null);
-  const rows = list.data?.rows ?? [];
+  // Rows the server has said are left out: gone from the list at once, as its line takes the
+  // focus then, so the next row can be left out before the list is read again (11 Nov).
+  const [leftOut, setLeftOut] = useState<ReadonlySet<number>>(new Set());
+  const all = list.data?.rows ?? [];
+  const rows = all.filter((r) => !leftOut.has(r.id));
 
   async function refresh() {
     await Promise.all([queryClient.invalidateQueries({ queryKey: listKey }), onSorted()]);
@@ -187,20 +191,25 @@ export function FixBoard({ count, kinds, listKey, action, news, onNews, onDoneFo
   }
   async function leaveOut(row: LookRow, title: string) {
     setLeaving(row.id);
+    let done: Outcome;
     try {
-      await sorted(title, await send<Outcome>(`/api/move/rows/${row.id}/leave-out`, { seen: row.seen, requestKey: newRequestKey() }));
+      done = await send<Outcome>(`/api/move/rows/${row.id}/leave-out`, { seen: row.seen, requestKey: newRequestKey() });
     } catch (err) {
-      await gotGone(err instanceof ApiError ? err.message : NO_ANSWER);
-    } finally {
       setLeaving(null);
+      await gotGone(err instanceof ApiError ? err.message : NO_ANSWER);
+      return;
     }
+    // Answered: the buttons work again now, not once the list has been read again.
+    setLeftOut((gone) => new Set(gone).add(row.id));
+    setLeaving(null);
+    await sorted(title, done);
   }
   const group = (heading: string, n: number, of: LookRow[]) => (of.length === 0 ? null : (
     <>
       <h3 className="m-0 mt-1 text-size-15 font-bold">{`${heading} · ${n}`}</h3>
       <ul className="m-0 list-none p-0">
         {of.map((row) => {
-          const title = called(row, rows.indexOf(row));
+          const title = called(row, all.indexOf(row));
           return (
             <Row key={row.id} title={title} sub={row.why}>
               <span className="flex gap-2">
@@ -220,7 +229,7 @@ export function FixBoard({ count, kinds, listKey, action, news, onNews, onDoneFo
       {list.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load this. Try again in a moment.</p> : null}
       {group('Products', kinds.products, rows.filter((r) => r.report === 'price_list' || r.report === 'barcodes'))}
       {group('Customers', kinds.customers, rows.filter((r) => r.report === 'customers' || r.report === 'bikes'))}
-      {list.data && list.data.total > rows.length ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`Showing the first ${rows.length} of ${list.data.total}. The rest show as these are sorted.`}</p> : null}
+      {list.data && list.data.total > all.length ? <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`Showing the first ${all.length} of ${list.data.total}. The rest show as these are sorted.`}</p> : null}
       <div className="flex justify-end pt-1.5"><Button variant="primary" onClick={onDoneForNow}>Done for now</Button></div>
       {open
         ? <FixDialog key={open.row.id} row={open.row} title={open.title} onClose={() => setOpen(null)} onDone={(o) => void sorted(open.title, o)} onGone={(m) => void gotGone(m)} />
