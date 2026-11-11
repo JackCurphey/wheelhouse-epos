@@ -11,6 +11,7 @@ import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
+import { returningReport, returningCsv } from '../lib/report-customers.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
@@ -39,6 +40,7 @@ const dates = (p) => `${p.from}-to-${p.through}`;
 
 // A period asked for in the address, or a 400 saying what to fix.
 const asked = (query) => ({ period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to') });
+const returningAsked = (query) => ({ ...asked(query), period: query.get('period') || 'last-12-months', months: query.get('months') });
 
 export function register(route) {
   // The Reports page: the date, the shop, and this week's takings so far.
@@ -157,6 +159,35 @@ export function register(route) {
     try {
       const report = await workshopReport(asked(query), await currentShopToday());
       sendCsv(res, `workshop-${ctx.shop.slug}-${dates(report.period)}`, workshopCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // Returning customers: new and returning customers by month, the share back
+  // within 12 months, and the customers not seen for [n] months (?months=).
+  // screens: rp-returning
+  route('GET', '/api/reports/returning', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await returningReport(returningAsked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-returning
+  route('GET', '/api/reports/returning.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const report = await returningReport(returningAsked(query), await currentShopToday());
+      sendCsv(res, `returning-${ctx.shop.slug}-${dates(report.period)}`, returningCsv(report));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;
