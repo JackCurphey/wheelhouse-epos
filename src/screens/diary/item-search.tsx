@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * Search the shop's services and products, or scan a barcode (the scanner
@@ -11,7 +12,7 @@ export type Product = { id: number; name: string; sku: string | null; barcode: s
 export type Service = { id: number; name: string; price: number; minutes: number; active: boolean };
 export type Picked = { type: 'service'; service: Service } | { type: 'product'; product: Product };
 
-const money = (n: number) => `£${Number(n).toFixed(2)}`;
+const money = (n: number) => poundsText(Number(n));
 
 export function ItemSearch({ id, disabled, onPick }: { id: string; disabled?: boolean; onPick: (p: Picked) => void }) {
   const [search, setSearch] = useState('');

@@ -18,6 +18,7 @@ import { JobChecklistBar } from './job-checklist.tsx';
 import { SlotDialog, useStorageSlots } from './storage-slots.tsx';
 import { channelWord } from './channel-word.ts';
 import { DepositStrip, RefundDepositDialog, canMarkNoShow } from './job-deposit.tsx';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -29,7 +30,7 @@ import { DepositStrip, RefundDepositDialog, canMarkNoShow } from './job-deposit.
 
 type Customer = { id: number; name: string; email: string | null; phone: string | null };
 
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number) => poundsText(n);
 
 /** The badge's word for where the job is (the drawings' stage names). */
 export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'> & { requested?: WorkshopJob['requested']; noShowAt?: string | null }): string {
