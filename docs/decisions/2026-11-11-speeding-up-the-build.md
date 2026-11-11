@@ -2,9 +2,15 @@
 
 **The question.** Issue #669 (Mark, 11 Nov). The build had slowed since the
 week of 19 Oct, and Jack was hitting his Claude limits quickly. Measured:
-each session read about 49,000 tokens before starting; the full tests took
+each Claude session read about 49,000 tokens (Claude's measure of text,
+roughly three-quarters of a word each) before starting; the full tests took
 about 37 minutes on GitHub; the same progress was written in up to six
-places; and every session and helper ran on Opus.
+places; and every session and helper ran on Opus, Claude's most expensive
+model.
+
+The four risky areas, used below: database changes (migrations); money and
+stock; sign-in, customer accounts and public pages; and the server core
+(`server/server.js` and messaging).
 
 **Jack's answer** (on #669, 11 Nov): "All six."
 
@@ -22,22 +28,26 @@ places; and every session and helper ran on Opus.
    before merging, as the 28 Oct decision says. Mark also makes the full set
    faster.
 4. **The build board fills itself in.** A script adds what has merged to the
-   board, and a nightly GitHub workflow opens a pull request with it (Mark,
-   11 Nov). The daily status pull request stops once that runs. The "who is
+   board, and each night GitHub runs it and opens a pull request with the
+   update (Mark, 11 Nov). The daily status pull request stops once that runs. The "who is
    on what" lines stay hand-written in STATUS, changed when someone takes a
    piece. Jack switches off his nightly status job on his Mac once the board
    fills itself in.
-5. **A short OpenSpec for small pieces.** A piece under about 200 changed
-   lines, outside the four risky areas, has a proposal and a task list only:
-   no design file and no spec files. Risky areas keep the full version.
-6. **Cheaper Claude models for most of the work.** Sessions start on Sonnet;
-   reading goes to a Haiku helper; reviews use Sonnet, and Opus in the four
-   risky areas (#670).
+5. **A short OpenSpec for small pieces.** OpenSpec is where each piece's
+   plan is written before it's built. A piece under about 200 changed
+   lines, outside the four risky areas, has a proposal (what and why) and a
+   task list only: no design file (how) and no spec files (what the app does
+   afterwards). Risky areas keep the full version.
+6. **Cheaper Claude models for most of the work.** Sessions start on Sonnet,
+   the middle model; reading goes to a helper on Haiku, the cheapest; checks
+   before merging use Sonnet, and Opus in the four risky areas (#670).
 
 **What this changes in earlier decisions.** Point 5 narrows
 `2026-10-08-openspec-only.md` point 1 ("every piece of work is an OpenSpec
 change (proposal, specs, design, tasks)"): small pieces outside the risky
-areas are still OpenSpec changes, with a proposal and tasks only. Point 4
+areas are still OpenSpec changes, with a proposal and tasks only. It also
+narrows that decision's points 3 and 5: a small piece doesn't write or
+update an area's spec, so `openspec/specs/` doesn't describe small pieces. Point 4
 replaces rule 7's daily status pull request in `CLAUDE.md`. Nothing else is
 reopened.
 

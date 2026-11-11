@@ -44,5 +44,5 @@ rules:
     - Example names, prices and wording come from the drawings, never invented
   tasks:
     - Tests first, each watched failing for the right reason before the code
-    - Keep each pull request to about 250-600 changed lines
+    - Keep each pull request to about 250-600 changed lines (a small piece can be smaller)
     - End with npm test and npm run test:browser passing, and a self-review with the reviewer agent (risky-area-reviewer and /review in a risky area)

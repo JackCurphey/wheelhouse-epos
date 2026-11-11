@@ -9,6 +9,8 @@ Add each entry at the end of your own file:
 
     ### <d> <Mon> <yyyy>: <title> (<change>, <screen ids>)
 
+    Decided here, for Jack to overrule.
+
     1. **What was decided.** Why, and what it affects.
        *Pattern:* the built pattern it follows.
 

@@ -125,9 +125,8 @@ change's `.openspec.yaml`, write no `design.md`, and archive it with
 `openspec archive <name> --skip-specs` (Jack, 11 Nov, point 5). Risky areas
 keep the full version at any size.
 
-Where a
-piece has a server and a screen part, one person builds both; the contract
-in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines.
+Where a piece has a server and a screen part, one person builds both; the
+contract in `design.md` is a note for the reader, not a handoff. Pull requests aim for 250–600 changed lines; a small piece can be smaller.
 Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.
@@ -160,8 +159,9 @@ design or debugging, then back with `/model sonnet`. Start a new session, or
 - Use a scratch database to test migrations from empty.
 - Before a full `npm test`, run `npm run build` and `npm run migrate`, as CI
   does; without them, tests fail on a missing `public/dist` manifest or
-  missing tables. Four tests also need `ADMIN_DATABASE_URL` (the Postgres
-  superuser, see `.env.example`).
+  missing tables. Four tests also need `ADMIN_DATABASE_URL`, the compose
+  Postgres superuser:
+  `postgres://postgres:<POSTGRES_SUPERUSER_PASSWORD>@127.0.0.1:5433/postgres`.
 - While building, run only the related test files:
   `node --test --test-force-exit tests/<a>.test.js tests/<b>.test.js`
   (screen, customer and registry tests need `npm run pretest` first). Pick

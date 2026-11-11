@@ -20,8 +20,9 @@ workshop jobs, and the Citrus Lime left-out rows, with #661 (#667 is in).
 2. Paying a repair online: waits on Mark's deposit taken at the till.
 3. The text receipt and its page: waits on Mark's step C.
 
-**Mark is on:** the changes Jack agreed on #669 (these rules, faster tests,
-the build board filling itself in). Mark's last build entry is 24-25 Oct.
+**Mark is on:** the changes Jack agreed on #669: #670 is in; the rules,
+faster tests and the board filling itself in are next. Before that, Mark's
+last merged work was on 26 Oct.
 
 **Mark next:**
 1. Sales in pence step C.
