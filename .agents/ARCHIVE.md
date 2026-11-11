@@ -7,6 +7,641 @@ content moves here rather than being dropped. Decisions move to
 
 ---
 
+## Moved from STATUS on 2026-11-11 (#669)
+
+Everything below was in STATUS until 11 Nov, word for word, in the order it
+appeared. Jack agreed on #669 that STATUS keeps a short "Start here"
+(`docs/decisions/2026-11-11-speeding-up-the-build.md` point 1).
+
+**Who is on what** (from 21 Oct, the working agreement, #349: take a piece
+here before starting it, so two people never build the same one):
+- **Jack:** 29 Oct. Merged 24 Oct: #447 to #477 (Customers with Merge,
+  deposits online, Larger text, Don't close things by themselves, WP-0.4
+  finished, the test copy's review fixes and test shop, Done ticks and staff
+  notes per line, the till's Email receipt and Save to a customer record, an
+  online deposit off at the till, an unfinished booking coming back).
+  Merged 25 Oct: the workshop's amounts in whole pence (#478 to #482);
+  service reminders from the tick when booking to Stop these (#483, #485,
+  #488, #489, #491, #493), Settings › Workshop › Services (#484), review
+  requests (#494, #495), a bike's own page and Find a bike (#497, #498).
+  Stage 0 is closed: the WP-0.5 drills and the walkthrough are done (Mark, 25
+  Oct). Merged 25 Oct, evening: customer sign-in by emailed code (#500,
+  #502); staff sign-in through WorkOS only, Jack's test account (#504), its
+  pages (#505) and Wheelhouse's own sign-in screen with Continue with Google
+  (#508); the test copy's remove-a-shop and add-a-login commands (#506), its
+  test shop loaded with Jack as owner and connected to WorkOS (add-hosted-copy
+  3.6, taken from Mark); tests on pull requests and once a day, not after a
+  merge (#509, Jack's option 3; the copy updates about a minute after a merge);
+  print jobs reach only their own shop's helper (#510); the old app's Log in
+  leads to the new sign-in (#512). Merged 26 Oct, overnight: the customer's
+  account page, its server (#514, migration 084: a first code sign-in joins
+  only a customer whose email they gave themselves, Jack's option 2; a
+  signed-in customer opens their own repairs, Jack's option 1) and its
+  screens (#515); a sale opens from a customer's history, from either sales
+  record (#516, WP-3.2); customer groups in Settings › Payments (#517,
+  WP-5.1); booking's search over many single jobs and "Online booking is
+  unavailable just now" (#518). Merged 26 Oct, day (#519 to #543): own
+  automatic messages (#521, #522, migration 085); adding a bike from the
+  customer page and the account (#523); the account's bikes say when their
+  next service is due (#524); How we contact you, changed from the account
+  (#526, migration 086); the diary legend in a
+  box with its switch in Your settings (#525); the print agent dropped, the
+  day's answers recorded (#527, `docs/decisions/2026-10-26-day-answers.md`);
+  company customers, a company's receipt headed Invoice (#528, migration
+  088); Ask the shop, one conversation per customer, 30 days signed in from
+  the last visit (#529 server, migration 091; #531 screens); the stock list
+  and a product's page (#530); deliveries and orders (#532), receiving
+  against an order (#533, migration 092) and without one (#541, migration
+  094); adjusting stock, anyone with the Stock page, who, reason and when
+  recorded (#538, migration 093, Jack's answer 11); the note-and-coin
+  counter, block 18 (#540); the deposit amount waits while A fixed amount
+  saves (#536). Server fixes: staff and website requests never wait on a
+  second database connection (#534, #535); a bad address or cookie fails
+  only itself instead of stopping the server (#537); two saves at once no
+  longer undo each other for settings (#539), customers, bikes, products and
+  jobs (#542), and services, groups, time off, team, suppliers and purchase
+  orders (#543). Merged 27 Oct: the float check, WP-3.3 (#547, #548, migration 095);
+  closing a part-delivered order (#546); the build board shows slices (#544).
+  Merged 27-28 Oct: Google's official G on Continue with Google (#550);
+  closing the day, WP-3.4 (#551, #552, migration 096; Jack's answers 4 to 9).
+  Merged 28 Oct: PINs and the till check-in (#554, #555, migration
+  097); the give-a-PIN drawings (#556); CI once a day and by hand on risky
+  pull requests (#557, Jack's choice; main's required check turned off).
+  Merged 28-29 Oct: giving a PIN at the till, the Serving menu and Who's
+  getting a PIN? (#558); Who's in and Tills on Today, and a first sign-in
+  asking for Your till PIN (#561, WP-1.10 and WP-1.7 3.2, migration 098);
+  stock take, count blind, check, apply with Undo, Finished counts (#562,
+  #563, WP-2.2, migration 099 stock takes); Set up this till, a computer
+  becomes Till B1, check-ins per till, Settings › Tills (#564, #565, WP-1.7
+  3.4, migration 100 till setup); a Shopify refund adds its stock back and a
+  failed one is retried (#566); the intermittent quote-reminder test fixed
+  (#567); the shared workshop computer, first part: Enter your PIN, Working:
+  [name] · Switch, back to the PIN after 10 minutes (#568, WP-1.7 3.6,
+  migration 101 workshop computers). Merged 29 Oct: stock warnings on
+  Today, big adjustments with Seen, products below zero with Count them,
+  Settings › Stockroom (#569, migration 102); trust PIN and "Who's
+  working?" (#571, #572, migration 103, workshop computer tasks 2.1 and 2.2;
+  the review's fixes: the Owner's check-in on a workshop computer ends after
+  10 minutes at most, a changed PIN takes the person off the names, and the
+  names come from the same sign-in); the Working pills on workshop pages
+  (#573, task 2.3); the till's Serving pills (#574, task 2.4; recording a
+  sale under the person on the server waits for task 3.8, Mark's step C,
+  and tapping offline for task 3.5); Settings › Till › Tills with Rename,
+  and Remove, which asks first and switches off without deleting (#575,
+  #576, migration 104, task 2.7, part of WP-5.1; a removed workshop computer
+  counts as staff until someone signs out there). Merged 29 Oct, evening:
+  the workshop computer's Owner lock held on the server (#578, migration
+  105 `sessions.workshop_computer_id`, Jack's answer 4: deleting the
+  workshop cookie no longer opens the Owner's pages, Your settings uses the
+  same rule, and a workshop computer's WorkOS session is ended at WorkOS in
+  the background, a failed attempt tried again once a minute); a day nobody
+  closed, built as drawn (#579 Jack's answer 5; #580, #581, migration 106:
+  the next morning's count becomes that day's count, Today shows "[day]
+  wasn't closed" with Close it and that day gets its own close, two missed
+  days close oldest first, the money review's fixes in); "To return to
+  [Supplier]" with Returned (#582, migration 107, WP-2.3); Set up a
+  workshop computer says "Don't stay signed in to Google on this computer"
+  (#583, Jack's answer 6, the drawing approved); a normal day with no
+  morning check starts from the last close (#584, Jack's answer 7; it also
+  fixes, on main, close times losing their microseconds and a late Close
+  it's window, both from the money review); the build plan lists the new
+  `till-setup-workshop` drawing, so the drawings' coverage check passes
+  again (#585). Opened #560 for Mark: what would free up more work.
+  Merged 30 Oct: a customer's "Download a copy of your data" on their
+  account (#587, #588, migration 108 `privacy_requests`: one zip of six
+  spreadsheets, each copy logged, staff notes left out, Jack's 30 Oct
+  answer 1), one copy a day (#589, answer 2); "Ask us to delete your
+  account" with the shop's Privacy requests list (#590 to #592, migration
+  109, answers 3 and 4: what identifies the customer is blanked, their
+  messages, photos and own booking words removed, sales and jobs kept
+  without the name, Owner only, only a bike in the workshop blocks it; a
+  deleted customer can't be brought back by a staff save, an old booking
+  link or anything already under way). Each had an independent review and
+  a hand-started CI run.
+  Merged 3 Nov: a delivery is kept when it's booked in, with Delivery booked
+  in, a delivery's page and Recent deliveries (#594, migration 110; #595);
+  print labels after a delivery is booked in (#596); staff aren't sent what
+  the shop pays for stock (#597, the Owner only until roles add the per-person
+  switch). Merged 4 Nov: the Citrus Lime import, first part (#598 products and
+  stock, #599 the page, #600 customers and their bikes; migrations 111, 112;
+  Jack's answers in `docs/decisions/2026-11-03-answers.md`). Each had an
+  independent review and a hand-started CI run. Not built yet: Fix, Leave it
+  out, `mv-sorted` and Ask us to help (`mv-help`, `mv-help-sent`); rows needing
+  a look wait, holding their details, until Fix exists. Then the rest of it,
+  4 Nov (#602 to #605, migration 113; `docs/decisions/2026-11-04-answers.md`):
+  Fix, Leave it out, `mv-sorted`, and Ask us to help with a pretend inbox,
+  refused on production until a real inbox is connected. See them on `mv-sorted`
+  waits for Settings › Your data. Customer matching uses new key columns on
+  `customers`; import batches stop at 250ms, so merges, deletions and Fix get
+  through during a large file. Merge and Undo answer busy after 2 seconds.
+  Merged 5 Nov: WP-1.5 taken up (told on #560), split into ten pieces in
+  `openspec/changes/wp-1-5-products/`, each size its own product joined in a
+  group (Jack's answer 5). Products in whole pence (#607, migration 114); every
+  stock change through `moveStock`, with who, why, shop and cause, a held product
+  answers busy after 2 seconds, applying a large count is faster, and a paid Shopify
+  order is always recorded unless a figure in it can't be used (#608, #609, migration
+  115; answers 6 to 8). Request keys on a sale and an order's payment, so a lost answer
+  and a second press count once (#611, migration 116). Dropped and stalled connections
+  no longer hold the database connections: bodies are read first, with deadlines and
+  limits (#610, #612). Each had an independent review and a hand-started CI run.
+  Merged 5-6 Nov: one very large no-sign-in request can no longer crash the server:
+  a body's values are counted before it's parsed (#616, #621). Stock per shop, with a
+  first shop for every business named after it (#613, #614, migrations 117, 118). The
+  category tree and its details, server only (#617, #618, migration 119). Sizes and
+  colours, each size its own product in a group (#619, #620, migration 120). Product
+  editing: adding and changing products, prices and costs is Owner only until "Can
+  order stock" exists (decision 11); search by measurement; making products with
+  sizes, each named like "Jersey M Blue" (#622 to #624, migration 121; Jack's answers
+  9 and 10). Each had an independent review and a hand-started CI run, except the
+  test-only #621.
+  Piece 7, linking the Citrus Lime import's sizes, waits until Jack has seen a real
+  export (answer 11). Merged 6 Nov: Settings › Stockroom › Categories (#626, #627);
+  the stock list with sizes, colours and the Category pill, with details as filters
+  and columns (#628, #629, `/review` and a hand-started CI run).
+  Merged 8 Nov, WP-1.5 piece 10 (`product-page-sizes`): price and cost changes kept
+  in a product's history, who and when, shown to the Owner with a Price changes filter
+  (#632, migration 122); Edit and Details on a product's page (#633); a product with
+  sizes' own page, its grid of sizes and colours and one history (#634); adding a
+  product on Stock and when receiving an unknown barcode, and Change cost on a booked-in
+  delivery's line (#635). The restock list, finishing WP-2.3 (`restock-list`): its
+  server, grouped by supplier with a suggested count, Add to an order and a download
+  for the supplier's basket, Owner only until roles (#636, migration 123); its page,
+  the Restock list section on Deliveries and orders, and Today's line (#637). Each had
+  `/review`; the gaps and defaults are in Jack's 8 Nov section of
+  `decided-while-building.md`.
+  Merged 9 Nov, WP-2.1 stock control: changing prices in bulk, its server with a
+  preview, a new price, a percentage or a target margin, rounding and Undo (#639,
+  migration 124), and its screen, ticking on Stock, Change prices and Undo (#640);
+  frame numbers, each bike's frame number recorded when it's booked in, no frame in
+  stock twice (#641, migration 125), and the Frame number box on receiving, a bike's
+  page and Stock's line (#642); an unknown barcode on Stock says so, with Add this
+  product (#644). Jack's 9 Nov answers and the `finish-customers` plan (#643,
+  documents only) and the `finish-account` plan for WP-4.5 (#646, documents only).
+  WP-3.2, `finish-customers`: store credit and Ways to pay, server (#645, migration
+  126) and screens (#647); pay-later accounts with a statement, bank transfers and
+  Email the statement, server (#648) and screens (#649); a bike known by a mark on
+  its category, not its name (#650, migration 127); bike warranties by brand and a
+  product's brand (#651, migration 128); a bike sold or recorded as bought here
+  keeps its warranty lines (#652; the till's half is a later piece); the Bike
+  warranties fold, the category's Bikes mark and a bike product's brand and
+  warranty (#653); a bike's warranty on its page, the customer's Bikes and the
+  account, and Edit bike's Bought here on (#654); logging a privacy request by
+  hand, sending the fuller copy, and writing off store credit on deletion (#655).
+  Merged 10 Nov: + Log a request and Send the copy on Privacy requests, and the
+  `finish-customers` archive (#656). The gaps and defaults are in Jack's 9 Nov
+  section of `decided-while-building.md`.
+  Merged 10 Nov, WP-4.5 `finish-account`: a receipt on the account, its server,
+  only to the customer it belongs to, with Email it to me at most 5 an hour (#657),
+  and Your receipt on screen for a till sale with a receipt number (#658); older
+  in-shop sales and repairs open no receipt until Mark's step C (answer 1); a
+  service reminder's own booking link, its server (#659, migration 129) and the
+  ready-filled booking it opens (#662); Edit your name and mobile, and Today's line
+  for a request to delete (#663); changing your email, confirmed by a code sent to
+  the new one (#665); the shop's own privacy notice in Settings › Shop details and
+  on the account, a receipt forgotten on sign-out, the walk against the drawings
+  and the `finish-account` archive (#666). Tests that failed only when several runs
+  share the Mac, fixed at their causes (#660). Jack's 10 Nov answers and the
+  `your-data-download` plan (#661, documents only), and its first part:
+  Settings › Office › Your data › Download everything, the Owner's zip with
+  Customers and Stock (#667). Each had `/review`; the gaps and defaults are in
+  Jack's 10 Nov sections of `decided-while-building.md`.
+  **Now (11 Nov):** `finish-account` is built and archived; receipts for older
+  in-shop sales wait for Mark's step C. Next is the rest of `your-data-download`
+  (#661: sales and refunds, workshop jobs, and the Citrus Lime import's left-out
+  rows, which bring back See them). Jack's answers and the reports plan are open
+  in #664. WP-1.5 is in apart from piece 7, which
+  waits for a real export; WP-2.3 is finished. Before the first real shop: an independent memory check of #616 on a real server,
+  a test through Caddy, and a real inbox for Ask us to help. Roles and the settings
+  store (WP-1.1, 1.2) stay Mark's.
+  Still waiting: "I'll do this" and "Who did what" (WP-1.7, WP-1.2, WP-1.9).
+  WorkOS: Jack's account, Staging only
+  (`docs/decisions/2026-10-25-workos-account.md`); Google's chooser says
+  "continue to workos.com" until there's a domain ($99 a month, waits for
+  revenue).
+- **Mark:** merged 24 Oct: #402 and #404 (sales in pence step A). Merged
+  25 Oct: step B, reports read both records (#492, migration 083), audit
+  items 12, 20 and 24 (#496), a declined date change's message as the
+  second box of Date change answered (audit item 23, #507), and local
+  development without signing in (#503, `WHEELHOUSE_DEV_AUTOLOGIN`, off
+  unless asked, refused in production and on the hosted copy). Open: the
+  overnight runner (#490) and a replan into playable slices (#499; Mark
+  answered its four questions: the shop day before stock). Written, waiting
+  for Mark's yes before anything is built: `till-job-deposit` (a deposit at
+  the till on the current sales path, branch `mark/till-job-deposit`, money
+  questions for Jack inside) and `component-registry-repo` (Wheelhouse's
+  components in their own repository, branch `mark/component-registry-spec`;
+  needs Jack's yes on Radix and on creating the repository). Next: step C
+  (the new till on sync; the browser's offline copy and send queue are not
+  built, so it is large and has no spec yet), then the shop day (roles on the
+  server, the settings store and activity log, sign-in and PINs).
+- **Waiting on Jack:** the replan (#499) is accepted as is, order A to F
+  (day answers 1); the 26 Oct list is answered in
+  `docs/decisions/2026-10-26-day-answers.md` (the text receipt waits for
+  step C; own messages as built; paying a repair online after Mark's till
+  deposit; discounts after step C; downloads with Reports; browser printing
+  only). Answered 27 Oct (`docs/decisions/2026-10-27-answers.md`, with #546):
+  closing a part-delivered order marks the rest not coming; the restock list
+  waits for WP-1.5. Still open: who may edit a supplier (any staff member can,
+  unlike the other settings, #543); the hosted server's "System restart
+  required". Open from 28-29 Oct (`decided-while-building.md`, each built
+  on its default until Jack says): stock take, how sales during a count are
+  allowed for (default: from each product's last count); adding a till-only
+  person waits for roles; settings on a workshop computer belong to the
+  sign-in until roles; a staff member can end their check-in so the Owner's
+  sign-in sets up a till (default: allowed, as decision 7); supplier imports
+  start stock with no history line (a stock control decision 6 question,
+  #566). Also: 491 leftover test shops in the shared test database (#567;
+  default: leave them until Jack says). Answered 29 Oct (`docs/decisions/2026-10-29-answers.md`, answers 2 to 7): the Owner stays never a name to tap and capped at 10 minutes on a workshop computer (#572, #574); a removed workshop computer stays closed to the Owner's pages until someone signs out there (#575); the workshop computer's Owner lock is held on the server (#578); a day nobody closed is built as drawn (#579 to #581); Set up a workshop computer warns against staying signed in to Google (#583); a normal day with no morning check starts from the last close (#584). Answered 30 Oct (`docs/decisions/2026-10-30-answers.md`, answers 1 to 4): staff notes left out of a customer's copy; one copy a day; deleting an account on the seven defaults; a customer's own booking words wiped on deletion. To try once on the Staging account: after a workshop computer is set up and its cookies cleared, WorkOS asks for the password instead of offering "Continue" (#578; WorkOS's docs don't say this outright). For him to overrule: the 26 and
+  28-29 Oct `decided-while-building.md` sections.
+- **Waiting on Mark:** `till-job-deposit` (paying a repair online, slice A,
+  is built after it); a money route, `PUT /api/sale-documents/:id`, can
+  write an order back to open if it is saved while being completed (found
+  26 Oct, listed in the archived `more-saves-dont-clash` design, not
+  changed). #560 (28 Oct) lists what would free up more work: his yes on
+  `till-job-deposit`, step C, roles and the settings store, WP-1.5, and his
+  open pull requests; no activity from Mark since 26 Oct. Step C needs an Owner route to issue the offline key
+  for a till set up in the new app (#564; a till set up there has none yet).
+  The till's offline copy (`server/till/snapshot.js`) carries every
+  cashier's PIN hash (`decided-while-building.md`, 28 Oct, 6a), for step C's
+  design.
+
+**Mark is on:** (history; 24 Oct: the quote answer route moved (#468) and WP-0.5 went to Jack.) Away after 15 Oct. His half of WP-0.4 is done: every
+route of his is out of `server.js` (#202, #205, #209, #210–#214; #204 and
+#208 were Jack's #151 follow-ups). WP-0.5: the host is DigitalOcean in
+London, about £20 a month with VAT (#215; Jack's UK answer in
+`docs/decisions/2026-10-15-hosted-copy-region.md`), and the setup script
+and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
+(#219). #134 answered: the sales-in-pence spec merged (#203). When back:
+move the booking link's quote answer to `portal.js` (after #207); a login
+for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
+the commit in `/healthz`), then the deploy workflow; then #203 step A.
+On 18 Oct Mark said, through Jack, that the pull requests waiting for his
+approval could merge without it: #225, #231, #234, #249, #250 and #256 are
+merged. Still his: the
+server half of #190 A, a guard so a cancelled, declined or expired booking
+can't be booked in or started (the `workshop-jobs` spec allows it today;
+Jack, 16 Oct, `docs/decisions/2026-10-15-job-page-fixes.md` item 5). Also
+his: the bike on "Waiting for you" items (for the tablet cards' drawn bike
+line, #241); and Jack's question,
+when the front page switches from the old app to the new one (16 Oct; the
+plans don't say). The day's merges change his work: read #231 (his
+`add-hosted-copy` design now loads the drawn week into the week the shop is
+loaded; the test shop's prices are Jack's 16 Oct decision), #256 (Release 2
+is done when built and checked, ready to sell; the all-in-one first and
+Lightspeed after; stage 8's alongside and trading week move to the selling
+stage). **Check #265:** it changed his server file without his approval,
+merged after the six he waived: `DELETE /api/workshop-jobs/:id` now refuses a
+job with money paid on its order or the bike in the shop (409
+`settle_first`), and deletes the job's quotes and print tasks first.
+**New for you** (19 Oct, #297): the server half of confirming online
+bookings automatically, contract in `openspec/changes/auto-confirm/design.md`
+(migration 046, `confirmBookingsAutomatically`, bookings saved `scheduled`
+when on, `newOnline` and `POST /api/workshop-jobs/:id/seen`); Jack's screens
+wait for it (Jack, 19 Oct, `docs/decisions/2026-10-19-auto-confirm.md`). **Check #319 too** (20 Oct, on Jack's word): migration 047 adds
+`workshop_jobs.decline_message`; `POST /api/workshop-jobs/:id/decline` takes an
+optional `message` (workshop server, your approval); your `portal.js` link view
+carries `declineMessage` once declined. **Check #315 too** (20 Oct, on Jack's word): a new booking state
+`offered` (migration 046: the CHECK and the derived `status` re-made,
+`offered_from_date`/`offered_from_time`/`offer_message`/`offer_accepted_at`);
+`offered` is in `LIVE_BOOKING_STATES`; `POST /api/workshop-jobs/:id/offer`
+in workshop.js (your approval for the workshop server); your
+`booking-link.js` has stage `time_offered`; your `portal.js` has the link's
+`offer`/`canAccept`, `customerCanChange` (false for an offer), cancel on an
+offer, and `POST …/booking-links/:code/accept-offer`. The auto-confirm
+contract now takes the next free migration number. **Check the messages engine too** (20 Oct, on Jack's word; Jack: pretend for
+now, `docs/decisions/2026-10-20-messages-engine.md`): #321 adds
+`server/hosted-copy-guard.js`, called in `server.js` before migrations (your
+`add-hosted-copy` tasks 2.1–2.2: the hosted copy refuses `TWILIO_*`,
+`EMAIL_*`, `WHATSAPP_*` keys); #322 migration 048 (`message_templates`, the
+outbox's columns on `customer_messages`, old rows settled, `undone`);
+#323 `server/messaging/engine.js`, the pretend sender, the timer
+started in `server.js` and waited for on shutdown, migration 049
+(`claimed_at`), `GET /api/messages` and `POST /api/messages/:id/undo`;
+#325 `GET/PUT /api/message-templates[/:key]` (Owner only to change) and
+`POST …/:key/preview`; #326 in your workshop server and
+`customer-messages.js`: the quote send queues Quote to approve through the
+engine instead of Twilio, finishing queues Bike ready (in the finish's
+transaction, a new link only when it will go, reopening stops it), and the
+old app's one-off text goes through the pretend sender; #330 adds
+`direction` to the outbox's messages. `server/sms.js` is now unused by the
+app (kept for real sending). The change is archived:
+`openspec/specs/messages/spec.md`.
+**Check these too** (20 Oct, on Jack's word, your workshop server): #333
+`serializeWorkshopJob` gains `offer`; #335 a new job takes
+`customerDescription`; #336 accept, decline, offer and accept-change send the
+booking messages at once through `sendBookingMessage`
+(`server/workshop/job-messages.js`, the templates' `group: 'booking'`,
+`isPretend()`); #337 accept takes `mechanicId`, checked free under the day's
+lock; #341 their replies carry `bookingMessage` when the customer has no way
+to be reached. **New for you** (21 Oct, #344): the booking page's later
+stages are built with what the link sends; your server half's contract is in
+`openspec/changes/archive/2026-10-21-booking-page-stages/design.md` (work
+progress, what was done and the amount to pay, the checklist, paid and
+collected dates, the shop's address, phone and hours, the 410 reply's
+details). It also notes `isLinkExpired` counts 30 days from `job_date`, where
+build-plan Q8 says from collection.
+**Your opinion wanted** (Jack, 20 Oct, `docs/decisions/2026-10-20-booking-messages.md`
+answer 2): replying to a text as a shop setting, a shop's own number whose
+replies land in its inbox (a monthly cost, and receiving texts to build), or
+the cheaper shared number with replies on the booking page, as now. Not to
+build yet. **Check #305 too** (20 Oct, on Jack's word): your `portal.js` gains
+`GET /api/portal/:slug/booking-links/:code/availability?start&end`, the days
+and times a booking could move to for its own mechanic and length, with the
+booking left out of capacity (`loadCapacity(..., { ignoreJobId })`); refused
+as `POST …/change` refuses; `bookedMinutes(job)` pulled out of
+`changeBookingTime` unchanged; the route snapshot is 165. **Check #295 too** (19 Oct): migration 045 adds
+`workshop_settings.confirmation_note` (NOT NULL, default the drawn sentence);
+your `workshop-settings.js` sends and saves `confirmationNote` (trimmed, up to
+300 characters, empty for none); your `portal.js` `bookingLinkView` returns it
+once the booking is confirmed or a change waits. **Check #289 too** (19 Oct): migration 044 adds
+`workshop_settings.min_notice_days`; your `server/clock.js` `earliestBookable`
+starts days' notice at the start of the day N after the shop's today; your
+`workshop-settings.js` sends and saves `minNoticeDays` (1 to 28, or null for
+hours); `toCapacitySettings` carries it. **Check #287 too** (19 Oct): your `server/routes/portal.js` booking link view
+gains `dropOff` (the booked time less `timed_lead_minutes`, or the drop-off
+window when the shop books for the whole day that date, via `modeForDate`;
+null until the booking stands). **Check #283 too** (19 Oct, `docs/decisions/2026-10-19-owner-only-settings.md`):
+a new `server/lib/owner-only.js` (`ownerOnly`, reading the session as
+`team.js` does) makes your `PUT /api/workshop-settings` and `PUT
+/api/shop-details` Owner-only until WP-1.1 brings Managers and the "Can
+change settings" switch; swap it for those there. The booking settings on
+the workshop route are Owner-only too. **Check #279 too** (19 Oct, `docs/decisions/2026-10-19-receipt-words.md`):
+migration 043 adds `shops.receipt_footer`, and your `shop-settings.js`
+sends and saves `receiptFooter` on `/api/shop-details`. **Check #277 too** (Jack, 18 Oct, `docs/decisions/2026-10-18-shop-details.md`:
+build it "flagging Mark's files for him"): migration 042 adds `address`,
+`phone`, `email` and `vat_number` to `shops`, one set for the whole business
+for now; your `server/routes/shop-settings.js` gains `GET`/`PUT
+/api/shop-details` (the session's own row; no role check, as elsewhere).
+When your WP-1.4 gives shops their sites, Jack's answer is that address and
+phone move onto the first site and the VAT number stays on the business.
+**Check #275 too** (Jack, 18 Oct: build piece 3 "flagging Mark's two
+files for him"): migration 041 adds `workshop_settings.show_sign_off_to_customers`
+(off); your `server/routes/workshop-settings.js` sends and saves
+`showSignOffToCustomers`; your `server/routes/portal.js` booking link view
+carries `checkedBy` (the sign-off's name, only with the setting on and the
+bike ready or collected). Also worth a look: `PUT /api/workshop-settings`
+checks no role, so any staff session can change this privacy setting
+(already so for every setting). **Check #273 too** (Jack chose to merge it and flag it, 18 Oct): your
+`server/routes/sales.js` convert takes an optional `signedOffBy` and, when
+paying finishes a job, records the sign-off (`recordSignOff`); it never
+refuses a payment over it, warning instead (an inactive mechanic, a failed
+save, or `signedOffBy: null` from a till that saw finished work reopened
+since). No key, as the old app sends, finishes unsigned as before.
+**Check #271 too** (Jack chose to merge it and flag it, 18 Oct,
+`docs/decisions/2026-10-16-mechanic-sign-off.md`): migration 040 adds
+`workshop_jobs.signed_off_by` (ON DELETE SET NULL), `signed_off_name` and
+`signed_off_at`, and a new `workshop_job_sign_offs` table with row
+security; `POST /api/workshop-jobs/:id/finish` now needs `signedOffBy`, an
+active mechanic (400 `sign_off_required`); reopening, and the old app's
+save that reopens, clear it. Reset any local database that ran the branch's
+earlier 040. The till's question (answer 5) is a later piece in your
+`sales.js`. **Check #267 too** (Jack chose to make it and flag it, 18 Oct,
+`docs/decisions/2026-10-18-till-job-payment.md` answer 3): `server/routes/sales.js`
+gains `GET /api/sale-documents/:id/due` (the amount due after the order's
+and the customer's group discounts, stock levels, and paying's line checks),
+convert accepts `sellPastStock: true`, and `server/lib/sales.js` exports
+`resolveGroupDiscount`.
+**Jack is on:** 23 Oct, evening and overnight: Today (#437: Needs
+attention for the Owner and Workshop today, sharing the Overview's rules);
+the bike on Waiting cards (#439); his six answers that unlock the next pieces
+(#438); a bike left uncollected (#440 server, migration 064; #441 screens:
+Settings › Workshop › Collection, Bike still waiting, the bike on Today with
+Contacted); Your settings with Reduce motion (#442, migration 065), Show
+status symbols (#444) and Folded sidebar with the Till folded (#445); the
+email side of emailing a receipt (#443, migration 066; the till's button after
+#404). Larger text was built as a zoom and taken out: it put the diary's
+drops off their marks (a question for Jack). Each piece had a fresh review,
+its findings fixed test-first. The 4 tests that need `ADMIN_DATABASE_URL`
+fail on Jack's Mac only; CI sets it. Migration 064 also ran on the Mac's
+development database by mistake (scratch databases since).
+23 Oct: the Overview's Book in test, which failed before
+09:00 on CI's clock and so failed every pull request each morning (#426);
+the hosted copy's automatic updates (WP-0.5 task 3.4, at Mark's request,
+#427, #428): every merge to `main` that passes Tests is built, pushed to
+GitHub's container registry and started on the server by
+`scripts/hosting/deploy.sh` over a key tied to that script, rolled back if
+`/healthz` doesn't show its commit within 5 minutes. Seen: the merge of #427
+deployed itself at 12:04, and #428's pull request deployed nothing. Merged
+Mark's #416 for him and answered his #402 and #404.
+22 Oct, evening: Notes with the shop: the customer's notes on their
+booking link and the staff's replies (#421 server, migration 061; #422 the
+booking page's card), the staff Messages inbox with Needs a reply first
+(#423), Add a note for the shop from the quote and Work agreed (#424), and
+"No answer yet" after the quote reminder, in the diary and on the job
+(#425).
+22 Oct, afternoon: the customer's finished checklist on the
+booking page (#403); quotes (WP-4.2): the drawn words, staff names only with
+the sign-off switch on (#405), lines that go together and what happens
+without a Needed line (#409, migration 056), a photo on a quote line (#411,
+migration 057), a new quote after the customer says no to everything
+(#412, Jack's answer in `docs/decisions/2026-10-22-quote-after-declined.md`),
+the spending limit chosen at booking (#413, migration 058; only the customer
+sets it, `2026-10-22-spend-limit-who-sets.md`) and work within it going ahead
+without a quote, the customer told (#417, migration 059), one reminder when a
+quote has no answer (#418, migration 060) and the Your answers text after a
+call (#419). The four messages' wording is Jack's approved. Each piece had a
+fresh review, its findings fixed test-first.
+22 Oct, later: the job checklist (#381 drawn and approved,
+#382 server, #383 screens): each shop's own checklists in Settings with a
+full service template, ticks and notes on the job page; Diary blocks, what a
+block shows first and second (#384); storage slots (#389 server, #390
+screens): the shop's own hooks, chosen at book-in, Kept on, cleared at
+collection; the job page laid out as drawn, Notes in the wider column (#391);
+Jack's answers to Mark's questions (#392, #393, #395, #396).
+22 Oct: a job's planned length reaches the screens, so the
+diary offers a whole-day request for its real length (#365); every screen
+test's fake jobs and orders are checked against the server's real replies
+(#366, #367, #368); quotes always show their prices (#370); the customer
+merge decision (#371, #372); the New online mark on stacks and in the month
+view (#374). Next: the job checklist.
+21 Oct, late: browser tests for the Workshop Overview and
+Settings › Messages (#353); the old app's job orders open the new till and it
+never takes a job's payment (#355); the spec for what ended bookings can't do
+(#356); confirming online bookings automatically, server and screens (#357,
+#358); the booking link's later-stage data and 30 days from collection
+(#359); the booking page's progress, money and what was done (#360); Planned
+effort on the Overview and the bike's colour on its tag (#361); Request
+received and Booking cancelled sent, pretend (#362); the reply-shape file
+(#363). Merged Mark's #348, #351 and #350 after checking each.
+21 Oct: the Workshop Overview (#346, its `custody=in_shop`
+jobs filter in the workshop server, Planned effort waiting on capacity
+figures: `openspec/changes/archive/2026-10-21-workshop-overview/design.md`),
+the bike tag printed through the browser (#347, a stand-in until a template
+builder for receipts and tags). Agreed Mark's working agreement (#349,
+merged). Checked Mark's #348 and pushed a lock change and a test fix to it.
+20–21 Oct: staff decline or re-offer an offered time
+(#332, #333); New job's + Add a bike and "From the customer" printed on the
+receipt (#334, #335); the booking messages staff answers send, pretend, and
+the diary's note when one couldn't go (#336, #340, #341); the mechanic chosen
+as a request is accepted (#337); pills work from the keyboard (#338); the
+Settings frame of rooms and folds (#339); an order's workshop job opens in the
+new diary (#342; the old job form's removal, #343, is green, waiting to
+merge); the booking page's later stages (#344,
+`docs/decisions/2026-10-21-booking-page-stages.md`). 20 Oct: the messages engine is built, pretend for now
+(#321–#330, `docs/decisions/2026-10-20-messages-engine.md`): Settings ›
+Messages, Quote to approve and Bike ready with its minute's Undo, and each
+job's Messages as a conversation from the job page's Message button. The
+board shows how far through stage 0 we are (#328). 18 Oct merged: the old app's workshop diary is retired
+and its Workshop tab opens the new diary (#252,
+`docs/decisions/2026-10-18-retire-old-diary.md`). What only it did was drawn
+(#253, #254, #258, #260; `docs/decisions/2026-10-18-old-diary-features.md`)
+and built into the new diary: the Shared queue button (#255), stretching a
+job by its bottom edge (#257), month view (#259), Change details on the job
+page (#261) with a note when a change request is waiting (#262), and Accept
+or decline from a booking request's menu (#263). The till now pays a job's
+order: "Open in the till" from the diary menu and "Take payment" on a
+finished job open it with the job's lines locked, the discounts taken off,
+and the bike recorded as collected (#267,
+`docs/decisions/2026-10-18-till-job-payment.md`). Then printing a receipt
+through the browser: Print on the Paid box and Print receipt in the diary
+menu, the receipt drawn first and approved; no VAT line or B1 number until
+Mark's sales-in-pence work records them (#269,
+`docs/decisions/2026-10-18-print-receipt.md`). Email and Text receipts stay
+in their packages. Then the mechanic sign-off's first piece: "Mark ready
+for collection" asks "Who's signing this off?", the job's mechanic picked,
+and the finished job shows "Signed off by [name] · [day], [time]"; each
+sign-off keeps the mechanic's name (#271). Then the till asks too, when a
+payment finishes work still in progress (#273). Then showing customers who
+signed off: a first Settings page (Workshop › Mechanics) with the switch,
+off, and "Checked by [name]" on the receipt and booking link when it's on
+(#275); turning it on at a real shop waits for the solicitor's check. Then
+Shop details on the Settings page (shop name, address, phone, email, VAT
+number), and receipts with the shop's name at the top and the address,
+phone, VAT number and barcode at the bottom, after research on receipt
+layouts (#277). On 19 Oct, the words at the bottom of receipts: Settings ›
+Till › Receipts, printed just above the barcode (#279); the same pull
+request fixed a diary browser test that used 19 Oct as a week "away from
+today". Then opening hours in Settings › Shop and sites: each day Open or
+Closed, hours on the hour, saved at once; screens only, on the existing
+workshop settings (#281). Then Settings for the Owner only until roles are
+built: anyone else sees "Settings aren't part of your role", and the two
+settings routes refuse them (#283). Then the time kept free each day in
+Settings › Workshop › Online booking, worded so lunch (now a diary block)
+isn't counted twice, and the old app's Edit workshop removed (#285). The same
+pull request drew, for later: "Bikes are booked in for: A set time / The
+whole day", set-time customers dropping off before their booking (30
+minutes by default), and notice in hours or days, which needs a server
+change of yours (`docs/decisions/2026-10-19-retire-old-workshop-settings.md`).
+Then the customer's booking page says when to drop the bike off ("Drop your
+Trek Domane AL 3 off by 11:00, half an hour before your booking at 11:30."),
+with "Drop off before the booking" in Settings (#287). Then notice in hours or
+days: "1 day" lets a customer book any time tomorrow, whatever the time now
+(#289). Then switching between a set time and the whole day, from a day the
+shop chooses, with "Cancel the change" and the drop-off window; screens only,
+on the 24 Sep scheduled mode change (#291). Settings › Workshop › Online
+booking now has everything drawn except deposits and the other rows. Then
+the "Show prices on the booking page" switch in that box; screens only, the
+server already hid prices when it was off (#293). "Confirm bookings
+automatically" is its own piece later (mostly Mark's WP-4.2). Then the
+"Additional note on the confirmation" in that box: each shop's own words after
+the drop-off time on the confirmed booking page, starting with "Please bring
+the lock key, and tell us about any accessories." (#295,
+`docs/decisions/2026-10-19-confirmation-note.md`). Deposits wait for Mark's
+payment work (Jack, 19 Oct). Then confirming online bookings
+automatically drawn and approved (the diary's "New, booked online" mark,
+"Confirm booking", the switch on) and its contract written for Mark (#297);
+the screens follow his server half. Then "Preview" under the
+note: a pop-up of the confirmed page for the drawings' example booking with
+the shop's saved drop-off time, note and prices (#299,
+`docs/decisions/2026-10-19-booking-preview.md`); screens only. The preview
+follows the drawn bk-confirmed. Then the confirmed booking page itself, to
+its drawing (bk-page): "Your repair · WH-1042" over the bike and the work, the
+Booking confirmed badge, the drop-off sentence and note, the Service, Bike,
+When and Your repair rows, the shop's name (#301); screens only. Other stages,
+Change the date and Cancel booking, and rows needing data your server doesn't
+send yet (Extra work, deposit, free to cancel, mechanic, shop address and
+phone) come later. On 20 Oct, Cancel booking on the confirmed page: asked once
+("There's nothing to pay or refund."), then "Your booking is cancelled" with
+Book another time (#303); screens only, on the existing cancel route. Then
+Change the date: the day strip in place, a change waiting with Cancel my date
+change, and a declined change's notice (#306), on a new server route (#305). Then
+the waiting-for-the-shop page to its drawing: "Your booking request", the
+purple badge, Change the date (a request moves at once) and Cancel request
+(#308); screens only. Then the six booking messages' wording and edit boxes,
+drawn and approved (#310, `docs/decisions/2026-10-20-booking-messages.md`):
+the booking-confirmed text puts in the shop's note; sending waits for the
+messages engine (WP-1.8). Then a shop's own booking terms in Settings › Online booking:
+Use your own, from the standard terms, and Go back to Wheelhouse's (#312);
+screens only. Online booking now has everything drawn except deposits. Then
+Offer another time, whole: staff pick a time in the diary itself and add a
+message (drawings #314, redrawn at Jack's request); the suggested time is held
+and the first let go; the customer accepts or cancels on their booking page
+(#315 server, #316 staff, #317 customer). Then declining with a message: the drawn
+decline step ("Decline & notify customer") and the customer's declined page
+with the shop's message (#319). Staff can't yet decline a booking that's
+waiting on an offered time (logged for later). Then Files and photos on the job page,
+and Delete job, refused with "Settle up first" while money has been paid or
+the bike is in (#265, `docs/decisions/2026-10-18-attachments-and-delete.md`).
+Jack also decided Wheelhouse is built for every shop, not to move his own
+shop first (#254), and Release 2 is done when built and checked, ready to
+sell, the all-in-one first with Lightspeed after (#256,
+`docs/decisions/2026-10-18-build-for-every-shop.md`). All of Mark's waiting
+pull requests merged on his word (#225, #231, #234, #249, #250, #256).
+Earlier: the online test copy went live (#221; its address is given to Jack
+privately, never in the repo, as its spec says); 16 and 17 Oct's workshop changes
+(#236, #237, #239 to #245, #247, #248). No pull request waits for Mark's
+approval; #265 and #267 changed his server files after his go-ahead, so he checks them.
+#238, the diary layout review, is a report, all of it now built or
+decided. Next in his lane without Mark: see the build board's "Next up".
+The stage check waits for lines 4 and 6 of §9.
+**Open for Jack:** nothing waiting now. Small to-do: make a Google account
+for Wheelhouse (go-live checklist). Later: his yes to open Stripe and buy the
+S700. (Asking the accountant about Citrus Lime reports was dropped, #254;
+#171 and #138 were closed with #256's answers, 18 Oct.)
+
+**Updated:** 2026-10-18. **Two people build at once** (Jack agreed to Mark's
+split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
+PR #126): Mark takes the server half of each work package and all hosting;
+Jack takes the screens and the whole workshop. STATUS and the build board are
+updated by **one status pull request a day**, not by every feature pull
+request (`CLAUDE.md`, rule 7).
+
+**The build started 4 Oct** (Jack). The record of 4–5 Oct's planning
+merges (#126, #110–#112, #144, #146, #153, #154, #124, #157's state) is in
+ARCHIVE, "Moved from STATUS on 2026-10-05 (evening)".
+
+## Where the build stands
+
+Stage 0 (split plan §9). Done: line 1 (WP-0.1); line 2 (WP-0.2 server
+half, #148, 5 Oct); line 3 (STATUS trim, #149, 5 Oct); line 5 (WP-0.2 screens, #164,
+5 Oct). In progress: line 4
+(Mark, WP-0.4: route-list test #150, migration checks and
+`scripts/new-db.sh` #151, screen-trace reads the route files #152, route
+moves #155 suppliers, #156 purchase orders, #158 label settings and shop
+theme, #159 website and Shopify, #160 sites and tills, #162 team, #165
+printing and messages, #167 sign-in, #168 products; 15 Oct: #202 the sale helpers, #205 workshop settings and `server/lib/uploads.js`, #209 image uploads, #210 and #211 the booking pages, #212 customers, #213 sales and orders, #214 employees and the dashboard; Jack's workshop moves #180–#184, with his quote routes (#207) approved; guards that moved files
+and `server.js` define every name they use and import nothing unused,
+#155 and #158). Waiting: line 6 (WP-0.5: spec #201, DigitalOcean in London #215, setup script #219; Jack sets it up once he says yes on #137); line 7
+(Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
+line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 done in
+#157 (5 Oct). #161 fixed by #166. Stage 1's 25 drawing gaps answered (#185,
+7 Oct). Specs now live in `openspec/` (#186, 8 Oct).
+
+
+**Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
+source `docs/build-progress/build-board.html`. After any build piece merges or
+opens, edit its `BOARD` data block, including the Overview tab's `overview`
+(Needs you, Waiting on Mark, Next up), and republish (Jack, 3 and 8 Oct).
+It is not Jack's local task log (`~/Dashboards/`).
+
+## Moved to ARCHIVE
+
+All in `ARCHIVE.md`, "Moved from STATUS on 2026-10-05 (WP-0.3)":
+
+- Issue #116 record and its open walk questions for Jack (walk 10 L1, walk
+  11 M3/L1, drawer wording, size gaps): "Older notes from the top of STATUS".
+- Each journey's record, open notes and own canvas link: "Journey and
+  walk-through paragraphs".
+- Release 2 specs, names and Fjell: "Release 2 and the design system (27
+  Sep, main session)". The 29 Sep list (d6, and unscheduled items such as
+  WorkOS sign-in): "Next, in order (Jack, 29 Sep)".
+- Fjell items, five parked diary items, other workstreams: "Open for Jack —
+  the Fjell bullet…".
+- Old checkouts, build method, helper notes, migrations 037 and 038: "Working
+  notes moved out".
+
+---
+
 ## Moved from STATUS on 2026-10-05 (evening)
 
 **The build has started** (Jack, 4 Oct: "the corrections are all good, we
