@@ -12,11 +12,11 @@ When "Everything’s sorted" shows rows left out, its Left out line SHALL offer 
 - **THEN** Everything's sorted shows no See them, and Your data shows no fifth row and the zip no fifth file
 
 #### Scenario: A left-out row whose customer was then deleted
-- **WHEN** a left-out row's details were emptied because the customer was deleted
-- **THEN** that row is not in "Left out from Citrus Lime.csv"
+- **WHEN** a row left out holds a customer's own details and that customer's details are then deleted
+- **THEN** the row goes at the deletion, so it is not in "Left out from Citrus Lime.csv"; a row only sharing their email or phone stays, with its reason, and is listed
 
 ### Requirement: The left-out rows come in the download
-While any rows are left out, the download SHALL hold "Left out from Citrus Lime.csv", one row per row left out with the file it came from, why it needed a look and Citrus Lime's own columns, and the fold SHALL show a fifth row "Left out from Citrus Lime · [n] rows" (answer 1). A row emptied because its customer was deleted SHALL NOT appear.
+While any rows are left out, the download SHALL hold "Left out from Citrus Lime.csv", one row per row left out with the file it came from, why it needed a look and Citrus Lime's own columns in Citrus Lime's order, and the fold SHALL show a fifth row "Left out from Citrus Lime · [n] rows" (answer 1). A row that went when its customer's details were deleted SHALL NOT appear.
 
 #### Scenario: Rows left out in the download
 - **WHEN** two rows were left out and the Owner downloads everything

@@ -1,10 +1,9 @@
-# Spec Delta
+# reports Specification
 
 ## Purpose
-
 Reports let a shop's owner see how the business is doing and take the figures away: sales over any period compared with the period before, each closed day's takings and cash, and a spreadsheet of any report.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Reports are the Owner's until roles exist
 Reports and their downloads SHALL open for the shop's Owner only, until roles are built (WP-1.1). Anyone else signed in SHALL be refused with "Only the shop's owner can see reports", and the Reports item SHALL not show in their sidebar. Each report SHALL show only the signed-in shop's sales and closes.
@@ -107,6 +106,10 @@ Each report except a closed day's SHALL show a graph above its table: bars by da
 ### Requirement: Takings and cash-ups lists each closed day
 Takings and cash-ups SHALL open on This week, with the same periods as Sales, and show Closed days' takings, Card, Cash, Other ("Gift cards, store credit and customer accounts"), Online ("Paid on the website · separate from the tills") and Cash differences, a graph of takings by closed day, and a table of days, newest first: Day, Takings, Cash banked, Cash difference, Closed by.
 
+#### Scenario: the comparison while today is open
+- **WHEN** Jack opens Takings and cash-ups on Thursday and Thursday isn't closed yet
+- **THEN** each figure is compared with last Monday to Wednesday, not last Thursday's close against nothing
+
 #### Scenario: a week with three closed days
 - **WHEN** Jack opens Takings and cash-ups on Thursday and Monday to Wednesday were closed
 - **THEN** the table has Thursday "Not closed yet", then Wednesday, Tuesday and Monday with their takings, cash banked, difference and who closed each
@@ -115,8 +118,15 @@ Takings and cash-ups SHALL open on This week, with the same periods as Sales, an
 - **WHEN** a day's cash was short
 - **THEN** its Cash difference shows with a minus sign, in the warning colour and in words for a screen reader
 
+### Requirement: A past day nobody closed shows as Not closed
+A past day in the period that nobody closed, and that Close the day can still close, SHALL be its own row in Takings and cash-ups (when it is shown by day, not by month) reading "Not closed", with its takings so far and a "Close it" link to Close the day for that day. It SHALL have no Online row and SHALL NOT be in the headline figures. Today, not yet closed, keeps its "Not closed yet" row.
+
+#### Scenario: Saturday was never closed
+- **WHEN** Jack opens Takings and cash-ups for a period that includes Saturday 12 September, which nobody closed
+- **THEN** "Sat 12 Sep" reads "Not closed" with its takings so far ("£[£] so far") and "Close it", which opens Close the day for that day
+
 ### Requirement: Each day's online money is its own row
-Each day SHALL have an "Online" row beside its closed day, showing the online money that close kept apart from the tills, with "Not a till" and no cash columns, and the page SHALL say "Online is what customers paid on the website, from [payment provider]. It's separate from the tills: no till counts it, and it's in no till's close."
+Each closed day, and today while it is open, SHALL have an "Online" row beside it, showing the online money that close kept apart from the tills, with "Not a till" and "—" in the cash columns; today, not yet closed, shows the online money so far ("[£] so far"). The page SHALL say "Online is what customers paid on the website, from your payment provider. It's separate from the tills: no till counts it, and it's in no till's close."
 
 #### Scenario: Tuesday's online money
 - **WHEN** Tuesday's close kept £[£] of online money apart

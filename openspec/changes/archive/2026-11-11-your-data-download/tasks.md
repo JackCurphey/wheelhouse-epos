@@ -21,9 +21,9 @@ Each pull request: tests first, each watched failing for the right reason (break
 
 ## 4. Left out from Citrus Lime, and See them (PR 4, about 300 lines, then the archive)
 
-- [ ] 4.1 Tests first (server and screen tests, the move's browser test): with two rows left out, the zip holds "Left out from Citrus Lime.csv" with the file, why, and Citrus Lime's own columns; a row emptied by a customer's deletion is not in it; with none left out there is no fifth file; the fold shows "Left out from Citrus Lime · 2 rows" only while there are any; Everything's sorted shows See them on its Left out line, reads "…are listed under Settings › Office › Your data, to add by hand when you like.", and See them opens Your data with Download everything unfolded; with none left out there is no See them. Verify: each fails first.
-- [ ] 4.2 The fifth spreadsheet in `server/shop-data-copy.js` and its count in a small `GET /api/settings/your-data` (Owner only); the fold's fifth row; `move-page.tsx`'s Left out line and sentence, its comment updated (See them built; Next: run alongside still waits for WP-8.1). Verify: 4.1 passes.
-- [ ] 4.3 `/opsx:archive` as the last commit: `openspec/specs/your-data` made, `settings` and `moving-from-citrus-lime` updated.
+- [x] 4.1 Tests first (server and screen tests, the move's browser test): with two rows left out, the zip holds "Left out from Citrus Lime.csv" with the file, why, and Citrus Lime's own columns; a row emptied by a customer's deletion is not in it; with none left out there is no fifth file; the fold shows "Left out from Citrus Lime · 2 rows" only while there are any; Everything's sorted shows See them on its Left out line, reads "…are listed under Settings › Office › Your data, to add by hand when you like.", and See them opens Your data with Download everything unfolded; with none left out there is no See them. Verify: each fails first.
+- [x] 4.2 The fifth spreadsheet in `server/shop-data-copy.js` and its count in a small `GET /api/settings/your-data` (Owner only); the fold's fifth row; `move-page.tsx`'s Left out line and sentence, its comment updated (See them built; Next: run alongside still waits for WP-8.1). Verify: 4.1 passes.
+- [x] 4.3 `/opsx:archive` as the last commit: `openspec/specs/your-data` made, `settings` and `moving-from-citrus-lime` updated.
 
 ## 5. Left for later (not in these pull requests)
 

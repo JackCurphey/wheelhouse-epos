@@ -24,10 +24,11 @@ after(async () => {
 });
 
 const call = (who, options) => staffRequest(server.baseUrl, who.cookie, '/api/your-settings', options);
-// Show the diary legend starts on (diary-legend-box design 1); every other switch starts off.
-const ALL_OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false };
+// Show the diary legend starts on (diary-legend-box design 1), and so does Show graphs in reports
+// (reports-sales-and-takings, Jack's answer 11); every other switch starts off.
+const ALL_OFF = { showLegend: true, statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false, showGraphs: true };
 
-test('every switch starts off, but Show the diary legend, which starts on', async () => {
+test('every switch starts off, but Show the diary legend and Show graphs in reports, which start on', async () => {
   const res = await call(owner);
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(res.body, { accessibility: ALL_OFF });

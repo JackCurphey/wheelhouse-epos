@@ -83,6 +83,25 @@ async function openSales(day, upTo = null) {
 // made offline (third review, 27 Oct).
 const OLD_AT = 's.created_at';
 const TILL_AT = '(CASE WHEN t.made_offline THEN t.till_clock_at ELSE t.received_at END)';
+// Online money taken so far today: what the next close would keep apart, from the
+// sales no close has counted yet. A day nobody closed takes its own sales, up to the
+// morning count that counted it, when it is closed later, so today's figure starts
+// after the latest such count. Reports shows it as "[£] so far" (rp-takings).
+export async function onlineSoFar(day) {
+  const last = (await daysWaiting()).at(-1);
+  const after = last ? (await countFor(last.for_day))?.checkedAt ?? null : null;
+  return (await takingsIn(await openSales(day), after)).onlinePence;
+}
+// What a day nobody closed has taken so far: its sales up to the morning count that counted
+// it, and after the count of the unclosed day before it, whose late close takes those (the
+// same windows the late closes work from, unclosed-day design 4). Reports shows it on the
+// day's "Not closed" row, beside a link to close it.
+export async function takingsSoFarFor(day) {
+  const count = await countFor(day);
+  const earlier = (await daysWaiting()).filter((w) => w.for_day < day).at(-1);
+  const after = earlier ? (await countFor(earlier.for_day))?.checkedAt ?? null : null;
+  return (await takingsIn(await openSales(day, count?.checkedAt ?? null), after)).takingsPence;
+}
 const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till: { sql: 't.day_close_id = ?', args: [id] } });
 
 // Till money by how it was paid, from both sales records: the old record's
@@ -252,7 +271,8 @@ async function lateDay(day, count) {
   return { start, carriedPence, base: count.by.pence - carriedPence };
 }
 
-async function closeOn(day) {
+// The saved close for a day, as the end-of-day report shows it (Reports reads it too).
+export async function closeOn(day) {
   const r = await prepare(`SELECT c.*, to_char(c.day, 'YYYY-MM-DD') AS day_text, l.name AS closed_by_name
     FROM day_closes c JOIN logins l ON l.id = c.login_id WHERE c.day = ?`).get(day);
   if (!r) return null;

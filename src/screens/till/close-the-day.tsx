@@ -529,17 +529,25 @@ function reportRows(c: Close): [string, string, string?][] {
 // Online money is beside the till's takings, not in them (walk-through 11 H2;
 // Jack's answer 7). The drawing's "see Reports" waits for Reports.
 // A day nobody closed, closed later, says its own day rather than "today".
-const online = (c: Close) => `Online money is not in this till’s takings: ${penceText(c.onlinePence)} ${c.countedBy ? `on ${dayLabel(c.day)}` : 'today'}`;
+const online = (c: Close, onDay = false) => `Online money is not in this till’s takings: ${penceText(c.onlinePence)} ${c.countedBy || onDay ? `on ${dayLabel(c.day)}` : 'today'}`;
 
-/** "Day closed" (eod-z): the end-of-day report, with Print. */
-function Report({ close, onClose }: { close: Close; onClose: () => void }) {
-  const sub = `${dayLabel(close.day)} · closed by ${close.closedByName}`;
+/**
+ * "Day closed" (eod-z): the end-of-day report, with Print. Reports shows the
+ * same body for a closed day (rp-day; openspec/changes/reports-sales-and-takings
+ * design 5): `title` and `sub` head it with the day and who closed it, `actions`
+ * adds its buttons (Download as spreadsheet), and `onDay` words the online line
+ * for a day that isn't today.
+ */
+export function Report({ close, onClose, title = 'Day closed', sub, actions, onDay = false }: {
+  close: Close; onClose: () => void; title?: string; sub?: string; actions?: ReactNode; onDay?: boolean;
+}) {
+  const subtitle = sub ?? `${dayLabel(close.day)} · closed by ${close.closedByName}`;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="z-title" aria-describedby="z-sub" className="max-w-[560px]">
       <DialogHeader>
         <div className="min-w-0 grow">
-          <DialogTitle id="z-title">Day closed</DialogTitle>
-          <DialogDescription id="z-sub">{sub}</DialogDescription>
+          <DialogTitle id="z-title">{title}</DialogTitle>
+          <DialogDescription id="z-sub">{subtitle}</DialogDescription>
         </div>
         <button type="button" aria-label="Close" onClick={onClose} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -557,20 +565,20 @@ function Report({ close, onClose }: { close: Close; onClose: () => void }) {
             </li>
           ))}
         </ul>
-        <p className="m-0 border-t border-[var(--wh-border)] pt-3 text-sm leading-normal">{online(close)}</p>
+        <p className="m-0 border-t border-[var(--wh-border)] pt-3 text-sm leading-normal">{online(close, onDay)}</p>
       </DialogBody>
       <DialogFooter>
-        <span />
-        <Button variant="primary" onClick={() => printPaper(<ReportPaper close={close} sub={sub} />)}>Print</Button>
+        {actions ?? <span />}
+        <Button variant="primary" onClick={() => printPaper(<ReportPaper close={close} sub={subtitle} title={title} onDay={onDay} />)}>Print</Button>
       </DialogFooter>
     </Dialog>
   );
 }
 
-function ReportPaper({ close, sub }: { close: Close; sub: string }) {
+function ReportPaper({ close, sub, title, onDay }: { close: Close; sub: string; title: string; onDay: boolean }) {
   return (
     <div className="font-mono text-xs">
-      <p className="m-0 font-bold">Day closed</p>
+      <p className="m-0 font-bold">{title}</p>
       <p className="m-0">{sub}</p>
       {reportRows(close).map(([label, value, sub2]) => (
         <div key={label}>
@@ -578,7 +586,7 @@ function ReportPaper({ close, sub }: { close: Close; sub: string }) {
           {sub2 ? <div>{sub2}</div> : null}
         </div>
       ))}
-      <p className="m-0">{online(close)}</p>
+      <p className="m-0">{online(close, onDay)}</p>
     </div>
   );
 }

@@ -32,6 +32,7 @@ GET /api/end-of-day-settings
 PUT /api/end-of-day-settings
 GET /api/stockroom-settings
 PUT /api/stockroom-settings
+GET /api/settings/your-data
 GET /api/settings/your-data/download
 GET /api/storefront-settings
 PUT /api/storefront-settings
@@ -345,3 +346,8 @@ PUT /api/bike-warranties/:id
 PUT /api/products/:id/warranty
 GET /api/reports/home
 GET /api/reports/sales
+GET /api/reports/takings
+GET /api/reports/days/:id
+GET /api/reports/sales.csv
+GET /api/reports/takings.csv
+GET /api/reports/days/:id/csv

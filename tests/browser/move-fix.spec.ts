@@ -87,6 +87,13 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
 
     await page.reload();
     await expect(main.getByRole('heading', { level: 2, name: 'Everything’s sorted' })).toBeVisible();
+
+    // See them: Settings › Office › Your data, Download everything open, the row left out counted
+    // (your-data-download group 4).
+    await main.getByRole('listitem').filter({ hasText: 'Left out' }).getByRole('link', { name: 'See them' }).click();
+    await expect(page).toHaveURL(/\/workshop\/settings\?room=office&fold=download-everything$/);
+    await expect(page.getByRole('list', { name: 'What the download holds' }).getByRole('listitem').last()).toHaveText('Left out from Citrus Lime · 1 row');
+    await noSideways();
   });
 }
 

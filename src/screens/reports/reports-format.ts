@@ -16,7 +16,7 @@ export type SalesReport = {
   };
   rows: SalesRow[];
   total: { label: string; takingsPence: number; sales: number; averagePence: number | null };
-  empty: boolean; nothingBefore: boolean; firstSaleOn: string | null; shopLine: string; today: string;
+  empty: boolean; nothingBefore: boolean; firstSaleOn: string | null; startedOn: string; shopLine: string; today: string;
 };
 
 /** Pence as pounds and pence, "£45.00"; "—" for a figure that has no value (a day not reached). */
@@ -37,3 +37,6 @@ export function longDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 }
+
+/** A cash difference: "−£5.00" when short, "£2.00" when over, "£0.00" when exact. */
+export const differenceText = (pence: number): string => (pence < 0 ? `−${penceText(-pence)}` : penceText(pence));

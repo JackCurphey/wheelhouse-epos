@@ -22,7 +22,8 @@ import { ApiError } from '@/lib/api/client.ts';
 // answer 8; openspec/changes/larger-text): after Reduce motion, as drawn.
 // Don't close things by themselves between them (Jack, 24 Oct answer 9;
 // app-map.mjs ys-wait; openspec/changes/dont-close-screens).
-const ROWS: { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' | 'text' }[] = [
+type Row = { key: keyof Accessibility; label: string; hint: string; preview?: 'symbols' | 'text' };
+const ROWS: Row[] = [
   // Show the diary legend, first, on to start (Jack, 26 Oct; diary-legend-box; app-map.mjs ys-legend).
   { key: 'showLegend', label: 'Show the diary legend', hint: 'The key to what each colour means, beside the Workshop diary. Switch it off once you know them.' },
   { key: 'statusSymbols', label: 'Show status symbols', hint: 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', preview: 'symbols' },
@@ -111,11 +112,15 @@ export function YourSettingsPage() {
   }
 
   const a11y = settings.data?.accessibility;
-  // Folded sidebar, last as drawn: its hint for a tablet, where the rail is always there; not on a phone, where the menu opens the rooms.
   // Not on a phone, where the diary has no legend (diary-legend-box design 2).
-  const rows = isPhone ? ROWS.filter((r) => r.key !== 'showLegend') : [...ROWS, { key: 'foldedSidebar' as const, label: 'Folded sidebar', hint: isTablet
+  // Folded sidebar after them: its hint for a tablet, where the rail is always there; not on a phone, where the menu opens the rooms.
+  // Show graphs in reports last, as drawn (app-map.mjs ys-graphs), for the people who can see reports: the Owner
+  // until roles (reports.mjs settingsGraphs; reports-sales-and-takings, Jack's answer 11).
+  const folded: Row[] = isPhone ? [] : [{ key: 'foldedSidebar', label: 'Folded sidebar', hint: isTablet
     ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.'
     : 'Folds the sidebar down to icons on every page, for more room. Press Unfold to open it. The Till always has it folded.' }];
+  const graphs: Row[] = user.isOwner ? [{ key: 'showGraphs', label: 'Show graphs in reports', hint: 'A graph above each report. The figures are always in the table below it, for screen readers too.' }] : [];
+  const rows: Row[] = [...(isPhone ? ROWS.filter((r) => r.key !== 'showLegend') : ROWS), ...folded, ...graphs];
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} aria-labelledby="ys-title" className="md:max-w-[560px] max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:rounded-none">
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-3.5 pr-3.5 pl-[22px]">

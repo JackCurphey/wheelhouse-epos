@@ -6,7 +6,7 @@ import { apiGet, apiMutate } from '@/lib/api/client.ts';
  * Each person's own settings (Your settings; workshop day 57; Jack, 23 Oct:
  * saved on the signed-in account until PINs). openspec/changes/your-settings-accessibility.
  */
-export type Accessibility = { showLegend: boolean; statusSymbols: boolean; reduceMotion: boolean; noAutoClose: boolean; largerText: boolean; foldedSidebar: boolean };
+export type Accessibility = { showLegend: boolean; statusSymbols: boolean; reduceMotion: boolean; noAutoClose: boolean; largerText: boolean; foldedSidebar: boolean; showGraphs: boolean };
 const KEY = ['your-settings'];
 
 export function useYourSettings(enabled = true) {
@@ -42,4 +42,9 @@ export function useAccessibilityClasses(signedIn: boolean) {
 export function prefersReducedMotion(): boolean {
   if (document.documentElement.classList.contains('wh-reduce-motion')) return true;
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** Show graphs in reports (reports-sales-and-takings, Jack's answer 11): on unless this person turned it off. */
+export function useShowGraphs(): boolean {
+  return useYourSettings().data?.accessibility.showGraphs !== false;
 }
