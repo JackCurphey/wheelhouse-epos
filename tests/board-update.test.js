@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { updateBoard } from '../scripts/board/update-board.mjs';
+import { sinceDay, updateBoard } from '../scripts/board/update-board.mjs';
 
 const html = readFileSync(new URL('../docs/build-progress/build-board.html', import.meta.url), 'utf8');
 const TODAY = new Date('2030-01-05T12:00:00Z');
@@ -84,4 +84,39 @@ test('the updated page still draws every section', () => {
     assert.ok(doc.getElementById(id).children.length > 0, `#${id} has nothing in it`);
   }
   assert.ok(doc.getElementById('pieces').textContent.includes('First test change'));
+});
+
+// A pull request opened early can merge after a higher-numbered one already on
+// the board. It is chosen by when it merged, not by being above the highest number.
+const onBoardNumbers = new Set([...html.matchAll(/\bpr: (\d+)\b/g)].map((m) => Number(m[1])));
+const freeBelowHighest = () => {
+  let n = highest - 1;
+  while (onBoardNumbers.has(n)) n--;
+  return n;
+};
+
+test('a lower-numbered pull request that merged after the board’s last update is still added', () => {
+  const late = freeBelowHighest();
+  assert.ok(late > 0 && late < highest);
+  const out = updateBoard(html, [pr(late, 'Opened early, merged late')], { today: TODAY });
+  assert.deepEqual(out.added, [late]);
+  assert.ok(out.html.includes(`what: 'Opened early, merged late', detail: '', pr: ${late} },`));
+  assert.equal(out.highest, highest, 'the highest number on the board does not go down');
+});
+
+test('the window starts the day before the board’s update date', () => {
+  assert.equal(sinceDay("  updated: '1 Mar 2031',\n"), '2031-02-28');
+  assert.equal(sinceDay("  updated: '1 Jan 2031',\n"), '2030-12-31');
+  const day = sinceDay(html);
+  const inside = pr(highest + 1, 'Merged on the day before', { mergedAt: `${day}T00:30:00Z` });
+  const before = new Date(Date.parse(`${day}T00:00:00Z`) - 60000).toISOString();
+  const outside = pr(highest + 2, 'Merged a minute too early', { mergedAt: before });
+  assert.deepEqual(updateBoard(html, [inside, outside], { today: TODAY }).added, [highest + 1]);
+});
+
+test('a pull request that merged before the day ahead of the board’s update date is not added', () => {
+  const stale = pr(freeBelowHighest(), 'Merged long ago', { mergedAt: '2020-01-01T00:00:00Z' });
+  const out = updateBoard(html, [stale], { today: TODAY });
+  assert.deepEqual(out.added, []);
+  assert.equal(out.html, html);
 });

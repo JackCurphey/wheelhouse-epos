@@ -1,6 +1,8 @@
 // Fills in the mechanical part of the build board from what has merged.
 // Adds one "done" row to BOARD.pieces for each pull request merged into main
-// since the highest pull request number already on the board, turns a
+// since the day before the board's `updated` date (chosen by merge date, so a
+// pull request opened early and merged late is still picked up) and not yet on
+// the board by number, turns a
 // "review" row for a merged pull request into "done", and sets `updated`.
 // Everything else in BOARD (the lead, the asks, who is on what, the slices) is
 // written by hand and is never touched: this makes surgical text edits, it
@@ -60,12 +62,22 @@ export function isUpkeep(pr) {
 
 const quote = (s) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\s+/g, ' ').trim()}'`;
 
+// The first day to look at: the day before the board's `updated` date, as
+// YYYY-MM-DD (UTC). Gives a day's slack for a pull request merged late.
+export function sinceDay(html) {
+  const m = /^ {2}updated: '(\d{1,2}) (\w{3}) (\d{4})',$/m.exec(html);
+  const month = m ? MONTHS.indexOf(m[2]) : -1;
+  if (month < 0) throw new Error('Could not read the updated date in BOARD');
+  return new Date(Date.UTC(Number(m[3]), month, Number(m[1]) - 1)).toISOString().slice(0, 10);
+}
+
 // Returns { html, added, flipped, highest }. `prs` is gh's list of merged pull
 // requests: { number, title, mergedAt, headRefName, files: [{ path }] }.
 export function updateBoard(html, prs, { today = new Date() } = {}) {
   const board = evaluate(html);
   const onBoard = new Set(board.pieces.map((p) => p.pr).filter(Number.isInteger));
   const floor = Math.max(0, ...onBoard);
+  const since = `${sinceDay(html)}T00:00:00Z`;
   const merged = new Set(prs.map((p) => p.number));
   let out = html;
 
@@ -83,7 +95,7 @@ export function updateBoard(html, prs, { today = new Date() } = {}) {
   out = out.slice(0, open) + rows.join('\n') + out.slice(close);
 
   const fresh = prs
-    .filter((p) => p.number > floor && !onBoard.has(p.number) && !isUpkeep(p))
+    .filter((p) => p.mergedAt >= since && !onBoard.has(p.number) && !isUpkeep(p))
     .sort((a, b) => a.mergedAt.localeCompare(b.mergedAt) || a.number - b.number);
   const added = fresh.map((p) => p.number);
 
@@ -114,9 +126,10 @@ export function updateBoard(html, prs, { today = new Date() } = {}) {
   return { html: out, added, flipped, highest: Math.max(floor, ...added) };
 }
 
-export function fetchMerged() {
+export function fetchMerged(since) {
   const json = execFileSync('gh', [
     'pr', 'list', '--state', 'merged', '--base', 'main',
+    '--search', `merged:>=${since}`,
     '--json', 'number,title,mergedAt,headRefName,files', '--limit', '200',
   ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(json);
@@ -127,7 +140,7 @@ function main(argv) {
   const i = argv.indexOf('--today');
   const today = i >= 0 ? new Date(`${argv[i + 1]}T12:00:00Z`) : new Date();
   const before = readFileSync(BOARD_FILE, 'utf8');
-  const result = updateBoard(before, fetchMerged(), { today });
+  const result = updateBoard(before, fetchMerged(sinceDay(before)), { today });
   const changed = result.html !== before;
   const titles = new Map(fetchTitles(result.html));
   if (!changed) console.log(`The board is up to date (highest pull request on it: #${result.highest}).`);
