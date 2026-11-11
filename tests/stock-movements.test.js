@@ -220,7 +220,10 @@ test('the lock limit ends with its transaction, and never stays on a connection 
     await lockStock([await (async () => (await prepare("INSERT INTO products (name, updated_at) VALUES ('[Product]', now()) RETURNING id").get()).id)()]);
     assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '2s', 'on during the transaction');
     await dbExec('COMMIT');
-    assert.equal((await prepare('SHOW lock_timeout').get()).lock_timeout, '0', 'off again, as every connection starts');
+    // Back to what the connection opened with (pg_settings' reset_val), whatever that is:
+    // none for a real server, a minute under test (server/db.js).
+    const after = await prepare("SELECT setting, reset_val FROM pg_settings WHERE name = 'lock_timeout'").get();
+    assert.equal(after.setting, after.reset_val, 'off again, as the connection opened');
   });
 });
 
