@@ -3,7 +3,7 @@
 // group 3; Jack's 10 Nov answers 2 and 7): the four spreadsheets the zip holds, the note
 // and the button. Owner only on the server. The waiting and failure states aren't drawn
 // (small one 8): they follow the customer's own copy (src/screens/book/account.tsx).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 
@@ -20,6 +20,12 @@ function fileName(header: string | null): string {
 
 export function DownloadEverything() {
   const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
+  const button = useRef<HTMLButtonElement>(null);
+  // The button is greyed out while the zip is made, and Try again goes with the warning, so the
+  // browser drops the focus to the top of the page: give it back to the button (review).
+  useEffect(() => {
+    if (state !== 'busy' && document.activeElement === document.body) button.current?.focus();
+  }, [state]);
   async function download() {
     setState('busy');
     try {
@@ -51,17 +57,20 @@ export function DownloadEverything() {
           </li>
         ))}
       </ul>
-      {state === 'failed' ? (
-        <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
-          <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
-          <span className="grow">The download didn’t start.</span>
-          <Button onClick={() => void download()}>Try again</Button>
-        </div>
-      ) : null}
+      {/* Always there, so screen readers read the warning out when it arrives (review). */}
+      <div role="status">
+        {state === 'failed' ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+            <TriangleAlert aria-hidden="true" className="size-[18px] shrink-0" />
+            <span className="grow">The download didn’t start.</span>
+            <Button onClick={() => void download()}>Try again</Button>
+          </div>
+        ) : null}
+      </div>
       <div className="flex flex-col items-start gap-2.5">
         <p className="m-0 text-sm text-[var(--wh-muted)]">Spreadsheets that open in Excel or Google Sheets — yours to keep, whatever happens.</p>
         <div aria-live="polite">
-          <Button onClick={() => void download()} disabled={busy}>{busy ? 'Preparing your download…' : 'Download everything'}</Button>
+          <Button ref={button} variant="accent" onClick={() => void download()} disabled={busy}>{busy ? 'Preparing your download…' : 'Download everything'}</Button>
         </div>
       </div>
     </div>

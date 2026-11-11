@@ -69,6 +69,7 @@ test('Office shows Shop and sites, then Your data, with its words; Jump to offer
   assert.ok(shop.compareDocumentPosition(data) & Node.DOCUMENT_POSITION_FOLLOWING);
   assert.ok(t.ui.getByText('Take a copy of everything, and see who changed what in Settings.'));
   assert.ok(t.ui.getByText('The shop and its sites, the people who work here, and your data.'));
+  assert.ok(t.ui.getByText('The shop’s details, its sites and their opening hours.'), 'Shop and sites keeps its words');
   assert.ok(t.ui.queryByRole('button', { name: /^Settings changes/ }) === null, 'no Settings changes until the activity log');
 });
 
@@ -100,16 +101,34 @@ test('pressing it says Preparing your download…, disabled and announced, then 
   assert.equal(downloads, 1);
 });
 
-test('a failed download shows The download didn’t start. with Try again, which works', async () => {
+test('a failed download shows The download didn’t start. with Try again, which works and keeps the focus', async () => {
   const t = await openOffice({ reply: () => ({ status: 500, ok: false, headers: new Headers(), json: async () => ({ error: 'Internal error' }) }) });
   await unfold(t);
-  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Download everything' }));
+  const list = await t.ui.findByRole('list', { name: 'What the download holds' });
+  // Screen readers read out a status area that is already there when its words arrive (review).
+  const status = list.parentElement.querySelector('[role="status"]');
+  assert.ok(status !== null, 'the status area is there before anything fails');
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Download everything' }));
   await t.ui.findByText('The download didn’t start.');
+  assert.ok(status.isConnected && status.textContent.includes('The download didn’t start.'), 'the words arrive in that same area');
   assert.equal(t.ui.getByRole('button', { name: 'Download everything' }).disabled, false, 'the button works again');
   answer = zipReply;
-  t.fireEvent.click(t.ui.getByRole('button', { name: 'Try again' }));
+  const again = t.ui.getByRole('button', { name: 'Try again' });
+  again.focus();
+  t.fireEvent.click(again);
   await t.waitFor(() => assert.deepEqual(clicked, [NAME]));
   await t.waitFor(() => assert.ok(t.ui.queryByText('The download didn’t start.') === null));
+  // Try again goes with the warning: the focus moves to the button, not the top of the page.
+  await t.waitFor(() => assert.ok(document.activeElement === t.ui.getByRole('button', { name: 'Download everything' })));
+});
+
+test('a shop name with ’ downloads by its own name, not the plain stand-in', async () => {
+  const real = 'Jack’s Bikes data 2026-09-01.zip';
+  const reply = () => ({ ...zipReply(), headers: new Headers({ 'content-type': 'application/zip', 'content-disposition': `attachment; filename="Jack_s Bikes data 2026-09-01.zip"; filename*=UTF-8''${encodeURIComponent(real)}` }) });
+  const t = await openOffice({ reply });
+  await unfold(t);
+  t.fireEvent.click(await t.ui.findByRole('button', { name: 'Download everything' }));
+  await t.waitFor(() => assert.deepEqual(clicked, [real]));
 });
 
 test('?room=office&fold=download-everything opens with it unfolded', async () => {
