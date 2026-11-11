@@ -392,6 +392,27 @@ test('Leave it out pressed twice goes once', async () => {
   assert.ok(!document.body.textContent.includes('changed since'));
 });
 
+// Its line takes the focus as soon as the server answers, so the next row's button must work
+// from then, not only once the list has been read again (the keyboard browser test's flake, 11 Nov).
+test('once a row is left out, the next row\'s Leave it out works straight away, before the list is read again', async () => {
+  const view = await open();
+  await toList(view);
+  let release;
+  view.state.hold = new Promise((r) => { release = r; });
+  click(view, 'Leave out A11');
+  const line = await view.findByText('A11 left out');
+  await view.rtl.waitFor(() => assert.ok(document.activeElement === line));
+  const next = view.getByRole('button', { name: 'Leave out Sam Patel' });
+  assert.equal(next.disabled, false, 'the next row\'s button works while the list is still being read');
+  assert.ok(view.queryByRole('button', { name: 'Leave out A11' }) === null, 'the row left out has gone from the list');
+  view.rtl.fireEvent.click(next);
+  await view.rtl.waitFor(() => assert.equal(view.state.calls.length, 2));
+  assert.equal(view.state.calls[1].path, '/api/move/rows/12/leave-out');
+  view.state.hold = null;
+  release();
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+});
+
 test('a row coming back from going round joins the list by itself', async () => {
   const view = await open({ rows: [NO_NAME], files: [FILE({ rowsLook: 2 })] });
   await toList(view, 'Look at the 2');
