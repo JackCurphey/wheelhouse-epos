@@ -92,6 +92,7 @@ export function register(route) {
     // next file as soon as the last was taken was told "busy" (seen under load,
     // 11 Nov). By then this send's own work is done or undone.
     const answer = (...args) => { giveUpPlace(shopId, req); return sendJson(...args); };
+    const refuse = (message) => { giveUpPlace(shopId, req); return badRequest(res, message); };
     let body;
     try {
       body = await readJsonBody(req, MAX_FILE_BODY_BYTES);
@@ -100,9 +101,9 @@ export function register(route) {
       throw err;
     }
     const key = readRequestKey(body);
-    if (key.error) return badRequest(res, key.error);
-    if (!key.value) return badRequest(res, 'A request key is required');
-    if (typeof body.dataBase64 !== 'string' || !body.dataBase64) return badRequest(res, 'No file received');
+    if (key.error) return refuse(key.error);
+    if (!key.value) return refuse('A request key is required');
+    if (typeof body.dataBase64 !== 'string' || !body.dataBase64) return refuse('No file received');
     const bytes = Buffer.from(body.dataBase64, 'base64');
     if (bytes.length === 0 || bytes.length > MAX_FILE_BYTES) return answer(res, 422, CANT_READ);
     const fileName = String(body.fileName ?? '').replaceAll('\u0000', '').toWellFormed().trim().slice(-MAX_NAME).toWellFormed();
