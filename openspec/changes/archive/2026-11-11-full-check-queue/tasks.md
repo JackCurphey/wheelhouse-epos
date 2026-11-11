@@ -1,0 +1,12 @@
+# Tasks: a queue for full test runs
+
+## 1. The queue
+
+- [x] 1.1 Tests first (`tests/full-check.test.js`), with fake step commands and a lock in a temporary folder: the lock is exclusive (a second run waits, saying who holds it, and runs after); a stale lock is taken over; a hand-made lock with the plain `owner` file sessions already write ("<pid> <worktree> <branch> <date>") is waited for while its process lives (this test was added after finding sessions queueing by hand on the same folder, and failed first: the script called such a lock stale and took it); the lock is let go after a failing command and after SIGINT and SIGTERM; all three steps run when the middle one fails, with a summary line each and a non-zero exit; the default steps are lint, test and test:browser in that order. Verify: all ten failed against an empty script (missing steps, missing npm script, runs that never started); each was then checked against a deliberate break (mkdir made non-exclusive, stale pids seen as alive, no release on exit, no signal handling, stopping after a failed step), and each break turned its test red.
+- [x] 1.2 `scripts/full-check.mjs` and the `full-check` script in `package.json`. Verify: 1.1 passes (14 tests).
+- [x] 1.4 From the self-review: two waiters could both take over the same stale lock (reproduced 6–10 times in 40 rounds); only the waiter holding a second `.takeover` folder may clear one now, and it looks again first. A step that ignores a stop is killed after 10 s, and runs in its own process group so the stop reaches all of it. A holder whose process number now belongs to a newer process is stale. Verify: three new tests (three waiters on a stale lock, eight rounds; a reused process number; a step ignoring SIGTERM) failed first; each fix, removed again, turned its test red.
+- [x] 1.3 The CLAUDE.md paragraph: drafted, then taken out before merging, for Jack to approve himself (the request came through another session); the wording is in the pull request.
+
+## 2. Its own merge
+
+- [x] 2.1 Self-review; `npm run full-check` on the final commit after merging the latest main; merge if clean. The first queued run waited behind another session, then failed only in citrus-import (6 tests, "busy" 429s; the file passes alone 3 of 3); the second passed all three steps on e68c5ad4. Main then moved with code, so the final run is on the archive commit after merging it.
