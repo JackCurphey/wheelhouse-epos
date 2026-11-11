@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { penceInput } from '@/lib/money.ts';
 import { penceText, parseTotal } from '@/lib/cash-count.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -147,7 +148,7 @@ export function AccountDialog({ customerId, name, isCompany, onClose }: { custom
 // "Most [name] can owe": the Owner types it (blank for the shop's), saved as he leaves the box,
 // as Ways to pay's limit is; everyone else reads it.
 function LimitRow({ customerId, first, account, owner, onSaved }: { customerId: number; first: string; account: Account; owner: boolean; onSaved: () => Promise<unknown> }) {
-  const [typed, setTyped] = useState(account.ownLimit === null ? '' : (account.ownLimit / 100).toFixed(2));
+  const [typed, setTyped] = useState(account.ownLimit === null ? '' : penceInput(account.ownLimit));
   const [problem, setProblem] = useState<string | null>(null);
   const shops = account.shopLimit === null ? 'the shop has no limit' : `the shop’s is ${penceText(account.shopLimit)}`;
   async function save() {

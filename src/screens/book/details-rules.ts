@@ -4,7 +4,7 @@ import type { BookingRequestKey } from '@/lib/api/types.ts';
 import type { Answer, BookingDraft } from './draft.tsx';
 import type { ServicesResponse } from './services-query.ts';
 import type { AvailabilityResponse, PortalMechanic } from './date-query.ts';
-import { chosenServices, formatFrom } from './service-selection.ts';
+import { chosenServices, formatFrom, formatMoney } from './service-selection.ts';
 import { cleanAnswers } from './problem-rules.ts';
 import { dayLabel } from './date-rules.ts';
 
@@ -202,7 +202,7 @@ export function limitError(draft: Pick<BookingDraft, 'limitOn' | 'limitText'>): 
 export function summaryLines(services: ServicesResponse, draft: BookingDraft, when: string): string[] {
   const bikeNote = draft.bikeNote?.trim() || null;
   const limit = spendLimit(draft);
-  const limitLine = limit === null ? null : `Extra work: go ahead if the whole bill is no more than £${limit}`;
+  const limitLine = limit === null ? null : `Extra work: go ahead if the whole bill is no more than ${formatMoney(limit)}`;
   return [serviceLine(services, draft), when, priceText(services, draft), bikeNote, limitLine].filter((l): l is string => !!l);
 }
 

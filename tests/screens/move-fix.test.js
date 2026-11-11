@@ -226,17 +226,24 @@ test('a fix that finds the row already here, or a deleted customer\'s account nu
   await see(view, /Everything’s sorted/);
 });
 
-test('every row sorted: Everything\'s sorted, with the rows left out and no link to a page that isn\'t there (mv-sorted)', async () => {
+test('every row sorted: Everything\'s sorted, with the rows left out and See them opening Settings › Office › Your data (mv-sorted)', async () => {
   const view = await open({ rows: [NO_NAME], files: [FILE({ rowsLook: 1 })] });
   await toList(view, 'Look at the 1');
   click(view, 'Leave out A11');
   await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
   assert.ok(document.body.textContent.includes(SORTED_NOTE));
   const row = [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith('Left out'));
-  assert.match(row.textContent, /1 row$/);
-  assert.ok(view.queryByRole('link', { name: 'See them' }) === null);
-  assert.ok(view.queryByRole('button', { name: 'See them' }) === null);
+  assert.match(row.textContent, /1 row/);
+  const see = view.rtl.within(row).getByRole('link', { name: 'See them' });
+  assert.equal(see.getAttribute('href'), '/workshop/settings?room=office&fold=download-everything');
+  // Next: run alongside still waits for WP-8.1.
   assert.ok(view.queryByRole('button', { name: /Next: run alongside/ }) === null);
+});
+
+test('everything sorted with none left out: no See them', async () => {
+  const view = await open({ rows: [], files: [FILE({ rowsLook: 0, rowsLeftOut: 0, rowsFixed: 2 })] });
+  await view.findByRole('heading', { level: 2, name: 'Everything’s sorted' });
+  assert.ok(view.queryByRole('link', { name: 'See them' }) === null);
 });
 
 test('coming back after everything was sorted shows it again; a new file then shows what came across', async () => {
