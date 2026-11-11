@@ -15,7 +15,7 @@ Two board items are partly done.
 - Built: shop details, hours, the Stockroom, signing in and tills.
 - Still missing, per the build board: staff and roles, ways to pay, end of day.
 
-This change covers quick buttons, End of day, and Ways to pay's Cash card. Staff and roles waits for Mark's roles (WP-1.1). Jack answered the change's three questions on 11 Nov (`docs/decisions/2026-11-11-settings-rest-answers.md`), and they are folded in here. **Nothing is built yet.** A builder session builds from this change.
+This change covers quick buttons, End of day, and Ways to pay's Cash card and Other ways to pay list. Staff and roles waits for Mark's roles (WP-1.1). Jack answered the change's three questions on 11 Nov (`docs/decisions/2026-11-11-settings-rest-answers.md`), and they are folded in here. **Nothing is built yet.** A builder session builds from this change.
 
 ## What Changes
 
@@ -72,15 +72,19 @@ Drawings: `set-eod`, `set-eod-close`, `set-save-failed`.
 
 ### Ways to pay (WP-5.1)
 
-Drawing: `set-pay-ways`.
+Drawings: `set-pay-ways`, `set-pay-other`.
 
-- **Now:** the Ways to pay fold gains the drawn **Cash** card, "Always on", with no switch.
-- **Later** (Jack's answer 3): Other ways to pay (`set-pay-other`), the Card, Gift cards and Deposits switches, and Store credit's "Customers earn back [n]%". Each comes with the till piece that makes it work, as already logged: "card machine and ways to pay come with their pieces" (`decided-while-building.md` line 3939).
+- **Now** (Jack's answer 3):
+  - The Ways to pay fold gains the drawn **Cash** card, "Always on", with no switch.
+  - A new **Other ways to pay** fold lists the shop's other ways to pay, starting with the drawn Finance, Cycle to Work and Payment link, each with its line and an outlined Remove, plus "Add another way to pay" and the note "These sit under “Other” at the bottom of Take payment, one tap away."
+  - The list is set up in Settings only. It does nothing at the till until Mark adds "Other" to Take payment.
+- **Later:** the Card, Gift cards and Deposits switches, and Store credit's "Customers earn back [n]%". Each comes with the till piece that makes it work, as already logged: "card machine and ways to pay come with their pieces" (`decided-while-building.md` line 3939).
 
 ### Not in this change, and why
 
 - **Staff and roles** (`set-staff*`): waits for Mark's roles (WP-1.1).
-- **Other ways to pay and the other Ways to pay switches**: these come later, per Jack's answer 3.
+- **The other Ways to pay switches** (Card, Gift cards, Deposits, earn-back): these come later, per Jack's answer 3.
+- **"Other" on Take payment**: Mark's Take payment work. This change only builds the list it will read.
 - **The card machine** (`set-pay-card`): waits for a real provider account, which is Jack's call (STATUS: Stripe and the S700 reader).
 - **The Till fold's other boards** (`set-till-reasons`, `set-till-receipts`' Print/Email/Text, `set-till-printer`): later WP-5.1 pieces.
 - **Workshop settings, Your data and Getting started** (`fr-today`): other WP-5.1 pieces.
@@ -88,11 +92,11 @@ Drawing: `set-pay-ways`.
 
 ## Who and risk
 
-Jack's side, built by one builder session in four pull requests (`tasks.md`).
+Jack's side, built by one builder session in five pull requests (`tasks.md`).
 
 **The four risky areas:**
 
-1. **Migrations:** touched. PR 1 adds the quick-button tables and copies existing shops' services into them. PR 4 adds two End of day columns. Each needs `/review` and the `risky-area-reviewer` agent.
+1. **Migrations:** touched. PR 1 adds the quick-button tables and copies existing shops' services into them. PR 4 adds two End of day columns. PR 5 adds the Other ways to pay table and its three drawn rows. Each needs `/review` and the `risky-area-reviewer` agent.
 2. **Money and stock:** not touched. Nothing writes a sale, payment, refund or `stock_qty`. Two places sit beside Mark's money area, and are named so he can agree them:
    - **PR 3 edits `src/screens/till/till-page.tsx`**, the till's left side only. It changes what the quick-button grid reads. It still calls the existing `add()`, which is unchanged. The file isn't on the risky list, but the till's sale screen is Mark's, so **PR 3 waits for Mark's yes**.
    - **PR 4 edits `src/screens/till/close-the-day.tsx`**. When Count first is off, it shows the expected figure while counting. The server already sends that figure, and no close is saved differently. PR 4 also edits `server/lib/close-entry.js`, which decides when the button shows and writes nothing.
@@ -106,7 +110,7 @@ It is not a small piece: it has migrations, and it is well over 200 lines.
 **Drawings** (in `docs/design/user-journeys/generator/`: `setup.mjs`, `settings-frame.mjs` and `till.mjs`; screen ids in `journeys.mjs` j08):
 - `set-till-quick`, `set-till-quick-add`, `set-till-quick-saved`, `set-till-empty`
 - `set-eod`, `set-eod-close`, `set-save-failed`
-- `set-pay-ways`
+- `set-pay-ways`, `set-pay-other`
 - The till's left side in `till.mjs` (`leftSide`)
 
 **Decisions:**

@@ -12,7 +12,7 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
 - Compare DOM query results with `assert.ok(x === null)`.
 - Aim for 250–600 changed lines.
 
-**Order:** PR 2 needs PR 1, and PR 3 needs PR 2. PR 4 stands alone.
+**Order:** PR 2 needs PR 1, and PR 3 needs PR 2. PRs 4 and 5 stand alone.
 
 ## 1. Quick buttons on the server (PR 1, about 450 lines; migration, a risky area)
 
@@ -67,7 +67,7 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
   Verify: each fails first.
 - [ ] 3.2 Change the left side of `src/screens/till/till-page.tsx`. `add()` and the payment steps are not changed. Remove the header comment's "quick button groups" line. Verify: 3.1 passes.
 
-## 4. End of day, and Ways to pay's Cash card (PR 4, about 480 lines; migration, a risky area)
+## 4. End of day: Close the day timing and Count first (PR 4, about 450 lines; migration, a risky area)
 
 - [ ] 4.1 Write the tests first (`tests/close-entry.test.js`, `tests/end-of-day-settings.test.js`). They cover:
   - `entryFor` with 0, 30 and 60 minutes, around a 17:30 close.
@@ -83,13 +83,31 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
   - The Counting the cash fold's switch and its summary.
   - With Count first off, Close the day shows the expected amount and a live difference. With it on, as before.
   - The existing close-the-day tests still pass.
-  - Ways to pay shows Cash first, "Always on", with no switch, and no Card, Gift cards, Deposits or Other ways to pay (Jack's answer 3).
 
   Verify: each fails first.
-- [ ] 4.4 Add the folds in `src/screens/settings/end-of-day-settings.tsx` and `OwnerSettings()`, the counting step in `src/screens/till/close-the-day.tsx`, and the Cash card in `src/screens/settings/ways-to-pay-settings.tsx`. Verify: 4.3 passes.
+- [ ] 4.4 Add the folds in `src/screens/settings/end-of-day-settings.tsx` and `OwnerSettings()`, and the counting step in `src/screens/till/close-the-day.tsx`. Verify: 4.3 passes.
 - [ ] 4.5 Log the gaps from `design.md` section 5 (point 1).
 
-## 5. Finish
+## 5. Ways to pay: Cash and Other ways to pay (PR 5, about 350 lines; migration, a risky area)
 
-- [ ] 5.1 Update the build board's hand-written WP-1.3 and WP-5.1 lines, and STATUS's "Start here", in the last pull request.
-- [ ] 5.2 Run `/opsx:archive` as the last commit of the last pull request, before it merges.
+- [ ] 5.1 Write the tests first (`tests/payment-ways-other.test.js`). They cover:
+  - The migration seeds Finance, Cycle to Work and Payment link with their lines for every shop.
+  - GET lists them in order.
+  - POST adds at the end. A name already on the list is refused, and so is one over 30 characters.
+  - DELETE removes. Undo re-adds in place.
+  - Staff are refused changes. Another shop's list is never seen.
+
+  Verify: each fails first.
+- [ ] 5.2 Add the migration and routes in `server/routes/customer-money.js`. Verify: 5.1 passes.
+- [ ] 5.3 Write the tests first (screen and browser). They cover:
+  - Ways to pay shows Cash first, "Always on", with no switch, and no Card, Gift cards or Deposits switches (Jack's answer 3).
+  - The Other ways to pay fold shows the rows, Remove, the Add box and the note, with Saved · Undo and the summary.
+  - Take payment is unchanged.
+
+  Verify: each fails first.
+- [ ] 5.4 Add the Cash card in `ways-to-pay-settings.tsx`, add `src/screens/settings/other-ways-to-pay.tsx`, and add the fold in `OwnerSettings()`. Verify: 5.3 passes.
+
+## 6. Finish
+
+- [ ] 6.1 Update the build board's hand-written WP-1.3 and WP-5.1 lines, and STATUS's "Start here", in the last pull request.
+- [ ] 6.2 Run `/opsx:archive` as the last commit of the last pull request, before it merges.

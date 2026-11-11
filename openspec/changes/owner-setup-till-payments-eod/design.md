@@ -17,7 +17,7 @@
 - Quick buttons set up in Settings and shown on the till.
 - Close the day's timing chosen by the shop.
 - Count first as a switch.
-- Ways to pay's Cash card.
+- Ways to pay's Cash card and the Other ways to pay list.
 
 **Non-goals:**
 - Anything that changes what Take payment offers or what a sale, payment or close writes.
@@ -69,12 +69,14 @@ The Add box searches `GET /api/products?search=` (products on sale) and the acti
 - `GET /api/close-the-day` gains `countFirst`. `close-the-day.tsx` shows the expected figure and live difference when it is false.
 - **Mark's area:** none of this writes a close; the saved figures are unchanged.
 
-### 4. Ways to pay: the Cash card only (in PR 4)
+### 4. Ways to pay: Cash and Other ways to pay (migration, PR 5)
 
+- A `payment_ways_other` table: `id`, `shop_id`, `name` (1–30 characters, unique per shop), `note`, `position`, with row-level security on `shop_id`.
+- The migration seeds the three drawn rows for every shop, new and existing, with their drawn lines. A shop's own rows have no line.
+- Routes in `server/routes/customer-money.js` beside `/api/payment-settings`: GET, POST and DELETE `/api/payment-ways-other`. Owner only for changes.
 - The Cash card is screen only: it goes first in `ways-to-pay-settings.tsx`, "Always on", with no switch.
-- There is no table and no route.
-- Other ways to pay and the remaining switches wait for their till pieces (Jack's answer 3).
-- The change is small, so it rides in PR 4.
+- Take payment does not read the list yet. When Mark adds "Other" to Take payment, it reads `GET /api/payment-ways-other`.
+- The Card, Gift cards and Deposits switches and Store credit's earn-back wait for their till pieces (Jack's answer 3).
 
 ### 5. Gaps the drawings don't settle, decided by the closest built pattern
 
@@ -84,7 +86,7 @@ These are logged in `docs/decisions/decided-while-building/2026-11-jack.md` (or 
 2. **Edit's box.** Checked: `setup.mjs` draws Edit on hover but no Edit box. It is the Add box with the button filled in and "Save", as Workshop › Services' Change box reuses its Add box.
 3. **Adding, renaming and removing a group.** Checked: the drawing shows the "+ Add a group" pill only. It is a small Form box (block 9) asking for the name, and a menu on the pill for Rename, Move and Remove, as Customer groups do. Removing a group with buttons asks first, as Remove on a service with bookings does.
 4. **A button whose item is off sale.** Not drawn. "Not on sale" on its Settings row, hidden on the till, as the services list marks an inactive service.
-5. **Name limits.** Not drawn. A group name is up to 20 characters (it is a pill) and a button label up to 40, following the closest built limits on the services and customer-groups names.
+5. **Name limits.** Not drawn. A group name is up to 20 characters (it is a pill), a button label up to 40 and an other way to pay 30, following the closest built limits on the services and customer-groups names.
 6. **The till's empty line.** Checked: `till.mjs` doesn't draw an empty quick-button grid. "No quick buttons yet. Add them in Settings." follows today's built line "No workshop services yet. Add them in Settings." (`till-page.tsx:170`) and the Settings empty state's heading.
 
 ## Jack's answers (11 Nov)
@@ -93,10 +95,11 @@ Recorded in `docs/decisions/2026-11-11-settings-rest-answers.md`:
 
 1. **Existing shops' quick buttons:** their active services are copied into a "Workshop" group (option 1).
 2. **Close the day timing:** every shop moves to 30 minutes before closing, including existing ones (option 2).
-3. **Ways to pay now:** the Cash card only (option 2). Other ways to pay waits with the other switches.
+3. **Ways to pay now:** the Cash card and the Other ways to pay list (option 1; Jack first chose option 2, then changed it). The other switches wait for their till pieces.
 
 ## Risks / Trade-offs
 
 - **Existing shops' Close the day moves.** It moves from an hour before to 30 minutes before without the shop choosing (Jack's answer 2). The fold shows the new time, and the shop can change it back.
 - **PR 3 needs Mark.** Without it, quick buttons can be set up but the till still shows services. PRs 1 and 2 are useful on their own only once PR 3 lands, so ask Mark early.
-- **Two migrations.** Each is small and adds only. None changes or drops an existing column.
+- **Other ways to pay does nothing at the till yet.** A shop can set up the list before Take payment offers "Other". The fold's note says where they will show; Mark's Take payment work makes it live.
+- **Three migrations.** Each is small and adds only. None changes or drops an existing column.

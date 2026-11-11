@@ -106,8 +106,33 @@ Settings › Front desk › End of day SHALL have a Counting the cash fold with 
 - **THEN** "Saved" shows with Undo, the summary reads "Show the expected amount", and the next Close the day shows the expected figure while counting
 
 ### Requirement: Ways to pay shows Cash as always on
-The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL go on naming only the ways to pay that are built and on. The Card, Gift cards and Deposits switches, Store credit's earn-back and Other ways to pay SHALL not show until the till pieces that use them are built (Jack's answer 3).
+The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL go on naming only the ways to pay that are built and on. The Card, Gift cards and Deposits switches and Store credit's earn-back SHALL not show until the till pieces that use them are built (Jack's answer 3).
 
 #### Scenario: Cash
 - **WHEN** Jack opens Ways to pay
 - **THEN** Cash shows first, reading "Always on", with nothing to switch
+
+### Requirement: The shop lists its other ways to pay
+Settings › Front desk › Payments SHALL have an Other ways to pay fold (`set-pay-other`) listing the shop's other ways to pay, each with its line and an outlined Remove. Under the list SHALL be "Add another way to pay" with Add, and the note "These sit under “Other” at the bottom of Take payment, one tap away." Add and Remove SHALL save at once, with "Saved" and Undo. The summary SHALL name them, or read "None".
+
+#### Scenario: Adding the shop's own
+- **WHEN** Jack types "Bank transfer" and chooses Add
+- **THEN** it is added at the end of the list, and "Saved" shows with Undo
+
+#### Scenario: Removing one
+- **WHEN** Jack chooses Remove on Payment link
+- **THEN** it goes from the list, and Undo puts it back where it was
+
+### Requirement: Other ways to pay changes nothing at the till yet
+The Other ways to pay list SHALL be set up in Settings only. Take payment SHALL not change; it uses the list once Mark's Take payment work adds "Other" (Jack's answer 3, `docs/decisions/2026-11-11-settings-rest-answers.md`).
+
+#### Scenario: Taking a payment after adding one
+- **WHEN** Jack adds "Bank transfer" and then takes a payment at the till
+- **THEN** Take payment offers the same ways to pay as before
+
+### Requirement: A shop starts with the drawn other ways to pay
+A shop SHALL start with Finance ("Recorded at the till; the finance company pays the shop"), Cycle to Work ("Recorded at the till against a Cycle to Work order") and Payment link ("Needs setting up with [payment provider] first"). A name SHALL be 1 to 30 characters and not the same as another on the list.
+
+#### Scenario: The starting list
+- **WHEN** Jack first opens Other ways to pay
+- **THEN** he sees Finance, Cycle to Work and Payment link with their lines, and the summary reads "Finance, Cycle to Work, payment link"

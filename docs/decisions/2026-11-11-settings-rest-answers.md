@@ -18,4 +18,6 @@ The question: owner setup decision 18 sets 30 minutes before closing for a new s
 
 The question: the drawn Ways to pay (`set-pay-ways`) and Other ways to pay (`set-pay-other`) include ways the till can't take yet.
 
-**Option 2, not the recommendation.** Only the Cash card ("Always on") comes now. The Other ways to pay list waits, along with the Card, Gift cards and Deposits switches and Store credit's earn-back. Each comes with the till piece that makes it work (the precedent at `decided-while-building.md` line 3939).
+**Option 1, the recommendation.** The Cash card ("Always on") and the Other ways to pay list come now, in Settings only. The list does nothing at the till until Mark adds "Other" to Take payment. The Card, Gift cards and Deposits switches and Store credit's earn-back come later, each with the till piece that makes it work (the precedent at `decided-while-building.md` line 3939).
+
+Jack first chose option 2 (the Cash card only) on 11 Nov, then changed it to option 1 the same evening. Option 1 is the answer.
