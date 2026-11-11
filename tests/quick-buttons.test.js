@@ -203,6 +203,11 @@ test("a product's new price, and an inactive service, show on its button with no
   assert.equal(buttons.find((b) => b.productId === items.pads).pricePence, 3000);
   assert.equal(buttons.find((b) => b.serviceId === items.brakes).onSale, false);
   await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET active = 1 WHERE id = ?').run(items.brakes));
+  // A product taken off sale shows the same way.
+  assert.equal(buttons.find((b) => b.productId === items.pads).onSale, true);
+  await runWithShop(owner.shop.id, () => prepare('UPDATE products SET active = 0 WHERE id = ?').run(items.pads));
+  assert.equal((await group('Workshop')).buttons.find((b) => b.productId === items.pads).onSale, false);
+  await runWithShop(owner.shop.id, () => prepare('UPDATE products SET active = 1 WHERE id = ?').run(items.pads));
 });
 
 test('add, rename, move and remove a group; a taken name is refused', async () => {
@@ -210,38 +215,38 @@ test('add, rename, move and remove a group; a taken name is refused', async () =
   const accessories = await addGroup('Accessories');
   assert.deepEqual((await list()).map((g) => [g.name, g.position]), [['Workshop', 0], ['Parts', 1], ['Accessories', 2]]);
   const taken = await own('/api/quick-button-groups', { method: 'POST', body: { name: 'parts' } });
-  assert.equal(taken.status, 409);
+  assert.deepEqual([taken.status, taken.body.code], [409, 'name_taken']);
   assert.equal((await own('/api/quick-button-groups', { method: 'POST', body: { name: '' } })).status, 400);
   assert.equal((await own('/api/quick-button-groups', { method: 'POST', body: { name: 'x'.repeat(21) } })).status, 400);
   assert.equal((await own(`/api/quick-button-groups/${parts.id}`, { method: 'PUT', body: { name: 'WORKSHOP' } })).status, 409);
-  const renamed = await own(`/api/quick-button-groups/${parts.id}`, { method: 'PUT', body: { name: 'Spares' } });
+  const renamed = await own(`/api/quick-button-groups/${parts.id}`, { method: 'PUT', body: { name: '[Group]' } });
   assert.equal(renamed.status, 200, JSON.stringify(renamed.body));
   const moved = await own(`/api/quick-button-groups/${accessories.id}`, { method: 'PUT', body: { position: 0 } });
   assert.equal(moved.status, 200);
-  assert.deepEqual((await list()).map((g) => [g.name, g.position]), [['Accessories', 0], ['Workshop', 1], ['Spares', 2]]);
+  assert.deepEqual((await list()).map((g) => [g.name, g.position]), [['Accessories', 0], ['Workshop', 1], ['[Group]', 2]]);
   assert.equal((await own(`/api/quick-button-groups/${parts.id}`, { method: 'DELETE' })).status, 200);
   assert.deepEqual((await list()).map((g) => [g.name, g.position]), [['Accessories', 0], ['Workshop', 1]]);
   assert.equal((await own(`/api/quick-button-groups/${accessories.id}`, { method: 'DELETE' })).status, 200);
 });
 
 test('removing a group with buttons returns 409 has_buttons with the count until confirmed', async () => {
-  const g = await addGroup('Spares');
+  const g = await addGroup('Parts');
   await addButton(g.id, { productId: items.pads });
   await addButton(g.id, { serviceId: items.cable });
   const asked = await own(`/api/quick-button-groups/${g.id}`, { method: 'DELETE' });
   assert.equal(asked.status, 409);
   assert.deepEqual([asked.body.code, asked.body.count], ['has_buttons', 2]);
-  assert.ok(await group('Spares'), 'nothing removed');
+  assert.ok(await group('Parts'), 'nothing removed');
   assert.equal((await own(`/api/quick-button-groups/${g.id}?confirm=1`, { method: 'DELETE' })).status, 200);
-  assert.equal(await group('Spares'), undefined);
+  assert.equal(await group('Parts'), undefined);
 });
 
 test('add, change, move and remove a button; Undo puts it back where it was', async () => {
   const workshop = await group('Workshop');
   const brakes = workshop.buttons.find((b) => b.serviceId === items.brakes);
-  const changed = await own(`/api/quick-buttons/${brakes.id}`, { method: 'PUT', body: { label: 'Brakes' } });
+  const changed = await own(`/api/quick-buttons/${brakes.id}`, { method: 'PUT', body: { label: '[Label]' } });
   assert.equal(changed.status, 200, JSON.stringify(changed.body));
-  assert.equal((await group('Workshop')).buttons[1].name, 'Brakes');
+  assert.equal((await group('Workshop')).buttons[1].name, '[Label]');
   await own(`/api/quick-buttons/${brakes.id}`, { method: 'PUT', body: { label: '' } });
   assert.equal((await group('Workshop')).buttons[1].name, 'Fit & adjust brakes', 'empty is the item’s own name');
   assert.equal((await own(`/api/quick-buttons/${brakes.id}`, { method: 'PUT', body: { label: 'x'.repeat(41) } })).status, 400);
@@ -297,4 +302,56 @@ test('Staff can read but are refused changes (403); signed out gets 401', async 
   assert.deepEqual(await list(), [workshop], 'nothing changed');
   assert.equal((await staffRequest(server.baseUrl, '', '/api/quick-buttons')).status, 401);
   assert.equal((await staffRequest(server.baseUrl, '', '/api/quick-button-groups', { method: 'POST', body: { name: 'Parts' } })).status, 401);
+});
+
+test("another shop's service, group and button are refused, and an id too big for the database is refused", async () => {
+  const theirs = as(other);
+  const theirService = (await runWithShop(other.shop.id, () => prepare("INSERT INTO workshop_services (name, price, price_pence, minutes) VALUES ('Standard service', 65, 6500, 60) RETURNING id").get())).id;
+  const theirGroup = await theirs('/api/quick-button-groups', { method: 'POST', body: { name: 'Workshop' } });
+  assert.equal(theirGroup.status, 201, JSON.stringify(theirGroup.body));
+  const theirButton = await theirs('/api/quick-buttons', { method: 'POST', body: { groupId: theirGroup.body.id, serviceId: theirService } });
+  assert.equal(theirButton.status, 201, JSON.stringify(theirButton.body));
+  const before = await list();
+  const workshop = before.find((g) => g.name === 'Workshop');
+  const mine = workshop.buttons[0];
+
+  const tries = [
+    ['POST', '/api/quick-buttons', { groupId: workshop.id, serviceId: theirService }, 400],
+    ['PUT', `/api/quick-buttons/${mine.id}`, { serviceId: theirService }, 400],
+    ['POST', '/api/quick-buttons', { groupId: theirGroup.body.id, productId: items.pads }, 400],
+    ['PUT', `/api/quick-buttons/${mine.id}`, { groupId: theirGroup.body.id }, 400],
+    ['POST', '/api/quick-buttons', { groupId: 3000000000, productId: items.pads }, 400],
+    ['PUT', `/api/quick-button-groups/${theirGroup.body.id}`, { name: 'Mine now' }, 404],
+    ['DELETE', `/api/quick-button-groups/${theirGroup.body.id}?confirm=1`, undefined, 404],
+    ['PUT', `/api/quick-buttons/${theirButton.body.id}`, { label: 'Mine now' }, 404],
+    ['DELETE', `/api/quick-buttons/${theirButton.body.id}`, undefined, 404],
+  ];
+  for (const [method, p, body, status] of tries) {
+    const res = await own(p, { method, body });
+    assert.equal(res.status, status, `${method} ${p} ${JSON.stringify(body)}: ${JSON.stringify(res.body)}`);
+  }
+  assert.deepEqual(await list(), before, 'nothing of ours changed');
+  const still = await theirs('/api/quick-buttons');
+  assert.deepEqual(still.body.groups.map((g) => [g.name, g.buttons.map((b) => [b.name, b.label])]), [['Workshop', [['Standard service', null]]]], 'nothing of theirs changed');
+});
+
+test('a button moved into another group goes last there, both groups stay in order, and its item can change', async () => {
+  const workshop = await group('Workshop');
+  const parts = await addGroup('Parts');
+  await addButton(parts.id, { productId: items.pads });
+  const cable = workshop.buttons.find((b) => b.serviceId === items.cable);
+  const moved = await own(`/api/quick-buttons/${cable.id}`, { method: 'PUT', body: { groupId: parts.id } });
+  assert.equal(moved.status, 200, JSON.stringify(moved.body));
+  const after = await list();
+  const into = after.find((g) => g.id === parts.id).buttons;
+  assert.deepEqual(into.map((b) => [b.serviceId ?? b.productId, b.position]), [[items.pads, 0], [items.cable, 1]], 'last in its new group');
+  assert.deepEqual(after.find((g) => g.id === workshop.id).buttons.map((b) => b.position), [...Array(workshop.buttons.length - 1).keys()], 'the old group closes up');
+  const swapped = await own(`/api/quick-buttons/${cable.id}`, { method: 'PUT', body: { productId: items.pads } });
+  assert.equal(swapped.status, 200, JSON.stringify(swapped.body));
+  const now = (await group('Parts')).buttons[1];
+  assert.deepEqual([now.kind, now.productId, now.serviceId, now.position], ['product', items.pads, null, 1]);
+  // Put things back for the tests after.
+  await own(`/api/quick-buttons/${cable.id}`, { method: 'PUT', body: { serviceId: items.cable, groupId: workshop.id, position: workshop.buttons.findIndex((b) => b.id === cable.id) } });
+  assert.equal((await own(`/api/quick-button-groups/${parts.id}?confirm=1`, { method: 'DELETE' })).status, 200);
+  assert.deepEqual(await names('Workshop'), workshop.buttons.map((b) => b.name));
 });

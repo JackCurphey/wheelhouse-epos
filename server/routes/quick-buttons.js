@@ -39,7 +39,8 @@ async function loadList() {
   return groups.map((g) => ({ ...g, buttons: buttons.filter((b) => b.group_id === g.id).map(serializeButton) }));
 }
 
-const isId = (v) => Number.isInteger(v) && v > 0;
+// A whole number that fits the database's integer ids.
+const isId = (v) => Number.isInteger(v) && v > 0 && v <= 2147483647;
 function readGroupName(name) {
   const n = typeof name === 'string' ? name.trim() : '';
   if (n.length < 1 || n.length > 20) throw new ValidationError('A group’s name is 1 to 20 characters');
@@ -86,7 +87,9 @@ async function heldButtons(groupId) {
   return rows.sort((a, b) => a.position - b.position || a.id - b.id).map((r) => r.id);
 }
 async function heldGroups(shopId) {
-  await db.prepare('SELECT id FROM shops WHERE id = ? FOR UPDATE').get(shopId);
+  // NO KEY UPDATE: group saves still queue behind each other, but a button's
+  // insert (whose shop link takes KEY SHARE on this row) isn't blocked by it.
+  await db.prepare('SELECT id FROM shops WHERE id = ? FOR NO KEY UPDATE').get(shopId);
   // In id order, as a button's move takes two groups, so the two can't deadlock.
   const rows = await db.prepare('SELECT id, position, lower(name) AS key FROM quick_button_groups ORDER BY id FOR UPDATE').all();
   return rows.sort((a, b) => a.position - b.position || a.id - b.id);
