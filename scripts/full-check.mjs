@@ -12,10 +12,17 @@
 // 30 seconds. A lock whose process has gone is stale and is taken over. The lock
 // is let go on exit, on Ctrl-C or another stop signal, and on errors.
 //
+// Waiting runs go first come, first served (Front desk, 12 Nov): each takes a
+// ticket, a file in a queue folder beside the lock named by when it came, and
+// only the oldest live ticket may take the lock. Before this, whoever checked
+// first after the lock went got it, and one session could take it several times
+// running while others waited over an hour. A ticket whose process has gone is
+// cleared; a run stopped while it waits takes its ticket away.
+//
 // The three steps all run, even after one fails, so one turn in the queue gives
 // the whole picture; the run fails if any step did.
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, rmdirSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync, rmSync, rmdirSync, statSync } from 'node:fs';
 import { constants } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -32,6 +39,8 @@ const LOCK = process.env.WHEELHOUSE_FULL_CHECK_LOCK || '/tmp/wheelhouse-full-run
 const OWNER = path.join(LOCK, 'owner.json');
 // Only the waiter holding this second folder may clear a stale lock (see clearStale).
 const TAKEOVER = `${LOCK}.takeover`;
+// One ticket per waiting run, oldest first.
+const QUEUE = `${LOCK}.queue`;
 const POLL_MS = Number(process.env.WHEELHOUSE_FULL_CHECK_POLL_MS) || 30_000;
 // How long a stopped step gets to wind down before it is killed outright.
 const GRACE_MS = Number(process.env.WHEELHOUSE_FULL_CHECK_GRACE_MS) || 10_000;
@@ -94,6 +103,50 @@ function describe(owner) {
 }
 
 let held = false;
+let ticket = null;
+
+function whoAmI() {
+  return {
+    pid: process.pid,
+    worktree: ROOT,
+    branch: git('rev-parse', '--abbrev-ref', 'HEAD'),
+    commit: git('rev-parse', '--short', 'HEAD'),
+    started: new Date().toISOString(),
+  };
+}
+
+// Named by arrival time (padded, so names sort in order) and pid; written under
+// another name first and renamed, so no one reads half a ticket.
+function joinQueue() {
+  mkdirSync(QUEUE, { recursive: true });
+  const me = whoAmI();
+  const name = `${String(Date.parse(me.started)).padStart(15, '0')}-${process.pid}.json`;
+  const part = path.join(QUEUE, `.${name}.part`);
+  writeFileSync(part, JSON.stringify(me, null, 2));
+  renameSync(part, path.join(QUEUE, name));
+  ticket = name;
+}
+
+function leaveQueue() {
+  if (!ticket) return;
+  try { rmSync(path.join(QUEUE, ticket), { force: true }); } catch { /* already gone */ }
+  ticket = null;
+}
+
+// How many live tickets are older than this run's; dead ones are cleared on the way.
+function aheadOfMe() {
+  let names;
+  try { names = readdirSync(QUEUE).filter((n) => n.endsWith('.json')).sort(); } catch { return 0; }
+  let ahead = 0;
+  for (const name of names) {
+    if (name === ticket) break;
+    let owner = null;
+    try { owner = JSON.parse(readFileSync(path.join(QUEUE, name), 'utf8')); } catch { /* gone since it was listed */ }
+    if (owner && holderAlive(owner)) ahead += 1;
+    else if (owner) rmSync(path.join(QUEUE, name), { force: true });
+  }
+  return ahead;
+}
 
 function tryTake() {
   try {
@@ -103,13 +156,8 @@ function tryTake() {
     throw err;
   }
   held = true;
-  writeFileSync(OWNER, JSON.stringify({
-    pid: process.pid,
-    worktree: ROOT,
-    branch: git('rev-parse', '--abbrev-ref', 'HEAD'),
-    commit: git('rev-parse', '--short', 'HEAD'),
-    started: new Date().toISOString(),
-  }, null, 2));
+  writeFileSync(OWNER, JSON.stringify(whoAmI(), null, 2));
+  leaveQueue();
   return true;
 }
 
@@ -139,8 +187,10 @@ function clearStale(isStale) {
 
 async function takeLock() {
   let lastSaid = '';
+  joinQueue();
   for (;;) {
-    if (tryTake()) return;
+    const ahead = aheadOfMe();
+    if (ahead === 0 && tryTake()) return;
     const owner = readOwner();
     if (owner && !holderAlive(owner)) {
       say(`the lock held by pid ${owner.pid} (${owner.branch || '[branch]'}) is stale: that process has gone. Taking it over.`);
@@ -152,7 +202,8 @@ async function takeLock() {
       clearStale(() => !readOwner() && lockAge() > HALF_MADE_MS);
       continue;
     }
-    const line = owner ? describe(owner) : 'another run is taking the lock';
+    const holder = owner ? describe(owner) : 'another run is taking the lock';
+    const line = ahead ? `${holder}, with ${ahead} run${ahead === 1 ? '' : 's'} ahead of this one in the queue` : holder;
     if (line !== lastSaid) say(`${line}. Waiting; checking again every ${Math.round(POLL_MS / 1000)} s.`);
     lastSaid = line;
     await new Promise((r) => setTimeout(r, POLL_MS));
@@ -160,6 +211,7 @@ async function takeLock() {
 }
 
 function releaseLock() {
+  leaveQueue();
   if (!held) return;
   held = false;
   if (readOwner()?.pid === process.pid) rmSync(LOCK, { recursive: true, force: true });

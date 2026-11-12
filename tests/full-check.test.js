@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, utimesSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -180,6 +180,85 @@ test('a lock whose process number now belongs to a newer process is taken over',
     assert.match(out.out, /stale/);
   } finally {
     run?.child.kill('SIGKILL');
+    rmSync(s.dir, { recursive: true, force: true });
+  }
+});
+
+// First come, first served (Front desk, 12 Nov): with every waiter checking
+// every 30 s, whoever checked first after the lock went got it, and one session
+// took it several times running while others waited over an hour. Each waiter
+// now takes a ticket in a queue folder beside the lock, and only the oldest
+// waiting may go.
+const holdFor = (s, word, ms) => ['--lock-only', '--', process.execPath, '-e',
+  `const f = require('fs'); f.appendFileSync(${JSON.stringify(s.log)}, '${word} in\\n'); setTimeout(() => { f.appendFileSync(${JSON.stringify(s.log)}, '${word} out\\n'); process.exit(0) }, ${ms}); setTimeout(() => process.exit(9), 30000)`];
+const queueOf = (s) => `${s.lock}.queue`;
+const tickets = (s) => (existsSync(queueOf(s)) ? readdirSync(queueOf(s)) : []);
+
+test('waiting runs go in the order they came, not whoever checks first', async () => {
+  const s = scratch();
+  const runs = [];
+  try {
+    runs.push(start(holdFor(s, 'first', 1500), { lock: s.lock }));
+    await until(() => logLines(s.log).includes('first in'), 'the first run to start');
+    // Each later run checks more often than the one before it, so without a
+    // queue the last to come would get in first.
+    for (const [word, pollMs] of [['a', 900], ['b', 300], ['c', 50]]) {
+      const run = start(holdFor(s, word, 100), { lock: s.lock, pollMs });
+      runs.push(run);
+      await until(() => /holds the full-run lock/.test(run.output()), `${word} to say it is waiting`);
+    }
+    const outs = await Promise.all(runs.map((r) => r.done));
+    for (const o of outs) assert.equal(o.code, 0, o.out);
+    assert.deepEqual(logLines(s.log), ['first in', 'first out', 'a in', 'a out', 'b in', 'b out', 'c in', 'c out']);
+    assert.match(runs[3].output(), /2 runs ahead of this one/);
+    assert.deepEqual(tickets(s), [], 'a ticket was left behind');
+  } finally {
+    for (const r of runs) r.child.kill('SIGKILL');
+    rmSync(s.dir, { recursive: true, force: true });
+  }
+});
+
+test('a ticket left by a waiter that has gone holds no one up, and is cleared', async () => {
+  const s = scratch();
+  let run;
+  try {
+    const gone = spawn(process.execPath, ['-e', '0']);
+    await new Promise((r) => gone.on('close', r));
+    mkdirSync(queueOf(s));
+    const old = new Date(Date.now() - 60_000);
+    writeFileSync(path.join(queueOf(s), `${String(old.getTime()).padStart(15, '0')}-${gone.pid}.json`), JSON.stringify({ pid: gone.pid, branch: 'gone', started: old.toISOString() }));
+    run = start(['--lock-only', '--', process.execPath, '-e', `require('fs').appendFileSync(${JSON.stringify(s.log)}, 'ran\\n')`], { lock: s.lock });
+    const out = await run.done;
+    assert.equal(out.code, 0, out.out);
+    assert.deepEqual(logLines(s.log), ['ran']);
+    assert.deepEqual(tickets(s), [], 'the dead waiter\'s ticket was left');
+  } finally {
+    run?.child.kill('SIGKILL');
+    rmSync(s.dir, { recursive: true, force: true });
+  }
+});
+
+test('a run stopped while it waits gives up its place in the queue', async () => {
+  const s = scratch();
+  const runs = [];
+  try {
+    runs.push(start(holdFor(s, 'first', 1500), { lock: s.lock }));
+    await until(() => logLines(s.log).includes('first in'), 'the first run to start');
+    const quitter = start(holdFor(s, 'quitter', 100), { lock: s.lock });
+    runs.push(quitter);
+    await until(() => /holds the full-run lock/.test(quitter.output()), 'the quitter to say it is waiting');
+    const next = start(holdFor(s, 'next', 100), { lock: s.lock });
+    runs.push(next);
+    await until(() => /holds the full-run lock/.test(next.output()), 'the next run to say it is waiting');
+    assert.equal(tickets(s).length, 2);
+    quitter.child.kill('SIGTERM');
+    assert.equal(await quitter.exited, 143, quitter.output());
+    assert.equal(tickets(s).length, 1, 'the stopped run kept its ticket');
+    const outs = await Promise.all([runs[0].done, next.done]);
+    for (const o of outs) assert.equal(o.code, 0, o.out);
+    assert.deepEqual(logLines(s.log), ['first in', 'first out', 'next in', 'next out']);
+  } finally {
+    for (const r of runs) r.child.kill('SIGKILL');
     rmSync(s.dir, { recursive: true, force: true });
   }
 });
