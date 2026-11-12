@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { apiMutate, serverSaid } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Box, Page } from '@/screens/reports/reports-bits.tsx';
 import { PHOTO_TYPES, readAsBase64 } from './website-boxes.tsx';
@@ -30,7 +30,6 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   if (later) {
     return (
       <Page>
-        <h1 className="m-0 text-size-22 font-bold">Website</h1>
         <Box label="Not set up yet">
           <h2 className="m-0 text-size-17 font-bold">Not set up yet</h2>
           <p className="m-0 text-size-15 text-[var(--wh-muted)]">Three steps: which website, your logo and colour, and what starts online.</p>
@@ -46,6 +45,10 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
     try {
       onState(await apiMutate<WebsiteState>('/api/website/set-up', { kind, startWith, mainColour: chosen }, { method: 'POST' }));
     } catch (err) {
+      // Set up meanwhile, in another tab: show the Website page as it now is.
+      if (err instanceof ApiError && err.status === 409) {
+        try { onState(await apiGet<WebsiteState>('/api/website')); return; } catch { /* show the server's words below */ }
+      }
       setProblem(failed(err));
     } finally {
       setBusy(false);
@@ -98,7 +101,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
           <ProductCounts counts={state.startCounts} />
         </div>
       ) : null}
-      <p className="m-0 text-size-13 text-[var(--wh-muted)]">Your website stays off until you turn it on.</p>
+      <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Your website stays off until you turn it on.</p>
     </Steps>
   );
 }
@@ -118,7 +121,7 @@ function Steps({ n, title, sub, problem, back, next, children }: {
         </div>
         <div className="flex flex-col gap-1.5">
           <h2 className="m-0 text-size-26 font-bold">{title}</h2>
-          <p className="m-0 text-size-15 text-[var(--wh-muted)]">{sub}</p>
+          <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">{sub}</p>
         </div>
         {children}
         {problem ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{problem}</p> : null}
@@ -135,7 +138,7 @@ function Option({ name, group, checked, onChoose, children }: { name: string; gr
       <input type="radio" name={group} checked={checked} onChange={onChoose} className="mt-0.5 size-[22px] accent-[var(--wh-ink)]" />
       <span className="flex flex-col gap-1">
         <span className="text-base font-bold">{name}</span>
-        <span className="text-sm text-[var(--wh-muted)]">{children}</span>
+        <span className="text-sm leading-[1.45] text-[var(--wh-muted)]">{children}</span>
       </span>
     </label>
   );
@@ -148,7 +151,9 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
 }) {
   const file = useRef<HTMLInputElement>(null);
   const [another, setAnother] = useState(false);
-  const [own, setOwn] = useState<Swatch | null>(null);
+  // A colour that isn't one of the suggestions is shown as "Your own", so it
+  // is still there, and chosen, after Back or a new logo.
+  const own = [...fromLogo, CHARCOAL].some((s) => s.hex === chosen) ? null : { hex: chosen, name: colourName(chosen) };
   const anotherId = useId();
 
   async function upload(picked: File | undefined) {
@@ -165,8 +170,6 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
     const hex = value.toUpperCase();
     const problem = colourProblem(hex);
     if (problem) { onProblem(problem); return; }
-    const known = [...fromLogo, CHARCOAL].some((s) => s.hex === hex);
-    if (!known) setOwn({ hex, name: colourName(hex) });
     onChoose(hex);
   }
 
@@ -179,7 +182,7 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
         </div>
         <LinkButton onClick={() => file.current?.click()}>{state.logo ? 'Change logo' : 'Add a logo'}</LinkButton>
         <input ref={file} type="file" aria-label="Logo file" accept={PHOTO_TYPES.join(',')} hidden onChange={(e) => void upload(e.target.files?.[0])} />
-        <span className="text-size-13 text-[var(--wh-muted)]">No logo yet? Skip it — your shop’s name is shown instead, and you can add one later.</span>
+        <span className="text-size-13 leading-[1.4] text-[var(--wh-muted)]">No logo yet? Skip it — your shop’s name is shown instead, and you can add one later.</span>
       </div>
       <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
         <legend className="pb-2 text-size-15 font-bold">Main colour — for buttons and links</legend>
@@ -201,14 +204,14 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
             </div>
           ) : null}
         </div>
-        <div><LinkButton onClick={() => setAnother(true)}>Choose another colour</LinkButton></div>
+        <LinkButton onClick={() => setAnother(true)}>Choose another colour</LinkButton>
         {another ? (
           <span className="flex items-center gap-2.5">
             <label htmlFor={anotherId} className="text-sm font-semibold">Another colour</label>
-            <input id={anotherId} type="color" defaultValue={chosen.toLowerCase()} onChange={(e) => pickAnother(e.target.value)} className="h-11 w-16 cursor-pointer rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)]" />
+            <input id={anotherId} type="color" value={chosen.toLowerCase()} onChange={(e) => pickAnother(e.target.value)} className="h-11 w-16 cursor-pointer rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)]" />
           </span>
         ) : null}
-        <p className="m-0 text-size-13 text-[var(--wh-muted)]">Every colour is checked so text on it stays easy to read.</p>
+        <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Every colour is checked so text on it stays easy to read.</p>
       </fieldset>
     </div>
   );
@@ -221,14 +224,14 @@ function SwatchChoice({ swatch, chosen, onChoose }: { swatch: Swatch; chosen: st
     <label className="flex w-24 cursor-pointer flex-col items-center gap-1 text-center">
       <input type="radio" name="colour" checked={on} onChange={() => onChoose(swatch.hex)} aria-label={`${swatch.name}, ${swatch.hex}`} className="peer sr-only" />
       <span aria-hidden="true" className={`size-[52px] rounded-[10px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--wh-ink)] ${on ? 'shadow-[0_0_0_3px_var(--wh-panel),0_0_0_5px_var(--wh-ink)]' : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]'}`} style={{ background: swatch.hex }} />
-      <span className="text-size-13 leading-tight font-semibold">{swatch.name}</span>
+      <span className="text-size-13 leading-[1.3] font-semibold">{swatch.name}</span>
       <span className="font-mono text-xs text-[var(--wh-muted)]">{swatch.hex}</span>
     </label>
   );
 }
 
 function LinkButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className="min-h-11 cursor-pointer self-start border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">{children}</button>;
+  return <button type="button" onClick={onClick} className="min-h-11 cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">{children}</button>;
 }
 
 /** Up to two readable colours from the logo, read through a small canvas; none if the browser can't. */
