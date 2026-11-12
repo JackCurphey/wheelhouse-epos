@@ -290,7 +290,7 @@ export function register(route) {
       const number = typeof body.number === 'string' ? body.number.trim() : '';
       if (!number || number.length > 60) throw new ValidationError('The certificate number is 1 to 60 characters');
       const amount = body.amountPence;
-      if (!Number.isInteger(amount) || amount < 0) throw new ValidationError('The amount on the certificate is in whole pence');
+      if (!Number.isInteger(amount) || amount < 1) throw new ValidationError('The amount on the certificate is in whole pence, more than nothing');
       const receivedOn = body.receivedOn ?? today;
       if (!isDay(receivedOn) || receivedOn > today) throw new ValidationError('Received is a date, today or earlier');
       const ready = body.ready ?? false;
@@ -309,7 +309,7 @@ export function register(route) {
       await takeStep(id, 'certificate', who, async (row) => {
         const fields = { certificate_number: number, certificate_pence: amount, certificate_received_on: receivedOn, hold_until: null };
         detail.quotePence = row.total_pence;
-        if (amount === row.total_pence) fields.difference_choice = null;
+        if (amount === row.total_pence && difference !== 'match') fields.difference_choice = null;
         else if (difference === null && amount < row.total_pence) throw new Refused(400, CHOOSE_DIFFERENCE);
         else fields.difference_choice = difference ?? 'keep';
         if (fields.difference_choice === 'match') {

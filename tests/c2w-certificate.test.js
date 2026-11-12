@@ -240,6 +240,20 @@ test('6.2 a released order takes a free frame at its site again', async () => {
   assert.equal((await order(made.id)).events.at(-1).detail.heldFrameId, o.frameId);
 });
 
+test('6.2 a certificate for nothing is refused', async () => {
+  const made = await quote(await framedBike(1));
+  const res = await certify(made.id, { amountPence: 0, difference: 'keep' });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+test('6.2 changing to match is kept even when the certificate equals the order', async () => {
+  const made = await quote(await framedBike(1), { accessoryIds: [lock] });
+  const res = await certify(made.id, { amountPence: 104000, difference: 'match', accessoryIds: [] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const o = res.body.order;
+  assert.deepEqual([o.differenceChoice, o.totalPence, o.accessories.length], ['match', 100000, 0]);
+});
+
 test('6.2 an accessory chosen twice to match is refused, not charged twice', async () => {
   const made = await quote(await framedBike(1), { accessoryIds: [lock, light] });
   const res = await certify(made.id, { amountPence: 110000, difference: 'match', accessoryIds: [lock, lock] });
