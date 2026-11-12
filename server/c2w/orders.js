@@ -23,9 +23,11 @@ export const PAID_SHOWN_DAYS = 30;
 // `to` keeps the order at its stage.
 export const STEPS = {
   applied: { from: ['quote'], to: 'waiting' },
-  // From the certificate on the hold is firm, with no end date (design 4).
+  // From the certificate on the hold is firm until collection (decision 3,
+  // docs/decisions/2026-10-02-cycle-to-work-review.md): no end date to move, and
+  // nothing to release.
   hold_longer: { from: ['quote', 'waiting'], to: null },
-  released: { from: ['quote', 'waiting', 'certificate', 'ready'], to: null },
+  released: { from: ['quote', 'waiting'], to: null },
 };
 // The stages an order can still be holding a bike in.
 const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
@@ -81,9 +83,11 @@ export async function takeHold(orderId, productId, siteId) {
 }
 
 // Lets the order's bike go: its frame back in stock, or its count back to free.
+// Only a frame still held for this order goes back on sale; one sold some other
+// way stays sold.
 export async function releaseHold(row) {
   await lockStock([row.product_id]);
-  if (row.frame_id) await prepare("UPDATE stock_frames SET state = 'in_stock', c2w_order_id = NULL WHERE id = ? AND c2w_order_id = ? RETURNING id").get(row.frame_id, row.id);
+  if (row.frame_id) await prepare("UPDATE stock_frames SET state = 'in_stock', c2w_order_id = NULL WHERE id = ? AND c2w_order_id = ? AND state = 'held' RETURNING id").get(row.frame_id, row.id);
 }
 
 // Dates come back as YYYY-MM-DD text, never as a Date at some time zone's midnight.

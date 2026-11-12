@@ -54,6 +54,12 @@ test('145 records when an order’s bike was held and released, counts older hol
     const product = (await one(c, "INSERT INTO products (sku, name, price, cost, stock_qty) VALUES ('[sku]', '[Bike]', 1, 0, 1) RETURNING id")).id;
     const held = (await one(c, "INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code, quote_given_at, hold_until) VALUES ($1, $2, $3, 1, 1, '[code 1]', '2026-09-01T09:00:00Z', '2026-09-08') RETURNING id", [customer, provider, product])).id;
     await c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code) VALUES ($1, $2, $3, 2, 1, '[code 2]')", [customer, provider, product]);
+    // A bike with frame numbers: pull request 3 gave its quote a hold date but put no frame aside.
+    const framed = (await one(c, "INSERT INTO products (sku, name, price, cost, stock_qty) VALUES ('[sku 2]', '[Bike]', 1, 0, 1) RETURNING id")).id;
+    const site = (await one(c, 'SELECT id FROM sites ORDER BY id LIMIT 1'))?.id
+      ?? (await one(c, "INSERT INTO sites (name, code) VALUES ('[Site]', 'S') RETURNING id")).id;
+    await c.query("INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key) VALUES ($1, $2, '[FRAME]', '[FRAME]')", [framed, site]);
+    await c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code, quote_given_at, hold_until) VALUES ($1, $2, $3, 3, 1, '[code 3]', '2026-09-01T09:00:00Z', '2026-09-08')", [customer, provider, framed]);
     assert.equal((await one(c, 'SELECT held_at FROM c2w_orders WHERE id = $1', [held])).held_at, null);
     // Run the whole file again over them: it adds nothing twice and fills in the old hold.
     await c.query('DELETE FROM schema_migrations WHERE filename = $1', [FILE]);
@@ -61,12 +67,15 @@ test('145 records when an order’s bike was held and released, counts older hol
   assert.match(migrate(env), new RegExp(`Applied migration: ${FILE}`), 'runs a second time');
   await withClient(url.href, async (c) => {
     await asShop(c, (await one(c, "SELECT id FROM shops WHERE slug = 's1'")).id);
-    const rows = (await c.query('SELECT quote_number, held_at, released_at FROM c2w_orders ORDER BY quote_number')).rows;
+    const rows = (await c.query("SELECT quote_number, held_at, released_at, to_char(hold_until, 'YYYY-MM-DD') AS until FROM c2w_orders ORDER BY quote_number")).rows;
     assert.equal(rows[0].held_at?.toISOString(), '2026-09-01T09:00:00.000Z', 'a quote with a hold date was held when given');
     assert.equal(rows[1].held_at, null, 'one without a hold date was never held');
     assert.equal(rows[0].released_at, null);
+    // Nothing was put aside for the bike with frame numbers, so it isn't counted as held,
+    // and the quote no longer says it is.
+    assert.deepEqual([rows[2].held_at, rows[2].until], [null, null], 'a frame bike with no frame held is not held');
     const idx = await one(c, "SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_c2w_orders_held'");
-    assert.match(idx.indexdef, /WHERE \(\(held_at IS NOT NULL\) AND \(frame_id IS NULL\)\)/);
+    assert.match(idx.indexdef, /WHERE \(held_at IS NOT NULL\)$/, 'the filter heldHere can use');
   });
   assert.doesNotMatch(migrate(env), new RegExp(`Applied migration: ${FILE}`), 'already applied');
 });

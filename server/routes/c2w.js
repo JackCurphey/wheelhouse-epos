@@ -242,17 +242,21 @@ export function register(route) {
   });
 
   // Release the bike (cw-order-held, cw-hold-ending): the frame goes back on sale
-  // and the order stays open where it is. Anyone checked in can release.
+  // and the order stays open where it is. Anyone checked in can release, until
+  // the certificate makes the hold firm.
   route('POST', '/api/c2w/orders/:id/release', async (req, res, params) => {
     const who = await whoIsBooking(req);
     if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const id = Number(params.id);
     await save(res, 200, async () => {
+      // "What's happened" keeps which frame it was: cw-certificate-released checks it.
+      const detail = {};
       await takeStep(id, 'released', who, async (row) => {
         if (!row.held_at) throw new Refused(409, NOT_HELD);
         await releaseHold(row);
+        if (row.frame_id) detail.frameId = row.frame_id;
         return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
-      });
+      }, { detail });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });

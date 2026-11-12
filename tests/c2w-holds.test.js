@@ -10,7 +10,8 @@ import '../server/load-env.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
+import { takeHold } from '../server/c2w/orders.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -125,6 +126,50 @@ test('5.1 a bike with no frame numbers is held as a count: the free number leave
   assert.equal((await stockOf(loose)).sites[0].free, 1);
 });
 
+test('5.1 the stock lock: a hold started while another is holding the last frame waits for it, then finds none free', async () => {
+  const bike = await framedBike(1);
+  const a = (await quote(bike, { hold: false })).body.order;
+  const b = (await quote(bike, { hold: false })).body.order;
+  const [frame] = await frames(bike);
+  let letGo;
+  const gate = new Promise((r) => { letGo = r; });
+  let tookFirst;
+  const firstTook = new Promise((r) => { tookFirst = r; });
+  // Each in its own connection and transaction, as two saves at once would be.
+  const first = inShop(async () => {
+    await dbExec('BEGIN');
+    const got = await takeHold(a.id, bike, site);
+    tookFirst();
+    await gate;
+    await dbExec('COMMIT');
+    return got;
+  });
+  await firstTook;
+  const second = inShop(async () => {
+    await dbExec('BEGIN');
+    const got = await takeHold(b.id, bike, site);
+    await dbExec('COMMIT');
+    return got;
+  });
+  // The second is now queued behind the first's lock (well inside the 2 s wait).
+  await new Promise((r) => { setTimeout(r, 400); });
+  letGo();
+  const [gotA, gotB] = await Promise.all([first, second]);
+  assert.deepEqual(gotA, { frameId: frame.id });
+  assert.equal(gotB, null, 'the second found the last frame already held');
+  const [after] = await frames(bike);
+  assert.deepEqual([after.state, after.c2w_order_id], ['held', a.id]);
+});
+
+test('5.1 the frame held is the one booked in longest ago', async () => {
+  const bike = await framedBike(2);
+  const [older, newer] = await frames(bike);
+  await inShop(async () => prepare("UPDATE stock_frames SET received_at = now() - interval '1 day' WHERE id = ? RETURNING id").get(newer.id));
+  const held = (await quote(bike)).body.order;
+  assert.equal(held.frameId, newer.id, 'booked in a day earlier');
+  assert.notEqual(held.frameId, older.id);
+});
+
 // ---------- 5.2 ----------
 
 test('5.2 a hold never ends by itself: the reminder day shows “hold ending soon”, after the date it stays held with “hold ended — choose”', async () => {
@@ -182,6 +227,7 @@ test('5.3 Release the bike frees the frame and keeps the order open at its stage
   assert.equal((await stockOf(bike)).sites[0].free, 1);
   const line = (await order(held.id)).events.find((e) => e.kind === 'released');
   assert.equal(line.by, 'Jack Lewis');
+  assert.deepEqual(line.detail, { frameId: frame.id }, 'which frame was let go');
   // Released once is released: a second press, or Hold longer, changes nothing.
   const twice = await own(`/api/c2w/orders/${held.id}/release`, { method: 'POST', body: {} });
   assert.deepEqual([twice.status, twice.body.code], [409, 'not_held']);
@@ -195,11 +241,39 @@ test('5.3 Release on a count-held bike frees one; holding and releasing need som
   const bike = await countedBike(1);
   const held = (await quote(bike)).body.order;
   const till = await tillNobodyIn();
-  assert.equal((await till(`/api/c2w/orders/${held.id}/release`, {})).status, 409);
-  assert.equal((await till(`/api/c2w/orders/${held.id}/hold-longer`, {})).status, 409);
+  const noOne = await till(`/api/c2w/orders/${held.id}/release`, {});
+  assert.deepEqual([noOne.status, noOne.body.code], [409, 'check_in_first']);
+  const noOneLonger = await till(`/api/c2w/orders/${held.id}/hold-longer`, {});
+  assert.deepEqual([noOneLonger.status, noOneLonger.body.code], [409, 'check_in_first']);
   assert.equal((await order(held.id)).held, true, 'nothing changed');
   assert.equal((await own(`/api/c2w/orders/${held.id}/release`, { method: 'POST', body: {} })).status, 200);
   assert.equal((await stockOf(bike)).sites[0].free, 1);
+});
+
+test('5.3 from the certificate on the hold is firm: no Hold longer, no Release (decision 3)', async () => {
+  const bike = await framedBike(1);
+  const held = (await quote(bike)).body.order;
+  for (const stage of ['certificate', 'ready', 'collected']) {
+    await inShop(async () => prepare('UPDATE c2w_orders SET stage = ? WHERE id = ? RETURNING id').get(stage, held.id));
+    const release = await own(`/api/c2w/orders/${held.id}/release`, { method: 'POST', body: {} });
+    assert.deepEqual([release.status, release.body.code], [409, 'wrong_stage'], `no release at ${stage}`);
+    const longer = await own(`/api/c2w/orders/${held.id}/hold-longer`, { method: 'POST', body: {} });
+    assert.deepEqual([longer.status, longer.body.code], [409, 'wrong_stage'], `no hold longer at ${stage}`);
+  }
+  const [frame] = await frames(bike);
+  assert.deepEqual([frame.state, frame.c2w_order_id], ['held', held.id], 'still put aside');
+});
+
+test('5.3 Release never puts a sold frame back on sale', async () => {
+  const bike = await framedBike(1);
+  const held = (await quote(bike)).body.order;
+  // Sold by some other way while held (the till refuses this from task 5.4).
+  await inShop(async () => prepare("UPDATE stock_frames SET state = 'sold' WHERE id = ? RETURNING id").get(held.frameId));
+  const released = await own(`/api/c2w/orders/${held.id}/release`, { method: 'POST', body: {} });
+  assert.equal(released.status, 200, JSON.stringify(released.body));
+  assert.equal(released.body.order.held, false, 'the order lets it go');
+  const [frame] = await frames(bike);
+  assert.equal(frame.state, 'sold', 'the frame stays sold');
 });
 
 test('the stock check names the sites, oldest first, with what is free and held at each', async () => {
