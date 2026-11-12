@@ -4,7 +4,6 @@
 // tills at once queue rather than overdraw, and a deletion or merge at the same moment waits.
 // Runs in the request's shop, so row-level security keeps it to that business.
 import { prepare } from '../db.js';
-import { penceToPounds } from './pence.js';
 import { penceText } from './money-text.js';
 
 // The most one change can be: £1,000,000.00, well inside an INTEGER column.
