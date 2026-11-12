@@ -261,7 +261,10 @@ export async function sendDueForShop(shopId) {
         continue;
       }
       const stillNeeded = DUE_CHECKS[m.template_key];
-      if (stillNeeded && !(await stillNeeded(m.job_id))) {
+      // Cycle to Work's Put aside and Your hold ends: only while a bike is still held (review).
+      const c2wGone = (m.template_key === 'c2w_put_aside' || m.template_key === 'c2w_hold_ending')
+        && !(await (await import('../c2w/messages.js')).c2wStillNeeded(m));
+      if (c2wGone || (stillNeeded && !(await stillNeeded(m.job_id)))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
         continue;
       }

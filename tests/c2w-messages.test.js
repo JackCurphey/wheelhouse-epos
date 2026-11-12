@@ -17,6 +17,7 @@ import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedProduct } from './helpers/till.js';
 import { queueHoldEndings } from '../server/c2w/messages.js';
+import { sendDueForShop } from '../server/messaging/engine.js';
 
 let server;
 let owner;
@@ -110,6 +111,8 @@ test('9.1 Your bike is put aside: sent again when the hold is made longer (cw-te
   const sent = await messagesTo(maya);
   assert.equal(sent.length, 2);
   assert.equal(sent[1].template_key, 'c2w_put_aside');
+  // The first, still in its minute, gives way to the new date: one message, not two.
+  assert.deepEqual(sent.map((m) => m.intent_state), ['undone', 'intended']);
   assert.equal(sent[1].body, `Hi Maya, we’re now holding [Bike] · [Size] for you until 15 September 2026. Quote ${made.quoteRef}. See your Cycle to Work bike: [link]`);
 });
 
@@ -213,6 +216,63 @@ test('9.1 Your hold ends on [date]: not for a hold already ended, a released bik
   await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-08-31' WHERE id = ?").run(ended.id));
   await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
   assert.equal((await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending').length, 0);
+});
+
+// The sender's own round runs the hold-ending check. It uses the real clock, so
+// the hold here ends tomorrow by the database's date. This runs before the tests
+// below that also call the sender, as the check runs at most once a minute.
+test('9.1 Your hold ends on [date]: the sender’s round checks for it', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  await inShop(() => prepare('UPDATE c2w_orders SET hold_until = CURRENT_DATE + 1 WHERE id = ?').run(made.id));
+  await sendDueForShop(owner.shop.id);
+  assert.equal((await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending').length, 1);
+});
+
+// Due now: as if its minute had passed.
+const dueNow = (maya) => inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE customer_id = ? AND intent_state = 'intended'").run(maya.id));
+
+test('9.1 Your bike is put aside: not sent once the bike is released within its minute', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
+  await dueNow(maya);
+  await sendDueForShop(owner.shop.id);
+  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone']]);
+  // A bike still held is told as usual.
+  const kept = await newMaya();
+  await quote(kept, await framedBike(1));
+  await dueNow(kept);
+  await sendDueForShop(owner.shop.id);
+  assert.deepEqual((await messagesTo(kept)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'delivered']]);
+});
+
+test('9.1 Your hold ends on [date]: not sent once the bike is released within its minute', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-09-03' WHERE id = ?").run(made.id));
+  await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
+  await dueNow(maya);
+  await sendDueForShop(owner.shop.id);
+  assert.equal((await messagesTo(maya)).find((m) => m.template_key === 'c2w_hold_ending').intent_state, 'undone');
+});
+
+test('9.1 Your hold ends on [date]: not sent for a hold no longer than the reminder days, as Put aside gave the date', async () => {
+  const maya = await newMaya();
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 2, remindDays: 2, quoteValidDays: 30 } })).status, 200);
+  try {
+    await quote(maya, await framedBike(1));
+    await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
+  } finally {
+    assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, remindDays: 2, quoteValidDays: 30 } })).status, 200);
+  }
+  assert.deepEqual((await messagesTo(maya)).map((m) => m.template_key), ['c2w_put_aside']);
+  // A 7-day hold, its date left as put aside (8 Sep), is still reminded 2 days before.
+  const longer = await newMaya();
+  await quote(longer, await framedBike(1));
+  await inShop(() => queueHoldEndings(new Date('2026-09-06T10:00:00Z')));
+  assert.deepEqual((await messagesTo(longer)).map((m) => m.template_key), ['c2w_put_aside', 'c2w_hold_ending']);
 });
 
 test('9.1 each message switched off in Settings › Messages is not sent', async () => {

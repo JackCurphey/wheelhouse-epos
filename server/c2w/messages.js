@@ -6,7 +6,7 @@
 import { prepare, dbExec } from '../db.js';
 import { queueMessage, UNDO_MS } from '../messaging/engine.js';
 import { messageLink } from '../workshop/job-messages.js';
-import { shopToday } from '../clock.js';
+import { shopToday, currentMoment } from '../clock.js';
 import { ORDER_SELECT, longDate, quoteRef, providerPays, addEvent } from './orders.js';
 import { c2wLinkPath } from './customer-view.js';
 import { isHttpsRequest } from '../proxy-trust.js';
@@ -29,6 +29,9 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
   // One size of a bike with sizes is named with its size, as drawn ("[Bike] · [Size]", cw-texts-*).
   const size = (await prepare('SELECT size FROM products WHERE id = ?').get(r.product_id))?.size;
   const base = baseFor(req);
+  // A new put-aside gives the new date: one still in its minute gives way to it
+  // (Hold longer pressed twice sends one message, not two).
+  if (key === 'c2w_put_aside') await stopWaiting(r.customer_id, 'c2w_put_aside');
   const link = await messageLink(async () => (base ? `${base}${c2wLinkPath(shop.slug, r.customer_code)}` : null));
   // Never a message without its link, and never a booking-in stopped for one.
   if (link === null) {
@@ -45,7 +48,46 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
     'Certificate amount': r.certificate_pence === null ? '' : pounds(r.certificate_pence),
     'Amount to pay': r.certificate_pence === null ? '' : pounds(r.total_pence - providerPays(r)),
   };
-  return queueMessage({ customerId: r.customer_id, key, vars, delayMs: UNDO_MS, loginId });
+  const queued = await queueMessage({ customerId: r.customer_id, key, vars, delayMs: UNDO_MS, loginId });
+  // Put aside already gives the end date: a hold no longer than the reminder days
+  // gets no "Your hold ends" for it as well, so the two never go back to back.
+  if (key === 'c2w_put_aside' && queued.id && r.hold_until_day) await toldTheEnd(orderId, r.hold_until_day);
+  return queued;
+}
+
+// The customer's Cycle to Work messages of one kind still waiting are stopped.
+// Messages aren't tied to an order, so this is by customer (decided while
+// building, 12 Nov, PR 9c item 6).
+async function stopWaiting(customerId, key) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE intent_state = 'intended' AND template_key = ? AND customer_id = ?`,
+  ).run(key, customerId);
+}
+
+// Marks the hold's end date as reminded when it falls within the reminder days.
+async function toldTheEnd(orderId, until) {
+  const s = await prepare('SELECT remind_days FROM c2w_settings LIMIT 1').get();
+  if (!s || s.remind_days === null) return;
+  const tz = (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+  const today = shopToday(tz, currentMoment());
+  const start = new Date(`${until}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - s.remind_days);
+  if (start.toISOString().slice(0, 10) > today) return;
+  await addEvent(orderId, 'hold_ending_sent', { name: null }, { detail: { until, skipped: 'put_aside' } });
+}
+
+/**
+ * Checked as each message comes due (the sender's DUE_CHECKS): Put aside and
+ * Your hold ends go only while the customer still has a bike held for an order
+ * before its certificate, so a release in the message's minute stops it. By
+ * customer, as the message isn't tied to an order.
+ */
+export async function c2wStillNeeded(m) {
+  const held = m.template_key === 'c2w_hold_ending' ? 'o.hold_until IS NOT NULL' : 'o.held_at IS NOT NULL';
+  return Boolean(await prepare(
+    `SELECT 1 FROM c2w_orders o WHERE o.customer_id = ? AND o.stage IN ('quote', 'waiting') AND ${held} LIMIT 1`,
+  ).get(m.customer_id));
 }
 
 /**
