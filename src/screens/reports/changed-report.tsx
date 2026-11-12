@@ -152,7 +152,7 @@ export function ChangedReportPage() {
       ) : answer.isError ? null : <Note>Loading…</Note>}
       {saving && report ? (
         <SaveReportDialog
-          what={[report.title, ...(report.line.split(' · ').slice(1, -1))].join(' · ')}
+          what={report.what}
           report={{ base: report.base, measure: report.measure, split: report.split, only: report.only, supplier: report.supplier, period }}
           onClose={() => setSaving(false)} onSaved={(s) => { setSaving(false); setSaved({ name: s.name, query }); }}
         />

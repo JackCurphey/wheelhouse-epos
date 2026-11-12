@@ -13,7 +13,7 @@ const NO_MANAGERS = 'there are no managers until staff roles are set up';
 const PERIOD = { period: 'this-week', from: '2026-09-14', to: '2026-09-20', through: '2026-09-17', soFar: true, unit: 'day', label: 'So far: Mon 14 – Thu 17 September', against: 'the same days last week' };
 const CHANGED = {
   base: 'sales', baseLabel: 'Sales', measure: 'items', split: 'product', only: ['Accessories'], supplier: '',
-  title: 'Sales: items sold by product', line: 'Changed from Sales · Accessories only · So far: Mon 14 – Thu 17 September, against the same days last week',
+  title: 'Sales: items sold by product', what: 'Sales: items sold by product · Accessories only', line: 'Changed from Sales · Accessories only · So far: Mon 14 – Thu 17 September, against the same days last week',
   period: PERIOD, columns: ['Product', 'Items sold', 'Takings'],
   rows: [{ key: 'p1', label: 'Water bottle', value: 3, takingsPence: 1767, beforeValue: 1 }],
   total: { label: 'Total, Accessories only', value: 3, takingsPence: 1767 }, figures: { value: 3, beforeValue: 1, diffValue: 2 },

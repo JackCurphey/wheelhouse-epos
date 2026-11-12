@@ -334,6 +334,8 @@ export async function changedReport(query, today, ctx) {
   return {
     base: sel.base, baseLabel, measure: sel.measure, split: sel.split, only: sel.only, supplier: sel.supplier,
     title: `${baseLabel}: ${lower(measureLabel)} by ${lower(splitLabel)}`,
+    // What the report is, as a saved report and the save popup say it.
+    what: [`${baseLabel}: ${lower(measureLabel)} by ${lower(splitLabel)}`, ...limitParts].join(' · '),
     line: ['Changed from ' + baseLabel, ...limitParts, `${period.label}, against ${period.against}`].join(' · '),
     period: {
       period: period.period, from: period.from, to: period.to, through: period.through, soFar: period.soFar,
