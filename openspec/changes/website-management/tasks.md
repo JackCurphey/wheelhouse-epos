@@ -61,11 +61,11 @@ the code. While building, run only the related test files
 
 ## 5. Online payments setup and Today (pull request 5, about 600 lines, risky: money and migration)
 
-- [ ] 5.1 Test: migrating from empty makes `online_payment_account` and `online_order_settings`; shops with deposits on and the server's provider set are marked connected
-- [ ] 5.2 Test: the pretend adapter's `connectStart`, `connectFinish` (finish and cancel) and `accountState`; the £1 test payment is one payment, taken and refunded, even if pressed twice
-- [ ] 5.3 Test: `paymentsConnected` is per shop; with it off, booking deposits are off and "Pay now" is hidden — one test per caller (`server/workshop/deposit.js`, `booking-deposit.js`, `routes/portal.js`, `routes/workshop-settings.js`)
-- [ ] 5.4 Test: Buying online can't be switched On while not connected; connecting switches it On
-- [ ] 5.5 Test: Today's Needs attention shows "[payment provider] needs more details by [date]" with Add the details for the Owner, and drops it when no longer needed
+- [x] 5.1 Test: migrating from empty makes `online_payment_account` and `online_order_settings`; shops with deposits on and the server's provider set are marked connected
+- [x] 5.2 Test: the pretend adapter's `connectStart`, `connectFinish` (finish and cancel) and `accountState`; the £1 test payment is one payment, taken and refunded, even if pressed twice
+- [x] 5.3 Test: `paymentsConnected` is per shop; with it off, booking deposits are off and "Pay now" is hidden — one test per caller (`server/workshop/deposit.js`, `booking-deposit.js`, `routes/portal.js`, `routes/workshop-settings.js`)
+- [x] 5.4 Test: Buying online can't be switched On while not connected; connecting switches it On
+- [x] 5.5 Test: Today's Needs attention shows "[payment provider] needs more details by [date]" with Add the details for the Owner, and drops it when no longer needed
 - [ ] 5.6 Screen test: `ws-pay-none`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-today-pay-more`, and the Website page's Taking payments row in each state
 - [ ] 5.7 Build the migration, adapter calls, routes, the Online orders settings page (Buying online and Paying online only) and the Today source to pass 5.1–5.6
 - [ ] 5.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI

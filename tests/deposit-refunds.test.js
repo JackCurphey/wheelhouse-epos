@@ -10,6 +10,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
 import { tryBooking, dayMaker } from './helpers/linkActions.js';
 
 let server;
@@ -22,6 +23,7 @@ const nextDay = dayMaker();
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'Refund Cycles' });
+  await connectPayments(owner.shop.id);
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
   service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, ROUND(65 * 100)::int, 60, 1, 1, now()) RETURNING id").get()).id);

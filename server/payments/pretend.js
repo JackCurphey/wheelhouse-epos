@@ -25,8 +25,31 @@ async function move(ref, from, to, set = '', ...args) {
   throw new PaymentError('wrong_state', `A ${row.status} payment can’t be ${to}.`);
 }
 
+const page = (title, links) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head>
+<body><main><h1>${title}</h1><p>The pretend payment provider: no account is made and no money moves.</p>
+${links.map(([href, words]) => `<p><a href="${href.replaceAll('&', '&amp;')}">${words}</a></p>`).join('\n')}</main></body></html>`;
+const q = encodeURIComponent;
+
 export const pretend = {
   name: 'pretend',
+  // No provider's name to show: the screens keep [payment provider].
+  displayName: null,
+  // Connecting the shop's own account (design 6): the provider's page, then back.
+  connectAddress: (state) => `/api/online-payments/pretend-connect?state=${q(state)}`,
+  connectPage: (state) => page('Connect your account', [
+    [`/api/online-payments/return?state=${q(state)}&outcome=finished`, 'Finish'],
+    [`/api/online-payments/return?state=${q(state)}&outcome=cancelled`, 'Cancel'],
+  ]),
+  // What the provider says when the Owner comes back. Nothing invented: no payout account or timing.
+  connectFinish: (query) => ({ connected: query.get('outcome') === 'finished', payoutLast4: null, payoutTiming: null }),
+  // Whether it now wants more details: the pretend provider has nothing to add, so what is stored stands.
+  accountState: async () => undefined,
+  // The £1 test payment's card page, answering as Stripe's test cards do.
+  payAddress: (state) => `/api/online-payments/pretend-card?state=${q(state)}`,
+  payPage: (state) => page('Pay £1.00', [
+    [`/api/online-payments/pretend-card/pay?state=${q(state)}&card=${ACCEPTED_CARD}`, 'Pay with the test card that works'],
+    [`/api/online-payments/pretend-card/pay?state=${q(state)}&card=${DECLINED_CARD}`, 'Pay with the test card that’s declined'],
+  ]),
   async hold({ amountPence, key }) {
     const made = await prepare(
       `INSERT INTO pretend_payments (ref, idempotency_key, amount_pence) VALUES (?, ?, ?)

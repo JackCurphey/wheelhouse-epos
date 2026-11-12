@@ -7,6 +7,8 @@
 // The old website settings (storefront_settings) stay as they are and follow
 // what is published, so the old customer site keeps working unchanged until
 // it is replaced (design 1).
+import { payments } from './payments/index.js';
+import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
 import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
@@ -237,6 +239,8 @@ export async function websiteState(row = null) {
     productCounts: await productCounts(),
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
+    // The Taking payments row: the same state as Settings › Online orders (design 6).
+    payments: { state: paymentsState(await paymentAccount()), providerName: payments()?.displayName ?? null },
   };
 }
 
