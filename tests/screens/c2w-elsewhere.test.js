@@ -12,10 +12,15 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).href;
 const OWNER = { id: 1, name: 'Jack Lewis', email: 'jack@example.com', isOwner: true, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const MAYA = { id: 5, name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test', notes: null, address: null, postcode: null, marketingPermission: false, groups: [] };
-const HOLD = { kind: 'c2w_hold_ended', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', holdUntil: '2026-09-08' };
-const FOUND = { id: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', stage: 'waiting', quoteRef: 'CW-[n]', holdUntil: '2026-09-08', certificateNumber: null };
-const OPEN = { kind: 'c2w_order', id: 31, stage: 'waiting', open: true, quoteRef: 'CW-[n]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: '2026-09-08', certificateNumber: null, collectedAt: null, at: '2026-09-01T10:00:00.000Z' };
-const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, certificateNumber: '[certificate number]', collectedAt: '2026-08-20T10:00:00.000Z', at: '2026-08-20T10:00:00.000Z' };
+// A test day (after the pinned 1 Sep 2026), and days from it.
+const TODAY = '2026-09-14';
+const day = (n) => { const d = new Date(`${TODAY}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const long = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const LABEL = 'Search jobs, customers, bikes and orders';
+const HOLD = { kind: 'c2w_hold_ended', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', holdUntil: day(-6) };
+const FOUND = { id: 31, customerName: 'Maya Patel', customerId: 5, bike: '[Bike] · [Size]', stage: 'waiting', quoteRef: 'CW-[n]', holdUntil: day(1), holdEnded: false, certificateNumber: null };
+const OPEN = { kind: 'c2w_order', id: 31, stage: 'waiting', open: true, quoteRef: 'CW-[n]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: day(1), holdEnded: false, certificateNumber: null, collectedAt: null, at: `${day(-13)}T10:00:00.000Z` };
+const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, holdEnded: false, certificateNumber: '[certificate number]', collectedAt: `${day(-10)}T10:00:00.000Z`, at: `${day(-10)}T10:00:00.000Z` };
 const SEARCHED = { timeout: 5000 };
 
 const realFetch = globalThis.fetch;
@@ -30,7 +35,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse = null, slow = false } = {}) {
+async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse = null, slow = false, found = [FOUND] } = {}) {
   calls = [];
   let attention = items;
   globalThis.fetch = async (url, init = {}) => {
@@ -45,9 +50,9 @@ async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse 
       if (slow) await new Promise((r) => setTimeout(r, 50));
       if (refuse) return reply(409, refuse);
       attention = attention.filter((i) => i.orderId !== 31);
-      return reply(200, { order: { id: 31, holdUntil: p.endsWith('hold-longer') ? '2026-09-15' : null } });
+      return reply(200, { order: { id: 31, holdUntil: p.endsWith('hold-longer') ? day(7) : null } });
     }
-    if (p === '/api/search') return reply(200, { jobs: [], customers: [{ id: 5, name: 'Maya Patel', phone: '07700 900 142', email: null, c2wOrders: 1 }], bikes: [], c2wOrders: [FOUND] });
+    if (p === '/api/search') return reply(200, { jobs: [], customers: [{ id: 5, name: 'Maya Patel', phone: '07700 900 142', email: null, c2wOrders: 1 }], bikes: [], c2wOrders: found });
     if (p === '/api/customers/5') return reply(200, MAYA);
     if (p === '/api/customers/5/history') return reply(200, { items: history });
     if (p === '/api/your-settings') return reply(200, { accessibility: { statusSymbols: false, reduceMotion: false, noAutoClose: false, largerText: false, foldedSidebar: false } });
@@ -70,7 +75,7 @@ const noteText = () => document.querySelector('[data-saved-note]')?.textContent 
 test('op-today-c2w: a hold that ended with nobody choosing asks the Owner to choose, Hold longer or Release the bike', async () => {
   const { ui, within } = await open('/workshop/today');
   const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
-  assert.ok(box.getByText('Maya Patel · Cycle to Work hold ended 8 September 2026 — choose') !== null);
+  assert.ok(box.getByText(`Maya Patel · Cycle to Work hold ended ${long(day(-6))} — choose`) !== null);
   assert.ok(box.getByText('[Bike] · [Size] · still held · no certificate yet') !== null);
   assert.ok(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }).textContent === 'Hold longer');
   assert.ok(box.getByRole('button', { name: 'Release Maya Patel’s bike' }).textContent === 'Release the bike');
@@ -80,14 +85,16 @@ test('cw-today-held: Hold longer holds the bike in one press; the line goes and 
   const { ui, within, fireEvent, waitFor } = await open('/workshop/today', { slow: true });
   const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
   const longer = box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' });
+  shell.queryClient.setQueryData(['c2w-orders'], { groups: {} });
   fireEvent.click(longer);
   assert.equal(longer.disabled, true, 'off while it saves');
   assert.equal(box.getByRole('button', { name: 'Release Maya Patel’s bike' }).disabled, true);
   fireEvent.click(longer);
   await waitFor(() => assert.ok(ui.queryByText(/hold ended/) === null));
   assert.equal(posts('/api/c2w/orders/31/hold-longer').length, 1, 'one press, one hold');
-  await waitFor(() => assert.equal(noteText(), 'Maya Patel’s bike is held until 15 September 2026.'));
+  await waitFor(() => assert.equal(noteText(), `Maya Patel’s bike is held until ${long(day(7))}.`));
   await waitFor(() => assert.ok(document.activeElement === ui.getByRole('heading', { name: 'Needs attention' })));
+  assert.equal(shell.queryClient.getQueryState(['c2w-orders'])?.isInvalidated, true, 'the Cycle to Work list is read again');
 });
 
 test('Release the bike on Today lets it go; the note says the order stays open', async () => {
@@ -105,7 +112,7 @@ test('a refused Hold longer shows the server’s words and keeps the line', asyn
   const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
   fireEvent.click(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }));
   assert.equal((await box.findByRole('alert')).textContent, words);
-  assert.ok(box.getByText('Maya Patel · Cycle to Work hold ended 8 September 2026 — choose') !== null);
+  assert.ok(box.getByText(`Maya Patel · Cycle to Work hold ended ${long(day(-6))} — choose`) !== null);
   assert.equal(noteText(), '');
 });
 
@@ -113,13 +120,14 @@ test('a refused Hold longer shows the server’s words and keeps the line', asyn
 
 test('cs-search-c2w: the header search finds the order, opening it, and says how many orders the customer has', async () => {
   const { ui, within, fireEvent } = await open('/workshop/today', { items: [] });
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'CW-[n]' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: LABEL }), { target: { value: 'CW-[n]' } });
   const results = within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
   const groups = results.getAllByRole('group').map((g) => g.getAttribute('aria-label'));
   assert.deepEqual(groups, ['Cycle to Work orders', 'Customers'], 'the orders first, as drawn');
   const orders = within(results.getByRole('group', { name: 'Cycle to Work orders' }));
   assert.equal(orders.getByRole('link', { name: 'Maya Patel · Cycle to Work · [Bike] · [Size]' }).getAttribute('href'), '/workshop/c2w/31');
-  assert.ok(orders.getByText('Quote CW-[n] · Waiting for the certificate · held until 8 September 2026') !== null);
+    const line = orders.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[n] · Waiting for the certificate · held until ${long(day(1))}`);
+  assert.ok(within(line).getByText('CW-[n]').className.includes('font-[family-name:var(--wh-font-mono)]'), 'the quote number in the fixed-width font');
   assert.ok(within(results.getByRole('group', { name: 'Customers' })).getByText('Customer · 07700 900 142 · 1 Cycle to Work order') !== null);
   assert.ok(results.getByText('Cycle to Work orders are found by name, quote number or certificate number.') !== null);
   assert.equal(document.querySelector('[data-search-status]').textContent, '2 results', 'the order and the customer');
@@ -134,9 +142,23 @@ test('cs-page-c2w and -collected: the customer’s orders in their history, open
   const now = openNow.getByRole('link', { name: /Cycle to Work · \[Bike\] · \[Size\] · Waiting for the certificate/ });
   assert.equal(now.getAttribute('href'), '/workshop/c2w/31');
   assert.ok(now.textContent.startsWith('Order'), 'tagged Order');
-  assert.ok(openNow.getByText('Quote CW-[n] · [Provider] · held until 8 September 2026') !== null);
+  const sub = openNow.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[n] · [Provider] · held until ${long(day(1))}`);
+  assert.ok(within(sub).getByText('CW-[n]').className.includes('font-[family-name:var(--wh-font-mono)]'), 'the quote number in the fixed-width font');
   const earlier = within(hist.getByRole('list', { name: 'Earlier, newest first' }));
   const done = earlier.getByRole('link', { name: /Cycle to Work · \[Bike\] · \[Size\] · Collected/ });
   assert.equal(done.getAttribute('href'), '/workshop/c2w/32');
-  assert.ok(earlier.getByText('Quote CW-[m] · certificate [certificate number] · collected 20 August 2026') !== null);
+  const was = earlier.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[m] · certificate [certificate number] · collected ${long(day(-10))}`);
+  assert.ok(within(was).getByText('[certificate number]').className.includes('font-[family-name:var(--wh-font-mono)]'), 'the certificate number too');
+});
+
+test('cs-search-c2w and cs-page-c2w: once a hold has ended, the order says so in the list’s words, not “held until”', async () => {
+  const ended = { holdUntil: day(-2), holdEnded: true };
+  const { ui, within, fireEvent } = await open('/workshop/customers/5', { items: [], found: [{ ...FOUND, ...ended }], history: [{ ...OPEN, ...ended }] });
+  const hist = within(await ui.findByRole('region', { name: 'History' }));
+  const openNow = within(await hist.findByRole('list', { name: 'Open now' }));
+  assert.ok(openNow.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[n] · [Provider] · hold ended ${long(day(-2))} — choose`) !== null);
+  fireEvent.change(ui.getByRole('searchbox', { name: LABEL }), { target: { value: 'CW-[n]' } });
+  const results = within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
+  assert.ok(results.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[n] · Waiting for the certificate · hold ended ${long(day(-2))} — choose`) !== null);
+  assert.ok(results.queryByText(/held until/) === null);
 });

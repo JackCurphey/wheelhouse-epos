@@ -240,6 +240,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       setRefused(serverSaid(err) ? err.message : 'Wheelhouse couldn’t record that. Try again in a moment.');
     } finally {
       await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-orders'] });
       void queryClient.invalidateQueries({ queryKey: ['c2w-count'] });
       void queryClient.invalidateQueries({ queryKey: ['c2w-order', line.orderId] });
       busyHold.current.delete(line.orderId);

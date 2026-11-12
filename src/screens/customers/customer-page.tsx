@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -49,7 +49,7 @@ export type Item =
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
   | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string }
-  | { kind: 'c2w_order'; id: number; stage: Stage; open: boolean; quoteRef: string; bike: string; providerName: string; holdUntil: string | null; certificateNumber: string | null; collectedAt: string | null; at: string }
+  | { kind: 'c2w_order'; id: number; stage: Stage; open: boolean; quoteRef: string; bike: string; providerName: string; holdUntil: string | null; holdEnded?: boolean; certificateNumber: string | null; collectedAt: string | null; at: string }
   | { kind: 'account'; id: number; change: 'bank_transfer' | 'undo'; changePence: number; reference: string | null; receivedOn: string | null; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
@@ -126,16 +126,21 @@ export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSal
   // UX walk-through 5 M5: a Cycle to Work order, opening the order; "Open now"
   // while it's open, "Earlier" once collected (cs-page-c2w, -collected).
   if (item.kind === 'c2w_order') {
-    const sub = item.open
-      ? [`Quote ${item.quoteRef}`, item.providerName, item.holdUntil ? `held until ${longDate(item.holdUntil)}` : null]
-      : [`Quote ${item.quoteRef}`, item.certificateNumber ? `certificate ${item.certificateNumber}` : null, item.collectedAt ? `collected ${longDate(dayOf(item.collectedAt))}` : null];
+    // Numbers in the fixed-width font, as the drawing's mono(); a hold that has
+    // ended in the list's words (list-page.tsx, the server's "choose").
+    const num = (n: string) => <span className={mono}>{n}</span>;
+    const hold = !item.holdUntil ? null : item.holdEnded ? `hold ended ${longDate(item.holdUntil)} — choose` : `held until ${longDate(item.holdUntil)}`;
+    const parts: React.ReactNode[] = item.open
+      ? [<>Quote {num(item.quoteRef)}</>, item.providerName, hold]
+      : [<>Quote {num(item.quoteRef)}</>, item.certificateNumber ? <>certificate {num(item.certificateNumber)}</> : null, item.collectedAt ? `collected ${longDate(dayOf(item.collectedAt))}` : null];
+    const sub = parts.filter(Boolean).map((p, i) => <Fragment key={i}>{i ? ' · ' : ''}{p}</Fragment>);
     return (
       <li className="border-t border-[var(--wh-border)]">
         <Link to={orderHref(item.id)} className="flex min-h-[52px] items-center gap-3 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
           {tag('Order')}
           <span className="flex min-w-0 grow flex-col gap-0.5">
             <span className="text-size-15 font-semibold">{`Cycle to Work · ${item.bike} · ${STAGE_WORD[item.stage]}`}</span>
-            <span className="text-size-13 text-[var(--wh-muted)]">{sub.filter(Boolean).join(' · ')}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{sub}</span>
           </span>
         </Link>
       </li>

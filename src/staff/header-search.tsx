@@ -20,10 +20,11 @@ import { STAGE_WORD, longDate, orderHref, type Stage } from '@/screens/c2w/c2w-b
  */
 type Job = { id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; customerName: string | null; bikeLabel: string | null };
 type Customer = { id: number; name: string; phone: string | null; c2wOrders?: number };
-type C2wFound = { id: number; customerName: string; bike: string; stage: Stage; quoteRef: string; holdUntil: string | null; certificateNumber: string | null };
+type C2wFound = { id: number; customerName: string; bike: string; stage: Stage; quoteRef: string; holdUntil: string | null; holdEnded?: boolean; certificateNumber: string | null };
 type Bike = { id: number; make: string; model: string; colour: string; serialNumber: string; customerName: string };
 type Found = { jobs: Job[]; customers: Customer[]; bikes: Bike[]; c2wOrders?: C2wFound[] };
-const LABEL = 'Search jobs, customers and bikes';
+// What it finds (cs-search-c2w draws "jobs, customers, orders"; bikes since bike-search).
+const LABEL = 'Search jobs, customers, bikes and orders';
 const total = (f: Found) => f.jobs.length + f.customers.length + (f.bikes?.length ?? 0) + (f.c2wOrders?.length ?? 0);
 
 /** What was typed, once typing has paused (250 ms). */
@@ -48,9 +49,12 @@ function jobLine(j: Job) {
   return [j.bikeLabel, j.title, state === 'hidden' ? null : STATE_LABEL[state], j.jobDate ? shortDay(j.jobDate) : null].filter(Boolean).join(' · ');
 }
 
-// "Quote CW-12 · Waiting for the certificate · held until 8 September 2026" (cs-search-c2w).
+// "Quote CW-12 · Waiting for the certificate · held until 8 September 2026"
+// (cs-search-c2w), the number in the fixed-width font; once the hold has
+// ended, the list's words for it (list-page.tsx, the server's "choose").
 function c2wLine(o: C2wFound) {
-  return [`Quote ${o.quoteRef}`, STAGE_WORD[o.stage], o.holdUntil ? `held until ${longDate(o.holdUntil)}` : null].filter(Boolean).join(' · ');
+  const hold = !o.holdUntil ? null : o.holdEnded ? ` · hold ended ${longDate(o.holdUntil)} — choose` : ` · held until ${longDate(o.holdUntil)}`;
+  return <>Quote <span className={MONO}>{o.quoteRef}</span>{` · ${STAGE_WORD[o.stage]}`}{hold}</>;
 }
 // "Customer · 07700 900 142 · 1 Cycle to Work order".
 function customerLine(c: Customer) {
@@ -67,7 +71,9 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function Row({ to, main, sub, onPick }: { to: string; main: React.ReactNode; sub: string; onPick: () => void }) {
+const MONO = 'font-[family-name:var(--wh-font-mono)]';
+
+function Row({ to, main, sub, onPick }: { to: string; main: React.ReactNode; sub: React.ReactNode; onPick: () => void }) {
   return (
     <li className="flex min-h-[52px] flex-col justify-center gap-0.5 rounded-lg px-3 py-1.5 hover:bg-[var(--wh-hover)]">
       <Link to={to} onClick={onPick} className="self-start text-size-15 font-semibold text-[var(--wh-ink)] no-underline hover:underline">{main}</Link>

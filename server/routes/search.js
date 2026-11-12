@@ -7,7 +7,7 @@
 import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { sendJson } from '../lib/http.js';
-import { findOrders, orderCounts } from '../c2w/elsewhere.js';
+import { customersOf, findOrders, orderCounts } from '../c2w/elsewhere.js';
 
 const LIMIT = 5;
 // What was typed, matched as plain text: a % or _ is just that character.
@@ -56,8 +56,12 @@ export function register(route) {
         LIMIT ${LIMIT}`
     ).all(text, text, `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
     // Cycle to Work orders by name, quote or certificate number, and how many
-    // each customer found has (cs-search-c2w; UX walk-through 5 M5).
-    const c2wOrders = await findOrders(text, LIMIT);
+    // each customer found has (cs-search-c2w; UX walk-through 5 M5). An
+    // order's customer joins Customers once, after those found by name.
+    const c2wOrders = await findOrders(text, q.replace(/[\\%_]/g, (c) => `\\${c}`), LIMIT);
+    const byName = new Set(customers.map((c) => c.id));
+    const more = await customersOf([...new Set(c2wOrders.map((o) => o.customerId))].filter((id) => !byName.has(id)));
+    customers.push(...more.slice(0, Math.max(0, LIMIT - customers.length)));
     const c2wCounts = await orderCounts(customers.map((c) => c.id));
     sendJson(res, 200, {
       c2wOrders,

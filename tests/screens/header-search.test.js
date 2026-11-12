@@ -65,7 +65,7 @@ async function open(path = '/workshop/today', { phone = false } = {}) {
 test('every staff page has the search box in its header', async () => {
   for (const path of ['/workshop/today', '/workshop/diary', '/workshop/settings']) {
     const { ui, cleanup } = await open(path);
-    assert.ok(ui.getByRole('banner').querySelector('input[type="search"][aria-label="Search jobs, customers and bikes"]'), path);
+    assert.ok(ui.getByRole('banner').querySelector('input[type="search"][aria-label="Search jobs, customers, bikes and orders"]'), path);
     cleanup();
     uninstall();
   }
@@ -73,7 +73,7 @@ test('every staff page has the search box in its header', async () => {
 
 test('typing finds the jobs and the customers, grouped, each a link to its page, with a count', async () => {
   const { ui, fireEvent, within } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' });
   // Typed a letter at a time: one search, once typing stops.
   for (const value of ['m', 'ma', 'may', 'maya']) {
     fireEvent.change(box, { target: { value } });
@@ -94,7 +94,7 @@ test('typing finds the jobs and the customers, grouped, each a link to its page,
 
 test('nothing found says so, and one letter doesn’t search', async () => {
   const { ui, fireEvent } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' });
   fireEvent.change(box, { target: { value: 'z' } });
   await new Promise((r) => setTimeout(r, 400));
   assert.deepEqual(searches, []);
@@ -105,7 +105,7 @@ test('nothing found says so, and one letter doesn’t search', async () => {
 
 test('Escape clears the results and stays in the box', async () => {
   const { ui, fireEvent, waitFor } = await open();
-  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
+  const box = ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' });
   box.focus();
   fireEvent.change(box, { target: { value: 'maya' } });
   await ui.findByRole('region', { name: 'Search results' }, SEARCHED);
@@ -116,12 +116,12 @@ test('Escape clears the results and stays in the box', async () => {
 
 test('on a phone, the search button opens the box over the page; Close search and Escape shut it', async () => {
   const { ui, fireEvent, waitFor, within } = await open('/workshop/today', { phone: true });
-  const button = ui.getByRole('button', { name: 'Search jobs, customers and bikes' });
+  const button = ui.getByRole('button', { name: 'Search jobs, customers, bikes and orders' });
   assert.equal(button.getAttribute('aria-expanded'), 'false');
   fireEvent.click(button);
   const sheet = within(await ui.findByRole('dialog', { name: 'Search' }));
   assert.equal(button.getAttribute('aria-expanded'), 'true');
-  const box = sheet.getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
+  const box = sheet.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' });
   await waitFor(() => assert.ok(document.activeElement === box, 'the box takes the focus'));
   fireEvent.change(box, { target: { value: 'maya' } });
   assert.ok((await sheet.findByRole('link', { name: 'WH-1042 · Maya Patel' }, SEARCHED)) !== null);
@@ -135,7 +135,7 @@ test('on a phone, the search button opens the box over the page; Close search an
 
 test('picking a job while already on the diary opens it there (review)', async () => {
   const { ui, fireEvent, waitFor } = await open('/workshop/diary');
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' }), { target: { value: 'maya' } });
   fireEvent.click(await ui.findByRole('link', { name: 'WH-1042 · Maya Patel' }, SEARCHED));
   await waitFor(() => assert.ok(calls.some((c) => c.endsWith('/api/workshop-jobs/42')), 'the diary didn’t open the job'));
 });
@@ -144,7 +144,7 @@ test('the count is said in one place that’s always there, so a screen reader h
   const { ui, fireEvent, waitFor } = await open();
   const status = document.querySelector('[data-search-status]');
   assert.ok(status, 'a status line before anything is typed');
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'maya' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' }), { target: { value: 'maya' } });
   await waitFor(() => assert.equal(status.textContent, '2 results'), SEARCHED);
   assert.ok(status.isConnected, 'the same line, not a new one');
 });
@@ -152,7 +152,7 @@ test('the count is said in one place that’s always there, so a screen reader h
 // Bikes (openspec/changes/bike-search): after Customers, each opening its page.
 test('a bike is found under Bikes, a link to its page with its owner, colour and frame number', async () => {
   const { ui, fireEvent, within, waitFor } = await open();
-  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers and bikes' }), { target: { value: 'trek' } });
+  fireEvent.change(ui.getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' }), { target: { value: 'trek' } });
   const results = within(await ui.findByRole('region', { name: 'Search results' }, SEARCHED));
   const bikes = within(results.getByRole('group', { name: 'Bikes' }));
   const links = bikes.getAllByRole('link', { name: 'Trek Domane AL 3' });
