@@ -102,8 +102,12 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await page.reload();
     await expect(main.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' })).toBeVisible();
     await expect(page.getByText(`Quote emailed to ${mayaEmail}. Bike held until 8 September 2026.`)).toHaveCount(0);
+    // Opened by its own address too (tests/browser-coverage.test.js).
+    const orderId = new URL(page.url()).pathname.split('/').pop();
+    await page.goto(`${server!.baseUrl}/workshop/c2w/${orderId}`);
+    await expect(main.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' })).toBeVisible();
 
-    await page.goto(page.url() + '/quote');
+    await page.goto(`${server!.baseUrl}/workshop/c2w/${orderId}/quote`);
     await expect(main.getByRole('heading', { level: 2, name: 'The quote' })).toBeVisible();
     await expect(main.getByText('Given 1 September 2026')).toBeVisible();
     await expect(main.getByLabel('Shop logo goes here')).toHaveText('LOGO');
