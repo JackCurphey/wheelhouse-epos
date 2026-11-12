@@ -116,14 +116,16 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
       against: 'the month before', before: { from: beforeFrom, to: monthEnd(beforeFrom) },
       buckets: dayBuckets(first, end, end, beforeFrom),
     };
-  } else if (period === 'last-12-months') {
-    const first = addMonths(monthStart(today), -11);
+  } else if (period === 'last-12-months' || period === 'last-24-months') {
+    // Last 24 months is Returning customers' own longer view (rp-returning).
+    const months = period === 'last-12-months' ? 12 : 24;
+    const first = addMonths(monthStart(today), 1 - months);
     const end = monthEnd(today);
-    const beforeFrom = addMonths(first, -12);
+    const beforeFrom = addMonths(first, -months);
     result = {
       from: first, to: end, through: today, soFar: today <= end, unit: 'month',
       label: `${monthLabel(first)} – ${monthLabel(today)}`,
-      against: 'the 12 months before', before: { from: beforeFrom, to: addDays(first, -1) },
+      against: `the ${months} months before`, before: { from: beforeFrom, to: addDays(first, -1) },
       buckets: monthBuckets(first, end, today, beforeFrom),
     };
   } else if (period === 'dates') {
@@ -144,4 +146,4 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
   return { period, ...result };
 }
 
-export { addDays, monthStart, monthEnd };
+export { addDays, addMonths, monthStart, monthEnd, monthBuckets };

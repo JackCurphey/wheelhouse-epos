@@ -23,6 +23,7 @@ const CARDS: { name: string; line: string; to: string }[] = [
   // The drawing's "and till" is left out while closes are per shop (Jack's answer 4, 10 Nov).
   { name: 'Takings and cash-ups', line: 'Each closed day, and any cash difference', to: ROUTES['rp-takings'] },
   { name: 'Workshop', line: 'Jobs, labour and parts, how full each mechanic was', to: ROUTES['rp-workshop'] },
+  { name: 'Returning customers', line: 'Who comes back, and who hasn’t been in for a while', to: ROUTES['rp-returning'] },
 ];
 
 /**
