@@ -70,7 +70,10 @@ function fakeServer(state) {
       return [201, { id: state.groups.at(-1).id, ...list() }];
     }
     if (path.startsWith('/api/quick-button-groups/') && method === 'PUT') {
-      state.groups.find((g) => g.id === id).name = body.name;
+      if (state.refuse) return state.refuse;
+      const g = state.groups.find((x) => x.id === id);
+      if ('name' in body) g.name = body.name;
+      if ('position' in body) { const rest = state.groups.filter((x) => x !== g); rest.splice(body.position, 0, g); state.groups = rest; }
       return [200, list()];
     }
     if (path.startsWith('/api/quick-button-groups/') && method === 'DELETE') {
@@ -447,7 +450,8 @@ test('a group’s … menu renames it, by keyboard or tap', async () => {
   const menu = t.within(t.ui.getByRole('menu', { name: 'Workshop' }));
   await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Rename…'));
   // A drawn menu item that opens a box ends in "…" (ms-tills).
-  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Rename…', 'Remove']);
+  // The first group can't go left, so it has no Move left (as Change length in job-extras.tsx).
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Rename…', 'Move right', 'Remove']);
   t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
   await t.waitFor(() => assert.ok(document.activeElement === more));
   t.fireEvent.click(more);
@@ -575,4 +579,172 @@ test('a slow Edit save, cancelled, doesn’t close the next button’s Edit box'
   await t.waitFor(() => assert.match(noteArea(t).textContent, /^Saved/));
   await t.act(() => new Promise((r) => setTimeout(r, 20)));
   assert.ok(t.ui.queryByRole('heading', { name: 'Fit & adjust brakes' }) !== null, 'the newer box is still open');
+});
+
+// Jack's answers of 12 Nov evening: Q2 option 2 (Move left and Move right in a
+// group's menu) and Q4 option 2 (press and hold on an iPhone).
+const groupPills = (t) => pills(t.ui.getByRole('group', { name: 'Quick button groups' }));
+const menuItems = (t) => t.within(t.ui.getByRole('menu')).getAllByRole('menuitem').map((m) => m.textContent);
+// Escape once the first item has the focus (the menu gives it after drawing).
+async function closeMenu(t) {
+  await t.waitFor(() => assert.equal(document.activeElement?.getAttribute('role'), 'menuitem'));
+  t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('menu') === null));
+}
+function groupMenuItem(t, name) {
+  t.fireEvent.click(more(t));
+  return t.within(t.ui.getByRole('menu')).getByRole('menuitem', { name });
+}
+
+test('a group’s menu has Move left and Move right between Rename and Remove, each only where it can go', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Parts' }));
+  t.fireEvent.click(more(t));
+  assert.deepEqual(menuItems(t), ['Rename…', 'Move left', 'Move right', 'Remove']);
+  await closeMenu(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Accessories' }));
+  t.fireEvent.click(more(t));
+  assert.deepEqual(menuItems(t), ['Rename…', 'Move left', 'Remove'], 'the last group has no Move right');
+  await closeMenu(t);
+  // Right-click on a pill opens the same menu.
+  t.fireEvent.contextMenu(t.ui.getByRole('button', { name: 'Workshop' }));
+  assert.deepEqual(menuItems(t), ['Rename…', 'Move right', 'Remove'], 'the first group has no Move left');
+});
+
+test('Move right moves the group one place, saves at once with Saved and Undo, and the focus goes back to …', async () => {
+  const t = await open();
+  await ready(t);
+  // Workshop is chosen only as the first group; it stays chosen as it moves.
+  press(t, groupMenuItem(t, 'Move right'));
+  await t.waitFor(() => assert.deepEqual(groupPills(t), ['Parts', 'Workshop (chosen)', 'Accessories', '+ Add a group']));
+  assert.ok(t.ui.queryByRole('menu') === null);
+  assert.deepEqual(sent(t, 'PUT'), [['/api/quick-button-groups/1', { position: 1 }]]);
+  await focusOnMore(t);
+  assert.equal(more(t).getAttribute('aria-label'), 'More for Workshop');
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.deepEqual(t.state.groups.map((g) => g.name), ['Parts', 'Workshop', 'Accessories']);
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Undo' }));
+  await t.waitFor(() => assert.deepEqual(groupPills(t), ['Workshop (chosen)', 'Parts', 'Accessories', '+ Add a group']));
+  assert.deepEqual(sent(t, 'PUT')[1], ['/api/quick-button-groups/1', { position: 0 }]);
+});
+
+test('Move left moves the group one place to the left', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Accessories' }));
+  press(t, groupMenuItem(t, 'Move left'));
+  await t.waitFor(() => assert.deepEqual(groupPills(t), ['Workshop', 'Accessories (chosen)', 'Parts', '+ Add a group']));
+  assert.deepEqual(sent(t, 'PUT'), [['/api/quick-button-groups/3', { position: 1 }]]);
+  await t.waitFor(() => assert.match(noteArea(t).textContent, /^Saved/));
+  await focusOnMore(t);
+  assert.deepEqual(t.state.groups.map((g) => g.id), [1, 3, 2]);
+});
+
+test('a group move the server refuses (a group someone else removed) says the server’s words with no Try again, and the list is fetched again', async () => {
+  const t = await open();
+  await ready(t);
+  // The refusal the group route can really give (server/routes/quick-buttons.js: Refused(404, { error: 'Not found' })).
+  t.state.refuse = [404, { error: 'Not found' }];
+  const gets = () => t.calls.filter((c) => c.method === 'GET' && c.path === '/api/quick-buttons').length;
+  const before = gets();
+  press(t, groupMenuItem(t, 'Move right'));
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, /^Not found/));
+  assert.ok(t.within(area).queryByRole('button', { name: 'Try again' }) === null);
+  await t.waitFor(() => assert.ok(gets() > before, 'fetched again'));
+  await t.waitFor(() => assert.deepEqual(groupPills(t), ['Workshop (chosen)', 'Parts', 'Accessories', '+ Add a group']));
+});
+
+test('a group move that fails offline is kept here, and Try again saves it', async () => {
+  const t = await open();
+  await ready(t);
+  t.state.offline = true;
+  press(t, groupMenuItem(t, 'Move right'));
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  assert.deepEqual(groupPills(t), ['Parts', 'Workshop (chosen)', 'Accessories', '+ Add a group'], 'kept here');
+  t.state.offline = false;
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Try again' }));
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.deepEqual(t.state.groups.map((g) => g.id), [2, 1, 3]);
+});
+
+// Press and hold: Safari on an iPhone never sends contextmenu. 500 ms and 6 px, as the diary's (use-diary-extras.tsx).
+const wait = (t, ms) => t.act(() => new Promise((r) => setTimeout(r, ms)));
+const touchDown = (t, el, at = { clientX: 100, clientY: 100 }) => t.fireEvent.pointerDown(el, { button: 0, pointerType: 'touch', ...at });
+const nameOf = (t, name) => row(t, name).querySelector('[data-part="name"]');
+
+test('holding a row on a touch screen for half a second shows Edit and Remove', async () => {
+  const t = await open();
+  await ready(t);
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  await wait(t, 300);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null, 'not before the half second');
+  await wait(t, 300);
+  assert.ok(t.ui.getByRole('button', { name: 'Edit Fit & adjust brakes' }));
+  assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }));
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }), 'still open after lifting');
+});
+
+test("a row can't be text-selected, so an iPhone's hold opens the menu instead of selecting the name", async () => {
+  const t = await open();
+  await ready(t);
+  const row = nameOf(t, 'Fit & adjust brakes').closest('[data-quick-button]');
+  assert.ok(row, 'the row');
+  assert.ok(row.className.includes('select-none'), row.className);
+  assert.ok(row.className.includes('[-webkit-touch-callout:none]'), row.className);
+});
+
+test('a hold is cancelled by lifting early or moving more than a few pixels, so a tap or a scroll opens nothing', async () => {
+  const t = await open();
+  await ready(t);
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  await wait(t, 200);
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  await wait(t, 450);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null, 'lifted early');
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  t.fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 110 });
+  await wait(t, 600);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null, 'moved: a scroll');
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  t.fireEvent.pointerCancel(window, { pointerType: 'touch' });
+  await wait(t, 600);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null, 'the browser took the touch');
+  // A small wobble is still a hold.
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  t.fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 103, clientY: 98 });
+  await wait(t, 600);
+  assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }));
+});
+
+test('holding the handle doesn’t open Edit and Remove; a mouse press is not a hold', async () => {
+  const t = await open();
+  await ready(t);
+  touchDown(t, t.ui.getByRole('button', { name: 'Move Fit & adjust brakes — drag, or use the arrow keys' }));
+  await wait(t, 600);
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null);
+  t.fireEvent.pointerDown(nameOf(t, 'Fit & adjust brakes'), { button: 0, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  await wait(t, 600);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null);
+});
+
+test('on Android, where contextmenu also fires during a hold, the menu opens once', async () => {
+  const t = await open();
+  await ready(t);
+  touchDown(t, nameOf(t, 'Fit & adjust brakes'));
+  await wait(t, 100);
+  t.fireEvent.contextMenu(row(t, 'Fit & adjust brakes'));
+  assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }));
+  // Another row opened before the half second is up stays open: the hold
+  // doesn't open the first row a second time.
+  t.fireEvent.contextMenu(row(t, 'Replace gear cable'));
+  await wait(t, 500);
+  assert.ok(t.ui.queryByRole('button', { name: 'Remove Fit & adjust brakes' }) === null);
+  assert.ok(t.ui.getByRole('button', { name: 'Remove Replace gear cable' }));
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
 });
