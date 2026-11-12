@@ -389,6 +389,9 @@ test('6.4 booking the bike in with no frame number holds one for the order as a 
   const o = await order(made.id);
   assert.deepEqual([o.stage, o.held, o.frameId, o.onOrder], ['waiting', true, null, false]);
   assert.equal(o.events.at(-1).kind, 'booked_in');
+  const deliveryId = await inShop(async () => (await prepare('SELECT delivery_id FROM delivery_lines WHERE purchase_order_item_id = ?').get(line.id)).delivery_id);
+  const booked = await own(`/api/deliveries/booked-in/${deliveryId}`);
+  assert.deepEqual(booked.body.c2w.map((b) => [b.orderId, b.customerName, b.frameNumber, b.ready]), [[made.id, 'Maya Patel', null, false]], 'a bike held as a count is listed as put aside');
 });
 
 // Receive a delivery and Delivery booked in say whose the bike is (rs-receive-c2w, rs-booked-c2w).
@@ -407,7 +410,22 @@ test('6.4 the supplier order’s line names the customer it’s for, and the boo
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const booked = await own(`/api/deliveries/booked-in/${res.body.deliveryId}`);
   assert.equal(booked.status, 200, JSON.stringify(booked.body));
-  assert.deepEqual(booked.body.c2w, [{ orderId: made.id, customerName: 'Maya Patel', name: booked.body.lines[0].name, frameNumber: frame, ready: true }]);
+  assert.equal(typeof booked.body.c2w[0]?.key, 'number');
+  assert.deepEqual(booked.body.c2w.map(({ key, ...b }) => b), [{ orderId: made.id, customerName: 'Maya Patel', name: booked.body.lines[0].name, frameNumber: frame, ready: true }]);
+});
+
+test('6.4 a bike held before the certificate is listed as put aside, not as moving the order on, and goes once sold', async () => {
+  await rule('applied');
+  const made = await quote(await bike());
+  await applied(made.id);
+  assert.equal((await orderBike(made.id)).status, 200);
+  const frameNumber = `[FRAME-${tag()}]`;
+  const frame = await bookIn(made.id, frameNumber);
+  const deliveryId = await inShop(async () => (await prepare('SELECT l.delivery_id FROM stock_frames sf JOIN delivery_lines l ON l.id = sf.delivery_line_id WHERE sf.id = ?').get(frame.id)).delivery_id);
+  const booked = await own(`/api/deliveries/booked-in/${deliveryId}`);
+  assert.deepEqual(booked.body.c2w.map((b) => [b.orderId, b.frameNumber, b.ready]), [[made.id, frameNumber, false]]);
+  await inShop(() => prepare("UPDATE stock_frames SET state = 'sold' WHERE id = ?").run(frame.id));
+  assert.deepEqual((await own(`/api/deliveries/booked-in/${deliveryId}`)).body.c2w, [], 'a bike since sold isn’t still to be put aside');
 });
 
 test('6.4 a bike that went on sale instead isn’t listed as put aside', async () => {
@@ -422,6 +440,8 @@ test('6.4 a bike that went on sale instead isn’t listed as put aside', async (
   });
   const [line] = await linesFor(made.id);
   assert.equal((await post(`/api/purchase-orders/${line.purchase_order_id}/mark-ordered`, {})).status, 200);
+  const po = await own(`/api/purchase-orders/${line.purchase_order_id}`);
+  assert.equal(po.body.items.find((it) => it.id === line.id).forC2w, undefined, 'an order that already has its bike isn’t waiting for this one');
   const res = await post('/api/deliveries/receive', { supplierId, items: [{ itemId: line.id, qty: 1, frames: [`[FRAME-${tag()}]`] }] }, asJo);
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual((await own(`/api/deliveries/booked-in/${res.body.deliveryId}`)).body.c2w, []);

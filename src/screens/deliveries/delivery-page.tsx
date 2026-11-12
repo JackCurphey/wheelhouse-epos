@@ -29,7 +29,7 @@ type Delivery = Summary & {
   setAside: { id: number; name: string; kind: Kind; qty: number; returned: boolean; cost?: number }[];
   stillToCome: { orderId: number; supplierName: string; orderedAt: string | null; qty: number }[];
   // Bikes put aside for Cycle to Work orders (rs-booked-c2w); `ready`: the order moved to Ready to collect.
-  c2w?: { orderId: number; customerName: string | null; name: string; frameNumber: string | null; ready: boolean }[];
+  c2w?: { key: number; orderId: number; customerName: string | null; name: string; frameNumber: string | null; ready: boolean }[];
 };
 
 const KIND: Record<Kind, string> = { damaged: 'Damaged', wrong_item: 'Wrong item' };
@@ -143,7 +143,7 @@ export function DeliveryBookedPage() {
             {c2w.map((b) => {
               const who = b.customerName ?? '[Customer]';
               return (
-                <Row key={`c2w${b.orderId}`} title={`${who} · Cycle to Work`}
+                <Row key={`c2w${b.key}`} title={`${who} · Cycle to Work`}
                   sub={<>{`${b.name}${b.frameNumber ? ' · frame ' : ''}`}{b.frameNumber ? <span className={mono}>{b.frameNumber}</span> : null}{' · '}<strong className="text-[var(--wh-ink)]">{`put it aside for ${who} — not for sale`}</strong>{b.ready ? ' · their order moves to Ready to collect' : ''}</>}>
                   <Link to={ROUTES['cw-order-held'].replace(':id', String(b.orderId))} className={linkClass} aria-label={`Open ${who}’s Cycle to Work order`}>Open the order</Link>
                 </Row>

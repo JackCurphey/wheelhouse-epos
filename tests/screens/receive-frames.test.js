@@ -190,6 +190,7 @@ test('a Cycle to Work bike says it’s for Maya Patel, to put aside, as drawn', 
   assert.equal(said(r), 'Added Trek Domane AL 3 · frame [frame 1] — for Maya Patel · Cycle to Work — put it aside');
   const line = bikeLine(r);
   assert.equal(r.within(line).getByText('for Maya Patel · Cycle to Work — put it aside').tagName, 'STRONG');
+  assert.ok(!line.textContent.includes('on your order'), 'the Cycle to Work words take the place of “on your order”');
 });
 
 test('a bike not for a Cycle to Work order says nothing about one', async () => {
