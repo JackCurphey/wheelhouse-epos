@@ -30,7 +30,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 3. Risky — the website app: shell, home, Shop, not found, off, footer pages
 
-- [ ] 3.1 Add the `website` entry to `vite.config` (`src/website/main.tsx`) and serve it in `server/server.js` at `/store/<slug>/…` and `<slug>.wheelhouseepos.com/…`, in place of `public-storefront/`; test that both addresses get the new app and that `/book/<slug>` is unchanged
+- [x] 3.1 Add the `website` entry to `vite.config` (`src/website/main.tsx`) and serve it in `server/server.js` at `/store/<slug>/…` and `<slug>.wheelhouseepos.com/…`, in place of `public-storefront/`; test that both addresses get the new app and that `/book/<slug>` is unchanged
 - [x] 3.2 Screen test: the shell (site): Skip to the main content, logo, Shop, Book a repair, Our shops, "Search the shop", chip, Account, Basket, footer links, current page marked
 - [x] 3.3 Screen test: the phone menu (site-menu) opens, closes on Esc and returns focus
 - [x] 3.4 Screen test: the main colour (site-ocean, site-ocean-menu) and "Find us" with one shop
@@ -40,7 +40,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 3.8 Screen tests: Collection and returns, Privacy and Contact us show the published words and the shops' details
 - [x] 3.9 Basket and Add to basket open the basket path's "can't take orders online yet" message until WP-6.3 (written line 1); log it in this month's decided-while-building file
 - [x] 3.10 Build `src/website/` (shell, home, Shop, not found, off, footer pages)
-- [ ] 3.11 Browser test: the home page on a phone and a computer
+- [x] 3.11 Browser test: the home page on a phone and a computer
 - [ ] 3.12 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 4. Category pages with filters
