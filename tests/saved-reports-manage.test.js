@@ -137,3 +137,9 @@ test('Undo can bring a report back under a new name when its old name has been u
   assert.equal(back.status, 200, JSON.stringify(back.body));
   assert.ok((await names()).includes('India again'));
 });
+
+test('asking to share another person\'s report is still "not there", not a refusal that confirms it exists', async () => {
+  const j = await make('Juliet');
+  const res = await as(other)(`/api/reports/saved/${j.id}`, { method: 'PATCH', body: { name: 'Juliet', shared: true } });
+  assert.equal(res.status, 404);
+});

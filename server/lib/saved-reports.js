@@ -80,7 +80,10 @@ const own = (loginId, id, deleted) => prepare(
 
 async function setName(id, name) {
   try {
-    return await prepare('UPDATE saved_reports SET name = ?, updated_at = now() WHERE id = ? RETURNING *').get(name, id);
+    // Still live: a delete that got in between leaves it deleted, and the rename is "not there".
+    const row = await prepare('UPDATE saved_reports SET name = ?, updated_at = now() WHERE id = ? AND deleted_at IS NULL RETURNING *').get(name, id);
+    if (!row) throw new SavedNotFound();
+    return row;
   } catch (err) {
     if (err.code === '23505') throw new ValidationError(TAKEN);
     throw err;
@@ -89,9 +92,9 @@ async function setName(id, name) {
 
 // Rename keeps everything else. The same name in other capitals, or the name it already has, is fine for itself.
 export async function renameSaved(loginId, id, rawName, body = {}) {
-  if (body.shared === true) throw new ValidationError(NO_MANAGERS);
   const found = await own(loginId, id, false);
   if (!found) throw new SavedNotFound();
+  if (body.shared === true) throw new ValidationError(NO_MANAGERS);
   const name = cleanName(rawName);
   if (await nameIsTaken(loginId, name, id)) throw new ValidationError(TAKEN);
   return shape(await setName(id, name), await onlyChoices());
@@ -101,7 +104,8 @@ export async function renameSaved(loginId, id, rawName, body = {}) {
 export async function deleteSaved(loginId, id) {
   const found = await own(loginId, id, false);
   if (!found) throw new SavedNotFound();
-  await prepare('UPDATE saved_reports SET deleted_at = now(), updated_at = now() WHERE id = ?').run(id);
+  const done = await prepare('UPDATE saved_reports SET deleted_at = now(), updated_at = now() WHERE id = ? AND deleted_at IS NULL RETURNING id').get(id);
+  if (!done) throw new SavedNotFound();
   return { id, name: found.name };
 }
 
@@ -113,7 +117,8 @@ export async function undoSaved(loginId, id, body = {}) {
   const name = body.name === undefined ? found.name : cleanName(body.name);
   if (await nameIsTaken(loginId, name)) throw new ValidationError(TAKEN);
   try {
-    const row = await prepare('UPDATE saved_reports SET name = ?, deleted_at = NULL, updated_at = now() WHERE id = ? RETURNING *').get(name, id);
+    const row = await prepare('UPDATE saved_reports SET name = ?, deleted_at = NULL, updated_at = now() WHERE id = ? AND deleted_at IS NOT NULL RETURNING *').get(name, id);
+    if (!row) throw new SavedNotFound();
     return shape(row, await onlyChoices());
   } catch (err) {
     if (err.code === '23505') throw new ValidationError(TAKEN);

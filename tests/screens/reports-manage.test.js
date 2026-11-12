@@ -156,3 +156,36 @@ test('deleting another report replaces the bar, and the old one can no longer be
   assert.ok(ui.queryByText('“Bottles” deleted.') === null);
   assert.equal(ui.getAllByRole('button', { name: 'Undo' }).length, 1);
 });
+
+test('clicking the "…" button\'s own dots closes an open menu', async () => {
+  const { ui, box, fireEvent } = await open();
+  const more = box.getByRole('button', { name: 'More for Bottles' });
+  fireEvent.click(more);
+  await ui.findByRole('menu', { name: 'Bottles' });
+  const dots = more.querySelector('span');
+  fireEvent.mouseDown(dots);
+  fireEvent.click(dots);
+  assert.ok(ui.queryByRole('menu') === null);
+});
+
+test('after choosing Rename the focus goes back to the button, and after Delete to Undo', async () => {
+  const { ui, box, within, fireEvent } = await open();
+  fireEvent.click(box.getByRole('button', { name: 'More for Bottles' }));
+  fireEvent.click(within(await ui.findByRole('menu', { name: 'Bottles' })).getByRole('menuitem', { name: 'Delete' }));
+  await ui.findByText('“Bottles” deleted.');
+  assert.equal(document.activeElement, ui.getByRole('button', { name: 'Undo' }));
+});
+
+test('an Undo that fails for any other reason says so in the bar, without asking for a name', async () => {
+  const answers = { ...server(), '/api/reports/saved/1/undo': () => [404, { error: 'That report isn’t there' }] };
+  const opened = await openReports('/workshop/reports', { answers });
+  const { ui, within, fireEvent } = opened;
+  const box = within(await ui.findByRole('region', { name: 'Your reports' }));
+  await box.findByRole('link', { name: /Bottles/ });
+  fireEvent.click(box.getByRole('button', { name: 'More for Bottles' }));
+  fireEvent.click(within(await ui.findByRole('menu', { name: 'Bottles' })).getByRole('menuitem', { name: 'Delete' }));
+  await ui.findByText('“Bottles” deleted.');
+  fireEvent.click(ui.getByRole('button', { name: 'Undo' }));
+  assert.ok(await ui.findByText(/That report isn’t there/) !== null);
+  assert.ok(ui.queryByRole('dialog', { name: 'Rename' }) === null);
+});

@@ -16,7 +16,7 @@ export function ReportMenu({ name, onRename, onDelete }: { name: string; onRenam
   useEffect(() => {
     if (!open) return undefined;
     menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    const away = (e: MouseEvent) => { if (!menu.current?.contains(e.target as Node) && e.target !== button.current) setOpen(false); };
+    const away = (e: MouseEvent) => { if (!menu.current?.contains(e.target as Node) && !button.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
   }, [open]);
@@ -27,7 +27,8 @@ export function ReportMenu({ name, onRename, onDelete }: { name: string; onRenam
     else if (e.key === 'ArrowDown') { e.preventDefault(); items[(at + 1) % items.length]?.focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); items[(at - 1 + items.length) % items.length]?.focus(); }
   }
-  const choose = (act: () => void) => () => { setOpen(false); act(); };
+  // The focus goes back to the button first, so it isn't lost when the item it was on goes.
+  const choose = (act: () => void) => () => { setOpen(false); button.current?.focus(); act(); };
   return (
     <div className="relative">
       <button

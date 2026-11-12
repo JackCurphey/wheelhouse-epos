@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Check } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { BoxHeading, Page, Refusal } from './reports-bits.tsx';
 import { money } from './reports-format.ts';
@@ -33,21 +33,28 @@ const CARDS: { name: string; line: string; to: string }[] = [
 function DeletedBar({ gone, onBack }: { gone: { id: number; name: string }; onBack: () => void }) {
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const undoButton = useRef<HTMLButtonElement>(null);
+  // The menu item that was pressed has gone, so the focus goes to Undo, the next thing to do.
+  useEffect(() => { undoButton.current?.focus(); }, []);
   async function undo() {
+    setFailed(null);
     try {
       await apiMutate(`/api/reports/saved/${gone.id}/undo`, {});
       void queryClient.invalidateQueries({ queryKey: ['reports-saved'] });
       onBack();
     } catch (err) {
-      setAsking(serverSaid(err) ? err.message : 'Wheelhouse couldn’t bring it back. Try again in a moment.');
+      // Only "that name is used again" needs a new name; anything else is said in the bar.
+      if (serverSaid(err) && err instanceof ApiError && err.status === 400) setAsking(err.message);
+      else setFailed(serverSaid(err) ? err.message : 'Wheelhouse couldn’t bring it back. Try again in a moment.');
     }
   }
   return (
     <>
       <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3.5 py-2.5 text-size-15 leading-snug">
         <Check size={18} aria-hidden="true" />
-        <span className="min-w-[200px] flex-1">“{gone.name}” deleted.</span>
-        <button type="button" onClick={() => void undo()} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Undo</button>
+        <span className="min-w-[200px] flex-1">“{gone.name}” deleted.{failed ? ` ${failed}` : ''}</span>
+        <button ref={undoButton} type="button" onClick={() => void undo()} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Undo</button>
       </div>
       {asking ? (
         <NameDialog
