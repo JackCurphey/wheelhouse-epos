@@ -18,6 +18,7 @@ and the change is archived with it. `your-data-download` is in (#678).
 `finish-account` is built and archived (#657 to #666).
 Also on: WP-6.1 website management (`website-management`), built
 overnight from 12 Nov, pull requests 1 to 6b; 7 waits for WP-1.1, 8 for WP-8.1.
+Also on: WP-6.2 find the shop and browse, the customer website (`website-browse`), from 12 Nov in nine pull requests (Jack's answers: `docs/decisions/2026-11-12-website-browse-answers.md`).
 Also on: Reports part 3, your own reports (`reports-your-own`, WP-5.3), built overnight from 12 Nov in four pull requests: 1 Change what's shown and the changed Sales report, 2 saving a report (migration), 3 rename and delete, 4 Workshop's Change what's shown. Margin's measure waits for part 2's sale-line costs.
 
 **Jack next:**
