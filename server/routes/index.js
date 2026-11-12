@@ -41,5 +41,6 @@ import * as stockFrames from './stock-frames.js';
 import * as customerMoney from './customer-money.js';
 import * as reports from './reports.js';
 import * as quickButtons from './quick-buttons.js';
+import * as c2wSettings from './c2w-settings.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports, quickButtons];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports, quickButtons, c2wSettings];
