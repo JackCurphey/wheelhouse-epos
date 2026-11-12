@@ -32,6 +32,10 @@ export const sortOf = (value: string | null): Sort => SORTS.find((s) => s.value 
 // The address's own keys; anything else names a detail. storefrontSlug is the
 // shop's own address standing in for its host name (address.ts).
 const OWN_KEYS = new Set(['sort', 'brand', 'from', 'to', 'ready', 'after', 'shop', 'category', 'q', 'storefrontSlug']);
+// A campaign link's own keys ("utm_source=…") are never a detail, and stay in the address.
+const isCampaign = (key: string) => key.startsWith('utm_');
+// "30.0" or "030" in a shared link is the value 30, as the server writes it.
+const valueOf = (text: string) => (/^\d+(\.\d+)?$/.test(text) ? String(Number(text)) : text);
 
 /** A detail's name as the address writes it: "Inner diameter" is "inner-diameter". */
 export function detailSlug(name: string): string {
@@ -54,9 +58,9 @@ const poundsText = (pounds: string) => penceText(Math.round(Number(pounds) * 100
 export function readSelection(params: URLSearchParams): Selection {
   const details: Record<string, string[]> = {};
   for (const [key, value] of params) {
-    if (OWN_KEYS.has(key) || value === '') continue;
+    if (OWN_KEYS.has(key) || isCampaign(key) || value === '') continue;
     const list = (details[key] ??= []);
-    if (!list.includes(value)) list.push(value);
+    if (!list.includes(valueOf(value))) list.push(valueOf(value));
   }
   const from = parsePounds(params.get('from') ?? '');
   const to = parsePounds(params.get('to') ?? '');
@@ -66,7 +70,7 @@ export function readSelection(params: URLSearchParams): Selection {
 /** The address with `selection` in place of its filters; the sort and anything else stay. */
 export function writeSelection(prev: URLSearchParams, selection: Selection): URLSearchParams {
   const next = new URLSearchParams();
-  for (const [key, value] of prev) if (OWN_KEYS.has(key) && !['brand', 'from', 'to', 'ready', 'after'].includes(key)) next.append(key, value);
+  for (const [key, value] of prev) if ((OWN_KEYS.has(key) && !['brand', 'from', 'to', 'ready', 'after'].includes(key)) || isCampaign(key)) next.append(key, value);
   for (const [slug, values] of Object.entries(selection.details)) for (const v of values) next.append(slug, v);
   for (const b of selection.brands) next.append('brand', b);
   if (selection.from) next.set('from', selection.from);
@@ -104,6 +108,18 @@ export function productsParams(categoryId: number, s: Selection, sort: Sort, sho
 /** A value as the filter shows it: a number with its unit ("30 mm"), words as written. */
 export const valueText = (detail: Pick<DetailFilter, 'kind' | 'unit'>, value: string | number) =>
   detail.kind === 'number' && detail.unit ? `${value} ${detail.unit}` : String(value);
+
+/**
+ * A category page's card line from a product's details (wb-category "[n] ×
+ * [n] × [n] mm"): one unit for all, written once at the end; otherwise each
+ * value with its own unit, joined by " · ". Null with no details.
+ */
+export function detailsLine(details: { value: string | number; unit: string | null }[]): string | null {
+  if (details.length === 0) return null;
+  const unit = details[0].unit;
+  if (unit && details.every((d) => d.unit === unit)) return `${details.map((d) => d.value).join(' × ')} ${unit}`;
+  return details.map((d) => (d.unit ? `${d.value} ${d.unit}` : String(d.value))).join(' · ');
+}
 
 export type Chip = { words: string; without: (s: Selection) => Selection };
 

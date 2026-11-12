@@ -5,6 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
 import { bookPath } from './address.ts';
+import { detailsLine } from './filters.ts';
 import { hasDetails, useSiteContext, type Category, type FirstShop, type ProductCardData, type ShopEntry, type StockLine } from './site-query.ts';
 
 /**
@@ -81,7 +82,9 @@ export function StockLineView({ stock }: { stock: StockLine }) {
 export const priceText = (low: number, high: number | null) => (high != null ? `${penceText(low)} to ${penceText(high)}` : penceText(low));
 
 /** A product's card (browse.mjs `productCard`): photo, or its name in a tile; name, price, stock line. */
-export function ProductCard({ product }: { product: ProductCardData }) {
+/** A product's card; `withDetails` adds the category page's details line (wb-category; the home page's cards have none). */
+export function ProductCard({ product, withDetails = false }: { product: ProductCardData; withDetails?: boolean }) {
+  const line = withDetails ? detailsLine(product.details ?? []) : null;
   return (
     <Link to={`/products/${product.id}`} className="flex flex-col gap-2 text-[var(--wh-ink)] no-underline">
       {product.photo ? (
@@ -90,6 +93,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         <span aria-hidden className="flex h-[120px] w-full items-center justify-center rounded-[10px] bg-[var(--wh-surface-muted)] p-3 text-center text-size-15 font-semibold md:h-[170px]">{product.name}</span>
       )}
       <span className="text-size-15 font-semibold leading-snug">{product.name}</span>
+      {line && <span className="text-size-13 text-[var(--wh-muted)]">{line}</span>}
       <span className="font-mono text-size-15 font-bold">{priceText(product.pricePence, product.priceHighPence)}</span>
       <StockLineView stock={product.stock} />
     </Link>

@@ -72,7 +72,11 @@ const NOT_FOUND = () => ({ status: 404, body: { error: 'We can’t find that pag
 
 export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, media, cookie, strict = false, retry = false } = {}) {
   const uninstall = installDom(`http://localhost${BASE}${url}`);
-  if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
+  // `setMedia(fn)` changes which queries match, as turning a tablet or widening a window does.
+  let matching = media;
+  const listeners = new Set();
+  if (media) window.matchMedia = (q) => ({ get matches() { return matching(q); }, media: q, addEventListener(_, f) { listeners.add(f); }, removeEventListener(_, f) { listeners.delete(f); } });
+  const setMedia = (fn) => { matching = fn; for (const f of [...listeners]) f(); };
   if (cookie) document.cookie = cookie;
   window.scrollTo = () => {};
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
@@ -100,7 +104,7 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
   const client = new QueryClient({ defaultOptions: { queries: { retry, retryDelay: 0, gcTime: Infinity } } });
   const tree = h(QueryClientProvider, { client }, h(RouterProvider, { router }));
   const ui = render(strict ? h(StrictMode, null, tree) : tree);
-  return { ui, client, router, uninstall, requests };
+  return { ui, client, router, uninstall, requests, setMedia };
 }
 
 /** A phone (under 768px wide) or a tablet (768 to 1023px), as matchMedia answers. */

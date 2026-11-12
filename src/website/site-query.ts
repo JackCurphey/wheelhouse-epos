@@ -54,6 +54,8 @@ export type ProductCardData = {
   photo: string | null;
   pricePence: number;
   priceHighPence: number | null;
+  /** The details every size of it shares, a measured one with its unit (server/site-products.js `sharedDetails`). */
+  details?: { name: string; value: string | number; unit: string | null }[];
   stock: StockLine;
 };
 export type Repair = { id: number; name: string; pricePence: number | null };

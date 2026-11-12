@@ -56,6 +56,7 @@ export function CategoryPage() {
       shopId={shopId}
       more={products.hasNextPage ? () => products.fetchNextPage() : null}
       loadingMore={products.isFetchingNextPage}
+      stale={products.isPlaceholderData}
     />
   );
 }
@@ -66,13 +67,15 @@ type ViewProps = {
   sort: Sort;
   ids: Record<string, number>;
   shopId: number | null;
-  more: (() => Promise<unknown>) | null;
+  more: (() => Promise<{ isError: boolean }>) | null;
   loadingMore: boolean;
+  /** The last answer, kept on the page while the one for new filters loads. */
+  stale: boolean;
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }: ViewProps) {
+function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore, stale }: ViewProps) {
   const first = pages[0];
   const { category, filters, total } = first;
   usePageTitle(category.name);
@@ -89,17 +92,21 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }
   const chipsRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const filterButton = useRef<HTMLButtonElement>(null);
+  const focusFrom = useRef<number | null>(null);
   const [panel, setPanel] = useState(false);
+  // The window widened past a phone's: the panel goes, its ticks thrown away.
+  if (panel && !phone) setPanel(false);
 
   // Each change is a new step in the history, so Back steps back through them.
   // flushSync: the router otherwise applies an address change as a React
   // transition, and a ticked box shows unticked until it lands.
-  const apply = (next: Selection) => setParams((prev) => writeSelection(prev, next), { flushSync: true });
-  const setSort = (value: string) => setParams((prev) => {
+  // A Show more still on its way no longer moves focus once the filters change.
+  const apply = (next: Selection) => { focusFrom.current = null; setParams((prev) => writeSelection(prev, next), { flushSync: true }); };
+  const setSort = (value: string) => { focusFrom.current = null; setParams((prev) => {
     const next = new URLSearchParams(prev);
     if (value === 'az') next.delete('sort'); else next.set('sort', value);
     return next;
-  }, { flushSync: true });
+  }, { flushSync: true }); };
 
   // A removed chip hands focus to the one after it (or Clear all); with none left, to the heading.
   const chipFocus = useRef<number | null>(null);
@@ -112,7 +119,6 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }
   }, [chipWords]);
 
   // Show more: focus moves to the first of the new products (spec, "Show more").
-  const focusFrom = useRef<number | null>(null);
   useEffect(() => {
     if (focusFrom.current === null || products.length <= focusFrom.current) return;
     gridRef.current?.querySelectorAll('a')[focusFrom.current]?.focus();
@@ -127,13 +133,17 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }
   }, [panel]);
 
   const count = !ticked ? plural(total, 'product', 'products') : total === 0 ? 'Nothing matches' : plural(total, 'product matches', 'products match');
+  // While the answer for new filters loads, the count keeps its last words:
+  // the old total with the new ticks would say something untrue.
+  const [said, setSaid] = useState(count);
+  if (!stale && said !== count) setSaid(count);
   const types = first.types.filter((t) => t.products > 0);
   const sortId = useId();
 
   const results = products.length > 0 ? (
     <div className="flex min-w-0 flex-col gap-[18px]">
       <div ref={gridRef}>
-        <Grid cols={3}>{products.map((p) => <ProductCard key={p.id} product={p} />)}</Grid>
+        <Grid cols={3}>{products.map((p) => <ProductCard key={p.id} product={p} withDetails />)}</Grid>
       </div>
       {more && total > products.length && (
         <div className="flex flex-col items-center gap-2 pt-1.5">
@@ -141,15 +151,18 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }
           <Button
             variant="default"
             className="min-h-11 text-size-15"
-            disabled={loadingMore}
-            onClick={() => { focusFrom.current = products.length; void more(); }}
+            disabled={loadingMore || stale}
+            onClick={() => {
+              focusFrom.current = products.length;
+              void more().then((r) => { if (r.isError) focusFrom.current = null; });
+            }}
           >
             Show more
           </Button>
         </div>
       )}
     </div>
-  ) : ticked ? (
+  ) : stale ? null : ticked ? (
     <NothingMatches selection={applied} page={first} onClear={() => { chipFocus.current = 0; apply(NOTHING_TICKED); }} />
   ) : (
     <p className="m-0 text-size-15 leading-relaxed">This shop hasn’t put any products in {category.name} online yet.</p>
@@ -161,7 +174,7 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore }
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div ref={headingRef} className="flex flex-col gap-1">
           <H1 tabIndex={-1}>{category.name}</H1>
-          <span aria-live="polite" className="text-[14px] text-[var(--wh-muted)]">{count}</span>
+          <span aria-live="polite" className="text-[14px] text-[var(--wh-muted)]">{stale ? said : count}</span>
         </div>
         <div className="flex items-center gap-2.5">
           {phone && (
@@ -284,20 +297,24 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 const SHOWN = 3;
 
 /** A group of values: the first three, then "Show [n] more" for the rest (design 6). */
-function ValuesGroup({ title, values, ticked, onToggle }: {
+function ValuesGroup({ title, values, ticked, labelOf, onToggle }: {
   title: string;
+  labelOf: (value: string) => string;
   values: { value: string; label: string; count: number }[];
   ticked: string[];
   onToggle: (value: string) => void;
 }) {
   // A ticked value no product now has still shows, so it can be unticked.
-  const all = [...values, ...ticked.filter((t) => !values.some((v) => v.value === t)).map((t) => ({ value: t, label: t, count: 0 }))];
-  const [open, setOpen] = useState(() => all.findIndex((v) => ticked.includes(v.value)) >= SHOWN);
+  const all = [...values, ...ticked.filter((t) => !values.some((v) => v.value === t)).map((t) => ({ value: t, label: labelOf(t), count: 0 }))];
+  const [opened, setOpen] = useState(false);
+  // A tick past the first three keeps the group open, however the address got it (Back included).
+  const tickPastShown = all.findIndex((v) => ticked.includes(v.value)) >= SHOWN;
+  const open = opened || tickPastShown;
   const shown = open ? all : all.slice(0, SHOWN);
   return (
     <Group title={title}>
       {shown.map((v) => <Check key={v.value} label={v.label} count={v.count} checked={ticked.includes(v.value)} onChange={() => onToggle(v.value)} />)}
-      {all.length > SHOWN && (
+      {all.length > SHOWN && !tickPastShown && (
         <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="min-h-11 self-start p-0 text-[14px] font-semibold text-[var(--wh-ink)] underline">
           {open ? 'Show fewer' : `Show ${all.length - SHOWN} more`}
         </button>
@@ -334,6 +351,7 @@ function FilterGroups({ filters, selection, onChange }: { filters: ProductsPage[
             title={d.name}
             values={d.values.map((v) => ({ value: String(v.value), label: valueText(d, v.value), count: v.count }))}
             ticked={ticked}
+            labelOf={(v) => valueText(d, v)}
             onToggle={(v) => onChange({ ...selection, details: { ...selection.details, [slug]: toggle(ticked, v) } })}
           />
         );
@@ -343,6 +361,7 @@ function FilterGroups({ filters, selection, onChange }: { filters: ProductsPage[
           title="Brand"
           values={filters.brands.map((b) => ({ value: b.value, label: b.value, count: b.count }))}
           ticked={selection.brands}
+          labelOf={(b) => b}
           onToggle={(v) => onChange({ ...selection, brands: toggle(selection.brands, v) })}
         />
       )}
@@ -412,7 +431,8 @@ function FilterPanel({ page, applied, sort, ids, shopId, onApply, onClose }: {
   const same = draftParams.toString() === productsParams(page.category.id, applied, sort, shopId, ids).toString();
   const preview = useProductsPreview(address, draftParams, !same);
   const shown = same ? page : (preview.data ?? page);
-  const n = shown.total;
+  // A count that couldn't be asked isn't guessed from the page behind.
+  const words = !same && preview.isError ? 'Show products' : `Show ${plural(shown.total, 'product', 'products')}`;
   return (
     <Dialog
       open
@@ -436,7 +456,7 @@ function FilterPanel({ page, applied, sort, ids, shopId, onApply, onClose }: {
         <div className="flex gap-2.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 pb-4 pt-3">
           <Button variant="ghost" className="min-h-11 text-size-15" onClick={() => setDraft(NOTHING_TICKED)}>Clear all</Button>
           <Button variant="accent" block className="min-h-11 text-size-15" onClick={() => onApply(draft)}>
-            {`Show ${plural(n, 'product', 'products')}`}
+            {words}
           </Button>
         </div>
       </div>

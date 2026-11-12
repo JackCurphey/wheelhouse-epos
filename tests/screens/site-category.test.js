@@ -39,6 +39,8 @@ const BEARINGS = Array.from({ length: 12 }, (_, i) => ({
 }));
 const DERAILLEURS = Array.from({ length: 4 }, (_, i) => ({ id: 300 + i, name: '[Derailleur]', brand: '[Brand]', pricePence: 3000 + 100 * i, ready: true, d: { 5: [10, 11, 12, 12][i] } }));
 const OTHER = Array.from({ length: 3 }, (_, i) => ({ id: 400 + i, name: '[Product]', brand: '[Brand]', pricePence: 2000 + 100 * i, ready: true, d: {} }));
+// The first [Product] has details in two units, for the card's line.
+OTHER[0].cardDetails = [{ name: '[Length]', value: 120, unit: 'mm' }, { name: '[Weight]', value: 300, unit: 'g' }];
 
 const CATS = {
   10: { category: { id: 10, name: 'Bearings', path: 'Bearings', parentId: null }, types: [], details: BEARING_DETAILS, items: BEARINGS },
@@ -79,7 +81,8 @@ function productsAnswer(url) {
       category: cat.category,
       types: cat.types,
       products: sorted.slice(after, after + 6).map((p) => ({
-        id: p.id, name: p.name, brand: p.brand, photo: null, pricePence: p.pricePence, priceHighPence: null, details: [],
+        id: p.id, name: p.name, brand: p.brand, photo: null, pricePence: p.pricePence, priceHighPence: null,
+        details: p.cardDetails ?? cat.details.filter((x) => p.d[x.id] != null).map((x) => ({ name: x.name, value: p.d[x.id], unit: x.unit })),
         stock: shop ? { line: p.ready ? 'ready' : 'sold-out', shop: shop.name } : { line: 'none' },
       })),
       total: sorted.length,
@@ -104,6 +107,19 @@ const filters = () => r.ui.getByRole('complementary', { name: 'Filters' });
 const legends = (root) => [...root.querySelectorAll('fieldset > legend')].map((l) => l.textContent);
 const countLine = async (text) => r.ui.findByText(text, { selector: '[aria-live="polite"]' });
 const rtl = () => import('@testing-library/react');
+async function cleanupNow() {
+  const { cleanup } = await import('@testing-library/react');
+  cleanup();
+  r.client.clear();
+  r.uninstall();
+  r = undefined;
+}
+const deferred = () => { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; };
+// An answer held back until `release()`, for asks `match` picks out.
+function holding(match) {
+  const gate = deferred();
+  return { answer: (url) => (match(new URL(url, 'http://localhost').searchParams) ? gate.promise.then(() => productsAnswer(url)) : productsAnswer(url)), release: () => gate.resolve() };
+}
 
 // ---------- 4.1 wb-category and wb-category-filtered ----------
 
@@ -464,4 +480,157 @@ test('on a phone, Close filters and Esc throw the panel’s ticks away and give 
   assert.ok(ui.queryByRole('dialog', { name: 'Filter' }) === null);
   assert.ok(document.activeElement === ui.getByRole('button', { name: 'Filter' }));
   assert.equal(search().toString(), 'inner-diameter=30');
+});
+
+// ---------- Review fixes ----------
+
+test('while a new answer loads, the old one never shows the empty-category words or a wrong count', async () => {
+  let hold = null;
+  r = await open('/shop/10?ready=1&inner-diameter=30&height=10', { products: (url) => (hold ? hold.answer(url) : productsAnswer(url)) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  assert.ok(await countLine('Nothing matches'));
+  const seen = [];
+  const watch = new window.MutationObserver(() => { seen.push(main()?.textContent ?? ''); });
+  watch.observe(document.body, { subtree: true, childList: true, characterData: true });
+  hold = holding((q) => !q.has('d1'));
+  fireEvent.click(ui.getByRole('button', { name: 'Clear all filters' }));
+  await new Promise((done) => setTimeout(done, 20));
+  assert.ok(!main().textContent.includes('hasn’t put any products'), 'no empty-category words while loading');
+  hold.release();
+  assert.ok(await countLine('12 products'));
+  watch.disconnect();
+  assert.ok(!seen.some((t) => t.includes('hasn’t put any products')), 'the empty-category words never appeared');
+
+  // Ticking: until the answer comes, the count keeps its last wording.
+  hold = holding((q) => q.has('d1'));
+  fireEvent.click(ui.getByRole('checkbox', { name: /^30 mm/ }));
+  await new Promise((done) => setTimeout(done, 20));
+  assert.ok(ui.queryByText('12 products match', { selector: '[aria-live="polite"]' }) === null, 'never the old total as "match"');
+  assert.ok(ui.getByText('12 products', { selector: '[aria-live="polite"]' }));
+  const more = ui.queryByRole('button', { name: 'Show more' });
+  assert.ok(more === null || more.disabled, 'Show more waits for the new answer');
+  hold.release();
+  assert.ok(await countLine('3 products match'));
+});
+
+test('Back to an address ticking a value past the first three opens its group', async () => {
+  r = await open('/shop/10');
+  const { ui } = r;
+  const { act } = await rtl();
+  await countLine('12 products');
+  await act(() => r.router.navigate('/shop/10?inner-diameter=35'));
+  assert.ok(await countLine('3 products match'));
+  const box = ui.getByRole('checkbox', { name: /^35 mm/ });
+  assert.ok(box.checked);
+});
+
+test('a ticked value no product has keeps its unit, and "30.0" in the address ticks 30', async () => {
+  r = await open('/shop/10?height=10&inner-diameter=30.0');
+  const { ui } = r;
+  assert.ok(await countLine('Nothing matches'));
+  const box = ui.getByRole('checkbox', { name: /^30 mm/ });
+  assert.ok(box.checked);
+  assert.ok(box.closest('label').textContent.startsWith('30 mm0'), box.closest('label').textContent);
+  assert.deepEqual(lastAsked().getAll('d1'), ['30']);
+});
+
+test('a filter change after Show more doesn’t move focus to a product later', async () => {
+  let hold = null;
+  r = await open('/shop/10', { products: (url) => (hold ? hold.answer(url) : productsAnswer(url)) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await countLine('12 products');
+  hold = holding((q) => q.get('after') === '6');
+  fireEvent.click(ui.getByRole('button', { name: 'Show more' }));
+  fireEvent.click(ui.getByRole('checkbox', { name: /^30 mm/ }));
+  assert.ok(await countLine('3 products match'));
+  hold.release();
+  await new Promise((done) => setTimeout(done, 20));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }));
+  assert.ok(await countLine('12 products'));
+  await new Promise((done) => setTimeout(done, 20));
+  assert.ok(document.activeElement === ui.getByRole('heading', { level: 1, name: 'Bearings' }), `focus is on ${document.activeElement?.outerHTML.slice(0, 80)}`);
+});
+
+test('on a phone, a failed count reads "Show products", and widening the window closes the panel', async () => {
+  let fail = false;
+  r = await open('/shop/10', { media: PHONE, products: (url) => (fail ? { status: 500, body: { error: '[error]' } } : productsAnswer(url)) });
+  const { ui, setMedia } = r;
+  const { fireEvent, within, act } = await rtl();
+  await countLine('12 products');
+  fireEvent.click(ui.getByRole('button', { name: 'Filter' }));
+  let panel = ui.getByRole('dialog', { name: 'Filter' });
+  fail = true;
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /^30 mm/ }));
+  assert.ok(await within(panel).findByRole('button', { name: 'Show products' }));
+  assert.ok(within(panel).queryByRole('button', { name: /^Show \d+ products?$/ }) === null);
+  fail = false;
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /^30 mm/ }));
+  assert.ok(await within(panel).findByRole('button', { name: 'Show 12 products' }));
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /^15 mm/ }));
+  act(() => setMedia(() => false));
+  assert.ok(ui.queryByRole('dialog', { name: 'Filter' }) === null, 'the panel closes on a wide window');
+  assert.equal(search().toString(), '', 'its ticks are thrown away');
+  assert.ok(await ui.findByRole('complementary', { name: 'Filters' }));
+  act(() => setMedia(PHONE));
+  fireEvent.click(ui.getByRole('button', { name: 'Filter' }));
+  panel = ui.getByRole('dialog', { name: 'Filter' });
+  assert.ok(!within(panel).getByRole('checkbox', { name: /^15 mm/ }).checked);
+});
+
+test('a utm_ key in the address is not a detail: no extra ask, nothing ticked, and it stays', async () => {
+  r = await open('/shop/10?utm_source=[source]');
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  assert.ok(await countLine('12 products'));
+  assert.equal(asked().length, 1);
+  fireEvent.click(ui.getByRole('checkbox', { name: /^30 mm/ }));
+  assert.ok(await countLine('3 products match'));
+  assert.equal(search().get('utm_source'), '[source]');
+});
+
+test('a category page’s cards show their details: one unit once at the end, mixed units each with its own', async () => {
+  r = await open('/shop/10');
+  const { ui } = r;
+  await countLine('12 products');
+  const line = (card) => [...card.querySelectorAll('span')].map((x) => x.textContent);
+  assert.ok(line(cards()[0]).includes('10 × 22 × 7 mm'), line(cards()[0]).join(' | '));
+  await cleanupNow();
+  r = await open('/shop/22');
+  await countLine('3 products');
+  assert.ok(line(cards()[0]).includes('120 mm · 300 g'), line(cards()[0]).join(' | '));
+  assert.equal(cards()[1].querySelectorAll('span').length, line(cards()[1]).length);
+  assert.ok(!line(cards()[1]).some((t) => / × | · /.test(t)));
+  void ui;
+});
+
+test('removing a chip moves focus to the next chip, then to the heading; Clear all moves it to the heading', async () => {
+  r = await open('/shop/10?ready=1&inner-diameter=30');
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  assert.ok(await countLine('2 products match'));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove filter Ready today at Bolton' }));
+  assert.ok(await countLine('3 products match'));
+  assert.ok(document.activeElement === ui.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }));
+  assert.ok(await countLine('12 products'));
+  assert.ok(document.activeElement === ui.getByRole('heading', { level: 1, name: 'Bearings' }));
+  fireEvent.click(ui.getByRole('checkbox', { name: /^30 mm/ }));
+  assert.ok(await countLine('3 products match'));
+  fireEvent.click(ui.getByRole('button', { name: 'Clear all' }));
+  assert.ok(await countLine('12 products'));
+  assert.ok(document.activeElement === ui.getByRole('heading', { level: 1, name: 'Bearings' }));
+});
+
+test('on a phone, one result reads "Show 1 product"', async () => {
+  r = await open('/shop/10', { media: PHONE });
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await countLine('12 products');
+  fireEvent.click(ui.getByRole('button', { name: 'Filter' }));
+  const panel = ui.getByRole('dialog', { name: 'Filter' });
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /^30 mm/ }));
+  fireEvent.click(within(panel).getByRole('checkbox', { name: /^\[Second brand\]/ }));
+  assert.ok(await within(panel).findByRole('button', { name: 'Show 1 product' }));
 });
