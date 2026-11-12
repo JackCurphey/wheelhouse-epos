@@ -4,7 +4,7 @@
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  openWebsite, closeWebsite, calls, STAFF, OFF_NEVER, ON_CHANGES, ON_CLEAN, OFF_CHANGES, HISTORY, parts,
+  openWebsite, closeWebsite, calls, STAFF, OFF_NEVER, ON_CHANGES, ON_CLEAN, OFF_CHANGES, HISTORY, parts, tools,
 } from '../helpers/website-screen.js';
 
 afterEach(closeWebsite);
@@ -175,8 +175,9 @@ test('Turn off turns the website off', async () => {
   await waitFor(() => assert.equal(calls.filter((c) => c.path === '/api/website/turn-off' && c.method === 'POST').length, 1));
 });
 
-test('a tracking tool that is on shows in its row with the cookie choice', async () => {
-  const { ui } = await openWebsite(PAGE, { answers: served({ ...ON_CLEAN, tracking: [{ name: 'Google Analytics' }] }) });
+test('a tracking tool that is on shows in its row with the cookie choice; one waiting for its ID does not', async () => {
+  const tracking = tools({ google_analytics: { id: 'G-PSW1MY7HB4', on: true }, meta_pixel: { id: 'x!', on: true, wrong: true } });
+  const { ui } = await openWebsite(PAGE, { answers: served({ ...ON_CLEAN, tracking }) });
   assert.ok(await ui.findByText('Google Analytics · cookie choice on'));
 });
 

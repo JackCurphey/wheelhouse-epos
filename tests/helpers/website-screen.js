@@ -18,6 +18,20 @@ const PART_LIST = [
 export const parts = (unchecked = ['collection_returns', 'privacy']) =>
   PART_LIST.map(([key, name, page, fields]) => ({ key, name, page, ...fields, checked: !unchecked.includes(key) }));
 
+const TOOL_LIST = [
+  ['google_analytics', 'Google Analytics', 'Statistics', 'From your Google Analytics account. It starts with G-', 'That doesn’t look like a Google Analytics ID. It starts with G- and is in your Google Analytics settings.'],
+  ['microsoft_clarity', 'Microsoft Clarity', 'Statistics', '[Where to find it in Clarity]', 'That doesn’t look like a Microsoft Clarity ID. [Where to find it in Clarity]'],
+  ['meta_pixel', 'Meta (Facebook) Pixel', 'Marketing', '[Where to find it in Meta]', 'That doesn’t look like a Meta Pixel ID. [Where to find it in Meta]'],
+  ['tiktok_pixel', 'TikTok Pixel', 'Marketing', '[Where to find it in TikTok]', 'That doesn’t look like a TikTok Pixel ID. [Where to find it in TikTok]'],
+];
+
+/** The four tracking tools, all off unless `saved` gives one `{ id, on, wrong }`. */
+export const tools = (saved = {}) => TOOL_LIST.map(([tool, name, kind, idHelp, problem]) => {
+  const { id = '', on = false, wrong = false } = saved[tool] ?? {};
+  const right = Boolean(id) && !wrong;
+  return { tool, name, kind, idHelp, id, on, waiting: on && !right, idProblem: id && !right ? problem : null };
+});
+
 // Set up, off, never published: ws-page.
 export const OFF_NEVER = {
   kind: 'wheelhouse', setUp: true, isOn: false, neverPublished: true,
@@ -25,7 +39,7 @@ export const OFF_NEVER = {
   changes: [], changeCount: 0, photosWithoutDescription: 0,
   savedBy: 'Jack Lewis', savedAt: '2026-09-17T09:12:00Z',
   parts: parts(), partsToCheck: ['Collection and returns', 'Privacy'], ready: false,
-  logo: null, mainColour: '#2b2b2b', tracking: [],
+  logo: null, mainColour: '#2b2b2b', tracking: tools(),
   productCounts: { goOnline: 212, noPhoto: 14, noPrice: 3 },
   address: 'north-street.wheelhouseepos.com',
 };

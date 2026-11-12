@@ -52,11 +52,11 @@ the code. While building, run only the related test files
 
 ## 4. Tracking tools (pull request 4, about 300 lines)
 
-- [ ] 4.1 Check the ID formats for Microsoft Clarity, Meta Pixel and TikTok Pixel against each company's own help pages; note the sources in the code
-- [ ] 4.2 Test: switching a tool on saves it to the draft only; a wrong ID is kept and reported waiting; off keeps the ID; published, only valid tools reach `/api/storefront/info`, each with its kind
-- [ ] 4.3 Screen test: `ws-tracking` (four tools, kinds, the two drawn lines), `ws-tracking-on` (the cookie line, the ID field, the toast with Undo), `ws-tracking-error`
-- [ ] 4.4 Build the tracking list, route and screen to pass 4.2–4.3; the Website page's Tracking tools row shows "None — so there's no cookie choice" or the tools on
-- [ ] 4.5 Log decided-while-building 7 in your own month file
+- [x] 4.1 Check the ID formats for Microsoft Clarity, Meta Pixel and TikTok Pixel against each company's own help pages; note the sources in the code
+- [x] 4.2 Test: switching a tool on saves it to the draft only; a wrong ID is kept and reported waiting; off keeps the ID; published, only valid tools reach `/api/storefront/info`, each with its kind
+- [x] 4.3 Screen test: `ws-tracking` (four tools, kinds, the two drawn lines), `ws-tracking-on` (the cookie line, the ID field, the toast with Undo), `ws-tracking-error`
+- [x] 4.4 Build the tracking list, route and screen to pass 4.2–4.3; the Website page's Tracking tools row shows "None — so there's no cookie choice" or the tools on
+- [x] 4.5 Log decided-while-building 7 in your own month file
 - [ ] 4.6 Self-review with `reviewer`; full check
 
 ## 5. Online payments setup and Today (pull request 5, about 600 lines, risky: money and migration)

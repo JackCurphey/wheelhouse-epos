@@ -10,6 +10,19 @@ export type Part = {
   checked: boolean;
 };
 
+/** A tracking tool, as server/website-tracking.js `trackingList` sends it. */
+export type Tool = {
+  tool: string;
+  name: string;
+  kind: 'Statistics' | 'Marketing';
+  idHelp: string;
+  id: string;
+  on: boolean;
+  /** On, but its ID is missing or wrong: nothing loads until it is right. */
+  waiting: boolean;
+  idProblem: string | null;
+};
+
 export type WebsiteState = {
   kind: 'wheelhouse' | 'shopify' | null;
   setUp: boolean;
@@ -28,7 +41,7 @@ export type WebsiteState = {
   ready: boolean;
   logo: string | null;
   mainColour: string | null;
-  tracking: { name: string }[];
+  tracking: Tool[];
   productCounts: { goOnline: number; noPhoto: number; noPrice: number };
   /** Before set-up: what "Every product online" would give. */
   startCounts?: { goOnline: number; noPhoto: number; noPrice: number };
