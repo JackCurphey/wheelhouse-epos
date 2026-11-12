@@ -43,6 +43,7 @@ import { MAX_BOOKING_BODY_BYTES, MAX_PHOTO_BYTES, readBookingPhotos, sniffImage 
 import { addPhotoWithCode, photoCodeView } from '../workshop/photo-codes.js';
 import { setStopped, stopView } from '../messaging/stop-codes.js';
 import { EXPIRED as REMINDER_EXPIRED, reminderCode, reminderLinkView } from '../messaging/reminder-links.js';
+import { customerView as c2wCustomerView, orderByCode as c2wOrderByCode, ordersOfCustomer as c2wOrdersOfCustomer } from '../c2w/customer-view.js';
 import { addNote, cleanNote, customerConversation, jobNotes, MESSAGE_WORDS, NOTE_WORDS } from '../workshop/job-notes.js';
 import { saveBookingPhotos } from '../booking-photo-store.js';
 import { dataCopyFiles } from '../customer-data-copy.js';
@@ -2025,6 +2026,36 @@ export function register(route) {
     const view = await reminderLinkView(params.code);
     if (!view) return stopCodeGone(res);
     sendJson(res, 200, view);
+  });
+
+  // A Cycle to Work order's private link (cw-customer-view; cycle-to-work design 8):
+  // the allowed fields only, no sign-in made. A code that doesn't work gets the
+  // stop page's answer, so codes can't be probed.
+  // screens: cw-customer-view, cw-customer-released, cw-customer-cancelled
+  route('GET', '/api/portal/:shopSlug/c2w-links/:code', async (req, res, params, query, shop) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (stopCodeTooMany(req, res)) return;
+    const row = await c2wOrderByCode(params.code);
+    if (!row) return stopCodeGone(res);
+    sendJson(res, 200, await c2wCustomerView(row, shop.name));
+  });
+
+  // The signed-in customer's own Cycle to Work orders (ac-account-c2w, -collected),
+  // and one of them by its id; anyone else's is the same 404.
+  // screens: ac-account-c2w, ac-account-c2w-collected, cw-customer-view
+  route('GET', '/api/portal/:shopSlug/c2w-orders', async (req, res, params, query, shop) => {
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const rows = await c2wOrdersOfCustomer(ctx.login.customer_id);
+    sendJson(res, 200, await Promise.all(rows.map(async (r) => ({ id: r.id, ...(await c2wCustomerView(r, shop.name)) }))));
+  });
+  route('GET', '/api/portal/:shopSlug/c2w-orders/:id', async (req, res, params, query, shop) => {
+    const ctx = await currentCustomerSession(req, res);
+    if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+    const id = /^\d+$/.test(params.id) ? Number(params.id) : null;
+    const row = id && (await c2wOrdersOfCustomer(ctx.login.customer_id)).find((r) => r.id === id);
+    if (!row) return notFound(res, 'There is no such Cycle to Work order');
+    sendJson(res, 200, { id: row.id, ...(await c2wCustomerView(row, shop.name)) });
   });
 
   // screens: ac-stopped
