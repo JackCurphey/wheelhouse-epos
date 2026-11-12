@@ -178,3 +178,33 @@ test('a category that has gone is left out of what the saved report says', async
   assert.ok(!mine.what.includes('No such category'));
   assert.ok(typeof listSaved === 'function');
 });
+
+test('two saves of the same name at once: one is saved and the other is told the name is taken', async () => {
+  const both = await Promise.all([save({ ...items, name: 'Race' }), save({ ...items, name: 'Race' })]);
+  assert.deepEqual(both.map((r) => r.status).sort(), [201, 400], JSON.stringify(both.map((r) => r.body)));
+  assert.equal(both.find((r) => r.status === 400).body.error, TAKEN);
+});
+
+test('one saved report that no longer makes sense does not stop the rest being listed', async () => {
+  await runWithShop(owner.shop.id, async () => {
+    const login = await prepare('SELECT login_id FROM saved_reports WHERE name = ?').get('Bottles by product');
+    await prepare("INSERT INTO saved_reports (login_id, base, measure, split, period, name) VALUES (?, 'sales', 'retired-measure', 'day', 'this-week', 'Old one')").run(login.login_id);
+  });
+  const res = await as(owner)('/api/reports/saved');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(res.body.reports.some((r) => r.name === 'Old one'));
+  assert.ok(res.body.reports.some((r) => r.name === 'Bottles by product'));
+});
+
+test('limits that are too long, too many or not text are refused, and so is a broken body', async () => {
+  const many = await save({ ...items, name: 'Many', only: Array.from({ length: 51 }, (_, i) => `C${i}`) });
+  assert.equal(many.status, 400);
+  const nul = await save({ ...items, name: 'Nul', supplier: 'a\u0000b' });
+  assert.equal(nul.status, 400);
+  const longSupplier = await save({ ...items, name: 'Long', supplier: 'x'.repeat(201) });
+  assert.equal(longSupplier.status, 400);
+  const nulName = await save({ ...items, name: 'a\u0000b' });
+  assert.equal(nulName.status, 400);
+  const broken = await fetch(`${server.baseUrl}/api/reports/saved`, { method: 'POST', headers: { cookie: owner.cookie, 'content-type': 'application/json' }, body: '{nope' });
+  assert.equal(broken.status, 400);
+});

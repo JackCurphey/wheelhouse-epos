@@ -113,3 +113,26 @@ test('Your reports lists each saved report with what it is and who can see it, a
   assert.equal(box.getByRole('link', { name: /Picked/ }).getAttribute('href'), '/workshop/reports/changed?base=sales&measure=takings&split=day&period=this-week', 'Pick dates opens on the first period');
   assert.ok(box.queryByText('Start from any report, choose “Change what’s shown”, then “Save as my report”.') === null);
 });
+
+test('changing the report after saving brings Save as my report back, so the new one can be saved too', async () => {
+  const answers = served({ '/api/reports/saved': (query, method) => (method === 'POST' ? [201, { id: 7, name: 'Bottles' }] : [200, { reports: [] }]) });
+  const { ui, dialog, fireEvent } = await openSave(answers);
+  fireEvent.change(dialog.getByLabelText('Name (needed)'), { target: { value: 'Bottles' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await ui.findByText('Saved as “Bottles”. It is in Your reports on the Reports page.');
+  assert.ok(ui.queryByRole('button', { name: 'Save as my report' }) === null);
+  fireEvent.click(ui.getByRole('radio', { name: 'This month' }));
+  await ui.findByRole('radio', { name: 'This month', checked: true });
+  assert.ok(ui.queryByText(/^Saved as/) === null);
+  assert.ok(ui.getByRole('button', { name: 'Save as my report' }) !== null);
+});
+
+test('Enter in the name field saves, and a click outside the popup does not throw the name away', async () => {
+  const answers = served({ '/api/reports/saved': (query, method) => (method === 'POST' ? [201, { id: 7, name: 'Bottles' }] : [200, { reports: [] }]) });
+  const { ui, dialog, fireEvent } = await openSave(answers);
+  const input = dialog.getByLabelText('Name (needed)');
+  fireEvent.change(input, { target: { value: 'Bottles' } });
+  fireEvent.submit(input.closest('form'));
+  await ui.findByText('Saved as “Bottles”. It is in Your reports on the Reports page.');
+  assert.equal(saveCalls().length, 1);
+});

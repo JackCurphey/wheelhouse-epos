@@ -34,10 +34,11 @@ export function SaveReportDialog({ what, report, onSaved, onClose }: { what: str
   }
   const who = [{ value: 'me', label: 'Just me' }, { value: 'managers', label: 'Me and the other managers', why: NO_MANAGERS }];
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="sv-title" className="md:max-w-[520px]">
+    <Dialog open onOpenChange={(o) => { if (!o && !save.isPending) onClose(); }} dismissOnBackdrop={false} aria-labelledby="sv-title" className="md:max-w-[520px]">
       <DialogHeader>
         <div><DialogTitle id="sv-title">Save as my report</DialogTitle><DialogDescription>{what}</DialogDescription></div>
       </DialogHeader>
+      <form id="sv-form" onSubmit={(e) => { e.preventDefault(); submit(); }} className="contents">
       <DialogBody className="flex flex-col gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <label htmlFor="sv-name" className="text-size-13-5 font-semibold">Name (needed)</label>
@@ -53,9 +54,10 @@ export function SaveReportDialog({ what, report, onSaved, onClose }: { what: str
         <p className="m-0 text-sm text-[var(--wh-muted)]">It opens on the latest period each time, under “Your reports”.</p>
       </DialogBody>
       <DialogFooter>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={save.isPending} onClick={submit}>Save</Button>
+        <Button variant="ghost" disabled={save.isPending} onClick={onClose}>Cancel</Button>
+        <Button type="submit" variant="primary" disabled={save.isPending}>Save</Button>
       </DialogFooter>
+      </form>
     </Dialog>
   );
 }

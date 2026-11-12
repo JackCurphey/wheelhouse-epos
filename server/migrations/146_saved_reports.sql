@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS saved_reports (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_saved_reports_live_name ON saved_reports (shop_id, login_id, lower(name)) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_saved_reports_person ON saved_reports (shop_id, login_id) WHERE deleted_at IS NULL;
 
 ALTER TABLE saved_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_reports FORCE ROW LEVEL SECURITY;

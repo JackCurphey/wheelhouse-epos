@@ -16,11 +16,15 @@ const MAX_NAME = 80;
 function shape(row, existing) {
   const only = row.only_categories.filter((o) => existing.includes(o));
   const sel = { base: row.base, measure: row.measure, split: row.split, only, supplier: row.supplier ?? '' };
-  const { title, limitParts } = describeChoice(sel);
+  // One report that no longer makes sense (a measure since retired) must not stop the rest being listed.
+  let what = 'This report can’t be shown any more';
+  try {
+    const { title, limitParts } = describeChoice(sel);
+    what = [title, ...limitParts].join(' · ');
+  } catch { /* keep the plain words above */ }
   return {
     id: row.id, name: row.name, base: row.base, measure: row.measure, split: row.split, only, supplier: sel.supplier,
-    period: row.period, opensOn: row.period === 'dates' ? 'this-week' : row.period, shared: row.shared,
-    what: [title, ...limitParts].join(' · '),
+    period: row.period, opensOn: row.period === 'dates' ? 'this-week' : row.period, shared: row.shared, what,
   };
 }
 
@@ -34,6 +38,7 @@ export async function listSaved(loginId) {
 export function cleanName(raw) {
   const name = typeof raw === 'string' ? raw.trim() : '';
   if (!name) throw new ValidationError('Type its name');
+  if (name.includes('\u0000')) throw new ValidationError('A report’s name can’t have that character in it');
   if (name.length > MAX_NAME) throw new ValidationError(`A report’s name can be up to ${MAX_NAME} characters`);
   return name;
 }
@@ -48,9 +53,16 @@ export async function createSaved(loginId, body) {
   const name = cleanName(body.name);
   const sel = checkSaved(body);
   if (await nameIsTaken(loginId, name)) throw new ValidationError(TAKEN);
-  const row = await prepare(
-    `INSERT INTO saved_reports (login_id, base, measure, split, only_categories, supplier, period, name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
-  ).get(loginId, sel.base, sel.measure, sel.split, sel.only, sel.supplier || null, sel.period, name);
+  let row;
+  try {
+    row = await prepare(
+      `INSERT INTO saved_reports (login_id, base, measure, split, only_categories, supplier, period, name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    ).get(loginId, sel.base, sel.measure, sel.split, sel.only, sel.supplier || null, sel.period, name);
+  } catch (err) {
+    // Two saves of one name at once: the unique index is the last word, and says the same as the check above.
+    if (err.code === '23505') throw new ValidationError(TAKEN);
+    throw err;
+  }
   return shape(row, await onlyChoices());
 }

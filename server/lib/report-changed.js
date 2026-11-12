@@ -86,6 +86,9 @@ export function checkSaved(raw) {
   const again = 'Choose what to limit it to again';
   if (raw.only !== undefined && (!Array.isArray(raw.only) || !raw.only.every(text))) throw new ValidationError(again);
   if (raw.supplier !== undefined && raw.supplier !== null && !text(raw.supplier)) throw new ValidationError(again);
+  // Bounded, and no NUL (Postgres can't store one): a report is a few short choices.
+  const bad = (v) => v.length > 200 || v.includes('\u0000');
+  if ((raw.only ?? []).length > 50 || (raw.only ?? []).some(bad) || bad(raw.supplier ?? '')) throw new ValidationError(again);
   const sel = { base: raw.base, measure: raw.measure, split: raw.split, only: [...new Set(raw.only ?? [])], supplier: (raw.supplier ?? '').trim(), period: raw.period };
   const fit = fitFor({ ...sel, days: 1 }, { canSeeCosts: true });
   const why = fit.measure.find((c) => c.value === sel.measure)?.why || fit.split.find((c) => c.value === sel.split)?.why;

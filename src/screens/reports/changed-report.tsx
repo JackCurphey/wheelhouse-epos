@@ -81,13 +81,15 @@ export function ChangedReportPage() {
   const [params, setParams] = useSearchParams();
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedAs, setSavedAs] = useState<string | null>(null);
+  const [saved, setSaved] = useState<{ name: string; query: string } | null>(null);
   const base = params.get('base') === 'takings' ? 'takings' : 'sales';
   const period = params.get('period') ?? 'this-week';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
   const periodParams = new URLSearchParams({ period, ...(period === 'dates' ? { from, to } : {}) });
   const query = params.toString();
+  // The bar says it is saved only while the report on screen is the one that was saved.
+  const savedAs = saved && saved.query === query ? saved.name : null;
   const answer = useQuery({ queryKey: ['reports-changed', query], queryFn: () => apiGet<ChangedReport>(`/api/reports/changed?${query}`), retry: false });
   const report = answer.data;
 
@@ -152,7 +154,7 @@ export function ChangedReportPage() {
         <SaveReportDialog
           what={[report.title, ...(report.line.split(' · ').slice(1, -1))].join(' · ')}
           report={{ base: report.base, measure: report.measure, split: report.split, only: report.only, supplier: report.supplier, period }}
-          onClose={() => setSaving(false)} onSaved={(saved) => { setSaving(false); setSavedAs(saved.name); }}
+          onClose={() => setSaving(false)} onSaved={(s) => { setSaving(false); setSaved({ name: s.name, query }); }}
         />
       ) : null}
       {picking ? (

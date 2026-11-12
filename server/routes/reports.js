@@ -227,6 +227,7 @@ export function register(route) {
       sendJson(res, 201, await createSaved(ctx.login.id, body));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'Send the report as JSON' });
       throw err;
     }
   });
