@@ -67,6 +67,9 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
 
+    // A changed report has its own address, so a bookmark and Back work.
+    await page.goto(`${server!.baseUrl}/workshop/reports/changed?base=sales&measure=items&split=product&only=Accessories&period=this-week`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Sales: items sold by product' })).toBeVisible();
     await page.getByRole('link', { name: 'Back to Sales' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Sales' })).toBeVisible();
     await expect(page.getByRole('radio', { name: 'This week' })).toBeChecked();

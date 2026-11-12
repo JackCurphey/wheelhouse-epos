@@ -367,6 +367,9 @@ GET /api/reports/takings.csv
 GET /api/reports/days/:id/csv
 GET /api/reports/workshop
 GET /api/reports/workshop.csv
+GET /api/reports/changed
+GET /api/reports/changed/choices
+GET /api/reports/changed.csv
 GET /api/quick-buttons
 POST /api/quick-button-groups
 PUT /api/quick-button-groups/:id
@@ -380,3 +383,10 @@ GET /api/c2w/providers
 POST /api/c2w/providers
 PUT /api/c2w/providers/:id
 POST /api/c2w/providers/:id/retire
+GET /api/c2w/orders
+GET /api/c2w/count
+POST /api/c2w/orders
+GET /api/c2w/orders/:id
+GET /api/c2w/orders/:id/quote
+POST /api/c2w/orders/:id/email-quote
+POST /api/c2w/orders/:id/applied

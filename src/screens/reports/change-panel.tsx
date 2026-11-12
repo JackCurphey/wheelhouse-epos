@@ -70,7 +70,7 @@ export function ChangePanel({ base, period, initial, onClose }: {
             <fieldset className={`m-0 min-w-0 border-0 p-0 ${GROUP}`}>
               <legend className="mb-2 text-size-15 font-bold">Only <span className="font-normal text-[var(--wh-muted)]">— pick one or more</span></legend>
               <div className={CHIPS}>{data.choices.only.map((c) => <ChoiceChip key={c.value} role="checkbox" group="only" choice={c} checked={sel.only.includes(c.value)} onChoose={() => toggle(c.value)} />)}</div>
-              <span className="mt-1 text-size-14 font-semibold">Supplier</span>
+              <span className="mt-1 text-sm font-semibold">Supplier</span>
               <div role="radiogroup" aria-label="Supplier" className={CHIPS}>{data.choices.suppliers.map((c) => <ChoiceChip key={c.value || 'any'} role="radio" group="supplier" choice={c} checked={sel.supplier === c.value} onChoose={() => set({ supplier: c.value })} />)}</div>
             </fieldset>
           </>
