@@ -20,12 +20,14 @@ import { useSession } from '@/lib/auth/use-session.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { dayYear, warrantyText, type BikeWarranty } from '@/lib/warranty-words.ts';
 import { poundsText } from '@/lib/money.ts';
+import { STAGE_WORD, dayOf, longDate, orderHref, type Stage } from '@/screens/c2w/c2w-bits.tsx';
 
 /**
  * A customer's page (drawn as cs-page and cs-page-new, customer.mjs; customer
  * service review 12: one page, one history; openspec/changes/customer-page):
  * who they are with New job, Details with Edit (cs-edit), their bikes, offers,
- * and History: what's open now, then everything else, newest first.
+ * and History: what's open now, then everything else, newest first; their
+ * Cycle to Work orders among them (cs-page-c2w, cs-page-c2w-collected).
  */
 type Customer = {
   createdAt?: string;
@@ -47,6 +49,7 @@ export type Item =
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
   | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string }
+  | { kind: 'c2w_order'; id: number; stage: Stage; open: boolean; quoteRef: string; bike: string; providerName: string; holdUntil: string | null; certificateNumber: string | null; collectedAt: string | null; at: string }
   | { kind: 'account'; id: number; change: 'bank_transfer' | 'undo'; changePence: number; reference: string | null; receivedOn: string | null; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
@@ -120,6 +123,24 @@ export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSal
       </li>
     );
   }
+  // UX walk-through 5 M5: a Cycle to Work order, opening the order; "Open now"
+  // while it's open, "Earlier" once collected (cs-page-c2w, -collected).
+  if (item.kind === 'c2w_order') {
+    const sub = item.open
+      ? [`Quote ${item.quoteRef}`, item.providerName, item.holdUntil ? `held until ${longDate(item.holdUntil)}` : null]
+      : [`Quote ${item.quoteRef}`, item.certificateNumber ? `certificate ${item.certificateNumber}` : null, item.collectedAt ? `collected ${longDate(dayOf(item.collectedAt))}` : null];
+    return (
+      <li className="border-t border-[var(--wh-border)]">
+        <Link to={orderHref(item.id)} className="flex min-h-[52px] items-center gap-3 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
+          {tag('Order')}
+          <span className="flex min-w-0 grow flex-col gap-0.5">
+            <span className="text-size-15 font-semibold">{`Cycle to Work · ${item.bike} · ${STAGE_WORD[item.stage]}`}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{sub.filter(Boolean).join(' · ')}</span>
+          </span>
+        </Link>
+      </li>
+    );
+  }
   if (item.kind === 'store_credit') {
     const what = CREDIT_WORDS[item.change] ?? 'Store credit changed';
     // Only a change made by hand here; the till's own entries come with the till's half.
@@ -172,8 +193,9 @@ function History({ id }: { id: number }) {
   const onUndo = session.status === 'signed-in' && session.user.isOwner ? setUndoing : undefined;
   const items = (history.data?.items ?? []).filter((i) => !KIND[filter] || i.kind === KIND[filter]);
   // What's open now is always shown, however much came since (review); the rest eight at a time.
-  const open = items.filter((i) => i.kind === 'job' && i.open);
-  const rest = items.filter((i) => !(i.kind === 'job' && i.open));
+  const isOpen = (i: Item) => (i.kind === 'job' || i.kind === 'c2w_order') && i.open;
+  const open = items.filter(isOpen);
+  const rest = items.filter((i) => !isOpen(i));
   const earlier = all ? rest : rest.slice(0, Math.max(0, SHOWN - open.length));
   const head = (t: string, listId: string) => <span id={listId} className="pt-2.5 pb-1 text-size-13 font-bold text-[var(--wh-muted)]">{t}</span>;
   return (

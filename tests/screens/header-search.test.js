@@ -87,7 +87,8 @@ test('typing finds the jobs and the customers, grouped, each a link to its page,
   const customers = within(results.getByRole('group', { name: 'Customers' }));
   assert.equal(customers.getByRole('link', { name: 'Maya Patel' }).getAttribute('href'), '/workshop/customers/5');
   assert.ok(customers.queryByText('Customer · 07700 900142') !== null);
-  assert.ok(ui.getByRole('status').textContent === '2 results');
+  // The search's own status line: Today also has the note's (cw-today-held).
+  assert.ok(document.querySelector('[data-search-status]').textContent === '2 results');
   assert.deepEqual(searches, ['maya'], 'one search once typing stops');
 });
 

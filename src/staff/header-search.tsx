@@ -6,22 +6,25 @@ import { STATE_LABEL, diaryState, shortDay } from '@/screens/diary/rules.ts';
 import { useMedia } from '@/screens/diary/diary-bits.tsx';
 import { NavIcon } from './nav-icon.tsx';
 import { ROUTES } from './routes.ts';
+import { STAGE_WORD, longDate, orderHref, type Stage } from '@/screens/c2w/c2w-bits.tsx';
 
 /**
  * The header search (drawn as staff-search, app-map.mjs; the header's box and
  * button, diary.mjs; app map review 2; Jack, 24 Oct, answer 7;
  * openspec/changes/header-search): jobs, customers and bikes (bike-search;
- * Jack's answer of 15 Oct) from any staff page.
+ * Jack's answer of 15 Oct) from any staff page; Cycle to Work orders by name,
+ * quote or certificate number (cs-search-c2w; UX walk-through 5 M5).
  * Results are a labelled list of links, grouped as drawn, not a list of
  * options (design 2). A box in the header on a computer; on a tablet or a
  * phone a button that opens the box and its results over the page.
  */
 type Job = { id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; customerName: string | null; bikeLabel: string | null };
-type Customer = { id: number; name: string; phone: string | null };
+type Customer = { id: number; name: string; phone: string | null; c2wOrders?: number };
+type C2wFound = { id: number; customerName: string; bike: string; stage: Stage; quoteRef: string; holdUntil: string | null; certificateNumber: string | null };
 type Bike = { id: number; make: string; model: string; colour: string; serialNumber: string; customerName: string };
-type Found = { jobs: Job[]; customers: Customer[]; bikes: Bike[] };
+type Found = { jobs: Job[]; customers: Customer[]; bikes: Bike[]; c2wOrders?: C2wFound[] };
 const LABEL = 'Search jobs, customers and bikes';
-const total = (f: Found) => f.jobs.length + f.customers.length + (f.bikes?.length ?? 0);
+const total = (f: Found) => f.jobs.length + f.customers.length + (f.bikes?.length ?? 0) + (f.c2wOrders?.length ?? 0);
 
 /** What was typed, once typing has paused (250 ms). */
 function useSettled(value: string, ms = 250) {
@@ -43,6 +46,16 @@ function useSearch(typed: string) {
 function jobLine(j: Job) {
   const state = diaryState({ bookingState: j.bookingState, workState: j.workState });
   return [j.bikeLabel, j.title, state === 'hidden' ? null : STATE_LABEL[state], j.jobDate ? shortDay(j.jobDate) : null].filter(Boolean).join(' · ');
+}
+
+// "Quote CW-12 · Waiting for the certificate · held until 8 September 2026" (cs-search-c2w).
+function c2wLine(o: C2wFound) {
+  return [`Quote ${o.quoteRef}`, STAGE_WORD[o.stage], o.holdUntil ? `held until ${longDate(o.holdUntil)}` : null].filter(Boolean).join(' · ');
+}
+// "Customer · 07700 900 142 · 1 Cycle to Work order".
+function customerLine(c: Customer) {
+  const orders = c.c2wOrders ? `${c.c2wOrders} Cycle to Work ${c.c2wOrders === 1 ? 'order' : 'orders'}` : null;
+  return ['Customer', c.phone, orders].filter(Boolean).join(' · ');
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
@@ -78,6 +91,14 @@ function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => 
     <>
       <section aria-label="Search results" className="flex flex-col gap-3 bg-[var(--wh-panel)] px-2 py-2.5">
         {count === 0 ? <p className="m-0 px-3 py-1.5 text-sm text-[var(--wh-muted)]">{none}</p> : null}
+        {/* cs-search-c2w: the orders first, as drawn. */}
+        {found.c2wOrders?.length ? (
+          <Group title="Cycle to Work orders">
+            {found.c2wOrders.map((o) => (
+              <Row key={o.id} to={orderHref(o.id)} onPick={onPick} main={`${o.customerName} · Cycle to Work · ${o.bike}`} sub={c2wLine(o)} />
+            ))}
+          </Group>
+        ) : null}
         {found.jobs.length ? (
           <Group title="Jobs">
             {found.jobs.map((j) => (
@@ -88,7 +109,7 @@ function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => 
         {found.customers.length ? (
           <Group title="Customers">
             {found.customers.map((c) => (
-              <Row key={c.id} to={`${ROUTES.customers}/${c.id}`} onPick={onPick} main={c.name} sub={c.phone ? `Customer · ${c.phone}` : 'Customer'} />
+              <Row key={c.id} to={`${ROUTES.customers}/${c.id}`} onPick={onPick} main={c.name} sub={customerLine(c)} />
             ))}
           </Group>
         ) : null}
@@ -101,6 +122,7 @@ function Results({ q, found, onPick }: { q: string; found: Found; onPick: () => 
             ))}
           </Group>
         ) : null}
+        {found.c2wOrders?.length ? <p className="m-0 px-3 pt-1 text-size-13 text-[var(--wh-muted)]">Cycle to Work orders are found by name, quote number or certificate number.</p> : null}
       </section>
     </>
   );
