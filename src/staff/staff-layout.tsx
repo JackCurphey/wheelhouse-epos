@@ -37,10 +37,11 @@ const ITEM_ON = 'bg-[var(--sidebar-primary)] font-bold shadow-[inset_3px_0_0_var
 
 /**
  * Cycle to Work's count: the orders due or late (decision M3; c2w.mjs countIn,
- * drawn on the full sidebar only). Nothing shows at none.
+ * drawn on the full sidebar only). Nothing shows at none. Asked again each
+ * minute and on coming back to the window, as Today's lists are.
  */
 function useC2wCount(on: boolean): number | null {
-  const count = useQuery({ queryKey: ['c2w-count'], queryFn: () => apiGet<{ count: number }>('/api/c2w/count'), enabled: on }).data?.count;
+  const count = useQuery({ queryKey: ['c2w-count'], queryFn: () => apiGet<{ count: number }>('/api/c2w/count'), enabled: on, refetchInterval: 60_000, refetchOnWindowFocus: true }).data?.count;
   return on && typeof count === 'number' && count > 0 ? count : null;
 }
 

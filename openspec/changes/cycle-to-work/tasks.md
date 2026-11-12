@@ -57,10 +57,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 4.1 Screen test: `cw-list` and `cw-list-owner` — groups, row buttons, top line; `cw-first-use` with its two buttons
 - [x] 4.2 Screen test: `cw-new` and `cw-new-not-in-stock` — fields, the Bike lines, the two ticks, Cancel and Make the quote; + New customer (edge 6c)
 - [x] 4.3 Screen test: `cw-quote` and `cw-quote-revised` — every drawn line, "LOGO" placeholder, Print and Email
-- [x] 4.4 Screen test: `cw-order-held` and `cw-more` — heading, Who pays what, next-step buttons, "What's happened"
+- [x] 4.4 Screen test: `cw-order-held` — heading, stages, the next step's message, Who pays what, Email the quote again and Print the quote, "What's happened", Customer; the owner's provider line with its commission (from `cw-more`). The next-step buttons come with the pull requests that build their steps (5–8); the More… menu is 4.8
 - [x] 4.5 Build `src/screens/c2w/` to pass 4.1–4.4, with the sidebar count
 - [x] 4.6 Log decided-while-building 1, 3 and 4 (design) in your own month file
 - [ ] 4.7 Self-review with `reviewer`; full check
+- [ ] 4.8 More… menu and the Change steps (`cw-more`, and `cw-quote-revised`'s message): change the bike or size, the accessories or the provider, each making a revised quote that is sent only on Email. Left open for whoever builds the revised quote; the drawn menu also lists "Release the bike" (5.3, also a button on the order page) and "Cancel the order…" (8.5)
 
 ## 5. Holding bikes and stock (pull request 5, about 450 lines, risky: stock)
 

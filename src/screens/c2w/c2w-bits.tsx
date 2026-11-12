@@ -14,7 +14,7 @@ export type Stage = 'quote' | 'waiting' | 'certificate' | 'ready' | 'collected' 
 export type Next = 'choose' | 'order' | 'certificate' | 'ready' | 'handover' | 'paid' | null;
 export type C2wOrder = {
   id: number; stage: Stage; quoteRef: string; customerId: number; customerName: string; customerPhone: string | null; customerEmail: string | null;
-  providerId: number; providerName: string; productId: number; bike: string; siteName: string | null;
+  providerId: number; providerName: string; productId: number; bike: string; siteName: string | null; onOrder: boolean;
   quoteGivenAt: string; quoteRevisedAt: string | null; validUntil: string; holdUntil: string | null; holdWanted: boolean;
   accessories: { productId: number; name: string; pricePence: number }[]; totalPence: number;
   appliedAt: string | null; applicationReference: string | null; certificateNumber: string | null; certificatePence: number | null;
@@ -36,8 +36,6 @@ export const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 export const possessive = (name: string) => `${name}’s`;
 export const mono = 'font-[family-name:var(--wh-font-mono)]';
 
-/** The shop's day today, as YYYY-MM-DD. */
-export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
 export function addDays(day: string, n: number) {
   const d = new Date(`${day}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
@@ -48,6 +46,8 @@ export const daysBetween = (from: string, to: string) => Math.round((Date.parse(
 export const longDate = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 /** A moment's day in the shop. */
 export const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+/** The bike as a row and The order say it: on order, or not in stock (c2w.mjs listPage, details). */
+export const bikeLine = (o: C2wOrder) => (o.onOrder ? `${o.bike} · on order` : o.inStock ? o.bike : `${o.bike} · not in stock`);
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The quote's closing paragraph, as the server words it (server/c2w/orders.js quoteClosing). */

@@ -96,6 +96,7 @@ export function serializeOrder(r) {
     // The customer's number and email, and the site's name, for the order page (cw-order-held; PR 4).
     customerPhone: r.customer_phone ?? null, customerEmail: r.customer_email ?? null,
     productId: r.product_id, bike: r.bike_name, siteId: r.site_id, siteName: r.site_name ?? null, frameId: r.frame_id,
+    onOrder: Boolean(r.on_order),
     quoteGivenAt: iso(r.quote_given_at), quoteRevisedAt: iso(r.quote_revised_at),
     validUntil: r.valid_until_day, holdUntil: r.hold_until_day, holdWanted: r.hold_wanted,
     accessories: r.accessories, totalPence: r.total_pence,

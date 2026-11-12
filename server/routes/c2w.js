@@ -97,7 +97,8 @@ export function register(route) {
     const groups = Object.fromEntries(Object.entries(GROUPS).map(([g, stages]) => [g, rows.filter((r) => stages.includes(r.stage))
       .map((r) => ({ ...serializeOrder(r), next: nextFor(r, settings.order_rule, today) }))]));
     const providers = (await db.prepare('SELECT count(*)::int AS n FROM c2w_providers WHERE retired_at IS NULL').get()).n;
-    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, tz, costs), providers });
+    // The shop's day, for the screens' dates (pull request 4), as the reports send it.
+    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, tz, costs), providers, today });
   });
 
   route('GET', '/api/c2w/count', async (req, res) => {
@@ -162,7 +163,7 @@ export function register(route) {
   route('GET', '/api/c2w/orders/:id', async (req, res, params) => {
     const row = await loadOrder(Number(params.id));
     if (!row) return notFound(res);
-    sendJson(res, 200, { order: { ...serializeOrder(row), events: await eventsOf(row.id) } });
+    sendJson(res, 200, { order: { ...serializeOrder(row), events: await eventsOf(row.id) }, today: shopToday(await shopTimeZone()) });
   });
 
   // What the printed quote shows (cw-quote).

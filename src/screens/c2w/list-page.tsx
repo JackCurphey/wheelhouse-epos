@@ -7,7 +7,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { NewOrder } from './new-order.tsx';
 import {
-  Badge, Box, Page, daysBetween, dayOf, linkClass, longDate, note, orderHref, plural, possessive, pounds, today, useC2wSettings, type C2wOrder,
+  Badge, Box, Page, daysBetween, dayOf, linkClass, longDate, note, orderHref, plural, possessive, pounds, bikeLine, useC2wSettings, type C2wOrder,
 } from './c2w-bits.tsx';
 
 /**
@@ -21,7 +21,7 @@ type Group = 'waiting' | 'certificate' | 'ready' | 'collected' | 'paid';
 type List = {
   groups: Record<Group, C2wOrder[]>;
   counts: { holdEndingSoon: number; holdEnded: number; readyToOrder: number; noCertificate: number; paymentLate: number; owedPence?: number };
-  count: number; providers: number;
+  count: number; providers: number; today: string;
 };
 const TITLES: [Group, string, string?][] = [
   ['waiting', 'Waiting for the certificate', 'Bikes in stock are held for the customer. Ones to order follow your rule in Settings.'],
@@ -31,10 +31,9 @@ const TITLES: [Group, string, string?][] = [
   ['paid', 'Paid · last 30 days'],
 ];
 export const C2W_SETTINGS = (fold: string) => `${ROUTES.settings}?room=front-desk&fold=${fold}`;
-const dayName = () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' }).replace(',', '');
+const dayName = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(',', '');
 
-function Status({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
-  const now = today();
+function Status({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null; now: string }) {
   if (o.stage === 'collected' && o.expectedBy && o.expectedPence !== null) {
     const late = daysBetween(o.expectedBy, now);
     return late > 0
@@ -42,6 +41,7 @@ function Status({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
       : <>{`Expected ${pounds(o.expectedPence)} by ${longDate(o.expectedBy)}`}</>;
   }
   if (o.stage === 'paid' && o.paidOn && o.paidPence !== null) return <>{`Paid ${pounds(o.paidPence)} on ${longDate(o.paidOn)}`}</>;
+  // "Due from [supplier] [date]" for a bike on order waits for pull request 6, which orders it (logged).
   if (o.stage === 'ready' && o.certificateNumber) return <>{`Certificate ${o.certificateNumber} · put aside`}</>;
   if (o.stage !== 'quote' && o.stage !== 'waiting') return null;
   if (o.holdUntil) {
@@ -55,8 +55,8 @@ function Status({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
   return <>{said}{o.next === 'order' ? <><br /><Badge tone="blue">Ready to order</Badge></> : null}</>;
 }
 
-function Row({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
-  const late = o.stage === 'collected' && o.expectedBy !== null && o.expectedBy < today();
+function Row({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null; now: string }) {
+  const late = o.stage === 'collected' && o.expectedBy !== null && o.expectedBy < now;
   const open = o.stage === 'collected' || o.stage === 'paid' || o.stage === 'certificate' || o.stage === 'ready';
   return (
     <li className="grid grid-cols-1 items-center gap-1.5 border-t border-[var(--wh-border)] py-3 md:grid-cols-[200px_minmax(0,1fr)_230px_190px] md:gap-4">
@@ -65,11 +65,11 @@ function Row({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
         <span className="text-size-13 text-[var(--wh-muted)]">{`Quote ${o.quoteRef}`}</span>
       </Link>
       <span className="flex flex-col gap-[3px] text-sm">
-        <span>{o.inStock ? o.bike : `${o.bike} · not in stock`}</span>
+        <span>{bikeLine(o)}</span>
         <span className="text-[var(--wh-muted)]">{o.providerName}</span>
       </span>
       <span className="text-sm">
-        <Status o={o} remindDays={remindDays} />
+        <Status o={o} remindDays={remindDays} now={now} />
       </span>
       <span className="justify-self-start md:justify-self-end">
         {open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}
@@ -78,7 +78,7 @@ function Row({ o, remindDays }: { o: C2wOrder; remindDays: number | null }) {
   );
 }
 
-function TopLine({ list, owner, action }: { list: List; owner: boolean; action: ReactNode }) {
+function TopLine({ list, action }: { list: List; action: ReactNode }) {
   const c = list.counts;
   const items: [number, string, 'amber' | 'blue'][] = [
     [c.holdEnded, plural(c.holdEnded, 'hold ended — choose', 'holds ended — choose'), 'amber'],
@@ -91,7 +91,7 @@ function TopLine({ list, owner, action }: { list: List; owner: boolean; action: 
     <div className="flex flex-wrap items-center justify-between gap-2.5">
       <p className="m-0 inline-flex flex-wrap items-center gap-x-3.5 gap-y-2 text-size-15">
         {items.filter(([n]) => n > 0).map(([, text, tone]) => <Badge key={text} tone={tone}>{text}</Badge>)}
-        {owner && c.owedPence !== undefined ? <span className="inline-flex min-h-11 items-center font-semibold">{`Owed by providers ${pounds(c.owedPence)} · ${c.paymentLate} late`}</span> : null}
+        {c.owedPence !== undefined ? <span className="inline-flex min-h-11 items-center font-semibold">{`Owed by providers ${pounds(c.owedPence)} · ${c.paymentLate} late`}</span> : null}
       </p>
       {action}
     </div>
@@ -137,8 +137,8 @@ export function C2wListPage() {
     : owner ? <Link to={C2W_SETTINGS('c2w-providers')} className={buttonVariants({ variant: 'accent' })}>+ New Cycle to Work order</Link> : null;
   return (
     <Page>
-      <p className={note}>{`${dayName()} · ${shop}`}</p>
-      <TopLine list={l} owner={owner} action={start} />
+      <p className={note}>{`${dayName(l.today)} · ${shop}`}</p>
+      <TopLine list={l} action={start} />
       {groups.length === 0 ? (
         <Box label="cw-none">
           <h3 id="cw-none" className="m-0 text-size-17 font-bold">No Cycle to Work orders yet</h3>
@@ -150,11 +150,11 @@ export function C2wListPage() {
           <h2 id={`cw-g-${g}`} className="m-0 text-size-17 font-bold">{`${title} · ${l.groups[g].length}`}</h2>
           {sub ? <p className={note}>{sub}</p> : null}
           <ul aria-labelledby={`cw-g-${g}`} className="m-0 list-none p-0">
-            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} />)}
+            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} now={l.today} />)}
           </ul>
         </Box>
       ))}
-      {starting ? <NewOrder onClose={() => setStarting(false)} /> : null}
+      {starting ? <NewOrder today={l.today} onClose={() => setStarting(false)} /> : null}
     </Page>
   );
 }

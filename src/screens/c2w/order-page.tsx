@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, ApiError } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,11 @@ import { ROUTES } from '@/staff/routes.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
 import { customerHref } from '@/screens/customers/customers-page.tsx';
 import {
-  Back, Box, Kv, Msg, Page, daysBetween, dayOf, firstName, linkClass, longDate, mono, note, plural, pounds, quoteHref, today,
+  Back, Box, Kv, Msg, Page, daysBetween, dayOf, firstName, linkClass, longDate, mono, note, plural, pounds, bikeLine,
   useAllProviders, useC2wSettings, type C2wEvent, type C2wOrder, type Provider,
 } from './c2w-bits.tsx';
-import { useEmailQuote } from './quote-page.tsx';
+import { printPaper } from '@/screens/till/receipt.tsx';
+import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
@@ -47,11 +48,11 @@ function Stages({ o }: { o: Full }) {
   );
 }
 
-function NextStep({ o, rule, remindDays }: { o: Full; rule: string | undefined; remindDays: number | null }) {
+function NextStep({ o, rule, remindDays, now }: { o: Full; rule: string | undefined; remindDays: number | null; now: string }) {
   if (o.stage !== 'quote' && o.stage !== 'waiting') return null;
   const name = firstName(o.customerName);
   if (o.holdUntil) {
-    const left = daysBetween(today(), o.holdUntil);
+    const left = daysBetween(now, o.holdUntil);
     return (
       <Box label="cw-next">
         <h3 id="cw-next" className="m-0 text-size-17 font-bold">Next: the certificate</h3>
@@ -119,7 +120,17 @@ function History({ o }: { o: Full }) {
 const commission = (p: Provider) => (p.commissionKind === undefined || p.commissionValue == null ? null : p.commissionKind === 'percent' ? `${p.commissionValue / 100}%` : pounds(p.commissionValue));
 
 function Details({ o, provider, onEmail, busy }: { o: Full; provider: Provider | undefined; onEmail: () => void; busy: boolean }) {
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { show } = useSavedNote();
+  // The quote on its own paper, as receipts print (printPaper), without leaving the order.
+  async function print() {
+    try {
+      const { quote } = await queryClient.fetchQuery({ queryKey: quoteKey(o.id), queryFn: () => getQuote(o.id) });
+      printPaper(<QuoteDoc q={quote} paper />);
+    } catch {
+      show({ text: 'Wheelhouse couldn’t load the quote to print. Try again in a moment.', failed: true, action: { label: 'Try again', run: () => void print() } });
+    }
+  }
   const extrasPence = o.accessories.reduce((n, a) => n + a.pricePence, 0);
   // Until the certificate, the provider pays the order, or the bike only when its accessories aren't inside.
   const providerPays = o.certificatePence ?? (provider && !provider.accessoriesInside ? o.totalPence - extrasPence : o.totalPence);
@@ -128,7 +139,7 @@ function Details({ o, provider, onEmail, busy }: { o: Full; provider: Provider |
     <Box label="cw-order">
       <h3 id="cw-order" className="m-0 text-size-17 font-bold">The order</h3>
       <div>
-        <Kv k="Bike">{o.inStock ? o.bike : `${o.bike} · not in stock`}</Kv>
+        <Kv k="Bike">{bikeLine(o)}</Kv>
         <Kv k="Accessories">{o.accessories.length ? o.accessories.map((a) => a.name).join(' · ') : 'None'}</Kv>
         <Kv k="Provider">{cut ? `${o.providerName} · commission ${cut}` : o.providerName}</Kv>
         <Kv k="Expected from the provider">{o.expectedPence !== null && o.expectedBy ? <span className={mono}>{`${pounds(o.expectedPence)} by ${longDate(o.expectedBy)}`}</span> : 'After collection'}</Kv>
@@ -140,8 +151,8 @@ function Details({ o, provider, onEmail, busy }: { o: Full; provider: Provider |
         <Kv k={`${firstName(o.customerName)} pays at collection`} strong><span className={mono}>{pounds(Math.max(0, o.totalPence - providerPays))}</span></Kv>
       </div>
       <div className="flex flex-wrap gap-2.5">
-        <Button variant="default" disabled={busy} onClick={onEmail}>Email the quote again</Button>
-        <Button variant="default" onClick={() => navigate(quoteHref(o.id), { state: { print: true } })}>Print the quote</Button>
+        {o.customerEmail ? <Button variant="default" disabled={busy} onClick={onEmail}>Email the quote again</Button> : null}
+        <Button variant="default" onClick={() => void print()}>Print the quote</Button>
       </div>
     </Box>
   );
@@ -169,17 +180,23 @@ function OrderBody() {
   const session = useSession();
   const shop = session.status === 'signed-in' ? session.shop.name : '';
   const location = useLocation();
+  const navigate = useNavigate();
   const { show } = useSavedNote();
-  const order = useQuery({ queryKey: ['c2w-order', id], queryFn: () => apiGet<{ order: Full }>(`/api/c2w/orders/${id}`), retry: false, enabled: known });
+  const order = useQuery({ queryKey: ['c2w-order', id], queryFn: () => apiGet<{ order: Full; today: string }>(`/api/c2w/orders/${id}`), retry: false, enabled: known });
   const settings = useC2wSettings().data?.settings;
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
   const shown = useRef(false);
-  // The note New order sends: "Quote emailed to … Bike held until …" (cw-order-held).
+  // The note New order sends (cw-order-held), shown once: the address is cleared
+  // of it, so a reload or Back doesn't show it again. An email that didn't go
+  // offers Try again.
   useEffect(() => {
-    const sent = (location.state as { note?: { text: string; failed: boolean } } | null)?.note;
-    if (sent && !shown.current) { shown.current = true; show(sent); }
-  }, [location.state, show]);
+    const sent = (location.state as { note?: { text: string; failed: boolean; retry?: boolean } } | null)?.note;
+    if (!sent || shown.current) return;
+    shown.current = true;
+    show(sent.retry ? { text: sent.text, failed: true, action: { label: 'Try again', run: () => void send() } } : sent);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, show, send]);
 
   if (!known || order.isError) {
     return <Page><Back to={ROUTES.c2w}>Cycle to Work</Back><p role="alert" className="m-0 text-sm">{!known || (order.error instanceof ApiError && order.error.status === 404) ? 'Order not found' : 'Wheelhouse couldn’t load this order. Try again in a moment.'}</p></Page>;
@@ -187,8 +204,8 @@ function OrderBody() {
   const o = order.data?.order;
   if (!o) return <Page><Back to={ROUTES.c2w}>Cycle to Work</Back><p className={note}>Loading…</p></Page>;
   const provider = providers?.find((p) => p.id === o.providerId);
-  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} /><History o={o} /></>;
-  const right = <><Details o={o} provider={provider} onEmail={() => void send(o.customerEmail)} busy={busy} /><Customer o={o} /></>;
+  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={order.data?.today ?? ''} /><History o={o} /></>;
+  const right = <><Details o={o} provider={provider} onEmail={() => void send()} busy={busy} /><Customer o={o} /></>;
   return (
     <Page>
       <Back to={ROUTES.c2w}>Cycle to Work</Back>

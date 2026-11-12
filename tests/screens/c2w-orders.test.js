@@ -18,11 +18,13 @@ const LOCK = { id: 22, name: '[Accessory]', sku: null, pricePence: 4000, price: 
 const PROVIDER = { id: 3, name: '[Provider]', paysInDays: 30, accessoriesInside: true, handoverNote: '', handoverChecks: [], retiredAt: null };
 const SETTINGS = { holdDays: 7, remindDays: 2, quoteValidDays: 30, orderRule: 'applied', depositKind: 'percent', depositValue: null, depositOnCertificate: 'refund', depositOnPullOut: 'refund', howToApply: '[The shop’s own words]', todayLines: false, noCertificateDays: null, paymentLateDays: null };
 
-const day = (n) => { const d = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }) + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// The shop's day comes from the server (`today`); a test value, never the computer's date.
+const TODAY = '2026-09-14';
+const day = (n) => { const d = new Date(`${TODAY}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const long = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const order = (over = {}) => ({
   id: 9, stage: 'quote', quoteNumber: 1, quoteRef: 'CW-1', customerId: 5, customerName: 'Maya Patel', customerPhone: '07700 900 142', customerEmail: 'maya@example.test',
-  providerId: 3, providerName: '[Provider]', productId: 21, bike: '[Bike] · [Size]', siteId: 1, siteName: 'Bolton', frameId: null,
+  providerId: 3, providerName: '[Provider]', productId: 21, bike: '[Bike] · [Size]', siteId: 1, siteName: 'Bolton', frameId: null, onOrder: false,
   quoteGivenAt: `${day(0)}T10:00:00.000Z`, quoteRevisedAt: null, validUntil: day(30), holdUntil: day(1), holdWanted: true,
   accessories: [{ productId: 22, name: '[Accessory]', pricePence: 4000 }], totalPence: 104000, appliedAt: null, applicationReference: null,
   certificateNumber: null, certificatePence: null, certificateReceivedOn: null, saleId: null, collectedAt: null, paidOn: null, closeReason: null,
@@ -31,10 +33,10 @@ const order = (over = {}) => ({
 const NOT_IN_STOCK = order({ id: 10, quoteRef: 'CW-2', customerName: '[Customer]', stage: 'waiting', holdUntil: null, inStock: false, appliedAt: `${day(-1)}T12:00:00.000Z`, next: 'order' });
 const LIST = {
   groups: { waiting: [order(), NOT_IN_STOCK], certificate: [], ready: [], collected: [order({ id: 11, quoteRef: 'CW-3', customerName: '[Customer]', stage: 'collected', holdUntil: null, expectedPence: 95000, expectedBy: day(-3), next: 'paid' })], paid: [] },
-  counts: { holdEndingSoon: 1, holdEnded: 0, readyToOrder: 1, noCertificate: 0, paymentLate: 1 }, count: 3, providers: 1,
+  counts: { holdEndingSoon: 1, holdEnded: 0, readyToOrder: 1, noCertificate: 0, paymentLate: 1 }, count: 3, providers: 1, today: TODAY,
 };
 const OWNER_LIST = { ...LIST, counts: { ...LIST.counts, owedPence: 95000, owedLate: 95000 } };
-const EMPTY = { groups: { waiting: [], certificate: [], ready: [], collected: [], paid: [] }, counts: { holdEndingSoon: 0, holdEnded: 0, readyToOrder: 0, noCertificate: 0, paymentLate: 0 }, count: 0, providers: 0 };
+const EMPTY = { groups: { waiting: [], certificate: [], ready: [], collected: [], paid: [] }, counts: { holdEndingSoon: 0, holdEnded: 0, readyToOrder: 0, noCertificate: 0, paymentLate: 0 }, count: 0, providers: 0, today: TODAY };
 const EVENTS = [
   { kind: 'quote_given', by: 'Jo Taylor', at: `${day(0)}T10:00:00.000Z`, reason: null, detail: { quoteRef: 'CW-1', closing: `We’re holding your bike until ${long(day(1))}. This quote is valid until ${long(day(30))}. Once your certificate reaches us, it’s yours to collect.` } },
   { kind: 'quote_emailed', by: 'Jo Taylor', at: `${day(0)}T10:00:01.000Z`, reason: null, detail: { to: 'maya@example.test' } },
@@ -64,6 +66,7 @@ afterEach(async () => {
 });
 
 async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theOrder = order(), emailFails = false, providers = [PROVIDER] } = {}) {
+  let emails = 0;
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
@@ -81,9 +84,15 @@ async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theO
     if (p === '/api/products') return reply(200, [BIKE, LOCK].filter((x) => x.name.toLowerCase().includes((u.searchParams.get('search') ?? '').toLowerCase())));
     if (p === '/api/products/21') return reply(200, { ...BIKE, stockAtShops: [{ id: 1, name: 'Bolton', qty: stock, here: true }, { id: 2, name: '[Second site]', qty: 0, here: false }] });
     if (p === '/api/c2w/orders' && method === 'POST') return reply(201, { order: order({ holdUntil: body.hold && stock > 0 ? day(7) : null, inStock: stock > 0 }) });
-    if (p === '/api/c2w/orders/9/email-quote') return emailFails ? reply(429, { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' }) : reply(200, { sent: true, to: 'maya@example.test' });
+    if (p === '/api/c2w/orders/9/email-quote') {
+      emails += 1;
+      // 'fault' fails the first send with a server fault, then sends: Try again can work.
+      if (emailFails === 'fault' && emails === 1) return reply(500, { error: 'Internal server error' });
+      if (emailFails === true) return reply(429, { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' });
+      return reply(200, { sent: true, to: 'maya@example.test' });
+    }
     if (p === '/api/c2w/orders/9/quote') return reply(200, { quote });
-    if (p === '/api/c2w/orders/9') return reply(200, { order: { ...theOrder, events: EVENTS } });
+    if (p === '/api/c2w/orders/9') return reply(200, { order: { ...theOrder, events: EVENTS }, today: TODAY });
     if (p.startsWith('/api/')) return reply(200, []);
     return reply(404, { error: 'Not found' });
   };
@@ -109,7 +118,7 @@ test('cw-list: the top line, + New Cycle to Work order, and each group with its 
   assert.ok(main.getByText('1 bike ready to order') && main.getByText('1 payment late'));
   assert.ok(main.queryByText(/Owed by providers/) === null, 'staff see no owed total (decision M6)');
   assert.ok(main.getByRole('button', { name: '+ New Cycle to Work order' }));
-  assert.ok(main.getByText(/ · North Street Cycles$/), 'the day and the shop');
+  assert.ok(main.getByText('Monday 14 September · North Street Cycles'), 'the shop’s day from the server, and the shop');
   assert.ok(main.getByRole('heading', { level: 2, name: 'Waiting for the certificate · 2' }));
   assert.ok(main.getByText('Bikes in stock are held for the customer. Ones to order follow your rule in Settings.'));
   assert.ok(main.getByRole('heading', { level: 2, name: 'Collected · waiting for payment · 1' }));
@@ -140,8 +149,8 @@ test('cw-list: a hold the server says has ended stays held and asks for a choice
   assert.ok(row.textContent.includes(`Still held`) && row.textContent.includes(`Hold ended ${long(day(-2))} — choose`), row.textContent);
 });
 
-test('cw-list-owner: the owner also sees Owed by providers', async () => {
-  const { ui } = await open('/workshop/c2w', { me: OWNER, list: OWNER_LIST });
+test('cw-list-owner: Owed by providers shows whenever the server sends it (whoever can see costs)', async () => {
+  const { ui } = await open('/workshop/c2w', { me: JO, list: OWNER_LIST });
   assert.ok(await ui.findByText('Owed by providers £950.00 · 1 late'));
 });
 
@@ -164,6 +173,13 @@ test('the sidebar shows the count beside Cycle to Work, read as due or late', as
   assert.equal(link.textContent, 'Cycle to Work3');
 });
 
+test('cw-list: a bike on order says so, ahead of not in stock', async () => {
+  const onOrder = order({ id: 12, stage: 'certificate', holdUntil: null, inStock: false, onOrder: true, next: 'ready' });
+  const { ui } = await open('/workshop/c2w', { list: { ...LIST, groups: { ...LIST.groups, waiting: [], certificate: [onOrder] } } });
+  const row = (await ui.findByRole('list', { name: 'Certificate received · 1' })).querySelector('li');
+  assert.ok(row.textContent.includes('[Bike] · [Size] · on order') && !row.textContent.includes('not in stock'), row.textContent);
+});
+
 // ---- 4.2 New order ----
 
 async function newOrder(options) {
@@ -173,8 +189,8 @@ async function newOrder(options) {
   return r;
 }
 async function pick(r, label, term, option) {
-  r.fireEvent.change(r.ui.getByRole('searchbox', { name: label }), { target: { value: term } });
-  r.fireEvent.click(await r.ui.findByRole('button', { name: option }));
+  r.fireEvent.change(r.ui.getByRole('combobox', { name: label }), { target: { value: term } });
+  r.fireEvent.click(await r.ui.findByRole('option', { name: option }));
 }
 
 test('cw-new: the fields, a bike in stock held, the quote’s words, the email tick, the total, Cancel and Make the quote', async () => {
@@ -244,6 +260,50 @@ test('cw-new: the order is made but the email refused: the order opens and says 
   assert.ok(await r.ui.findByText('Quote CW-1 made, not emailed: This customer has been sent five Cycle to Work quotes in the last hour. Try again later.'));
 });
 
+test('cw-new: Escape in a search box closes its list, not New order', async () => {
+  const r = await newOrder();
+  const box = r.ui.getByRole('combobox', { name: 'Customer' });
+  r.fireEvent.change(box, { target: { value: 'Maya' } });
+  await r.ui.findByRole('option', { name: /^Maya Patel/ });
+  r.fireEvent.keyDown(box, { key: 'Escape' });
+  assert.ok(r.ui.queryByRole('option', { name: /^Maya Patel/ }) === null, 'the list closed');
+  r.fireEvent.keyDown(box, { key: 'Escape' });
+  assert.ok(r.ui.getByRole('heading', { level: 2, name: 'New Cycle to Work order' }), 'New order is still open');
+});
+
+test('cw-new: the arrow keys and Enter pick; the focus goes to Change, back to the box after Change, and to the box after removing a chip', async () => {
+  const r = await newOrder();
+  const settle = () => new Promise((res) => setTimeout(res, 40));
+  const box = r.ui.getByRole('combobox', { name: 'Customer' });
+  r.fireEvent.change(box, { target: { value: 'Maya' } });
+  await r.ui.findByRole('option', { name: /^Maya Patel/ });
+  assert.equal(box.getAttribute('aria-expanded'), 'true');
+  r.fireEvent.keyDown(box, { key: 'Enter' });
+  await settle();
+  assert.ok(document.activeElement === r.ui.getByRole('button', { name: 'Change the customer' }), 'focus');
+  assert.ok(r.ui.getByRole('group', { name: 'Customer' }).textContent.includes('Maya Patel · 07700 900 142'), 'the picked customer is named by its label');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Change the customer' }));
+  await settle();
+  assert.ok(document.activeElement === r.ui.getByRole('combobox', { name: 'Customer' }), 'focus');
+  await pick(r, 'Accessories', 'Acc', /^\[Accessory\]/);
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Remove [Accessory]' }));
+  await settle();
+  assert.ok(document.activeElement === r.ui.getByRole('combobox', { name: 'Accessories' }), 'focus');
+});
+
+test('cw-new: an email that failed for want of a connection opens the order with Try again, which sends it', async () => {
+  const r = await newOrder({ emailFails: 'fault' });
+  await pick(r, 'Customer', 'Maya', /^Maya Patel/);
+  await pick(r, 'Bike', 'Bike', /^\[Bike\] · \[Size\]/);
+  await r.ui.findByRole('checkbox', { name: /^Hold the bike/ });
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Make the quote' }));
+  assert.ok(await r.ui.findByText('Quote CW-1 made, not emailed: Wheelhouse couldn’t send it.'));
+  assert.ok(window.history.state?.usr == null, 'the note is cleared from the address, so a reload doesn’t show it again');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Try again' }));
+  assert.ok(await r.ui.findByText('Quote emailed to maya@example.test.'));
+  assert.equal(posts('/email-quote').length, 2);
+});
+
 // ---- 4.3 The quote ----
 
 test('cw-quote: every drawn line, the LOGO placeholder, Print and Email to Maya', async () => {
@@ -263,6 +323,9 @@ test('cw-quote: every drawn line, the LOGO placeholder, Print and Email to Maya'
   assert.ok(doc.getByText('How to apply:'));
   fireEvent.click(main.getByRole('button', { name: 'Print' }));
   assert.ok(calls.some((c) => c.method === 'PRINT'));
+  // What goes to the printer is the quote itself (#wh-print, the only thing the print styles show).
+  const paper = document.getElementById('wh-print');
+  for (const t of ['LOGO', 'Cycle to Work quote', 'Quote number CW-1', 'For Maya Patel · scheme provider [Provider]', '£1,040.00', QUOTE.closing]) assert.ok(paper?.textContent.includes(t), t);
   fireEvent.click(main.getByRole('button', { name: 'Email to Maya' }));
   assert.ok(await ui.findByText('Quote emailed to maya@example.test.'));
   assert.equal(posts('/email-quote').length, 1);
@@ -313,14 +376,16 @@ test('cw-more: the owner sees the provider’s commission on the order', async (
   assert.equal(details.getByText('Provider').nextElementSibling.textContent, '[Provider] · commission 5%');
 });
 
-test('the order: Email the quote again sends it and says so; Print the quote opens the quote and prints', async () => {
+test('the order: Email the quote again sends it and says so; Print the quote prints the quote itself', async () => {
   const { ui, fireEvent } = await open('/workshop/c2w/9');
   fireEvent.click(await ui.findByRole('button', { name: 'Email the quote again' }));
   assert.ok(await ui.findByText('Quote emailed to maya@example.test.'));
   fireEvent.click(ui.getByRole('button', { name: 'Print the quote' }));
-  await ui.findByRole('heading', { level: 2, name: 'The quote' });
-  await new Promise((r) => setTimeout(r, 20));
+  await new Promise((r) => setTimeout(r, 30));
   assert.ok(calls.some((c) => c.method === 'PRINT'));
+  const paper = document.getElementById('wh-print');
+  for (const t of ['LOGO', 'Quote number CW-1', '£1,040.00', QUOTE.closing]) assert.ok(paper?.textContent.includes(t), t);
+  assert.ok(ui.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' }), 'the order stays on screen');
 });
 
 test('the order: a bike not in stock says the shop’s rule, and Who pays what follows a provider without accessories', async () => {
@@ -332,4 +397,19 @@ test('the order: a bike not in stock says the shop’s rule, and Who pays what f
   assert.equal(details.getByText('Bike').nextElementSibling.textContent, '[Bike] · [Size] · not in stock');
   assert.equal(details.getByText('[Provider] pays (the certificate)').nextElementSibling.textContent, '£1,000.00');
   assert.equal(details.getByText('Maya pays at collection').nextElementSibling.textContent, '£40.00');
+});
+
+test('no email address: no Email the quote again on the order, and no Email on the quote', async () => {
+  const noEmail = order({ customerEmail: null });
+  const first = await open('/workshop/c2w/9', { theOrder: noEmail });
+  assert.ok(await first.ui.findByRole('button', { name: 'Print the quote' }));
+  assert.ok(first.ui.queryByRole('button', { name: 'Email the quote again' }) === null);
+  first.cleanup();
+  shell.queryClient.clear();
+  uninstall();
+  rendered = false;
+  const { ui } = await open('/workshop/c2w/9/quote', { theOrder: noEmail });
+  assert.ok(await ui.findByRole('button', { name: 'Print' }));
+  await new Promise((res) => setTimeout(res, 30));
+  assert.ok(ui.queryByRole('button', { name: /^Email/ }) === null);
 });

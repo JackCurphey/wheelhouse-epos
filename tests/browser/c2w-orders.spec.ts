@@ -11,6 +11,8 @@ import { deleteTestShop } from '../helpers/testShop.js';
 // happened"; the quote with its LOGO placeholder; and the list and sidebar
 // count, at computer and phone widths, with nothing scrolling sideways.
 // Providers, bikes and quote numbers stay bracketed; prices are test values.
+// The server's clock is pinned to 1 Sep 2026, so with 7 days' hold and 30 days'
+// validity the dates shown are the shop's: 8 September and 1 October 2026.
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
 let mayaEmail: string;
@@ -47,36 +49,63 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
 
     await page.goto(`${server!.baseUrl}/workshop/c2w`);
     const main = page.getByRole('main');
+    await expect(main.getByText(/^Tuesday 1 September · North Street Cycles/)).toBeVisible();
     await main.getByRole('button', { name: '+ New Cycle to Work order' }).click();
     const box = page.getByRole('dialog', { name: 'New Cycle to Work order' });
-    await box.getByRole('searchbox', { name: 'Customer' }).fill('Maya');
-    await box.getByRole('button', { name: /^Maya Patel/ }).click();
+    // Escape in a search closes its list, then empties the box, and never New order.
+    const find = box.getByRole('combobox', { name: 'Customer' });
+    await find.fill('Maya');
+    await expect(box.getByRole('option', { name: /^Maya Patel/ })).toBeVisible();
+    await find.press('Escape');
+    await expect(box.getByRole('option', { name: /^Maya Patel/ })).toHaveCount(0);
+    await find.press('Escape');
+    await expect(box).toBeVisible();
+    await find.fill('Maya');
+    await box.getByRole('option', { name: /^Maya Patel/ }).click();
+    await expect(box.getByRole('button', { name: 'Change the customer' })).toBeFocused();
     await expect(box.getByText('Maya Patel · 07700 900 142')).toBeVisible();
     await expect(box.getByText('Pays in about 30 days')).toBeVisible();
-    await box.getByRole('searchbox', { name: 'Bike' }).fill('[Bike]');
-    await box.getByRole('button', { name: /^\[Bike\] · \[Size\]/ }).click();
-    await box.getByRole('searchbox', { name: 'Accessories' }).fill('[Accessory]');
-    await box.getByRole('button', { name: /^\[Accessory\]/ }).click();
-    await expect(box.getByRole('checkbox', { name: /^Hold the bike until / })).toBeChecked();
-    await expect(box.getByText(/^We’re holding your bike until .+ This quote is valid until .+ Once your certificate reaches us, it’s yours to collect\.$/)).toBeVisible();
+    await box.getByRole('combobox', { name: 'Bike' }).fill('[Bike]');
+    await box.getByRole('option', { name: /^\[Bike\] · \[Size\]/ }).click();
+    await box.getByRole('combobox', { name: 'Accessories' }).fill('[Accessory]');
+    await box.getByRole('option', { name: /^\[Accessory\]/ }).click();
+    await expect(box.getByRole('checkbox', { name: 'Hold the bike until 8 September 2026' })).toBeChecked();
+    await expect(box.getByText('We’re holding your bike until 8 September 2026. This quote is valid until 1 October 2026. Once your certificate reaches us, it’s yours to collect.', { exact: true })).toBeVisible();
     await expect(box.getByRole('checkbox', { name: `Email the quote to ${mayaEmail} now` })).toBeChecked();
     await expect(box.getByText('£1,040.00')).toBeVisible();
     await wide();
     await box.getByRole('button', { name: 'Make the quote' }).click();
 
     await expect(main.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' })).toBeVisible();
-    await expect(page.getByRole('status').getByText(`Quote emailed to ${mayaEmail}. Bike held until`)).toBeVisible();
+    await expect(page.getByRole('status').getByText(`Quote emailed to ${mayaEmail}. Bike held until 8 September 2026.`)).toBeVisible();
     await expect(main.getByText(/^Quote CW-\d+ · North Street Cycles/)).toBeVisible();
     await expect(main.getByRole('list', { name: 'Stages' }).getByRole('listitem').nth(1)).toHaveAttribute('aria-current', 'step');
     await expect(main.getByText(new RegExp(`Jack Lewis gave quote CW-\\d+ and emailed it to ${mayaEmail.replace(/\./g, '\\.')} · it says the bike is put aside until`))).toBeVisible();
     await expect(main.getByText('Maya pays at collection')).toBeVisible();
     await wide();
 
+    await expect(main.getByText('[Bike] · [Size] is held until 8 September 2026.')).toBeVisible();
+    // Print the quote puts the quote itself on the paper (#wh-print), and the order stays.
     await main.getByRole('button', { name: 'Print the quote' }).click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
+    const paper = page.locator('#wh-print');
+    await expect(paper).toContainText('Cycle to Work quote');
+    await expect(paper).toContainText('LOGO');
+    await expect(paper).toContainText('We’re holding your bike until 8 September 2026.');
+    await expect(main.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' })).toBeVisible();
+    // A reload doesn't show New order's note again.
+    await page.reload();
+    await expect(main.getByRole('heading', { level: 2, name: 'Maya Patel · Cycle to Work' })).toBeVisible();
+    await expect(page.getByText(`Quote emailed to ${mayaEmail}. Bike held until 8 September 2026.`)).toHaveCount(0);
+
+    await page.goto(page.url() + '/quote');
     await expect(main.getByRole('heading', { level: 2, name: 'The quote' })).toBeVisible();
+    await expect(main.getByText('Given 1 September 2026')).toBeVisible();
     await expect(main.getByLabel('Shop logo goes here')).toHaveText('LOGO');
     await expect(main.getByText('How to apply:')).toBeVisible();
+    await main.getByRole('button', { name: 'Print' }).click();
     await expect.poll(() => page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(1);
+    await expect(paper).toContainText('Valid until 1 October 2026');
     await wide();
 
     await page.goto(`${server!.baseUrl}/workshop/c2w`);
