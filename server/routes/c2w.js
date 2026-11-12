@@ -16,15 +16,23 @@ import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '.
 import { sendEmailTo } from '../messaging/engine.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
+import { ownerOnly } from '../lib/owner-only.js';
+import { nameKey } from '../lib/restock.js';
 import {
   GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
-  nextFor, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep,
+  nextFor, notInStock, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep,
 } from '../c2w/orders.js';
 
 const db = { prepare, exec: dbExec };
 const EMAILS_PER_HOUR = 5;
 const CHOOSE_DIFFERENCE = { error: 'The certificate is for less than the order. Choose what to do about the difference.', code: 'difference_choice' };
 const SETTINGS_NEEDED = { error: 'Set how long quotes are valid and how long bikes are held in Settings › Front desk › Cycle to Work first', code: 'settings_needed' };
+const NOT_TIME = { error: 'It isn’t time to order this bike yet. Use Order now anyway to order it before then.', code: 'not_time_to_order' };
+const ALREADY_ORDERED = { error: 'This bike is already on order. Refresh to see where it is now.', code: 'already_ordered' };
+const HAS_BIKE = { error: 'This order already has its bike, so there’s nothing to order.', code: 'has_bike' };
+const NO_SUPPLIER = { error: 'This bike has no supplier in Settings › Suppliers to order it from. Set its supplier on the product first.', code: 'no_supplier' };
+const NOTHING_ON_ORDER = { error: 'Nothing is on order for this bike. Refresh to see where it is now.', code: 'not_on_order' };
+const ORDER_SENT = { error: 'The supplier order has been sent, so this can’t be undone here. Change it on the purchase order.', code: 'order_sent' };
 const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
 // BEGIN, the change, COMMIT; a refusal rolls back.
@@ -258,6 +266,85 @@ export function register(route) {
         await releaseHold(row);
         if (row.frame_id) detail.frameId = row.frame_id;
         return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
+      }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Order the bike from the supplier (cw-list's Order button, cw-ordered): a line for one,
+  // naming the order, on the supplier's draft order, made if there isn't one. Anyone
+  // checked in, once the shop's rule says it's time; before then, "Order now anyway…"
+  // (cw-order-anyway) needs a reason and is the Owner's until roles are built.
+  route('POST', '/api/c2w/orders/:id/order', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const anyway = body.anyway === true;
+    if (anyway && await ownerOnly(req, res, 'Only the shop’s owner can order a bike before it’s time')) return;
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const reason = anyway ? optionalWords(body.reason, 'Why', 500) : null;
+      if (anyway && !reason) throw new ValidationError('Say why the bike is being ordered now');
+      const s = await settingsRow();
+      const detail = {};
+      await takeStep(id, 'ordered', who, async () => {
+        const row = await loadOrder(id);
+        if (row.on_order) throw new Refused(409, ALREADY_ORDERED);
+        if (!notInStock(row)) throw new Refused(409, HAS_BIKE);
+        if (!anyway && !readyToOrder(row, s.order_rule)) throw new Refused(409, NOT_TIME);
+        const product = await db.prepare('SELECT id, name, sku, cost, supplier FROM products WHERE id = ?').get(row.product_id);
+        const supplier = nameKey(product.supplier)
+          ? (await db.prepare('SELECT id, name FROM suppliers ORDER BY id').all()).find((x) => nameKey(x.name) === nameKey(product.supplier))
+          : null;
+        if (!supplier) throw new Refused(409, NO_SUPPLIER);
+        // The supplier first, so an order and a restock at once make one draft between them.
+        await db.prepare('SELECT id FROM suppliers WHERE id = ? FOR UPDATE').get(supplier.id);
+        let po = await db.prepare("SELECT id FROM purchase_orders WHERE supplier_id = ? AND status = 'draft' ORDER BY id DESC LIMIT 1 FOR UPDATE").get(supplier.id);
+        const now = currentMoment().toISOString();
+        if (!po) po = { id: (await db.prepare("INSERT INTO purchase_orders (supplier_id, reference, notes, status, updated_at) VALUES (?, '', '', 'draft', ?)").run(supplier.id, now)).lastInsertRowid };
+        await db.prepare(
+          `INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered, unit_cost, c2w_order_id)
+           VALUES (?, ?, ?, ?, 1, ?, ?)`
+        ).run(po.id, product.id, product.name, product.sku, product.cost, id);
+        await db.prepare('UPDATE purchase_orders SET updated_at = ? WHERE id = ?').run(now, po.id);
+        Object.assign(detail, { purchaseOrderId: po.id, supplier: supplier.name, ...(anyway ? { anyway: true } : {}) });
+        return {};
+      }, { detail, reason });
+      return { order: serializeOrder(await loadOrder(id)), purchaseOrderId: detail.purchaseOrderId, supplier: detail.supplier };
+    });
+  });
+
+  // Undo (cw-ordered's toast): the order's bike comes off the draft, while it is still a
+  // draft: its line goes, or, edited up to more than one, keeps the rest as plain stock.
+  // A draft left with nothing on it goes too.
+  route('POST', '/api/c2w/orders/:id/order/undo', async (req, res, params) => {
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const detail = {};
+      await takeStep(id, 'order_undone', who, async () => {
+        const open = await db.prepare(
+          `SELECT i.id, i.purchase_order_id, po.status FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id
+           WHERE i.c2w_order_id = ? AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered
+           ORDER BY i.id DESC LIMIT 1`
+        ).get(id);
+        if (!open) throw new Refused(409, NOTHING_ON_ORDER);
+        if (open.status !== 'draft') throw new Refused(409, ORDER_SENT);
+        // Only a draft is locked, and checked again once it is: booking in locks a sent
+        // order and then this order, so locking a sent one here could deadlock.
+        const po = await db.prepare('SELECT status FROM purchase_orders WHERE id = ? FOR UPDATE').get(open.purchase_order_id);
+        if (po?.status !== 'draft') throw new Refused(409, ORDER_SENT);
+        const line = await db.prepare('SELECT id, purchase_order_id, qty_ordered FROM purchase_order_items WHERE id = ? AND c2w_order_id = ?').get(open.id, id);
+        if (!line) throw new Refused(409, NOTHING_ON_ORDER);
+        if (line.qty_ordered > 1) {
+          await db.prepare('UPDATE purchase_order_items SET qty_ordered = qty_ordered - 1, c2w_order_id = NULL WHERE id = ?').run(line.id);
+        } else {
+          await db.prepare('DELETE FROM purchase_order_items WHERE id = ?').run(line.id);
+          await db.prepare("DELETE FROM purchase_orders WHERE id = ? AND status = 'draft' AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ?)").run(line.purchase_order_id, line.purchase_order_id);
+        }
+        detail.purchaseOrderId = line.purchase_order_id;
+        return {};
       }, { detail });
       return { order: serializeOrder(await loadOrder(id)) };
     });
