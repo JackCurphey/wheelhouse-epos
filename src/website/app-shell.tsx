@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api/client.ts';
 import { siteAddress } from './address.ts';
 import { SiteFailed, SiteLayout } from './shell.tsx';
 import { HomePage } from './home.tsx';
+import { CookiesPage } from './cookies.tsx';
 import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 
 /**
@@ -33,6 +34,7 @@ export const websiteRoutes: RouteObject[] = [
       { path: 'contact', Component: ContactPage },
       { path: 'collection-returns', Component: CollectionReturnsPage },
       { path: 'privacy', Component: PrivacyPage },
+      { path: 'cookies', Component: CookiesPage },
       { path: 'basket', Component: BasketPage },
       { path: '*', Component: NotFoundPage },
     ],

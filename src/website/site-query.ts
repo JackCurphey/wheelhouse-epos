@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { apiPath, type SiteAddress } from './address.ts';
+import type { TrackingTool } from './tracking.ts';
 
 /**
  * What the customer website reads (server/routes/site.js, design 2). Every
@@ -39,7 +40,8 @@ export type Site = {
     privacy: string;
   };
   shops: ShopEntry[];
-  tracking: { kind: string; name: string }[];
+  /** Each tool's kind and name; its `tool` and `id` only once the visitor's choice turns its kind on. */
+  tracking: TrackingTool[];
   preview: boolean;
   canTurnOn: boolean;
   ownerNames?: string[];

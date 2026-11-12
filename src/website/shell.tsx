@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { bookPath, chosenShopCookie, siteAddress } from './address.ts';
 import { SiteContext, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
 import { H1 } from './parts.tsx';
+import { CookieChoices, CookieChoicesButton } from './cookies.tsx';
+import { StaffBanner } from './staff-banner.tsx';
 
 /**
  * The customer website's frame (openspec/changes/website-browse, design 3;
@@ -82,7 +84,9 @@ export function SiteLayout() {
   const value: SiteContextValue = { address, site: site.data, chosen, several };
   return (
     <SiteContext.Provider value={value}>
-      <Frame />
+      <CookieChoices>
+        <Frame />
+      </CookieChoices>
     </SiteContext.Provider>
   );
 }
@@ -232,6 +236,7 @@ function Frame() {
         </nav>
       )}
       <main id="main-content" ref={main} tabIndex={-1} className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 py-5 outline-none md:gap-9 md:px-8 md:py-8">
+        <StaffBanner />
         {narrow && several && <Chip line />}
         <Outlet />
       </main>
@@ -242,6 +247,7 @@ function Frame() {
           <Link to="/collection-returns" className={footerLink}>Collection and returns</Link>
           <Link to="/privacy" className={footerLink}>Privacy</Link>
           <Link to="/cookies" className={footerLink}>Cookies</Link>
+          <CookieChoicesButton className={footerLink} />
         </span>
       </footer>
     </div>
