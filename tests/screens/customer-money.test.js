@@ -68,7 +68,9 @@ async function openWays(start = { storeCreditOn: false, accountsOn: false, accou
 
 test('Ways to pay sits in Payments with the two drawn rows, both off to start', async () => {
   const { ui, fold } = await openWays();
-  assert.match(fold.textContent, /None switched on yet/);
+  // Cash is always on, so the summary starts with it (settings-frame.mjs payFolds: "Cash, card and 4 more").
+  assert.match(fold.textContent, /Ways to pay\s*Cash$/);
+  assert.ok(!/None switched on yet/.test(fold.textContent));
   assert.ok(ui.getByText('Earned back on sales, and given on refunds without a receipt'));
   assert.ok(ui.getByText('Pay later, settled from the customer’s page'));
   assert.equal(ui.getByRole('switch', { name: 'Store credit' }).getAttribute('aria-checked'), 'false');
@@ -84,7 +86,7 @@ test('the Owner switches Customer accounts on and types the limit; each saves as
   fireEvent.change(limit, { target: { value: '250.00' } });
   fireEvent.blur(limit);
   await waitFor(() => assert.deepEqual(writes(), ['PUT /api/payment-settings {"accountsOn":true}', 'PUT /api/payment-settings {"accountLimitPence":25000}']));
-  await waitFor(() => assert.match(fold.textContent, /Customer accounts/));
+  await waitFor(() => assert.match(fold.textContent, /Cash and customer accounts$/));
   fireEvent.change(limit, { target: { value: '2.5.0' } });
   fireEvent.blur(limit);
   assert.ok(await ui.findByText('Pounds and pence, like 5.00'));
