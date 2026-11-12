@@ -255,7 +255,7 @@ function Toast({ state, address }: { state: 'on' | 'off'; address: string }) {
     <div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm text-[var(--wh-panel)] shadow-modal max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:translate-x-0">
       <Check aria-hidden="true" size={16} />
       <span className="grow pr-1.5">{state === 'on' ? 'Published — customers see it now' : 'Published. Customers will see it once you turn the website on'}</span>
-      <a href={address} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-lg bg-white/15 px-3.5 font-bold whitespace-nowrap text-[var(--wh-panel)] no-underline">{state === 'on' ? 'View website' : 'View it'}</a>
+      <a href={address} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-lg bg-[var(--wh-on-ink-tint)] px-3.5 font-bold whitespace-nowrap text-[var(--wh-panel)] no-underline">{state === 'on' ? 'View website' : 'View it'}</a>
     </div>
   );
 }
