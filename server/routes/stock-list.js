@@ -16,6 +16,20 @@ const db = { prepare, exec: dbExec };
 const same = (a, b) => a.toLocaleLowerCase('en-GB') === b.toLocaleLowerCase('en-GB');
 const has = (text, word) => (text ?? '').toLocaleLowerCase('en-GB').includes(word.toLocaleLowerCase('en-GB'));
 const below = (p) => p.stock_qty < 0;
+// The Website page's See them (Jack's answer to Q1, 12 Nov): the products server/website.js
+// counts as having no photo (priced, no photo) or no price; online=1 keeps to those switched
+// to show on the website, as the Website page counts them. Anything else filters nothing.
+const priced = (p) => Number(p.price_pence) > 0;
+const SHOWS = {
+  'no-photo': (p) => priced(p) && !p.photo_url,
+  'no-price': (p) => !priced(p),
+};
+function showsOf(query) {
+  const which = SHOWS[query.get('show')];
+  if (!which) return () => true;
+  const online = query.get('online') === '1';
+  return (p) => which(p) && (!online || p.show_online);
+}
 const low = (p) => p.stock_qty >= 0 && p.low_stock_threshold > 0 && p.stock_qty <= p.low_stock_threshold;
 
 function productRow(p, costs) {
@@ -135,12 +149,13 @@ export function register(route) {
     const search = String(query.get('search') ?? '').trim();
     const words = await conditionsOf(search.split(/\s+/).filter(Boolean));
     const kept = await filtersOf(query);
+    const shows = showsOf(query);
     const groups = new Map((await db.prepare('SELECT id, name, category FROM product_groups').all()).map((g) => [g.id, g]));
     const products = await db.prepare(`SELECT * FROM products ${all ? '' : 'WHERE active = 1'} ORDER BY category, name, id`).all();
     const singles = new Map();
     const grouped = new Map();
     for (const p of products) {
-      if (!kept(p)) continue;
+      if (!kept(p) || !shows(p)) continue;
       const g = p.group_id === null ? null : groups.get(p.group_id);
       if (!g) {
         if (!words.length || matches(p, null, words, search)) singles.set(p.id, productRow(p, costs));

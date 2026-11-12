@@ -93,8 +93,12 @@ function BackToWebsite({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** ws-shopify-connect and ws-shopify-failed: from the Website page's Wheelhouse's website or Shopify row. */
-export function ShopifyConnect({ failedAddress, onBack }: { failedAddress: string | null; onBack: () => void }) {
+/**
+ * ws-shopify-connect and ws-shopify-failed: from the Website page's Wheelhouse's website or Shopify row.
+ * With the Wheelhouse website on, one line above Connect says it will be switched off (Jack's answer
+ * to Q3, 12 Nov; docs/decisions/2026-11-12-website-defaults-taken.md).
+ */
+export function ShopifyConnect({ failedAddress, siteOn, onBack }: { failedAddress: string | null; siteOn: boolean; onBack: () => void }) {
   return (
     <Page>
       <BackToWebsite onBack={onBack} />
@@ -104,6 +108,7 @@ export function ShopifyConnect({ failedAddress, onBack }: { failedAddress: strin
       </div>
       <WhatHappens />
       {failedAddress !== null ? <Note tone="bad" live>{connectFailed(failedAddress)}</Note> : null}
+      {siteOn ? <Note tone="warn">Your Wheelhouse website will be switched off when Shopify is connected.</Note> : null}
       <ConnectBox address={failedAddress ?? ''} />
     </Page>
   );
