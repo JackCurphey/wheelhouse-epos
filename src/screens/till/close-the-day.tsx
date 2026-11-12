@@ -37,6 +37,7 @@ export type Close = {
 export type Day = {
   day: string; floatPence: number | null; floatStart: FloatStart | null; cashPence: number; paidOutsPence: number;
   expectedPence: number | null; paidOuts: PaidOut[]; entry: { show: boolean; closesAt: string | null }; close: Close | null;
+  countFirst?: boolean;
   // Cash banked since this morning for a day nobody closed, and the oldest such day still waiting.
   earlierBankedPence?: number; earlierDay?: string | null;
 };
@@ -151,16 +152,27 @@ export function CloseTheDayPage() {
 
   const diff = result !== null && expected !== null ? result - expected : null;
   const countStatus = result === null ? 'To do' : diff === 0 ? 'Spot on' : 'Counted';
+  // Count first (Settings › End of day): blind unless the shop turned it off.
+  const blind = d.countFirst !== false;
   return (
     <Page>
       {head}
       <Step n={1} title="Count the cash" tone={result !== null ? 'done' : 'todo'} status={countStatus} open={open === 1} onToggle={() => toggle(1)}>
         {result === null || expected === null || diff === null || d.floatStart === null ? (
           <>
-            <Note>Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.</Note>
+            <Note>{blind ? 'Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.' : 'Count the drawer and fill in how many of each.'}</Note>
+            {/* Count first off (eod-count-shown): what the till expects, before counting. */}
+            {!blind && expected !== null ? (
+              <div data-row className="flex items-baseline justify-between gap-3 rounded-[8px] bg-[var(--wh-surface-muted)] px-3.5 py-2.5">
+                <span className="text-size-15">The till expects</span>
+                <span className="font-mono text-lg">{penceText(expected)}</span>
+              </div>
+            ) : null}
             <NoteCoinCounter onChange={setCounted} />
+            {/* And the difference as the count changes (the close-the-day spec; logged). */}
+            {!blind && expected !== null && counted !== null ? <Row label="Difference" value={difference(counted - expected)} strong first /> : null}
             <div className="flex justify-end">
-              <Button variant="primary" disabled={counted === null || day.isFetching} onClick={() => { if (counted !== null) void doneCounting(counted); }}>Done counting — show the difference</Button>
+              <Button variant="primary" disabled={counted === null || day.isFetching} onClick={() => { if (counted !== null) void doneCounting(counted); }}>{blind ? 'Done counting — show the difference' : 'Done counting'}</Button>
             </div>
           </>
         ) : (

@@ -330,6 +330,9 @@ POST /api/stock/prices/:id/undo
 GET /api/stock-frames/check
 GET /api/payment-settings
 PUT /api/payment-settings
+GET /api/payment-ways-other
+POST /api/payment-ways-other
+DELETE /api/payment-ways-other/:id
 GET /api/customers/:id/store-credit
 POST /api/customers/:id/store-credit
 POST /api/store-credit-entries/:id/undo
@@ -355,3 +358,16 @@ GET /api/reports/workshop
 GET /api/reports/workshop.csv
 GET /api/reports/returning
 GET /api/reports/returning.csv
+GET /api/quick-buttons
+POST /api/quick-button-groups
+PUT /api/quick-button-groups/:id
+DELETE /api/quick-button-groups/:id
+POST /api/quick-buttons
+PUT /api/quick-buttons/:id
+DELETE /api/quick-buttons/:id
+GET /api/c2w/settings
+PUT /api/c2w/settings
+GET /api/c2w/providers
+POST /api/c2w/providers
+PUT /api/c2w/providers/:id
+POST /api/c2w/providers/:id/retire
