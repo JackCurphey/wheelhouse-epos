@@ -52,6 +52,7 @@ test('put aside: the link is read with no sign-in, and the page says until when 
   assert.ok(ui.getByText('Quote [quote number] · North Street Cycles, Bolton · [Provider]'));
   const top = ui.getByText('Your bike is put aside until 8 September 2026.').parentElement;
   assert.equal(text(top), 'Your bike is put aside until 8 September 2026. We’ll let you know when your certificate reaches us.');
+  assert.doesNotMatch(top.parentElement.className, /wh-warn-bg/);
 });
 
 test('the five stages, the second one now; "Paid by the provider" is never shown', async () => {
@@ -62,6 +63,8 @@ test('the five stages, the second one now; "Paid by the provider" is never shown
   assert.deepEqual(steps.map((li) => li.getAttribute('aria-current')), [null, 'step', null, null, null]);
   assert.match(text(steps[0]), /Done$/);
   assert.match(text(steps[1]), /Now$/);
+  // Stages still to come show their number and nothing under them.
+  assert.deepEqual(steps.slice(2).map(text), ['3Certificate received', '4Ready to collect', '5Collected']);
   assert.ok(ui.queryByText('Paid by the provider') === null);
 });
 
@@ -87,6 +90,8 @@ test('no longer put aside (cw-customer-released)', async () => {
   await heading(ui);
   const top = ui.getByText('Your bike is no longer put aside.').parentElement;
   assert.equal(text(top), 'Your bike is no longer put aside. We’ll still get you one when your certificate comes.');
+  // Drawn as a warning, unlike the grey put-aside and cancelled lines.
+  assert.match(top.parentElement.className, /wh-warn-bg/);
   assert.ok(ui.queryByText(/put aside until/) === null);
 });
 
@@ -107,6 +112,7 @@ test('from the certificate on, no put-aside line: the stage says it', async () =
   assert.ok(ui.queryByText(/put aside/) === null);
   const steps = ui.getAllByRole('listitem').filter((li) => li.closest('ol[aria-label="Stages"]'));
   assert.deepEqual(steps.map((li) => li.getAttribute('aria-current')), [null, null, 'step', null, null]);
+  assert.deepEqual(steps.map(text), ['Quote givenDone', 'Waiting for the certificateDone', '3Certificate receivedNow', '4Ready to collect', '5Collected']);
 });
 
 test('no accessories and no how-to-apply words: those parts are left out', async () => {

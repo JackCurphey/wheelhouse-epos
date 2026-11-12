@@ -32,7 +32,13 @@ export type C2wView = {
 export function useC2wLink(shopSlug: string, code: string) {
   return useQuery({
     queryKey: ['c2w-link', shopSlug, code],
-    queryFn: () => apiGet<C2wView>(`/api/portal/${shopSlug}/c2w-links/${code}`),
+    queryFn: () =>
+      apiGet<C2wView>(
+        `/api/portal/${encodeURIComponent(shopSlug)}/c2w-links/${encodeURIComponent(code)}`,
+      ),
     enabled: Boolean(shopSlug && code),
+    // A 404 is the answer (a wrong link), not a fault to retry.
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 }
