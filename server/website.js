@@ -242,7 +242,8 @@ export async function websiteState(row = null) {
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
     // The Taking payments row: the same state as Settings › Online orders (design 6).
-    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },    // Connected to the shop's own Shopify (design 7), or null.
+    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },
+    // Connected to the shop's own Shopify (design 7), or null.
     shopify: await linkState(),
   };
 }
@@ -362,6 +363,8 @@ export async function turnOff() {
 // Wheelhouse's own website is off until the Owner turns it on. `alongside`
 // saves the Shopify link in the same transaction.
 export async function chooseWebsiteKind(kind, alongside) {
+  // Made first: making it commits on its own, which would end this transaction early.
+  await getOrCreateWebsite();
   await inTransaction(async () => {
     await lockWebsite();
     await prepare('UPDATE website SET kind = ?, set_up_at = COALESCE(set_up_at, now()), is_on = false, updated_at = now()').run(kind);

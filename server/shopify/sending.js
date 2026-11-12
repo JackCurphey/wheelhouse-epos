@@ -2,13 +2,30 @@
 // (openspec/changes/website-management design 7; ws-shopify-sending: "You can
 // leave this page — it carries on"). Each round takes a few products off the
 // link's queue in one statement, so two rounds at once never send the same
-// one, sends them outside any transaction, then counts them and keeps what
-// couldn't be sent. Paused or stopped, nothing more is taken.
-import { prepare, runWithShop } from '../db.js';
+// one, sends them outside any transaction, then counts them. What couldn't be
+// sent is kept as a problem, including, when Shopify stops answering, every
+// product of the batch not yet sent: Try sending again sends them, and
+// Wheelhouse doesn't keep asking by itself. Paused or stopped, nothing more is
+// taken, and a round that ends after Switch counts nothing into the stopped link.
+import { pool, prepare, runWithShop } from '../db.js';
 import { shopify } from './index.js';
 import { countInShopify, PROBLEM_WORDS, productsToSend } from './link.js';
 
 const BATCH = 10;
+// Longer than any batch of ten takes, so only a round no one is finishing.
+const STALE_MINUTES = 5;
+
+const problem = (product, answer) => ({
+  productId: product.wheelhouseId, sku: product.sku, name: product.title, kind: answer.kind, reason: answer.reason ?? PROBLEM_WORDS[answer.kind],
+});
+
+async function finish(address, still) {
+  const inShopify = await countInShopify(address);
+  await prepare(
+    `UPDATE shopify_link SET state = 'idle', last_sent_at = now(), product_count = ?, updated_at = now()
+      WHERE state IN ('sending', 'paused') AND ${still} RETURNING shop_id`
+  ).run(inShopify);
+}
 
 /** One batch for one shop; false when there was nothing to send. */
 export async function sendRound(shopId) {
@@ -21,32 +38,36 @@ export async function sendRound(shopId) {
        UPDATE shopify_link l SET to_send = l.to_send[${BATCH + 1}:], updated_at = now()
          FROM old WHERE l.shop_id = old.shop_id RETURNING old.address, old.batch`
     ).get(provider.name);
-    if (!claimed) return false;
-    const problems = [];
-    try {
-      // A product taken offline meanwhile isn't sent, but is counted as done.
-      for (const product of await productsToSend(claimed.batch)) {
-        const answer = await provider.send(claimed.address, product);
-        if (!answer.ok) {
-          problems.push({ productId: product.wheelhouseId, sku: product.sku, name: product.title, kind: answer.kind, reason: answer.reason ?? PROBLEM_WORDS[answer.kind] });
-        }
-      }
-    } catch (err) {
-      // Shopify didn't answer: the batch goes back to the front of the queue for the next round.
-      await prepare('UPDATE shopify_link SET to_send = ?::int[] || to_send, updated_at = now() RETURNING shop_id').run(claimed.batch);
-      throw err;
+    if (!claimed) {
+      // A batch a restart took off the queue and never counted: the send is
+      // finished, and what wasn't sent shows in the check again.
+      const cutOff = await prepare(
+        `SELECT address FROM shopify_link WHERE provider = ? AND state = 'sending' AND cardinality(to_send) = 0
+            AND updated_at < now() - interval '${STALE_MINUTES} minutes'`
+      ).get(provider.name);
+      if (cutOff) await finish(cutOff.address, `cardinality(to_send) = 0 AND updated_at < now() - interval '${STALE_MINUTES} minutes'`);
+      return false;
     }
+    const problems = [];
+    const products = await productsToSend(claimed.batch);
+    for (const [i, product] of products.entries()) {
+      let answer;
+      try {
+        answer = await provider.send(claimed.address, product);
+      } catch (err) {
+        console.error('Shopify: no answer while sending', err.code ?? err.name);
+        problems.push(...products.slice(i).map((p) => problem(p, { kind: 'no_answer' })));
+        break;
+      }
+      if (!answer.ok) problems.push(problem(product, answer));
+    }
+    // A product taken offline meanwhile isn't sent, but is counted as done.
     const counted = await prepare(
       `UPDATE shopify_link SET sent_count = sent_count + ?, problems = problems || ?::jsonb, updated_at = now()
-        RETURNING state, sent_count, total, cardinality(to_send) AS waiting`
+        WHERE state IN ('sending', 'paused') RETURNING state, cardinality(to_send) AS waiting`
     ).get(claimed.batch.length, JSON.stringify(problems));
-    if (counted.state === 'sending' && Number(counted.waiting) === 0 && counted.sent_count >= counted.total) {
-      const inShopify = await countInShopify(claimed.address);
-      await prepare(
-        `UPDATE shopify_link SET state = 'idle', last_sent_at = now(), product_count = ?, updated_at = now()
-          WHERE state = 'sending' AND cardinality(to_send) = 0 AND sent_count >= total RETURNING shop_id`
-      ).run(inShopify);
-    }
+    // Paused during the last batch: nothing is left to pause, so it finishes too.
+    if (counted && Number(counted.waiting) === 0) await finish(claimed.address, 'cardinality(to_send) = 0');
     return true;
   });
 }
@@ -58,7 +79,8 @@ const wantedShops = new Set();
 export function wakeShopifySending(shopId) { wantedShops.add(shopId); }
 
 async function sendingRound(stopped, only) {
-  const shops = only ?? (await prepare('SELECT id FROM shops ORDER BY id').all()).map((s) => s.id);
+  // Outside any one shop, as bring-across.js lists them.
+  const shops = only ?? (await pool.query('SELECT id FROM shops ORDER BY id')).rows.map((s) => s.id);
   for (const shopId of shops) {
     if (stopped()) break;
     try {

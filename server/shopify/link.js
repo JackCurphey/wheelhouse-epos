@@ -13,7 +13,7 @@ export class ShopifyError extends Error {
   }
 }
 export const NOT_CONNECTED = () => new ShopifyError(409, 'Connect Shopify first.', 'shopify_not_connected');
-export const PROBLEM_WORDS = { no_price: 'No price yet', no_photo: 'No photo — Shopify needs one for this category' };
+export const PROBLEM_WORDS = { no_price: 'No price yet', no_photo: 'No photo — Shopify needs one for this category', no_answer: 'Shopify didn’t answer — try sending again' };
 
 /** The link with this server's Shopify, unless the shop has stopped using it. */
 export async function readLink() {
@@ -87,6 +87,8 @@ export async function preview() {
     address: link.address, count: changing.length,
     newPrices: count('price'), newPhotos: count('photo'), newStock: count('stock'), added: count('added'),
     onlyInShopify: onlyInShopify.length, noPrice: noPrice.length,
+    // Listed under the drawn “See the list of products” (defaults taken 12 Nov, item 2).
+    onlyInShopifyProducts: onlyInShopify.map((p) => ({ sku: p.sku, name: p.title })),
     products: changing.map((p) => ({ id: p.wheelhouseId, sku: p.sku, name: p.title, changes: p.changes })),
   };
 }
@@ -99,13 +101,16 @@ export async function startSending() {
   if (link.state === 'paused') throw new ShopifyError(409, 'Sending is paused. Resume it first.', 'shopify_paused');
   const { changing, noPrice } = compare(await productsToSend(), await shopify().listProducts(link.address));
   const ids = changing.map((p) => p.wheelhouseId);
-  await prepare(
+  // Only from idle: a send still going would mix its counts into this one.
+  const done = await prepare(
     `UPDATE shopify_link SET state = CASE WHEN cardinality(?::int[]) = 0 THEN 'idle' ELSE 'sending' END,
             to_send = ?::int[], total = cardinality(?::int[]), sent_count = 0, problems = ?::jsonb,
-            last_sent_at = CASE WHEN cardinality(?::int[]) = 0 THEN now() ELSE last_sent_at END, updated_at = now()
-      WHERE state IN ('idle', 'sending') RETURNING shop_id`
-  ).run(ids, ids, ids, JSON.stringify(noPrice.map(noPriceProblem)), ids);
-  return ids.length > 0;
+            last_sent_at = CASE WHEN cardinality(?::int[]) = 0 THEN now() ELSE last_sent_at END,
+            product_count = CASE WHEN cardinality(?::int[]) = 0 THEN ? ELSE product_count END, updated_at = now()
+      WHERE provider = ? AND state = 'idle' RETURNING state`
+  ).get(ids, ids, ids, JSON.stringify(noPrice.map(noPriceProblem)), ids, ids, ids.length ? 0 : await countInShopify(link.address), link.provider);
+  if (!done) throw new ShopifyError(409, 'Wheelhouse is still sending to Shopify. Wait for it to finish.', 'shopify_sending');
+  return done.state === 'sending';
 }
 
 export async function pause() {
@@ -147,6 +152,7 @@ export async function countInShopify(address) {
   const ours = await productsToSend();
   const theirs = await shopify().listProducts(address);
   const ids = new Set(theirs.map((p) => String(p.wheelhouseId)));
-  const skus = new Set(theirs.map((p) => p.sku));
+  // An empty SKU matches nothing, as in compare().
+  const skus = new Set(theirs.filter((p) => p.sku).map((p) => p.sku));
   return ours.filter((p) => ids.has(String(p.wheelhouseId)) || skus.has(p.sku)).length;
 }
