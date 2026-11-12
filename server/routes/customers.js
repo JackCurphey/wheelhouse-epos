@@ -16,6 +16,7 @@ import { isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { deletionOnPage } from '../privacy-requests.js';
 import { accountHistory, creditHistory, moneyFor, paymentSettings } from '../lib/customer-money.js';
+import { customerOrders } from '../c2w/elsewhere.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -385,8 +386,11 @@ export function register(route) {
     const credit = settings.store_credit_on ? await creditHistory(id) : [];
     // Bank transfers while Customer accounts is on (design 4).
     const transfers = settings.accounts_on ? await accountHistory(id) : [];
+    // Cycle to Work orders, open and collected (cs-page-c2w, cs-page-c2w-collected).
+    const c2w = await customerOrders(id);
     const items = [
       ...credit,
+      ...c2w,
       ...transfers,
       ...jobs.map((j) => ({
         kind: 'job', id: j.id, reference: j.reference, title: j.title, jobDate: j.job_date, startTime: j.start_time,

@@ -217,7 +217,7 @@ test('Your settings: a PIN someone kept meanwhile says so; no Till block without
 test('keys typed into the search, with Ctrl, Alt or Cmd held, or held down, are not PIN digits', async () => {
   const t = await open('/workshop/till');
   await t.ui.findByRole('heading', { name: 'Enter your PIN' });
-  const search = t.ui.getByLabelText('Search jobs, customers and bikes');
+  const search = t.ui.getByLabelText('Search jobs, customers, bikes and orders');
   for (const key of ['1', '2', '3', '4']) t.fireEvent.keyDown(search, { key });
   t.fireEvent.keyDown(window, { key: '5', ctrlKey: true });
   t.fireEvent.keyDown(window, { key: '6', metaKey: true });

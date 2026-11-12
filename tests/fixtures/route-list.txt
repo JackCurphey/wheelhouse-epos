@@ -222,6 +222,9 @@ POST /api/portal/:shopSlug/bookings
 GET /api/portal/:shopSlug/photo-codes/:code
 POST /api/portal/:shopSlug/photo-codes/:code
 GET /api/portal/:shopSlug/reminder-links/:code
+GET /api/portal/:shopSlug/c2w-links/:code
+GET /api/portal/:shopSlug/c2w-orders
+GET /api/portal/:shopSlug/c2w-orders/:id
 GET /api/portal/:shopSlug/reminder-stops/:code
 POST /api/portal/:shopSlug/reminder-stops/:code
 GET /api/portal/:shopSlug/booking-links/:code
