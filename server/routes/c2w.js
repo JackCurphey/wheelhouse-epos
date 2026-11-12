@@ -313,7 +313,8 @@ export function register(route) {
     });
   });
 
-  // Undo (cw-ordered's toast): the line comes off the draft, while it is still a draft.
+  // Undo (cw-ordered's toast): the order's bike comes off the draft, while it is still a
+  // draft: its line goes, or, edited up to more than one, keeps the rest as plain stock.
   // A draft left with nothing on it goes too.
   route('POST', '/api/c2w/orders/:id/order/undo', async (req, res, params) => {
     const who = await whoIsBooking(req);
@@ -322,14 +323,25 @@ export function register(route) {
     await save(res, 200, async () => {
       const detail = {};
       await takeStep(id, 'order_undone', who, async () => {
-        const line = await db.prepare(
+        const open = await db.prepare(
           `SELECT i.id, i.purchase_order_id, po.status FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id
-           WHERE i.c2w_order_id = ? ORDER BY i.id DESC LIMIT 1 FOR UPDATE OF po, i`
+           WHERE i.c2w_order_id = ? AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered
+           ORDER BY i.id DESC LIMIT 1`
         ).get(id);
+        if (!open) throw new Refused(409, NOTHING_ON_ORDER);
+        if (open.status !== 'draft') throw new Refused(409, ORDER_SENT);
+        // Only a draft is locked, and checked again once it is: booking in locks a sent
+        // order and then this order, so locking a sent one here could deadlock.
+        const po = await db.prepare('SELECT status FROM purchase_orders WHERE id = ? FOR UPDATE').get(open.purchase_order_id);
+        if (po?.status !== 'draft') throw new Refused(409, ORDER_SENT);
+        const line = await db.prepare('SELECT id, purchase_order_id, qty_ordered FROM purchase_order_items WHERE id = ? AND c2w_order_id = ?').get(open.id, id);
         if (!line) throw new Refused(409, NOTHING_ON_ORDER);
-        if (line.status !== 'draft') throw new Refused(409, ORDER_SENT);
-        await db.prepare('DELETE FROM purchase_order_items WHERE id = ?').run(line.id);
-        await db.prepare("DELETE FROM purchase_orders WHERE id = ? AND status = 'draft' AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ?)").run(line.purchase_order_id, line.purchase_order_id);
+        if (line.qty_ordered > 1) {
+          await db.prepare('UPDATE purchase_order_items SET qty_ordered = qty_ordered - 1, c2w_order_id = NULL WHERE id = ?').run(line.id);
+        } else {
+          await db.prepare('DELETE FROM purchase_order_items WHERE id = ?').run(line.id);
+          await db.prepare("DELETE FROM purchase_orders WHERE id = ? AND status = 'draft' AND NOT EXISTS (SELECT 1 FROM purchase_order_items WHERE purchase_order_id = ?)").run(line.purchase_order_id, line.purchase_order_id);
+        }
         detail.purchaseOrderId = line.purchase_order_id;
         return {};
       }, { detail });

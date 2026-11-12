@@ -147,7 +147,8 @@ async function keepLineJobs(loaded, before) {
   const out = [];
   for (const l of loaded) {
     let jobId;
-    const was = earlier.get(l.product.id)?.shift();
+    // Only an item that says nothing of jobs takes the earlier line's job and order.
+    const was = l.forJobId === undefined ? earlier.get(l.product.id)?.shift() : undefined;
     const c2wOrderId = was?.c2wOrderId ?? null;
     if (l.forJobId === undefined) jobId = was?.jobId ?? null;
     else if (l.forJobId === null) jobId = null;
@@ -295,6 +296,10 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     const left = outstanding(line);
     if (n > left) return refuse(`Cannot receive ${n} of "${line.product_name}" - only ${left} outstanding`);
   }
+  // The Cycle to Work orders these lines were ordered for, in turn, before any stock: an
+  // order's own steps lock the order and then its stock, so this keeps to the same order.
+  const c2wIds = [...new Set([...taken.keys()].map((itemId) => itemsById.get(itemId).c2w_order_id).filter(Boolean))].sort((a, b) => a - b);
+  for (const c2wId of c2wIds) await db.prepare('SELECT id FROM c2w_orders WHERE id = ? FOR UPDATE').get(c2wId);
   // A product not on an order must be the shop's, and on sale.
   const items = [];
   for (const x of lines) {
@@ -358,9 +363,10 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost)).lastInsertRowid;
     // Each bike's frame, in stock at the shop its stock line went to (frame-numbers, design 3).
     const frameIds = [];
+    const moveId = moved.lineOf.get(productId);
+    const siteOf = async () => (await db.prepare('SELECT site_id FROM stock_movements WHERE id = ?').get(moveId)).site_id;
     if (needsFrames && frames?.length) {
-      const moveId = moved.lineOf.get(productId);
-      const { site_id: siteId } = await db.prepare('SELECT site_id FROM stock_movements WHERE id = ?').get(moveId);
+      const siteId = await siteOf();
       for (const f of frames) {
         frameIds.push((await db.prepare(
           'INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, delivery_id, delivery_line_id, stock_movement_id, received_by_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -368,7 +374,7 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
       }
     }
     // A line ordered for a Cycle to Work order puts its bike aside for it (rs-frame-c2w, rs-booked-c2w).
-    if (orderLine?.c2w_order_id) await bookedInForOrder(orderLine.c2w_order_id, frameIds[0] ?? null, who);
+    if (orderLine?.c2w_order_id) await bookedInForOrder(orderLine.c2w_order_id, frameIds[0] ?? null, await siteOf(), who);
     shopifyPushes.push(...moved.pushes);
     booked += qty;
   }

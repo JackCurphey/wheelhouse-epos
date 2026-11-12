@@ -100,12 +100,16 @@ export async function releaseHold(row) {
 
 // Dates come back as YYYY-MM-DD text, never as a Date at some time zone's midnight.
 const DAY = (col) => `to_char(o.${col}, 'YYYY-MM-DD') AS ${col}_day`;
+// On order: a line naming the order, still to come, on a supplier order that's a draft or
+// sent and not yet all in. A cancelled or closed one doesn't count, so the bike can be
+// ordered again.
+const ON_ORDER = `FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id
+    WHERE i.c2w_order_id = o.id AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered`;
 export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certificate_received_on', 'expected_by', 'paid_on'].map(DAY).join(', ')},
   c.name AS customer_name, c.email AS customer_email, p.name AS provider_name, pr.name AS bike_name,
-  EXISTS (SELECT 1 FROM purchase_order_items i WHERE i.c2w_order_id = o.id) AS on_order,
-  (SELECT i.purchase_order_id FROM purchase_order_items i WHERE i.c2w_order_id = o.id ORDER BY i.id DESC LIMIT 1) AS on_order_po,
-  (SELECT s.name FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id JOIN suppliers s ON s.id = po.supplier_id
-    WHERE i.c2w_order_id = o.id ORDER BY i.id DESC LIMIT 1) AS on_order_from
+  EXISTS (SELECT 1 ${ON_ORDER}) AS on_order,
+  (SELECT i.purchase_order_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1) AS on_order_po,
+  (SELECT s.name FROM suppliers s WHERE s.id = (SELECT po.supplier_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1)) AS on_order_from
   FROM c2w_orders o
   JOIN customers c ON c.id = o.customer_id
   JOIN c2w_providers p ON p.id = o.provider_id
@@ -204,15 +208,17 @@ export async function takeStep(orderId, stepName, who, change, { detail = {}, re
  * order, and an order with its certificate in moves to Ready to collect. An order that
  * has moved on, or already has its bike, leaves the bike on sale like any other.
  */
-export async function bookedInForOrder(orderId, frameId, who) {
+export async function bookedInForOrder(orderId, frameId, siteId, who) {
   const row = await prepare('SELECT * FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
   if (!row || !['quote', 'waiting', 'certificate'].includes(row.stage) || row.held_at || row.frame_id) return;
+  // Booked in at another shop from the order's: it goes on sale there.
+  if (row.site_id !== null && siteId !== null && siteId !== row.site_id) return;
   let held;
   if (frameId) {
     await lockStock([row.product_id]);
     held = await prepare("UPDATE stock_frames SET state = 'held', c2w_order_id = ? WHERE id = ? AND state = 'in_stock' RETURNING id").get(orderId, frameId);
     held = held ? { frameId } : null;
-  } else held = await takeHold(orderId, row.product_id, row.site_id);
+  } else held = await takeHold(orderId, row.product_id, row.site_id ?? siteId);
   if (!held) return;
   const ready = row.stage === 'certificate';
   await prepare(`UPDATE c2w_orders SET frame_id = ?, held_at = now()${ready ? ", stage = 'ready'" : ''} WHERE id = ?`).run(held.frameId, orderId);

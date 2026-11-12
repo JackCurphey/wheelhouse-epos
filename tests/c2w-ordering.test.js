@@ -74,6 +74,13 @@ const nextOf = async (id) => {
   const { groups } = (await own('/api/c2w/orders')).body;
   return Object.values(groups).flat().find((o) => o.id === id)?.next;
 };
+// A supplier of the test's own, so its drafts hold only what the test puts on them.
+const ownSupplier = () => inShop(async () => {
+  const name = `[Supplier ${tag()}]`;
+  const id = (await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES (?, 'mock_csv', '{}', now())").run(name)).lastInsertRowid;
+  return { id, name };
+});
+const poRow = (poId) => inShop(() => prepare('SELECT id, status FROM purchase_orders WHERE id = ?').get(poId));
 const linesFor = (c2wId) => inShop(() => prepare(
   `SELECT i.id, i.purchase_order_id, i.product_id, i.qty_ordered, i.c2w_order_id, po.status, po.supplier_id
    FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id WHERE i.c2w_order_id = ? ORDER BY i.id`
@@ -206,6 +213,7 @@ test('6.3 a bike in stock, or one with no supplier, is not ordered', async () =>
   await applied(held.id);
   const refused = await orderBike(held.id, { anyway: true, reason: '[reason]' });
   assert.equal(refused.status, 409, JSON.stringify(refused.body));
+  assert.equal(refused.body.code, 'has_bike');
   assert.deepEqual(await linesFor(held.id), []);
 });
 
@@ -224,6 +232,82 @@ test('6.3 editing the draft keeps the line’s order, and restock adds its own l
   assert.equal(edit.status, 200, JSON.stringify(edit.body));
   assert.equal((await linesFor(made.id)).length, 1, 'the edit kept the line for the order');
   assert.equal((await order(made.id)).onOrder, true);
+});
+
+test('6.3 an edit that names a line’s job leaves the order on the line that doesn’t', async () => {
+  await rule('applied');
+  const product = await bike();
+  const made = await quote(product);
+  await applied(made.id);
+  const poId = (await orderBike(made.id)).body.purchaseOrderId;
+  const edit = await own(`/api/purchase-orders/${poId}`, { method: 'PUT', body: { items: [{ productId: product, qty: 2, unitCost: 600, forJobId: null }, { productId: product, qty: 1, unitCost: 600 }] } });
+  assert.equal(edit.status, 200, JSON.stringify(edit.body));
+  assert.deepEqual((await linesFor(made.id)).map((l) => l.qty_ordered), [1]);
+});
+
+test('6.3 Undo on a line edited up to more than one takes off only the order’s bike', async () => {
+  await rule('applied');
+  const product = await bike();
+  const made = await quote(product);
+  await applied(made.id);
+  const poId = (await orderBike(made.id)).body.purchaseOrderId;
+  const edit = await own(`/api/purchase-orders/${poId}`, { method: 'PUT', body: { items: [{ productId: product, qty: 3, unitCost: 600 }] } });
+  assert.equal(edit.status, 200, JSON.stringify(edit.body));
+  const res = await post(`/api/c2w/orders/${made.id}/order/undo`, {});
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.order.onOrder, false);
+  const left = await inShop(() => prepare('SELECT qty_ordered, c2w_order_id FROM purchase_order_items WHERE purchase_order_id = ? AND product_id = ?').all(poId, product));
+  assert.deepEqual(left.map((l) => [l.qty_ordered, l.c2w_order_id]), [[2, null]]);
+});
+
+test('6.3 Undo takes away the draft it leaves empty, and keeps one with other lines on it', async () => {
+  await rule('applied');
+  const sup = await ownSupplier();
+  const alone = await quote(await bike(sup.name));
+  await applied(alone.id);
+  const emptied = (await orderBike(alone.id)).body.purchaseOrderId;
+  assert.equal((await post(`/api/c2w/orders/${alone.id}/order/undo`, {})).status, 200);
+  assert.ok(!(await poRow(emptied)), 'the draft left empty went');
+
+  const product = await bike(sup.name);
+  const kept = await quote(product);
+  await applied(kept.id);
+  const poId = (await orderBike(kept.id)).body.purchaseOrderId;
+  assert.equal((await post('/api/restock/add-to-order', { supplierId: sup.id, lines: [{ productId: product, qty: 2 }] })).status, 200);
+  assert.equal((await post(`/api/c2w/orders/${kept.id}/order/undo`, {})).status, 200);
+  assert.equal((await poRow(poId))?.status, 'draft', 'the draft with the restock line stays');
+  const left = await inShop(() => prepare('SELECT qty_ordered, c2w_order_id FROM purchase_order_items WHERE purchase_order_id = ?').all(poId));
+  assert.deepEqual(left.map((l) => [l.qty_ordered, l.c2w_order_id]), [[2, null]]);
+});
+
+test('6.3 a supplier order cancelled leaves the bike not on order, to be ordered again', async () => {
+  await rule('applied');
+  const sup = await ownSupplier();
+  const made = await quote(await bike(sup.name));
+  await applied(made.id);
+  const poId = (await orderBike(made.id)).body.purchaseOrderId;
+  assert.equal((await order(made.id)).orderedFrom, sup.name);
+  assert.equal((await post(`/api/purchase-orders/${poId}/cancel`, {})).status, 200);
+  const o = await order(made.id);
+  assert.deepEqual([o.onOrder, o.purchaseOrderId, o.orderedFrom], [false, null, null]);
+  assert.equal(await nextOf(made.id), 'order');
+  const undo = await post(`/api/c2w/orders/${made.id}/order/undo`, {});
+  assert.deepEqual([undo.status, undo.body.code], [409, 'not_on_order'], 'nothing on order to undo');
+  const again = await orderBike(made.id);
+  assert.equal(again.status, 200, JSON.stringify(again.body));
+  assert.notEqual(again.body.purchaseOrderId, poId);
+});
+
+test('6.3 Restock doesn’t count a customer’s bike on order as stock coming', async () => {
+  await rule('applied');
+  const product = await bike();
+  await inShop(() => prepare('UPDATE products SET low_stock_threshold = 1 WHERE id = ?').run(product));
+  const made = await quote(product);
+  await applied(made.id);
+  assert.equal((await orderBike(made.id)).status, 200);
+  const res = await own('/api/restock');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(res.body.groups.flatMap((g) => g.lines).some((l) => l.productId === product), 'the bike is still running low');
 });
 
 // ---------- 6.4 ----------
@@ -276,4 +360,33 @@ test('6.4 a bike booked in for an order that has since got its bike goes on sale
   });
   const frame = await bookIn(made.id, `[FRAME-${tag()}]`);
   assert.deepEqual([frame.state, frame.c2w_order_id], ['in_stock', null]);
+});
+
+test('6.4 a bike booked in at another shop from the order’s goes on sale there', async () => {
+  await rule('applied');
+  const made = await quote(await bike());
+  await applied(made.id);
+  assert.equal((await orderBike(made.id)).status, 200);
+  await inShop(async () => {
+    const elsewhere = (await prepare("INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id").get()).id;
+    await prepare('UPDATE c2w_orders SET site_id = ? WHERE id = ?').run(elsewhere, made.id);
+  });
+  const frame = await bookIn(made.id, `[FRAME-${tag()}]`);
+  assert.deepEqual([frame.state, frame.c2w_order_id], ['in_stock', null]);
+  const o = await order(made.id);
+  assert.deepEqual([o.stage, o.held], ['waiting', false]);
+});
+
+test('6.4 booking the bike in with no frame number holds one for the order as a count', async () => {
+  await rule('applied');
+  const made = await quote(await bike());
+  await applied(made.id);
+  assert.equal((await orderBike(made.id)).status, 200);
+  const [line] = await linesFor(made.id);
+  assert.equal((await post(`/api/purchase-orders/${line.purchase_order_id}/mark-ordered`, {})).status, 200);
+  const res = await post(`/api/purchase-orders/${line.purchase_order_id}/receive`, { items: [{ itemId: line.id, qtyReceived: 1 }] }, asJo);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const o = await order(made.id);
+  assert.deepEqual([o.stage, o.held, o.frameId, o.onOrder], ['waiting', true, null, false]);
+  assert.equal(o.events.at(-1).kind, 'booked_in');
 });
