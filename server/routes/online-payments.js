@@ -11,10 +11,12 @@ import { currentSession } from '../lib/session.js';
 import { endTrip, html, peekTrip, redirect, startTrip } from '../lib/trips.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { isConnected, paymentAccount, paymentsState } from '../payments/provider.js';
-import { setCategoryShowing, showingProducts } from '../online-orders/showing.js';
+import { setCategoryShowing, showingProducts, websiteKind } from '../online-orders/showing.js';
 
 const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
+// A category's switch changes many products at once without Shopify's product sync, so not for a Shopify website.
+const SHOPIFY_WEBSITE = { error: 'Your website is your Shopify shop: choose what’s sent to it on each product in Stock.', code: 'shopify_website' };
 const TEST_PENCE = 100;
 
 // The shop's row, made if missing, with the starting values (migration 154);
@@ -163,6 +165,7 @@ export function register(route) {
     if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) return notFound(res, 'Category not found');
     const body = (await readJsonBody(req)) ?? {};
     if (typeof body.showOnline !== 'boolean') return badRequest(res, 'Say whether the category shows on the website');
+    if ((await websiteKind()) === 'shopify') return sendJson(res, 409, SHOPIFY_WEBSITE);
     if (!(await setCategoryShowing(id, body.showOnline))) return notFound(res, 'Category not found');
     sendJson(res, 200, await settingsBody());
   });

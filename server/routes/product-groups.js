@@ -88,11 +88,13 @@ async function inUse(sizes, own = []) {
 // A new size: its own product, showing online as its category does (website-buy-online),
 // then its starting stock, if any, through moveStock.
 async function addSize(group, s, who) {
+  // Its category found or made and held against a rename (categoryFor), then its switch read.
+  const shows = await categoryShowsOnline(await categoryFor(group.category));
   const made = await db.prepare(
     `INSERT INTO products (name, sku, barcode, category, price, cost, low_stock_threshold, group_id, size, colour, active, show_online, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now()) RETURNING id`
   ).get(nameOf(group.name, s), s.sku ?? null, s.barcode ?? null, group.category, s.money.price ?? 0, s.money.cost ?? 0,
-    s.lowStockThreshold ?? 3, group.id, s.size, s.colour, s.active ?? 1, await categoryShowsOnline(group.category));
+    s.lowStockThreshold ?? 3, group.id, s.size, s.colour, s.active ?? 1, shows);
   if (s.stock) await moveStock([{ productId: made.id, change: s.stock, type: 'intake', note: 'Initial stock' }], who);
   return made.id;
 }

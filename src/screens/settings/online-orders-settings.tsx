@@ -31,7 +31,8 @@ type OnlineOrders = {
   remindDays: number;
   keepDays: number;
   shelfName: string | null;
-  showing: { categories: Category[]; setDifferently: number };
+  // setDifferently: null until a Wheelhouse website is set up; shopify: the fold isn't shown.
+  showing: { categories: Category[]; setDifferently: number | null; shopify: boolean };
   payments: {
     state: PayState; connected: boolean; providerName: string | null; connectedByName: string | null; connectedAt: string | null;
     testPaidAt: string | null; payoutLast4: string | null; payoutTiming: string | null; needsDetailsBy: string | null; needsWhat: string | null;
@@ -69,8 +70,10 @@ const SHELF_PLACEHOLDER = '[Shelf name]';
 /** The other folds' summaries (settings-frame.mjs onlineFolds), from what is set. */
 export function useOnlineOrdersSummaries() {
   const d = useOnlineOrders().data;
-  if (!d?.payments) return { sells: '', showing: '', notCollected: '', shelf: '' };
+  if (!d?.payments) return { sells: '', showing: '', notCollected: '', shelf: '', shopify: false };
   return {
+    // A Shopify website has no Showing products fold: Shopify's shop is sent what Stock says.
+    shopify: d.showing?.shopify === true,
     sells: 'Only what’s on the shelf',
     showing: 'Set on each category and product',
     notCollected: `Reminder after ${days(d.remindDays)} · kept for ${days(d.keepDays)}`,
@@ -144,10 +147,11 @@ export function ShowingProducts() {
         {d.showing.categories.map((c) => <RowSwitch key={c.id} label={c.path} on={c.showOnline} disabled={busy} onChange={(on) => void turn(c, on)} />)}
       </div>
       {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
-      <p className="m-0 flex flex-wrap items-center gap-x-3 text-sm">
+      {/* Only once the Wheelhouse website is set up: before that, every priced product would count. */}
+      {n === null ? null : <p className="m-0 flex flex-wrap items-center gap-x-3 text-sm">
         <span>{`${n} ${n === 1 ? 'product is' : 'products are'} set differently from their category.`}</span>
         {n > 0 ? <Link to={`${ROUTES.stock}?show=set-differently`} aria-label="See the products set differently from their category, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link> : null}
-      </p>
+      </p>}
       <p className={hint}>New products follow their category. Each product’s page in Stock has its own “Show on website” switch.</p>
     </div>
   );

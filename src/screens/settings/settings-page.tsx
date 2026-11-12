@@ -1117,7 +1117,8 @@ function OwnerSettings() {
         // order (website-management design 6; website-buy-online pull request 2).
         { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
           { key: 'website-sells', title: 'What the website sells', summary: online.sells, body: <WhatTheWebsiteSells /> },
-          { key: 'showing-products', title: 'Showing products', summary: online.showing, body: <ShowingProducts /> },
+          // Not for a Shopify website, as Paying online's switches aren't (2026-11-jack, PR 2).
+          ...(online.shopify ? [] : [{ key: 'showing-products', title: 'Showing products', summary: online.showing, body: <ShowingProducts /> }]),
           { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
           { key: 'not-collected', title: 'Not collected', summary: online.notCollected, body: <NotCollected /> },
           { key: 'ready-orders-wait', title: 'Where ready orders wait', summary: online.shelf, body: <WhereReadyOrdersWait /> },

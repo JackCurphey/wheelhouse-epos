@@ -22,10 +22,18 @@ after(async () => {
 });
 const ok = (res, status = 200) => { assert.equal(res.status, status, JSON.stringify(res.body)); return res.body; };
 
-async function freshShop(t, name) {
+// A shop whose website is set up as Wheelhouse's (every product online, before any product
+// exists), as Shopify's, or not set up at all. New products follow their category only on a
+// Wheelhouse website that has been set up.
+async function freshShop(t, name, { website = 'wheelhouse' } = {}) {
   const s = await staffSignup(server.baseUrl, { shopName: name });
   t.after(() => deleteTestShop(s.shop.id));
   const req = (p, options) => staffRequest(server.baseUrl, s.cookie, p, options);
+  if (website === 'wheelhouse') ok(await req('/api/website/set-up', { method: 'POST', body: { kind: 'wheelhouse', startWith: 'every', mainColour: '#2B2B2B' } }));
+  if (website === 'shopify') {
+    ok(await req('/api/website'));
+    await runWithShop(s.shop.id, () => prepare("UPDATE website SET kind = 'shopify', set_up_at = now()").run());
+  }
   const add = async (productName, category, over = {}) => ok(await req('/api/products', { method: 'POST', body: { name: productName, category, pricePence: 1299, ...over } }), 201).id;
   const shown = async (id) => (await runWithShop(s.shop.id, () => prepare('SELECT show_online FROM products WHERE id = ?').get(id))).show_online;
   const showing = async () => ok(await req('/api/online-orders-settings')).showing;
@@ -123,17 +131,62 @@ test('two products switched off on their own are counted as set differently, and
 });
 
 test('the website’s set-up asks step 3 through the same code: nothing online switches every category off too, so new products stay off', async (t) => {
-  const shop = await freshShop(t, '[Showing shop]');
-  const bearing = await shop.add('[Bearing]', 'Bearings');
+  const shop = await freshShop(t, '[Showing shop]', { website: null });
+  const bearing = await shop.add('[Bearing]', 'Bearings', { showOnline: true });
   ok(await shop.req('/api/website/set-up', { method: 'POST', body: { kind: 'wheelhouse', startWith: 'nothing', mainColour: '#2B2B2B' } }));
   assert.equal(await shop.shown(bearing), false);
   assert.equal((await shop.category('Bearings')).showOnline, false);
   assert.equal(await shop.shown(await shop.add('[New bearing]', 'Bearings')), false);
   assert.equal((await shop.showing()).setDifferently, 0);
+  // A new top-level category starts off too: none of the shop's categories is on ("Add
+  // categories and products as you go", the set-up's Nothing online).
+  assert.equal(await shop.shown(await shop.add('[Tyre]', '[Tyres]')), false);
+  assert.equal((await shop.category('[Tyres]')).showOnline, false);
+  // Stock's Add a category starts a sub-category as the one above it, and a top-level one the same way.
+  const parent = (await shop.category('Bearings')).id;
+  ok(await shop.req('/api/product-categories', { method: 'POST', body: { name: '[Cups]', parentId: parent } }), 201);
+  assert.equal((await shop.category('Bearings › [Cups]')).showOnline, false);
+  ok(await shop.req('/api/product-categories', { method: 'POST', body: { name: '[Wheels]' } }), 201);
+  assert.equal((await shop.category('[Wheels]')).showOnline, false);
+  ok(await shop.turn('Bearings', true));
+  ok(await shop.req('/api/product-categories', { method: 'POST', body: { name: '[Seals]', parentId: parent } }), 201);
+  assert.equal((await shop.category('Bearings › [Seals]')).showOnline, true);
+  ok(await shop.req('/api/product-categories', { method: 'POST', body: { name: '[Saddles]' } }), 201);
+  assert.equal((await shop.category('[Saddles]')).showOnline, true, 'on once any of the shop’s categories is on');
+});
+
+test('before the website is set up, new products start off as they always did, and nothing is counted as set differently', async (t) => {
+  const shop = await freshShop(t, '[Showing shop]', { website: null });
+  const bearing = await shop.add('[Bearing]', 'Bearings');
+  assert.equal(await shop.shown(bearing), false);
+  assert.equal((await shop.category('Bearings')).showOnline, true, 'the category itself starts on');
+  assert.equal((await shop.showing()).setDifferently, null, 'no count until the website is set up');
+});
+
+test('a Shopify website: new products, imports and sizes start off so nothing is sent to Shopify, and the category switch is refused', async (t) => {
+  const shop = await freshShop(t, '[Shopify shop]', { website: 'shopify' });
+  const added = await shop.add('[Bearing]', 'Bearings');
+  assert.equal(await shop.shown(added), false, 'off, so syncProductWithShopifyIfNeeded publishes nothing');
+  const item = await runWithShop(shop.shop.id, async () => {
+    const supplier = await prepare("INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES ('[Supplier]', 'mock_csv', '{}', now())").run();
+    return (await prepare("INSERT INTO supplier_catalogue_items (supplier_id, supplier_sku, name, price, stock_qty, status) VALUES (?, '[CODE-2]', '[Catalogue item]', 14, 0, 'new')").run(supplier.lastInsertRowid)).lastInsertRowid;
+  });
+  const imported = ok(await shop.req(`/api/catalogue-items/${item}/import`, { method: 'POST', body: { price: 28, category: 'Bearings' } }), 201);
+  assert.equal(await shop.shown(imported.id), false);
+  const group = ok(await shop.req('/api/product-groups', { method: 'POST', body: { name: '[Jersey]', category: 'Bearings', sizes: [{ size: 'M', pricePence: 3000 }] } }), 201);
+  const size = await runWithShop(shop.shop.id, () => prepare('SELECT id FROM products WHERE group_id = ?').get(group.id));
+  assert.equal(await shop.shown(size.id), false);
+  const { showing } = ok(await shop.req('/api/online-orders-settings'));
+  assert.equal(showing.shopify, true);
+  assert.equal(showing.setDifferently, null);
+  const res = await shop.req(`/api/online-orders-settings/categories/${showing.categories[0].id}`, { method: 'PUT', body: { showOnline: false } });
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'shopify_website');
+  assert.equal((await shop.category('Bearings')).showOnline, true, 'nothing changed');
 });
 
 test('every product online: categories on, priced products on, and none counted as set differently', async (t) => {
-  const shop = await freshShop(t, '[Showing shop]');
+  const shop = await freshShop(t, '[Showing shop]', { website: null });
   const bearing = await shop.add('[Bearing]', 'Bearings');
   await shop.add('[Unpriced]', 'Bearings', { pricePence: 0 });
   ok(await shop.turn('Bearings', false));

@@ -6,7 +6,7 @@
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { notOwnerHere } from '../lib/product-editor.js';
-import { JOIN, isNone } from '../lib/categories.js';
+import { JOIN, NEW_CATEGORY_SHOWS, isNone } from '../lib/categories.js';
 import { limitLockWait } from '../lib/stock.js';
 
 const db = { prepare, exec: dbExec };
@@ -117,7 +117,9 @@ export function register(route) {
         return sendJson(res, 409, { error: `There’s already a category called ${clash.name}${parent ? ` in ${parent.name}` : ''}` });
       }
       const path = parent ? `${parent.path}${JOIN}${name}` : name;
-      const made = await db.prepare('INSERT INTO product_categories (parent_id, name, path) VALUES (?, ?, ?) ON CONFLICT (shop_id, path) DO NOTHING RETURNING id').get(parentId, name, path);
+      // Showing on the website as categoryFor starts one (website-buy-online, Showing products).
+      const made = await db.prepare(`INSERT INTO product_categories (parent_id, name, path, show_online) VALUES (?, ?, ?, ${NEW_CATEGORY_SHOWS})
+        ON CONFLICT (shop_id, path) DO NOTHING RETURNING id`).get(parentId, name, path, parentId);
       if (!made) {
         await db.exec('ROLLBACK');
         return sendJson(res, 409, { error: `There’s already a category called ${name}${parent ? ` in ${parent.name}` : ''}` });

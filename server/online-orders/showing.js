@@ -36,16 +36,35 @@ export async function setDifferentlyIds() {
   return new Set(rows.map((r) => r.id));
 }
 
-/** Settings' Showing products: each category's switch, and how many products differ. */
+/** The shop's website: Wheelhouse's and set up, Shopify's, or neither (not set up yet). */
+export async function websiteKind() {
+  const row = await prepare('SELECT kind, set_up_at FROM website').get();
+  if (!row?.kind || !row.set_up_at) return null;
+  return row.kind;
+}
+
+/**
+ * Settings' Showing products: each category's switch, and how many products
+ * differ. The count only once a Wheelhouse website is set up: before that,
+ * every priced product would count. `shopify`: the fold isn't shown, as
+ * Shopify's shop is sent what Stock says.
+ */
 export async function showingProducts() {
+  const kind = await websiteKind();
   const categories = (await prepare('SELECT id, path, show_online FROM product_categories').all())
     .sort(byPath)
     .map((c) => ({ id: c.id, path: c.path, showOnline: c.show_online }));
-  return { categories, setDifferently: (await setDifferentlyIds()).size };
+  return { categories, setDifferently: kind === 'wheelhouse' ? (await setDifferentlyIds()).size : null, shopify: kind === 'shopify' };
 }
 
-/** What a new product in this category starts as. No category: off, as products always started. */
+/**
+ * What a new product in this category starts as: its category's switch, but
+ * only on a Wheelhouse website that has been set up. Otherwise off, as products
+ * always started, so nothing reaches a Shopify shop (its product sync and Send
+ * read this switch) or a website not set up, unasked. No category: off.
+ */
 export async function categoryShowsOnline(path) {
+  if ((await websiteKind()) !== 'wheelhouse') return false;
   const row = await prepare('SELECT show_online FROM product_categories WHERE path = ?').get(path);
   return row ? row.show_online : false;
 }

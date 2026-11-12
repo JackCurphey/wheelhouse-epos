@@ -276,6 +276,23 @@ test('on-settings-show: a switch per category, the products set differently with
   assert.ok(box.getByText('1 product is set differently from their category.'));
 });
 
+test('a Shopify website has no Showing products fold: what is sent to Shopify is set in Stock', async () => {
+  const t = await openOnline(account('tested', { showing: { ...SHOWING, shopify: true, setDifferently: null } }), `${SETTINGS}&fold=paying-online`);
+  const box = await area(t);
+  await box.findByRole('button', { name: /^What the website sells/ });
+  assert.ok(box.queryByRole('button', { name: /^Showing products/ }) === null);
+  assert.ok(box.queryByRole('switch', { name: 'Bearings' }) === null);
+});
+
+test('on-settings-show: before the website is set up, the switches but no count or See them', async () => {
+  const t = await openOnline(account('tested', { showing: { ...SHOWING, setDifferently: null } }), `${SETTINGS}&fold=showing-products`);
+  const box = await area(t);
+  assert.ok(await box.findByRole('switch', { name: 'Bearings' }));
+  assert.ok(box.queryByText(/set differently from their category/) === null);
+  assert.ok(box.queryByRole('link', { name: /See the products set differently/ }) === null);
+  assert.ok(box.getByText('New products follow their category. Each product’s page in Stock has its own “Show on website” switch.'));
+});
+
 test('on-settings-show: with none set differently, no See them', async () => {
   const t = await openOnline(account('tested', { showing: { ...SHOWING, setDifferently: 0 } }), `${SETTINGS}&fold=showing-products`);
   const box = await area(t);
