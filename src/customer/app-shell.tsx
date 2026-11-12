@@ -17,7 +17,8 @@ import { AccountScreen } from '@/screens/book/account.tsx';
 import { ConversationScreen } from '@/screens/book/conversation.tsx';
 import { ReminderLandingScreen } from '@/screens/book/reminder-landing.tsx';
 import { PrivacyScreen } from '@/screens/book/privacy.tsx';
-import { ACCOUNT_ROUTE, CUSTOMER_ROUTES, MESSAGES_ROUTE, PHOTO_STEP_ROUTE, PRIVACY_ROUTE, REMINDER_BOOK_ROUTE, SIGNIN_ROUTE, STOP_ROUTE, type CustomerScreenId } from './routes.ts';
+import { C2wScreen } from '@/screens/book/c2w.tsx';
+import { ACCOUNT_ROUTE, C2W_ROUTE, CUSTOMER_ROUTES, MESSAGES_ROUTE, PHOTO_STEP_ROUTE, PRIVACY_ROUTE, REMINDER_BOOK_ROUTE, SIGNIN_ROUTE, STOP_ROUTE, type CustomerScreenId } from './routes.ts';
 
 /**
  * The customer app's frame: query client, router, error boundary. The same
@@ -90,7 +91,7 @@ const router = createBrowserRouter([
           const rest = path.slice(BOOK_BASE.length).replace(/^\//, '');
           const Component = SCREENS[id] ?? notBuilt(id);
           return rest ? { path: rest, Component } : { index: true, Component };
-        }).concat({ path: PHOTO_STEP_ROUTE.slice(BOOK_BASE.length + 1), Component: PhotoStepScreen }, { path: STOP_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderStopScreen }, { path: SIGNIN_ROUTE.slice(BOOK_BASE.length + 1), Component: SignInScreen }, { path: ACCOUNT_ROUTE.slice(BOOK_BASE.length + 1), Component: AccountScreen }, { path: MESSAGES_ROUTE.slice(BOOK_BASE.length + 1), Component: ConversationScreen }, { path: REMINDER_BOOK_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderLandingScreen }, { path: PRIVACY_ROUTE.slice(BOOK_BASE.length + 1), Component: PrivacyScreen }),
+        }).concat({ path: PHOTO_STEP_ROUTE.slice(BOOK_BASE.length + 1), Component: PhotoStepScreen }, { path: STOP_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderStopScreen }, { path: SIGNIN_ROUTE.slice(BOOK_BASE.length + 1), Component: SignInScreen }, { path: ACCOUNT_ROUTE.slice(BOOK_BASE.length + 1), Component: AccountScreen }, { path: MESSAGES_ROUTE.slice(BOOK_BASE.length + 1), Component: ConversationScreen }, { path: REMINDER_BOOK_ROUTE.slice(BOOK_BASE.length + 1), Component: ReminderLandingScreen }, { path: PRIVACY_ROUTE.slice(BOOK_BASE.length + 1), Component: PrivacyScreen }, { path: C2W_ROUTE.slice(BOOK_BASE.length + 1), Component: C2wScreen }),
       },
       { path: '/book/*', Component: NoSuchScreen },
     ],
