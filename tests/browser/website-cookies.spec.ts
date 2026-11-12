@@ -72,4 +72,18 @@ test('on a phone: the cookie banner sits at the bottom, full width, and Google l
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(banner).toHaveCount(0);
   await expect(page.getByRole('contentinfo').getByRole('button', { name: 'Cookie choices' })).toBeVisible();
+
+  // Saying no after yes: the page starts again so the tag already running
+  // stops, and nothing from Google is asked for after that.
+  await page.getByRole('contentinfo').getByRole('button', { name: 'Cookie choices' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose cookies' });
+  await dialog.getByRole('switch', { name: 'Measuring visits' }).click();
+  const reloaded = page.waitForEvent('load');
+  await dialog.getByRole('button', { name: 'Save my choices' }).click();
+  await reloaded;
+  const before = asked.length;
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  expect((await context.cookies()).find((c) => c.name === 'wh_cookies')?.value).toBe('measuring-off.advertising-on');
+  expect(await page.locator('script[data-wh-tool="google_analytics"]').count()).toBe(0);
+  expect(asked.length).toBe(before);
 });

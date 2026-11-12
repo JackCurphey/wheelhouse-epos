@@ -6,7 +6,7 @@ import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog.tsx';
 import { RowSwitch } from '@/screens/settings/row-switch.tsx';
-import { COOKIE_CHOICES, cookiesFor } from './cookie-list.ts';
+import { CHOICE_FOR_KIND, COOKIE_CHOICES, cookiesFor } from './cookie-list.ts';
 import { loadTools } from './tracking.ts';
 import { useSiteContext } from './site-query.ts';
 import { Box, H1, H2 } from './parts.tsx';
@@ -27,7 +27,6 @@ import { usePageTitle } from './pages.tsx';
 
 export type Choice = 'measuring' | 'advertising';
 export type Choices = Record<Choice, boolean>;
-const CHOICE_FOR_KIND: Record<string, Choice> = { Statistics: 'measuring', Marketing: 'advertising' };
 const ORDER: Choice[] = ['measuring', 'advertising'];
 const WHAT: Record<Choice, string> = { measuring: 'measuring visits', advertising: 'advertising' };
 
@@ -100,12 +99,20 @@ export function CookieChoices({ children }: { children: React.ReactNode }) {
 
   const save = useCallback((next: Choices) => {
     writeChoices(next, address.base);
+    // A tool already running can't be unloaded: saying no to its kind starts
+    // the page again, without it (decided while building).
+    const loaded = new Set([...document.querySelectorAll<HTMLScriptElement>('script[data-wh-tool]')].map((s) => s.dataset.whTool));
+    const running = site.tracking.some((t) => t.tool && loaded.has(t.tool) && !next[CHOICE_FOR_KIND[t.kind]]);
+    if (running) {
+      window.location.reload();
+      return;
+    }
     setChoices(next);
     setChoosing(false);
     setSaved((n) => n + 1);
     // The server sends a tool's ID only once its kind is on.
     void client.invalidateQueries({ queryKey: ['site', address.base], exact: true });
-  }, [address.base, client]);
+  }, [address.base, client, site.tracking]);
   const openChoose = useCallback(() => { setOpening((n) => n + 1); setChoosing(true); }, []);
 
   const value = useMemo(() => ({ kinds, tools, choices, save, openChoose }), [kinds, tools, choices, save, openChoose]);
@@ -128,7 +135,6 @@ const all = (on: boolean): Choices => ({ measuring: on, advertising: on });
 /** wb-cookies-banner. */
 function CookieBanner() {
   const { kinds, tools, save, openChoose } = useCookies();
-  const titleId = useId();
   return (
     <section
       role="region"
@@ -136,7 +142,7 @@ function CookieBanner() {
       className="fixed inset-x-0 bottom-0 z-10 flex flex-col items-stretch gap-4 border border-[var(--wh-border)] bg-[var(--wh-panel)] px-5 py-[18px] shadow-[0_-8px_30px_rgba(28,30,25,0.18)] md:inset-x-10 md:bottom-5 md:flex-row md:items-center md:rounded-xl"
     >
       <div className="flex grow flex-col gap-1">
-        <h2 id={titleId} className="m-0 text-size-17 font-bold">Cookies on this website</h2>
+        <h2 className="m-0 text-size-17 font-bold">Cookies on this website</h2>
         <p className="m-0 text-size-15 leading-normal">
           We use the cookies the site needs to work. With your OK, we’d also like to use {named(kinds.flatMap((k) => tools[k]))} to see how people use the site.{' '}
           <Link to="/cookies" className="inline-flex min-h-11 items-center text-[var(--wh-ink)]">About cookies</Link>

@@ -22,3 +22,6 @@ export const COOKIES: CookieLine[] = [SIGNED_IN, CHOSEN_SHOP, COOKIE_CHOICES];
 
 /** What this shop's website sets: the choices cookie only where there is something to choose. */
 export const cookiesFor = (hasTools: boolean): CookieLine[] => (hasTools ? COOKIES : COOKIES.filter((c) => c !== COOKIE_CHOICES));
+
+/** Which choice each kind of tracking tool needs: the Choose cookies rows (server/routes/site.js holds the same; a test checks). */
+export const CHOICE_FOR_KIND: Record<string, 'measuring' | 'advertising'> = { Statistics: 'measuring', Marketing: 'advertising' };

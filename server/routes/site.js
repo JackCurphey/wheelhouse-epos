@@ -210,10 +210,17 @@ export const COOKIE_CHOICES = 'wh_cookies';
 // Which choice each kind of tool needs: the Choose cookies rows.
 export const CHOICE_FOR_KIND = { Statistics: 'measuring', Marketing: 'advertising' };
 
-/** The kinds the visitor said yes to, from `measuring-on.advertising-off`; anything else is no. */
+/**
+ * The kinds the visitor said yes to, from `measuring-on.advertising-off`.
+ * Only a whole choice counts, read as the page reads it (cookies.tsx
+ * readChoices): half a choice shows the banner there, so it is no here.
+ */
 export function cookieChoices(req) {
   const value = parseCookies(req)[COOKIE_CHOICES] || '';
-  return new Set(value.split('.').filter((part) => /^[a-z]+-on$/.test(part)).map((part) => part.slice(0, -3)));
+  const said = new Map(value.split('.').map((part) => part.split('-')));
+  const choices = Object.values(CHOICE_FOR_KIND);
+  if (!choices.every((c) => said.get(c) === 'on' || said.get(c) === 'off')) return new Set();
+  return new Set(choices.filter((c) => said.get(c) === 'on'));
 }
 
 function trackingAnswer(tools, yes) {

@@ -76,7 +76,8 @@ test('a tracking tool’s ID reaches the page only when the visitor’s wh_cooki
   try {
     const kindAndName = [{ kind: 'Statistics', name: 'Google Analytics' }, { kind: 'Marketing', name: 'Meta (Facebook) Pixel' }];
     // No choice yet, and Reject all: kind and name only.
-    for (const cookie of [undefined, 'wh_cookies=measuring-off.advertising-off', 'wh_cookies=nonsense']) {
+    // Half a choice is no choice: the page shows the banner for it, so the server sends no ID either.
+    for (const cookie of [undefined, 'wh_cookies=measuring-off.advertising-off', 'wh_cookies=nonsense', 'wh_cookies=measuring-on', 'wh_cookies=advertising-on.measuring-maybe']) {
       const res = await site(north, '', { cookie });
       assert.equal(res.status, 200);
       assert.deepEqual(res.body.tracking, kindAndName, String(cookie));
@@ -123,6 +124,26 @@ test('Turn it on at the store path publishes the first time and switches on, wit
   const before = (await state(north)).live_version_id;
   assert.equal((await turn(north, 'on', { cookie: north.cookie })).status, 200);
   assert.equal((await state(north)).live_version_id, before);
+});
+
+test('Turn it on works for a shop that has never opened the Website page (no website row yet)', async () => {
+  // The old switch is off and there is no website row, so the shop's own
+  // staff see the preview and its banner (server/storefront.js).
+  const fresh = await staffSignup(server.baseUrl, { shopName: 'South Road Bikes' });
+  try {
+    assert.equal(await runWithShop(fresh.shop.id, () => prepare('SELECT 1 AS yes FROM website').get()), undefined);
+    const preview = await site(fresh, '', { cookie: fresh.cookie });
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.equal(preview.body.preview, true);
+    const on = await turn(fresh, 'on', { cookie: fresh.cookie });
+    assert.equal(on.status, 200, JSON.stringify(on.body));
+    const row = await state(fresh);
+    assert.equal(row.is_on, true);
+    assert.ok(row.published && row.live_version_id != null, 'published the first time, with a version');
+    assert.equal((await site(fresh)).status, 200);
+  } finally {
+    await deleteTestShop(fresh.shop.id);
+  }
 });
 
 test('only this shop’s Owner can turn it on or off; anyone else is refused and nothing changes', async () => {

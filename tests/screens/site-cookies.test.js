@@ -65,6 +65,9 @@ test('wb-cookies-banner: a shop with a tracking tool asks first, and no tool scr
   await ui.findByText('Your cookie choices are saved');
   await waitFor(() => gaScript());
   assert.equal(gaScript(), 'https://www.googletagmanager.com/gtm.js?id=%5BG-ID%5D');
+  // The saved message goes by itself after about 5 seconds (decided while building).
+  const { waitFor: wait } = await import('@testing-library/react');
+  await wait(() => assert.ok(ui.queryByRole('status') === null), { timeout: 7000 });
 });
 
 test('Reject all is remembered in wh_cookies: no banner on the next visit, and no tool script', async () => {
@@ -166,6 +169,20 @@ test('wb-cookies-page: the table from the one list in the code, the tools added,
   await ui.findByRole('dialog', { name: 'Choose cookies' });
 });
 
+test('wb-cookies-page before any choice, and after a yes: what it says for each kind', async () => {
+  r = await renderWebsite({ url: '/cookies', site: withTools(GA, META) });
+  const { ui } = r;
+  await ui.findByRole('heading', { level: 1, name: 'Cookies' });
+  ui.getByText('Google Analytics — measuring visits.');
+  ui.getByText('Meta (Facebook) Pixel — advertising.');
+  assert.equal(ui.getByText('You haven’t chosen yet about measuring visits.').tagName, 'STRONG');
+  ui.getByText('You haven’t chosen yet about advertising.');
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.click(ui.getByRole('button', { name: 'Accept all' }));
+  await ui.findByText('You said yes to measuring visits.');
+  ui.getByText('You said yes to advertising.');
+});
+
 test('wb-cookies-page-plain: a shop with no tool lists only what the site needs, with nothing to choose', async () => {
   r = await renderWebsite({ url: '/cookies' });
   const { ui } = r;
@@ -188,7 +205,9 @@ test('on a phone the banner is fixed to the bottom, full width, with its buttons
 test('the Cookies page’s list matches what the server really sets', async () => {
   const { COOKIES } = await import(new URL('../../.test-build/website/cookie-list.js', import.meta.url).href);
   const { CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE_SECONDS } = await import('../../server/customer-auth.js');
-  const { COOKIE_CHOICES } = await import('../../server/routes/site.js');
+  const { COOKIE_CHOICES, CHOICE_FOR_KIND: serverKinds } = await import('../../server/routes/site.js');
+  const { CHOICE_FOR_KIND } = await import(new URL('../../.test-build/website/cookie-list.js', import.meta.url).href);
+  assert.deepEqual(CHOICE_FOR_KIND, serverKinds, 'the page offers a row for every kind the server holds an ID back for');
   const byName = new Map(COOKIES.map((c) => [c.name, c]));
   assert.equal(byName.get(CUSTOMER_SESSION_COOKIE)?.seconds, CUSTOMER_SESSION_MAX_AGE_SECONDS);
   assert.ok(byName.has(COOKIE_CHOICES));
