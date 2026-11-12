@@ -141,7 +141,7 @@ report counts. All are "Owner only" until WP-1.1.
 | See the list, make quotes, add certificates, hold, release, mark applied, mark ready, hand over | Anyone signed in | Same |
 | Cancel with no deposit | Anyone signed in | Same |
 | Mark paid, part paid, close with a reason, order now anyway, cancel with a deposit | Owner (`ownerOnly`) | Owner, managers, Staff with "Can close the day" |
-| Cost, commission, expected amount, owed totals | `canSeeCosts` (Owner today) | "Can see costs and margin" |
+| Cost, commission, owed totals (the expected amount for one order goes to everyone, decision H3) | `canSeeCosts` (Owner today) | "Can see costs and margin" |
 | Today's Cycle to Work lines | Owner | Owner, managers, "Give everything a Manager can do" |
 | Settings | Owner | "Can change settings" |
 
