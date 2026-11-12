@@ -28,10 +28,12 @@ afterEach(async () => {
 });
 
 // A pretend server holding the list, as the routes answer (whole list on each change).
+// `state.fail` makes the next changes fail: 'offline' (no connection) or [status, body].
 async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: false, accountsOn: false, accountLimitPence: null }) {
   calls = [];
   let ways = start.map((w) => ({ ...w }));
   let nextId = 20;
+  const state = { fail: refuse };
   globalThis.fetch = async (u0, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -39,8 +41,11 @@ async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: f
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(u0, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
+    if (u.pathname.startsWith('/api/payment-ways-other') && method !== 'GET' && state.fail) {
+      if (state.fail === 'offline') throw new TypeError('Failed to fetch');
+      return reply(state.fail[0], state.fail[1]);
+    }
     if (u.pathname === '/api/payment-ways-other' && method === 'POST') {
-      if (refuse) return reply(refuse[0], refuse[1]);
       const id = nextId++;
       const at = body.position ?? ways.length;
       ways.splice(at, 0, { id, name: body.name, note: body.note ?? null, position: 0 });
@@ -66,8 +71,13 @@ async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: f
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  return { ...rtl, ui };
+  return { ...rtl, ui, state };
 }
+// Settings' one note at the foot of the page (saved-note.tsx; settings-frame.mjs toastHtml).
+const noteArea = (r) => r.ui.container.querySelector('[data-saved-note]');
+const NO_INTERNET = 'Not saved — no internet connection. Your change is kept here.';
+// The fold's own stand-in line is gone: nothing in the fold says Saved.
+const noInFoldSaved = (r) => assert.ok(!r.ui.getAllByRole('status').some((el) => !el.hasAttribute('data-saved-note') && /Saved/.test(el.textContent)));
 const writes = () => calls.filter((c) => c.method !== 'GET').map((c) => `${c.method} ${new URL(c.url, 'http://localhost').pathname} ${JSON.stringify(c.body ?? null)}`);
 async function openFold(r, name) {
   const fold = await r.ui.findByRole('button', { name: new RegExp(`^${name}`) });
@@ -111,31 +121,39 @@ test('the Other ways to pay fold shows the rows with their lines, Remove, the Ad
   assert.deepEqual(titles.map((t) => t.match(/^(Ways to pay|Other ways to pay|Customer groups)/)[1]), ['Ways to pay', 'Other ways to pay', 'Customer groups']);
 });
 
-test('Jack adds Bank transfer: it goes at the end, Saved shows with Undo, and Undo takes it off', async () => {
+test('Jack adds Bank transfer: it goes at the end, the note says Saved · Bank transfer added with Undo, and Undo takes it off', async () => {
   const r = await render();
   await openFold(r, 'Other ways to pay');
   const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
   r.fireEvent.change(box, { target: { value: 'Bank transfer' } });
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Add' }));
   assert.ok(await r.ui.findByRole('button', { name: 'Remove Bank transfer' }));
-  assert.ok(r.ui.getAllByRole('status').some((el) => /^Saved\.\s*Undo$/.test(el.textContent)), 'Saved · Undo');
+  const area = noteArea(r);
+  // As drawn: "Saved · Shimano brake pads added to Workshop" (set-till-quick-saved).
+  await r.waitFor(() => assert.equal(area.textContent, 'Saved · Bank transfer addedUndo'));
+  noInFoldSaved(r);
   assert.equal(box.value, '', 'the box empties for the next one');
-  r.fireEvent.click(r.ui.getByRole('button', { name: 'Undo' }));
+  r.fireEvent.click(r.within(area).getByRole('button', { name: 'Undo' }));
   await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Bank transfer' }) === null));
   await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'New way to pay'));
+  // The Undo, once saved, is confirmed: "Saved", with nothing more to undo (as End of day).
+  await r.waitFor(() => assert.equal(area.textContent, 'Saved'));
   assert.deepEqual(writes(), ['POST /api/payment-ways-other {"name":"Bank transfer"}', 'DELETE /api/payment-ways-other/20 {}']);
 });
 
-test('Jack removes Payment link: it goes, Saved shows with Undo, and Undo puts it back where it was with its line', async () => {
+test('Jack removes Payment link: it goes, the note says Saved · Payment link removed with Undo, and Undo puts it back where it was with its line', async () => {
   const r = await render();
   await openFold(r, 'Other ways to pay');
   r.fireEvent.click(await r.ui.findByRole('button', { name: 'Remove Payment link' }));
   await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Payment link' }) === null));
   // No row after it, so the focus goes to the Add box (as Storage slots' Remove).
   await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'New way to pay'));
-  assert.ok(r.ui.getAllByRole('status').some((el) => /^Saved\.\s*Undo$/.test(el.textContent)), 'Saved · Undo');
-  r.fireEvent.click(r.ui.getByRole('button', { name: 'Undo' }));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, 'Saved · Payment link removedUndo'));
+  noInFoldSaved(r);
+  r.fireEvent.click(r.within(area).getByRole('button', { name: 'Undo' }));
   assert.ok(await r.ui.findByRole('button', { name: 'Remove Payment link' }));
+  await r.waitFor(() => assert.equal(area.textContent, 'Saved'));
   // Undo puts the focus on the restored row's Remove.
   await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Remove Payment link'));
   assert.deepEqual(writes(), [
@@ -159,6 +177,32 @@ test('a name already on the list shows the server’s words and keeps what was t
   const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
   r.fireEvent.change(box, { target: { value: 'Finance' } });
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Add' }));
-  assert.ok(await r.ui.findByText('That way to pay is already on the list'));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, 'That way to pay is already on the list'));
+  assert.ok(area.querySelector('svg.lucide-circle-alert') !== null);
+  assert.ok(r.within(area).queryByRole('button') === null, 'no Try again after a refusal');
+  assert.ok(r.ui.queryByRole('alert') === null, 'no line in the fold');
   assert.equal(box.value, 'Finance');
+});
+
+test('with no connection the note says so with Try again and the name stays typed; Try again adds it; a server fault offers Try again too', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
+  r.state.fail = 'offline';
+  r.fireEvent.change(box, { target: { value: 'Bank transfer' } });
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Add' }));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, `${NO_INTERNET}Try again`));
+  assert.equal(box.value, 'Bank transfer', 'kept here');
+  r.state.fail = null;
+  r.fireEvent.click(r.within(area).getByRole('button', { name: 'Try again' }));
+  assert.ok(await r.ui.findByRole('button', { name: 'Remove Bank transfer' }));
+  await r.waitFor(() => assert.equal(area.textContent, 'Saved · Bank transfer addedUndo'));
+  assert.equal(box.value, '');
+  // A fault on the server: the general words, with Try again; the row stays.
+  r.state.fail = [500, { error: 'Internal error' }];
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Remove Finance' }));
+  await r.waitFor(() => assert.equal(area.textContent, 'Wheelhouse couldn’t save that. Try again in a moment.Try again'));
+  assert.ok(r.ui.getByRole('button', { name: 'Remove Finance' }));
 });

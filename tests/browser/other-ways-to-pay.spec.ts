@@ -60,13 +60,18 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await page.getByRole('textbox', { name: 'New way to pay' }).fill('Bank transfer');
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Remove Bank transfer' })).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+    // Settings' one note at the foot of the page (saved-note.tsx), worded as set-till-quick-saved.
+    const note = page.locator('[data-saved-note][role="status"] > *');
+    await expect(note).toBeVisible();
+    await expect(note).toContainText('Saved · Bank transfer added');
     await expect(fold).toContainText('Finance, Cycle to Work, Payment link, Bank transfer');
 
     await page.getByRole('button', { name: 'Remove Payment link' }).click();
     await expect(page.getByRole('button', { name: 'Remove Payment link' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    await expect(note).toContainText('Saved · Payment link removed');
+    await note.getByRole('button', { name: 'Undo', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Remove Payment link' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Payment link' })).toBeFocused();
     await noSideScroll(page);
     const list = (await staffRequest(server!.baseUrl, owner.cookie, '/api/payment-ways-other')).body.ways.map((w: { name: string }) => w.name);
     expect(list).toEqual(['Finance', 'Cycle to Work', 'Payment link', 'Bank transfer']);
