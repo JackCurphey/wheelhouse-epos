@@ -1,7 +1,7 @@
 // Settings › Front desk › End of day: Close the day timing and Count first
 // (openspec/changes/owner-setup-till-payments-eod design 3; set-eod-close;
 // owner setup decisions 6 and 18; Jack's answer 2 of 11 Nov: every shop moves
-// to 30 minutes before closing, existing ones included). Migration 132, the
+// to 30 minutes before closing, existing ones included). Migration 139, the
 // /api/end-of-day-settings route, and countFirst on /api/close-the-day. The
 // live server's clock is pinned to 1 Sep 2026.
 import '../server/load-env.js';
@@ -19,7 +19,7 @@ import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js'
 import { deleteTestShop } from './helpers/testShop.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const FILE = '132_end_of_day_settings.sql';
+const FILE = '139_end_of_day_settings.sql';
 
 function adminUrlOrSkip(t) {
   try {
@@ -31,10 +31,10 @@ function adminUrlOrSkip(t) {
   }
 }
 
-test('132 gives every shop 30 minutes before closing and Count first on, existing shops included, and runs twice', async (t) => {
+test('139 gives every shop 30 minutes before closing and Count first on, existing shops included, and runs twice', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig132_${process.pid}`;
+  const name = `epos_mig139_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));

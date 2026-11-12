@@ -27,23 +27,47 @@ function freePort() {
   });
 }
 
-async function waitForServer(child, baseUrl, timeoutMs) {
+// Ready means this child said it is listening ("Wheelhouse running at
+// http://localhost:<port>", server.js's listen callback) and then its /healthz
+// answered {"status":"ok"}. Before 12 Nov any answer on the port counted, so a
+// file whose port had been taken in the gap after freePort() ran against
+// another file's server. Once ours is listening, any other answer means another
+// server holds the port on 127.0.0.1 (which a Mac allows beside ours, listening
+// on every address), and the start is tried again on a fresh port.
+async function waitForServer(child, baseUrl, timeoutMs, listening) {
   const deadline = Date.now() + timeoutMs;
+  const notOurs = (what) => Object.assign(new Error(`another server holds ${baseUrl}: ${what}`), { notOurs: true });
   let lastErr;
+  let refused = 0;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
-      throw new Error(`server exited early with code ${child.exitCode}`);
+      throw Object.assign(new Error(`server exited early with code ${child.exitCode}`), { exitedEarly: true });
     }
+    if (!listening()) {
+      await new Promise((r) => setTimeout(r, 50));
+      continue;
+    }
+    let res;
     try {
-      const res = await fetch(`${baseUrl}/app.js`);
-      if (res.status === 200) {
-        await res.arrayBuffer();
-        return;
-      }
+      res = await fetch(`${baseUrl}/healthz`);
     } catch (err) {
+      // Ours is listening, so a connection that keeps failing is someone else's.
       lastErr = err;
+      if (++refused >= 10) throw notOurs(`its connections fail (${err.cause?.code ?? err.message})`);
+      await new Promise((r) => setTimeout(r, 200));
+      continue;
     }
-    await new Promise((r) => setTimeout(r, 200));
+    const text = await res.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch { /* not ours */ }
+    if (res.status === 200 && body?.status === 'ok') return;
+    // Ours with its database not answering yet: wait, as before.
+    if (res.status === 503 && body?.status === 'error') {
+      lastErr = new Error(`/healthz: ${text}`);
+      await new Promise((r) => setTimeout(r, 200));
+      continue;
+    }
+    throw notOurs(`/healthz answered ${res.status} ${text.slice(0, 80)}`);
   }
   throw new Error(`server did not start in ${timeoutMs}ms: ${lastErr}`);
 }
@@ -57,21 +81,51 @@ export const TEST_CLOCK_PIN = '2026-09-01T06:00:00Z';
 
 // Returns { baseUrl, stop }. Call stop() in an after() hook - a leaked child
 // keeps its port and its database connections.
-export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
-  const port = await freePort();
+//
+// A port can be taken between freePort() letting it go and the server
+// listening on it (another file's server, or any listen(0) the system hands
+// it to). The server then dies with EADDRINUSE, or, where the other listens on
+// 127.0.0.1 only, starts but another server answers; either way the start is
+// tried again on a fresh port, up to five times.
+// `pickPort` is for tests of this helper (tests/live-server-port.test.js).
+export async function startLiveServer({ timeoutMs = 30000, env = {}, pickPort = freePort } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await startOnce({ timeoutMs, env, port: await pickPort() });
+    } catch (err) {
+      if (!(err.portTaken && attempt < 5)) throw err;
+    }
+  }
+}
+
+// What a test server runs with: this process's environment, then these, then
+// the test's own `env`.
+export function testServerEnv(port, env = {}) {
+  return {
+    ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN,
+    // The pretend payment provider and pretend WorkOS, as a developer's .env
+    // asks for (deposit-settings design 3; staff-signin-workos design 7).
+    PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
+    // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
+    WHEELHOUSE_DEV_AUTOLOGIN: '',
+    // Says what this is, for what only runs in tests and development (the pretend help inbox).
+    NODE_ENV: 'test',
+    // Test servers share a database: one mustn't pick up another test's waiting
+    // Citrus Lime file. A test that wants the timer sets its own.
+    WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off',
+    // The same for the messages timer: each round goes through every shop in
+    // the shared database (hundreds), and dozens of test servers ran one every
+    // 5 s for nothing (tests/live-server-port.test.js). A test that sends sets its own.
+    WH_MESSAGES_TICK_MS: '3600000',
+    ...env,
+  };
+}
+
+async function startOnce({ timeoutMs, env, port }) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
-    // The pretend payment provider and pretend WorkOS, as a developer's .env
-    // asks for (deposit-settings design 3; staff-signin-workos design 7).
-    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, PAYMENTS_PROVIDER: 'pretend', STAFF_SIGNIN_PROVIDER: 'pretend',
-      // A developer's .env may switch the local sign-in skip on; a test server never has it unless the test asks (dev-autologin.test.js).
-      WHEELHOUSE_DEV_AUTOLOGIN: '',
-      // Says what this is, for what only runs in tests and development (the pretend help inbox).
-      NODE_ENV: 'test',
-      // Test servers share a database: one mustn't pick up another test's waiting
-      // Citrus Lime file. A test that wants the timer sets its own.
-      WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off', ...env },
+    env: testServerEnv(port, env),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Kept as well as shown, for a test that checks what the server logged.
@@ -80,11 +134,16 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
     stderr += d;
     process.stderr.write(`[server] ${d}`);
   });
+  // Read, too, so a server that logs a lot never blocks on a full pipe.
+  let stdout = '';
+  child.stdout.on('data', (d) => { stdout += d; });
+  const listening = () => stdout.includes(`Wheelhouse running at http://localhost:${port}`);
 
   try {
-    await waitForServer(child, baseUrl, timeoutMs);
+    await waitForServer(child, baseUrl, timeoutMs, listening);
   } catch (err) {
     child.kill('SIGKILL');
+    if (err.notOurs || (err.exitedEarly && /EADDRINUSE/.test(stderr))) err.portTaken = true;
     throw err;
   }
 

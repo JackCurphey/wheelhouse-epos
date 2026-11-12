@@ -360,3 +360,9 @@ DELETE /api/quick-button-groups/:id
 POST /api/quick-buttons
 PUT /api/quick-buttons/:id
 DELETE /api/quick-buttons/:id
+GET /api/c2w/settings
+PUT /api/c2w/settings
+GET /api/c2w/providers
+POST /api/c2w/providers
+PUT /api/c2w/providers/:id
+POST /api/c2w/providers/:id/retire
