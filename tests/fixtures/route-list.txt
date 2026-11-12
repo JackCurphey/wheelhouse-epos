@@ -376,3 +376,6 @@ POST /api/c2w/orders/:id/applied
 POST /api/c2w/orders/:id/hold-longer
 POST /api/c2w/orders/:id/release
 GET /api/c2w/stock
+POST /api/c2w/orders/:id/certificate
+POST /api/c2w/orders/:id/ready
+POST /api/c2w/orders/:id/ready/undo

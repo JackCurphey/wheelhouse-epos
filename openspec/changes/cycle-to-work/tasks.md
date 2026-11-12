@@ -74,8 +74,8 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 6. Certificate, applied and ordering in (pull request 6, about 550 lines, risky: stock)
 
-- [ ] 6.1 Test: Mark as applied; adding the certificate moves the stage and makes the hold firm; the "bike is ready" tick moves on to Ready to collect
-- [ ] 6.2 Test: less and more than the order give the drawn choices and change Who pays what; late certificate warns; released order takes a free frame again
+- [x] 6.1 Test (server; the screens come in 6c): Mark as applied; adding the certificate moves the stage and makes the hold firm; the "bike is ready" tick moves on to Ready to collect
+- [x] 6.2 Test (server; the screens come in 6c): less and more than the order give the drawn choices and change Who pays what; late certificate warns; released order takes a free frame again
 - [ ] 6.3 Test: the ordering rule decides when "Order from [supplier]" shows; ordering adds a supplier order line linked to the order, with Undo; "Order now anyway…" refused without a reason, logged with it
 - [ ] 6.4 Test: booking the bike in holds its frame for the order and moves it to Ready to collect when the certificate is in
 - [ ] 6.5 Screen test: `cw-applied`, `cw-certificate` with `-diff`, `-more`, `-late`, `-released`, `cw-certificate-match`, `cw-order-anyway`, `cw-ordered`, `cw-order-on-order`, `cw-order-get-ready`, `cw-marked-ready`, `cw-order-ready`; `rs-receive-c2w`, `rs-frame-c2w`, `rs-booked-c2w`

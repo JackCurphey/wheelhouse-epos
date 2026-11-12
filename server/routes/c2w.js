@@ -23,6 +23,7 @@ import {
 
 const db = { prepare, exec: dbExec };
 const EMAILS_PER_HOUR = 5;
+const CHOOSE_DIFFERENCE = { error: 'The certificate is for less than the order. Choose what to do about the difference.', code: 'difference_choice' };
 const SETTINGS_NEEDED = { error: 'Set how long quotes are valid and how long bikes are held in Settings › Front desk › Cycle to Work first', code: 'settings_needed' };
 const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
@@ -274,6 +275,92 @@ export function register(route) {
     }
     sendJson(res, 200, { here, sites });
   });
+
+  // Add the certificate (cw-certificate, -diff, -match, -more, -late, -released):
+  // the hold becomes firm until collection (decision 3). Less than the order,
+  // the shop changes the order to match or the customer pays the difference;
+  // more, it keeps the order as quoted or adds to it. Anyone checked in.
+  route('POST', '/api/c2w/orders/:id/certificate', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const today = await shopDay();
+      const number = typeof body.number === 'string' ? body.number.trim() : '';
+      if (!number || number.length > 60) throw new ValidationError('The certificate number is 1 to 60 characters');
+      const amount = body.amountPence;
+      if (!Number.isInteger(amount) || amount < 0) throw new ValidationError('The amount on the certificate is in whole pence');
+      const receivedOn = body.receivedOn ?? today;
+      if (!isDay(receivedOn) || receivedOn > today) throw new ValidationError('Received is a date, today or earlier');
+      const ready = body.ready ?? false;
+      if (typeof ready !== 'boolean') throw new ValidationError('Ready is yes or no');
+      const difference = body.difference ?? null;
+      if (difference !== null && !['keep', 'match'].includes(difference)) throw new ValidationError('Keep the order or change it to match');
+      let accessoryIds = null;
+      if (difference === 'match') {
+        accessoryIds = body.accessoryIds;
+        if (!Array.isArray(accessoryIds) || accessoryIds.length > 20) throw new ValidationError('Choose up to 20 accessories');
+        accessoryIds.forEach((a) => wholeId(a, 'an accessory'));
+      }
+      const detail = { number, certificatePence: amount };
+      await takeStep(id, 'certificate', who, async (row) => {
+        const fields = { certificate_number: number, certificate_pence: amount, certificate_received_on: receivedOn, hold_until: null };
+        detail.quotePence = row.total_pence;
+        if (amount === row.total_pence) fields.difference_choice = null;
+        else if (difference === null && amount < row.total_pence) throw new Refused(400, CHOOSE_DIFFERENCE);
+        else fields.difference_choice = difference ?? 'keep';
+        if (fields.difference_choice === 'match') {
+          // Kept accessories keep their quoted price; added ones take the shop's price now.
+          const quoted = new Map(row.accessories.map((a) => [a.productId, a]));
+          const extras = [];
+          for (const pid of accessoryIds) {
+            if (quoted.has(pid)) { extras.push(quoted.get(pid)); continue; }
+            const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(pid);
+            if (!p) throw new ValidationError('Choose the accessories from the shop’s products');
+            extras.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
+          }
+          const bikePence = row.total_pence - row.accessories.reduce((sum, a) => sum + a.pricePence, 0);
+          const total = bikePence + extras.reduce((sum, a) => sum + a.pricePence, 0);
+          if (total > amount) throw new ValidationError('The new total is more than the certificate. Take more off, or keep the order.');
+          Object.assign(fields, { accessories: JSON.stringify(extras), total_pence: total, quote_revised_at: currentMoment().toISOString() });
+        }
+        // A bike let go before the certificate is held again if one is free at the
+        // order's site; if none is, the order needs one ordering in.
+        let heldAt = row.held_at;
+        if (!heldAt) {
+          const got = await takeHold(id, row.product_id, row.site_id);
+          if (got) {
+            heldAt = currentMoment().toISOString();
+            Object.assign(fields, { frame_id: got.frameId, held_at: heldAt });
+          }
+        }
+        if (ready) {
+          if (!heldAt) throw new Refused(409, NOT_HELD);
+          fields.stage = 'ready';
+          detail.ready = true;
+        }
+        return fields;
+      }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Mark ready to collect (cw-order-get-ready, cw-marked-ready), and its Undo.
+  for (const [path, step] of [['ready', 'ready'], ['ready/undo', 'ready_undone']]) {
+    route('POST', `/api/c2w/orders/:id/${path}`, async (req, res, params) => {
+      const who = await whoIsBooking(req);
+      if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+      const id = Number(params.id);
+      await save(res, 200, async () => {
+        await takeStep(id, step, who, (row) => {
+          if (step === 'ready' && !row.held_at) throw new Refused(409, NOT_HELD);
+          return {};
+        });
+        return { order: serializeOrder(await loadOrder(id)) };
+      });
+    });
+  }
 
   // Mark applied (cw-applied): the customer has applied through their employer.
   route('POST', '/api/c2w/orders/:id/applied', async (req, res, params) => {
