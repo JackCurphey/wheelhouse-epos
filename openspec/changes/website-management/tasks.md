@@ -30,54 +30,54 @@ the code. While building, run only the related test files
 
 ## 2. The Website page — screen (pull request 2, about 550 lines)
 
-- [ ] 2.1 Screen test: `ws-page` — "Your website is off", the free address, Turn it on with its drawn line, the starting-wording pages named, the product counts with See them, the summary rows and the footer link
-- [ ] 2.2 Screen test: `ws-page-on` and `ws-page-changes` — "[n] unpublished changes", "Saved by Jack Lewis [time]", the open list with Publish and Discard changes, "Review in the editor" not shown
-- [ ] 2.3 Screen test: the Words and photos list — seven rows in the drawn order, "Check this" until saved once; Edit opens the form box; a photo part has a description and "This photo is only decoration"
-- [ ] 2.4 Screen test: the Published toasts (on and off), the Discard box with Keep editing, and History over the page with Go back to this
-- [ ] 2.5 Screen test: `ws-no-access` for Staff, naming the Owners, with Back to Today; Website not in a Staff sidebar
-- [ ] 2.6 Build `src/screens/website/` on the Settings page frame and the form box to pass 2.1–2.5; add Website to Office in the sidebar
-- [ ] 2.7 Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
-- [ ] 2.8 Log decided-while-building 1, 3, 4 and 5 (design) in your own month file
+- [x] 2.1 Screen test: `ws-page` — "Your website is off", the free address, Turn it on with its drawn line, the starting-wording pages named, the product counts with See them, the summary rows and the footer link
+- [x] 2.2 Screen test: `ws-page-on` and `ws-page-changes` — "[n] unpublished changes", "Saved by Jack Lewis [time]", the open list with Publish and Discard changes, "Review in the editor" not shown
+- [x] 2.3 Screen test: the Words and photos list — seven rows in the drawn order, "Check this" until saved once; Edit opens the form box; a photo part has a description and "This photo is only decoration"
+- [x] 2.4 Screen test: the Published toasts (on and off), the Discard box with Keep editing, and History over the page with Go back to this
+- [x] 2.5 Screen test: `ws-no-access` for Staff, naming the Owners, with Back to Today; Website not in a Staff sidebar
+- [x] 2.6 Build `src/screens/website/` on the Settings page frame and the form box to pass 2.1–2.5; add Website to Office in the sidebar
+- [ ] 2.7 (kept for now, decision 36) Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
+- [x] 2.8 Log decided-while-building 1, 3, 4 and 5 (design) in your own month file
 - [ ] 2.9 Self-review with `reviewer`; full check
 
 ## 3. The three-step start, logo and colour (pull request 3, about 450 lines)
 
-- [ ] 3.1 Test: `POST /api/website/set-up` with "every" switches `show_online` on for priced products only, "nothing" leaves all off; a second set-up is refused
-- [ ] 3.2 Test: the colour check accepts #1A3F66, #2F6B4F and #2A2822 and refuses a colour white text can't be read on, on the server as well as the screen
-- [ ] 3.3 Screen test: `ws-start-which` (both choices, Not now, Next), `ws-start-look` (logo, Change logo, skip line, suggestions, Soft sand charcoal, Choose another colour), `ws-start-products` (both choices, the three counts with See them, Make my website); Back keeps choices
-- [ ] 3.4 Test: colours suggested from a logo — a test image made of two known colours gives those two
-- [ ] 3.5 Build the start screens and the set-up and colour routes to pass 3.1–3.4
-- [ ] 3.6 Log decided-while-building 2 (the step line) in your own month file
+- [x] 3.1 Test: `POST /api/website/set-up` with "every" switches `show_online` on for priced products only, "nothing" leaves all off; a second set-up is refused
+- [x] 3.2 Test: the colour check accepts #1A3F66, #2F6B4F and #2A2822 and refuses a colour white text can't be read on, on the server as well as the screen
+- [x] 3.3 Screen test: `ws-start-which` (both choices, Not now, Next), `ws-start-look` (logo, Change logo, skip line, suggestions, Soft sand charcoal, Choose another colour), `ws-start-products` (both choices, the three counts with See them, Make my website); Back keeps choices
+- [x] 3.4 Test: colours suggested from a logo — a test image made of two known colours gives those two
+- [x] 3.5 Build the start screens and the set-up and colour routes to pass 3.1–3.4
+- [x] 3.6 Log decided-while-building 2 (the step line) in your own month file
 - [ ] 3.7 Self-review with `reviewer`; full check
 
 ## 4. Tracking tools (pull request 4, about 300 lines)
 
-- [ ] 4.1 Check the ID formats for Microsoft Clarity, Meta Pixel and TikTok Pixel against each company's own help pages; note the sources in the code
-- [ ] 4.2 Test: switching a tool on saves it to the draft only; a wrong ID is kept and reported waiting; off keeps the ID; published, only valid tools reach `/api/storefront/info`, each with its kind
-- [ ] 4.3 Screen test: `ws-tracking` (four tools, kinds, the two drawn lines), `ws-tracking-on` (the cookie line, the ID field, the toast with Undo), `ws-tracking-error`
-- [ ] 4.4 Build the tracking list, route and screen to pass 4.2–4.3; the Website page's Tracking tools row shows "None — so there's no cookie choice" or the tools on
-- [ ] 4.5 Log decided-while-building 7 in your own month file
+- [x] 4.1 Check the ID formats for Microsoft Clarity, Meta Pixel and TikTok Pixel against each company's own help pages; note the sources in the code
+- [x] 4.2 Test: switching a tool on saves it to the draft only; a wrong ID is kept and reported waiting; off keeps the ID; published, only valid tools reach `/api/storefront/info`, each with its kind
+- [x] 4.3 Screen test: `ws-tracking` (four tools, kinds, the two drawn lines), `ws-tracking-on` (the cookie line, the ID field, the toast with Undo), `ws-tracking-error`
+- [x] 4.4 Build the tracking list, route and screen to pass 4.2–4.3; the Website page's Tracking tools row shows "None — so there's no cookie choice" or the tools on
+- [x] 4.5 Log decided-while-building 7 in your own month file
 - [ ] 4.6 Self-review with `reviewer`; full check
 
 ## 5. Online payments setup and Today (pull request 5, about 600 lines, risky: money and migration)
 
-- [ ] 5.1 Test: migrating from empty makes `online_payment_account` and `online_order_settings`; shops with deposits on and the server's provider set are marked connected
-- [ ] 5.2 Test: the pretend adapter's `connectStart`, `connectFinish` (finish and cancel) and `accountState`; the £1 test payment is one payment, taken and refunded, even if pressed twice
-- [ ] 5.3 Test: `paymentsConnected` is per shop; with it off, booking deposits are off and "Pay now" is hidden — one test per caller (`server/workshop/deposit.js`, `booking-deposit.js`, `routes/portal.js`, `routes/workshop-settings.js`)
-- [ ] 5.4 Test: Buying online can't be switched On while not connected; connecting switches it On
-- [ ] 5.5 Test: Today's Needs attention shows "[payment provider] needs more details by [date]" with Add the details for the Owner, and drops it when no longer needed
-- [ ] 5.6 Screen test: `ws-pay-none`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-today-pay-more`, and the Website page's Taking payments row in each state
-- [ ] 5.7 Build the migration, adapter calls, routes, the Online orders settings page (Buying online and Paying online only) and the Today source to pass 5.1–5.6
+- [x] 5.1 Test: migrating from empty makes `online_payment_account` and `online_order_settings`; shops with deposits on and the server's provider set are marked connected
+- [x] 5.2 Test: the pretend adapter's `connectStart`, `connectFinish` (finish and cancel) and `accountState`; the £1 test payment is one payment, taken and refunded, even if pressed twice
+- [x] 5.3 Test: `paymentsConnected` is per shop; with it off, booking deposits are off and "Pay now" is hidden — one test per caller (`server/workshop/deposit.js`, `booking-deposit.js`, `routes/portal.js`, `routes/workshop-settings.js`)
+- [x] 5.4 Test: Buying online can't be switched On while not connected; connecting switches it On
+- [x] 5.5 Test: Today's Needs attention shows "[payment provider] needs more details by [date]" with Add the details for the Owner, and drops it when no longer needed
+- [x] 5.6 Screen test: `ws-pay-none`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-today-pay-more`, and the Website page's Taking payments row in each state
+- [x] 5.7 Build the migration, adapter calls, routes, the Online orders settings page (Buying online and Paying online only) and the Today source to pass 5.1–5.6
 - [ ] 5.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 6. Shopify in the new frame (pull request 6a and 6b, about 500 lines each)
 
-- [ ] 6.1 Test: the pretend Shopify adapter — connect finishes, "Couldn't connect" on an unknown address or a cancel, preview counts, the only-in-Shopify list (left alone in Shopify, never hidden or deleted), sending progress, the three problem kinds, pause and resume
-- [ ] 6.2 Test: the routes — nothing is sent until Send; sending carries on as a background job; switch-to-Wheelhouse stops sending, makes Wheelhouse's website switched off, and keeps `show_online` and orders
-- [ ] 6.3 Build the adapter, pretend version and routes to pass 6.1–6.2 (pull request 6a)
-- [ ] 6.4 Screen test: `ws-start-shopify`, `ws-shopify-connect` with `-failed`, `-check`, `-sending`, `-problem`, `-switch`; `ws-shopify-on` on the Website page; `ws-pay-shopify` in Online orders settings
-- [ ] 6.5 Build the Shopify screens to pass 6.4 (pull request 6b)
-- [ ] 6.6 Self-review each with `reviewer`; full check
+- [x] 6.1 Test: the pretend Shopify adapter — connect finishes, "Couldn't connect" on an unknown address or a cancel, preview counts, the only-in-Shopify list (left alone in Shopify, never hidden or deleted), sending progress, the three problem kinds, pause and resume
+- [x] 6.2 Test: the routes — nothing is sent until Send; sending carries on as a background job; switch-to-Wheelhouse stops sending, makes Wheelhouse's website switched off, and keeps `show_online` and orders
+- [x] 6.3 Build the adapter, pretend version and routes to pass 6.1–6.2 (pull request 6a)
+- [x] 6.4 Screen test: `ws-start-shopify`, `ws-shopify-connect` with `-failed`, `-check`, `-sending`, `-problem`, `-switch`; `ws-shopify-on` on the Website page; `ws-pay-shopify` in Online orders settings
+- [x] 6.5 Build the Shopify screens to pass 6.4 (pull request 6b)
+- [x] 6.6 Self-review each with `reviewer`; full check
 
 ## 7. Roles (pull request 7, about 250 lines — waits for WP-1.1)
 

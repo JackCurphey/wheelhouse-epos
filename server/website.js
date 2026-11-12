@@ -7,8 +7,12 @@
 // The old website settings (storefront_settings) stay as they are and follow
 // what is published, so the old customer site keeps working unchanged until
 // it is replaced (design 1).
+import { payments } from './payments/index.js';
+import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
+import { linkState } from './shopify/link.js';
+import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
 
 // History keeps 90 days (spec question 3, default taken:
 // docs/decisions/2026-11-12-website-defaults-taken.md).
@@ -142,8 +146,10 @@ function partValue(content, key) {
   return JSON.stringify(PART_BY_KEY.get(key).fields.map((f) => rest[f] ?? null));
 }
 
+// Only what customers' browsers would load counts as a change: a tool
+// waiting for a right ID changes nothing they see.
 function validTracking(content) {
-  return JSON.stringify((content?.tracking || []).map((t) => [t.tool, t.id, !!t.on]));
+  return JSON.stringify(liveTracking(content));
 }
 
 // The changes saved since the last publish, part by part, grouped by page in
@@ -178,6 +184,18 @@ async function loginNames(ids) {
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
+// Step 3's counts (ws-start-products): what "Every product online" would
+// give, whatever each product's switch says now.
+async function startCounts() {
+  const row = await prepare(
+    `SELECT count(*) FILTER (WHERE price > 0) AS go_online,
+            count(*) FILTER (WHERE price > 0 AND (photo_url IS NULL OR photo_url = '')) AS no_photo,
+            count(*) FILTER (WHERE price = 0) AS no_price
+     FROM products WHERE active = 1`
+  ).get();
+  return { goOnline: Number(row.go_online), noPhoto: Number(row.no_photo), noPrice: Number(row.no_price) };
+}
+
 async function productCounts() {
   const row = await prepare(
     // ws-page counts: an unpriced product "stays off until priced", so it is
@@ -199,6 +217,7 @@ export async function websiteState(row = null) {
   const names = await loginNames([website.draft_saved_by, website.published_by]);
   const parts = PARTS.map((p) => ({ key: p.key, name: p.name, page: p.page, ...draft.parts?.[p.key], checked: !!draft.parts?.[p.key]?.checked }));
   const partsToCheck = parts.filter((p) => !p.checked).map((p) => p.name);
+  const account = await paymentAccount();
   return {
     kind: website.kind,
     setUp: !!website.kind,
@@ -218,9 +237,14 @@ export async function websiteState(row = null) {
     ready: !!website.kind && partsToCheck.length === 0,
     logo: draft.logo ?? null,
     mainColour: draft.main_colour || SOFT_SAND_CHARCOAL,
-    tracking: draft.tracking || [],
+    tracking: trackingList(draft),
     productCounts: await productCounts(),
+    ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
+    // The Taking payments row: the same state as Settings › Online orders (design 6).
+    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },
+    // Connected to the shop's own Shopify (design 7), or null.
+    shopify: await linkState(),
   };
 }
 
@@ -316,6 +340,7 @@ export async function publish(loginId) {
 export async function turnOn(loginId) {
   await inTransaction(async () => {
     const website = await lockWebsite();
+    if (website.kind === 'shopify') throw new WebsiteError(409, 'Your website is your Shopify shop');
     if (!website.published) await publishLocked(website, loginId);
     await prepare('UPDATE website SET is_on = true, updated_at = now()').run();
     await getOrCreateStorefrontSettings();
@@ -332,6 +357,21 @@ export async function turnOff() {
     await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
   });
   return websiteState();
+}
+
+// Shopify connected, or Wheelhouse's website instead (design 7): either way
+// Wheelhouse's own website is off until the Owner turns it on. `alongside`
+// saves the Shopify link in the same transaction.
+export async function chooseWebsiteKind(kind, alongside) {
+  // Made first: making it commits on its own, which would end this transaction early.
+  await getOrCreateWebsite();
+  await inTransaction(async () => {
+    await lockWebsite();
+    await prepare('UPDATE website SET kind = ?, set_up_at = COALESCE(set_up_at, now()), is_on = false, updated_at = now()').run(kind);
+    await getOrCreateStorefrontSettings();
+    await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
+    await alongside();
+  });
 }
 
 async function keepDraftInHistory(website, loginId) {
@@ -426,4 +466,83 @@ export async function ownerNames(shopId) {
 // refused: they could neither turn the site off nor change what customers see.
 export async function websiteInUse() {
   return !!(await prepare('SELECT 1 AS yes FROM website').get());
+}
+
+// ---------- Set-up and the main colour (design 4) ----------
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const channel = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+
+/** The standard contrast of white text on a colour, from 1 to 21. */
+export function contrastWithWhite(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => channel(parseInt(hex.slice(i, i + 2), 16)));
+  return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
+}
+
+/** Why a main colour can't be used, or null when white text on it is easy to read (at least 4.5 to 1). */
+export function colourProblem(colour) {
+  if (typeof colour !== 'string' || !HEX.test(colour)) return 'Choose a colour';
+  return contrastWithWhite(colour) >= 4.5 ? null : 'That colour would make text hard to read. Choose a darker one.';
+}
+
+function checkColour(colour) {
+  const problem = colourProblem(colour);
+  if (problem) throw new WebsiteError(400, problem);
+  return colour.toUpperCase();
+}
+
+// The three steps' answers, once only (ws-start-which, -look, -products).
+// Shopify is set up by connecting it (pull request 6b).
+export async function setUp(body, loginId) {
+  if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
+  if (!['every', 'nothing'].includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
+  const colour = checkColour(body.mainColour);
+  await getOrCreateWebsite();
+  return inTransaction(async () => {
+    const website = await prepare('SELECT * FROM website FOR UPDATE').get();
+    if (website.kind) throw new WebsiteError(409, 'The website is already set up');
+    // Every product online: active ones with a price; one with no price stays
+    // off until priced. Nothing online: every product off, inactive ones too.
+    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
+    await prepare(
+      `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
+              draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`
+    ).run(colour, loginId);
+    return websiteState(await prepare('SELECT * FROM website').get());
+  });
+}
+
+export async function saveColour(colour, loginId) {
+  const checked = checkColour(colour);
+  await getOrCreateWebsite();
+  const saved = await prepare(
+    "UPDATE website SET draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)), draft_saved_by = ?, draft_saved_at = now(), updated_at = now() WHERE kind IS NOT NULL"
+  ).run(checked, loginId);
+  // Before set-up the colour is chosen in the three steps, and sent with them.
+  if (!saved.changes) throw new WebsiteError(409, 'Set up the website first');
+  return websiteState();
+}
+
+const MAX_TRACKING_ID = 64;
+
+// Switching a tool on or off, or changing its ID, changes the draft only. A
+// wrong ID is kept so the shop can correct it; off keeps the ID (design 5).
+export async function saveTracking(key, body, loginId) {
+  const tool = TOOL_BY_KEY.get(key);
+  if (!tool) throw new WebsiteError(404, 'There is no such tracking tool');
+  if (typeof body?.on !== 'boolean') throw new WebsiteError(400, 'Say whether the tool is on or off');
+  if (body.id !== undefined && typeof body.id !== 'string') throw new WebsiteError(400, 'The ID must be text');
+  const id = body.id === undefined ? undefined : body.id.trim();
+  if (id !== undefined && id.length > MAX_TRACKING_ID) throw new WebsiteError(400, `That’s too long for an ID: up to ${MAX_TRACKING_ID} characters`);
+  return inTransaction(async () => {
+    const website = await lockWebsite();
+    if (!website.kind) throw new WebsiteError(409, 'Set up the website first');
+    const others = (website.draft.tracking || []).filter((t) => t.tool !== key);
+    const entry = { tool: key, id: id ?? savedTool(website.draft, key)?.id ?? '', on: body.on };
+    const tracking = TRACKING_TOOLS.map((t) => (t.key === key ? entry : others.find((o) => o.tool === t.key))).filter(Boolean);
+    await prepare(
+      "UPDATE website SET draft = jsonb_set(draft, '{tracking}', ?::jsonb), draft_saved_by = ?, draft_saved_at = now(), updated_at = now()"
+    ).run(JSON.stringify(tracking), loginId);
+    return websiteState(await prepare('SELECT * FROM website').get());
+  });
 }

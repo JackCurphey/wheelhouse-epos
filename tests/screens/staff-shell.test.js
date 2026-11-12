@@ -86,10 +86,10 @@ test('staff do not see Reports, Website or Settings', async () => {
 });
 
 test('each page is titled with its name and shows the placeholder until it is built', async () => {
-  // Website: not built yet (Reports is, since reports-sales-and-takings).
-  const { ui } = await renderAt('/workshop/website', OWNER);
-  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Website' }));
-  assert.ok(ui.getByText('Not built yet: website'));
+  // Online orders: not built yet (Website is, since website-management).
+  const { ui } = await renderAt('/workshop/orders', OWNER);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Online orders' }));
+  assert.ok(ui.getByText('Not built yet: orders'));
 });
 
 test('the owner lands on Today', async () => {

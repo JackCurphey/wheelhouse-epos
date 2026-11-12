@@ -11,6 +11,7 @@ import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
 
 let server;
 let owner;
@@ -21,6 +22,7 @@ let jo;
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'Deposit Till Cycles' });
+  await connectPayments(owner.shop.id);
   alex = await seedMechanic(owner.shop.id, { name: 'Alex Morgan' });
   jo = await inShop(async () => (await prepare("INSERT INTO employees (name, is_mechanic, is_cashier) VALUES ('Jo Taylor', 0, 1) RETURNING id").get()).id);
   maya = (await staff('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900142' } })).body;
