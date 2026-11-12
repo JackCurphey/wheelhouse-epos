@@ -56,6 +56,7 @@ export async function takingsReport(choice, today) {
   // The reopened day, if it falls in this period.
   const reopenedAny = await reopenedOn();
   const reopened = reopenedAny && reopenedAny.day >= period.from && reopenedAny.day <= period.through ? reopenedAny : null;
+  const reopenedRow = reopened && unit === 'day' ? (await prepare(CLOSES.replace('c.reopened_at IS NULL', 'c.reopened_at IS NOT NULL')).all(reopened.day, reopened.day))[0] : null;
   const rows = [];
   for (const b of [...buckets].reverse()) {
     if (b.notReached) continue;
@@ -76,9 +77,14 @@ export async function takingsReport(choice, today) {
         differencePence: c.difference_pence, closedByName: c.closed_by_name, closedAt: c.closed_at,
       });
       rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: c.online_pence });
-    } else if (reopened?.day === b.key) {
-      // A reopened day (reports-accounts-and-reopen): left out of every figure, said so, and where to close it again.
-      rows.push({ kind: 'day', key: b.key, label: b.label, closed: false, reopened: true, closeDay: b.key });
+    } else if (reopenedRow?.day === b.key) {
+      // A reopened day (reports-accounts-and-reopen; Jack, 12 Nov): its row keeps the figures it was closed with and opens
+      // its report, and its Online row stays; only the headline figures, the graph and the months leave it out.
+      rows.push({
+        kind: 'day', key: b.key, label: b.label, closed: true, reopened: true, closeId: reopenedRow.id, takingsPence: reopenedRow.takings_pence,
+        bankedPence: reopenedRow.banked_pence, differencePence: reopenedRow.difference_pence, closedByName: reopenedRow.closed_by_name, closedAt: reopenedRow.closed_at,
+      });
+      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: reopenedRow.online_pence });
     } else if (b.key === today) {
       rows.push({ kind: 'day', key: b.key, label: b.label, closed: false });
       // Today's online money so far, as drawn ("[£] so far"): not yet in any close.

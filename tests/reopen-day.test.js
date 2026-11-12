@@ -85,7 +85,11 @@ test('reopening today\'s close saves who, when and why, keeps the first close as
   const state = (await call(owner, '/api/close-the-day')).body;
   assert.equal(state.close, null, 'a reopened day is not closed');
   assert.equal(state.reopened.reason, 'a card payment was counted as cash');
-  assert.equal((await call(owner, `/api/reports/days/${first.id}`)).status, 404, 'and its report is not there until it is closed again');
+  const report = await call(owner, `/api/reports/days/${first.id}`);
+  assert.equal(report.status, 200, 'its report can still be opened, as it was closed (Jack, 12 Nov)');
+  assert.equal(report.body.close.takingsPence, 9400);
+  assert.deepEqual([report.body.close.reopened.reason, report.body.close.reopened.byName], ['a card payment was counted as cash', 'Jack Lewis']);
+  assert.equal(report.body.canReopen, false);
 });
 
 test('a reason is needed, and only the Owner can reopen', async () => {
@@ -141,7 +145,9 @@ test('closing it again makes one close for the day from a new count, from the sa
   assert.equal(kept[0].counted_pence, FLOAT + 7400 - 500, 'the first close\'s count is kept');
   assert.equal((await sql(owner, 'SELECT day_close_id FROM sales WHERE id = ?', s1.id)).day_close_id, first.id, 'its sale is still marked with it');
   assert.equal((await call(owner, '/api/close-the-day')).body.close.id, first.id);
-  assert.equal((await call(owner, `/api/reports/days/${first.id}`)).status, 200, 'its report is back');
+  const back = await call(owner, `/api/reports/days/${first.id}`);
+  assert.equal(back.status, 200, 'its report is back');
+  assert.equal(back.body.close.reopened, null);
   // Reopened and closed again a second time: a second history row.
   await reopen(owner, first.id, 'again');
   await closeToday(owner, FLOAT + 7400);
@@ -198,7 +204,7 @@ test('a reopened past day is closed again from a new count, and Today shows it w
   assert.equal((await call(owner, '/api/needs-attention')).body.items.filter((i) => i.kind === 'day_reopened').length, 0, 'it goes once it is closed again');
 });
 
-test('a reopened day is left out of Takings and cash-ups and said so, and counts again once closed', async () => {
+test('a reopened day keeps its row but is left out of the headline figures and said so, and counts again once closed', async () => {
   const owner = await shop();
   await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74, card: 20 });
   const first = await closeToday(owner, FLOAT + 7400);
@@ -211,8 +217,9 @@ test('a reopened day is left out of Takings and cash-ups and said so, and counts
   assert.equal(during.figures.takings.pence, 0, 'its figures are left out');
   assert.deepEqual(during.reopened, { day: TODAY, label: 'Tue 1 Sep', reason: 'wrong tender', reopenedByName: 'Jack Lewis' });
   const row = during.rows.find((r) => r.key === TODAY && r.kind === 'day');
-  assert.deepEqual([row.closed, row.reopened, row.closeDay], [false, true, TODAY]);
-  assert.ok(!during.rows.some((r) => r.kind === 'online' && r.key === TODAY && !r.soFar) || during.rows.find((r) => r.kind === 'online').soFar);
+  assert.deepEqual([row.closed, row.reopened, row.closeId, row.takingsPence, row.bankedPence, row.closedByName], [true, true, first.id, 9400, 7400, 'Jack Lewis'], 'its row keeps the figures it was closed with');
+  const online = during.rows.find((r) => r.kind === 'online' && r.key === TODAY);
+  assert.ok(online && online.onlinePence === 0 && !online.soFar, 'and its Online row stays');
   await closeToday(owner, FLOAT + 7400);
   const after = (await call(owner, '/api/reports/takings?period=this-week')).body;
   assert.equal(after.figures.takings.pence, 9400);

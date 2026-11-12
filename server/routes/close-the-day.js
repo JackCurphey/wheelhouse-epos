@@ -272,9 +272,12 @@ async function lateDay(day, count) {
 }
 
 // The saved close for a day, as the end-of-day report shows it (Reports reads it too).
-export async function closeOn(day) {
-  const r = await prepare(`SELECT c.*, to_char(c.day, 'YYYY-MM-DD') AS day_text, l.name AS closed_by_name
-    FROM day_closes c JOIN logins l ON l.id = c.login_id WHERE c.day = ? AND c.reopened_at IS NULL`).get(day);
+// `reopened: true` is for Reports, which still shows a reopened day's first close as it was saved (Jack, 12 Nov:
+// its row keeps its figures and its report can be opened), with `reopened` saying who reopened it and why.
+export async function closeOn(day, { reopened = false } = {}) {
+  const r = await prepare(`SELECT c.*, to_char(c.day, 'YYYY-MM-DD') AS day_text, l.name AS closed_by_name, rl.name AS reopened_by_name
+    FROM day_closes c JOIN logins l ON l.id = c.login_id LEFT JOIN logins rl ON rl.id = c.reopened_by
+    WHERE c.day = ?${reopened ? '' : ' AND c.reopened_at IS NULL'}`).get(day);
   if (!r) return null;
   const start = await floatStartOn(day);
   const count = await countFor(day);
@@ -289,6 +292,7 @@ export async function closeOn(day) {
     takingsPence: r.takings_pence, cardPence: r.card_pence, otherPence: r.other_pence, onlinePence: r.online_pence,
     // A day closed late: the morning count that counted it (op-close-yesterday).
     countedBy: count?.by ?? null,
+    reopened: r.reopened_at ? { reason: r.reopen_reason, byName: r.reopened_by_name, at: iso(r.reopened_at) } : null,
   };
 }
 

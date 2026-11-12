@@ -61,7 +61,9 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await box.getByRole('button', { name: 'Reopen the day' }).click();
     await expect(page.getByText('Tue 15 Sep is reopened — its figures are left out until it’s closed again')).toBeVisible();
     await expect(page.getByRole('group', { name: 'Closed days’ takings' }).getByText('£200.00')).toBeVisible();
-    await expect(table.getByRole('row', { name: /Tue 15 Sep.*Reopened/ })).toBeVisible();
+    // Its row keeps the figures it was closed with, marked Reopened, and its report still opens.
+    await expect(table.getByRole('row', { name: /^Tue 15 Sep £300\.00.*Jack Lewis · Reopened$/ })).toBeVisible();
+    await expect(table.getByRole('row', { name: /^Tue 15 Sep · Online/ })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
 

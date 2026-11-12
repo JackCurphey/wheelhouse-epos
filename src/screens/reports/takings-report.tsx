@@ -27,8 +27,8 @@ import { Figure, PERIODS } from './sales-report.tsx';
  * is, and so is the open day (?day=).
  */
 type Row =
-  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; reopened?: boolean; takingsPence?: number; closeDay?: string }
-  | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
+  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
+  | { kind: 'day'; key: string; label: string; closed: true; reopened?: boolean; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
   | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
@@ -57,7 +57,7 @@ const DAY = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-left whitespace
 /** Close the day for a day: today's own page, or an earlier day's by its date. */
 const closeDayPath = (day: string, today: string) => (day === today ? ROUTES['eod-count'] : `${ROUTES['eod-count']}?day=${day}`);
 
-function ClosedDays({ rows, onOpen, todayKey }: { rows: Row[]; onOpen: (id: number) => void; todayKey: string }) {
+function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => void }) {
   return (
     <div className="overflow-x-auto">
       <table aria-label="Closed days" className="w-full border-collapse text-sm max-md:text-size-13">
@@ -72,21 +72,6 @@ function ClosedDays({ rows, onOpen, todayKey }: { rows: Row[]; onOpen: (id: numb
                 <tr key={`o${r.key}`}>
                   <th scope="row" className={`${DAY} font-normal`}>{r.label}</th>
                   <td className={CELL}>{money(r.onlinePence)}{r.soFar ? ' so far' : ''}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
-                </tr>
-              );
-            }
-            if (r.kind === 'day' && !r.closed && r.reopened) {
-              // A reopened day: left out, said so, and where to close it again (rp-takings-reopened).
-              return (
-                <tr key={`d${r.key}`}>
-                  <th scope="row" className={`${DAY} font-semibold`}>{r.label}</th>
-                  <td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>—</td>
-                  <td className={CELL}>
-                    <span className="inline-flex flex-wrap items-center justify-end gap-x-2">
-                      Reopened
-                      <Link to={closeDayPath(r.closeDay!, todayKey)} aria-label={`Close ${r.label}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)] underline">Close it</Link>
-                    </span>
-                  </td>
                 </tr>
               );
             }
@@ -116,7 +101,7 @@ function ClosedDays({ rows, onOpen, todayKey }: { rows: Row[]; onOpen: (id: numb
                 <th scope="row" className={DAY}>{open}</th>
                 <td className={CELL}>{money(r.takingsPence)}</td><td className={CELL}>{money(r.bankedPence)}</td>
                 <td className={CELL}><Difference pence={r.differencePence} /></td>
-                <td className={CELL}>{r.kind === 'day' ? r.closedByName : `${r.closedDays} closed days`}</td>
+                <td className={CELL}>{r.kind === 'day' ? (r.reopened ? `${r.closedByName} · Reopened` : r.closedByName) : `${r.closedDays} closed days`}</td>
               </tr>
             );
           })}
@@ -128,12 +113,12 @@ function ClosedDays({ rows, onOpen, todayKey }: { rows: Row[]; onOpen: (id: numb
 
 function DayReport({ id, onClose }: { id: number; onClose: () => void }) {
   const [reopening, setReopening] = useState(false);
-  const day = useQuery({ queryKey: ['reports-day', id], queryFn: () => apiGet<{ close: Close; canReopen?: boolean }>(`/api/reports/days/${id}`), retry: false });
+  const day = useQuery({ queryKey: ['reports-day', id], queryFn: () => apiGet<{ close: Close & { reopened?: { reason: string; byName: string; at: string } | null }; canReopen?: boolean }>(`/api/reports/days/${id}`), retry: false });
   if (day.isError) return <Refusal error={day.error} />;
   if (!day.data) return null;
   const { close, canReopen } = day.data;
   if (reopening) return <ReopenDialog id={id} day={close.day} onClose={() => setReopening(false)} onDone={() => { setReopening(false); onClose(); }} />;
-  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay actions={<span className="flex flex-wrap items-center gap-2">{canReopen ? <Button variant="default" className="min-h-11" onClick={() => setReopening(true)}>Reopen this day</Button> : null}<DownloadButton path={`/api/reports/days/${id}/csv`} /></span>} />;
+  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}${close.reopened ? ` · reopened by ${close.reopened.byName}: “${close.reopened.reason}”` : ''}`} onDay actions={<span className="flex flex-wrap items-center gap-2">{canReopen ? <Button variant="default" className="min-h-11" onClick={() => setReopening(true)}>Reopen this day</Button> : null}<DownloadButton path={`/api/reports/days/${id}/csv`} /></span>} />;
 }
 
 export function TakingsReportPage() {
@@ -202,7 +187,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         <Box>
           {showGraphs ? <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
             keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
-          <ClosedDays rows={report.rows} onOpen={onOpen} todayKey={report.today} />
+          <ClosedDays rows={report.rows} onOpen={onOpen} />
         </Box>
       )}
       <Note>Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.</Note>

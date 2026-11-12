@@ -104,7 +104,7 @@ export function register(route) {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
     const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
     const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
-    const close = row ? await closeOn(row.day) : null;
+    const close = row ? await closeOn(row.day, { reopened: true }) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
     sendJson(res, 200, { close, canReopen: await canReopen(id) });
   });
@@ -143,7 +143,7 @@ export function register(route) {
     const ctx = await currentSession(req);
     const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
     const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
-    const close = row ? await closeOn(row.day) : null;
+    const close = row ? await closeOn(row.day, { reopened: true }) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
     sendCsv(res, `day-${ctx.shop.slug}-${close.day}`, dayCsv(close));
   });

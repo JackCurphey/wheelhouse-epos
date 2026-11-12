@@ -79,17 +79,21 @@ test('the server\'s refusal is shown in the reopen box, which stays open', async
   assert.ok(ui.queryByRole('dialog', { name: 'Reopen Tue 15 September?' }) !== null);
 });
 
-test('a reopened day is a row of its own that says so and offers Close it, and is not in the figures', async () => {
+test('a reopened day keeps its row with the figures it was closed with, marked Reopened, and its report opens', async () => {
   const takings = { ...TAKINGS_WEEK, reopened: REOPENED, rows: [
-    ...TAKINGS_WEEK.rows.filter((r) => r.key !== '2026-09-16'),
-    { kind: 'day', key: '2026-09-16', label: 'Wed 16 Sep', closed: false, reopened: true, closeDay: '2026-09-16' },
+    ...TAKINGS_WEEK.rows.filter((r) => !r.key.startsWith('2026-09-15')),
+    { kind: 'day', key: '2026-09-15', label: 'Tue 15 Sep', closed: true, reopened: true, closeId: 30, takingsPence: 30000, bankedPence: 11500, differencePence: -500, closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z' },
+    { kind: 'online', key: '2026-09-15', label: 'Tue 15 Sep · Online', onlinePence: 2500 },
   ] };
-  const { ui, within } = await openReports('/workshop/reports/takings', { answers: served({ takings }) });
+  const { ui, within, fireEvent } = await openReports('/workshop/reports/takings', { answers: served({ takings, canReopen: false }) });
   await ui.findByText('Wed 16 Sep is reopened — its figures are left out until it’s closed again');
   const table = within(ui.getByRole('table'));
-  const row = table.getByText('Wed 16 Sep').closest('tr');
-  assert.ok(row.textContent.includes('Reopened'), row.textContent);
-  assert.equal(within(row).getByRole('link', { name: 'Close Wed 16 Sep' }).getAttribute('href'), '/workshop/till/close?day=2026-09-16');
+  const row = table.getByRole('button', { name: /^Tue 15 Sep/ }).closest('tr');
+  assert.deepEqual([...row.querySelectorAll('th,td')].map((c) => c.textContent), ['Tue 15 Sep›', '£300.00', '£115.00', '−£5.00 short', 'Jack Lewis · Reopened']);
+  assert.ok(table.queryByText('Tue 15 Sep · Online') !== null, 'its Online row stays');
+  fireEvent.click(table.getByRole('button', { name: /^Tue 15 Sep/ }));
+  const box = within(await ui.findByRole('dialog', { name: 'Tue 15 September' }));
+  assert.ok(box.queryByRole('button', { name: 'Reopen this day' }) === null, 'it is already reopened');
 });
 
 test('without a reopened day there is no bar', async () => {
