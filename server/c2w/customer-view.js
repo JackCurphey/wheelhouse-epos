@@ -15,7 +15,9 @@ export const c2wLinkPath = (shopSlug, code) => `/book/${shopSlug}/cycle-to-work/
 // which is between the shop and the provider (cw-customer-view shows five).
 export const CUSTOMER_STAGES = ['Quote given', 'Waiting for the certificate', 'Certificate received', 'Ready to collect', 'Collected'];
 const STAGE_AT = { quote: 0, waiting: 1, certificate: 2, ready: 3, collected: 4, paid: 4 };
-const LIVE = ['quote', 'waiting', 'certificate'];
+// "Put aside until [date]" and "no longer put aside" are about the wait before the
+// certificate (cw-customer-view, -released); from the certificate on, the stage says it.
+const BEFORE_CERTIFICATE = ['quote', 'waiting'];
 
 const LIVE_CUSTOMER = 'c.active = 1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL';
 
@@ -30,18 +32,19 @@ async function shopPlace(siteId) {
 export async function customerView(r, shopName) {
   const settings = await prepare('SELECT how_to_apply FROM c2w_settings LIMIT 1').get();
   const cancelled = r.stage === 'cancelled';
-  // Before the certificate's bike is ready, the bike is put aside, or was and isn't
-  // any more; nothing is said of a bike that was never held (one being ordered in).
-  const live = LIVE.includes(r.stage);
+  // Before the certificate, the bike is put aside, or was and isn't any more;
+  // nothing is said of a bike that was never held (one being ordered in).
+  const waiting = BEFORE_CERTIFICATE.includes(r.stage);
   const state = cancelled ? 'cancelled'
-    : live && r.held_at ? 'held'
-      : live && r.released_at ? 'released' : null;
+    : waiting && r.held_at && r.hold_until_day ? 'held'
+      : waiting && r.released_at ? 'released' : null;
   return {
     quoteRef: quoteRef(r.quote_number),
     shopName,
     place: await shopPlace(r.site_id),
     providerName: r.provider_name,
-    stage: r.stage,
+    // "Paid by the provider" is between the shop and the provider: the customer sees Collected.
+    stage: r.stage === 'paid' ? 'collected' : r.stage,
     stageIndex: STAGE_AT[r.stage] ?? null,
     stages: CUSTOMER_STAGES,
     state,
@@ -51,7 +54,6 @@ export async function customerView(r, shopName) {
     totalPence: r.total_pence,
     customerPaysPence: r.certificate_pence === null ? null : r.total_pence - providerPays(r),
     collectedAt: r.collected_at ? new Date(r.collected_at).toISOString() : null,
-    saleId: r.sale_id ?? null,
     howToApply: cancelled ? null : (settings?.how_to_apply || null),
   };
 }

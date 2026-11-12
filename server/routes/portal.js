@@ -2043,19 +2043,23 @@ export function register(route) {
   // The signed-in customer's own Cycle to Work orders (ac-account-c2w, -collected),
   // and one of them by its id; anyone else's is the same 404.
   // screens: ac-account-c2w, ac-account-c2w-collected, cw-customer-view
+  // The account's own orders also carry the receipt's sale, for "collected · receipt".
+  const accountOrder = async (r, shopName) => ({ id: r.id, ...(await c2wCustomerView(r, shopName)), saleId: r.sale_id ?? null });
   route('GET', '/api/portal/:shopSlug/c2w-orders', async (req, res, params, query, shop) => {
+    res.setHeader('Cache-Control', 'no-store');
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const rows = await c2wOrdersOfCustomer(ctx.login.customer_id);
-    sendJson(res, 200, await Promise.all(rows.map(async (r) => ({ id: r.id, ...(await c2wCustomerView(r, shop.name)) }))));
+    sendJson(res, 200, await Promise.all(rows.map((r) => accountOrder(r, shop.name))));
   });
   route('GET', '/api/portal/:shopSlug/c2w-orders/:id', async (req, res, params, query, shop) => {
+    res.setHeader('Cache-Control', 'no-store');
     const ctx = await currentCustomerSession(req, res);
     if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
     const id = /^\d+$/.test(params.id) ? Number(params.id) : null;
     const row = id && (await c2wOrdersOfCustomer(ctx.login.customer_id)).find((r) => r.id === id);
     if (!row) return notFound(res, 'There is no such Cycle to Work order');
-    sendJson(res, 200, { id: row.id, ...(await c2wCustomerView(row, shop.name)) });
+    sendJson(res, 200, await accountOrder(row, shop.name));
   });
 
   // screens: ac-stopped

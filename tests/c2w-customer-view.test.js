@@ -97,7 +97,9 @@ async function quoteFor(customer, body = {}) {
 const setOrder = (id, sql, ...args) => inShop(() => prepare(`UPDATE c2w_orders SET ${sql} WHERE id = ? RETURNING id`).get(...args, id));
 
 const ALLOWED = ['accessories', 'bike', 'collectedAt', 'customerPaysPence', 'holdUntil', 'howToApply', 'place', 'providerName', 'quoteRef',
-  'saleId', 'shopName', 'stage', 'stageIndex', 'stages', 'state', 'totalPence'].sort();
+  'shopName', 'stage', 'stageIndex', 'stages', 'state', 'totalPence'].sort();
+// The signed-in account's rows also carry their id and the receipt's sale; the link doesn't.
+const ACCOUNT = ['id', 'saleId', ...ALLOWED].sort();
 
 test('9.2 the private link gives the allowed fields only, with no sign-in', async () => {
   const { order, code } = await quoteFor(maya);
@@ -159,8 +161,24 @@ test('9.2 after the certificate: what the customer pays at collection is the tot
   assert.deepEqual([v.stageIndex, v.customerPaysPence], [2, 5000]);
   await setOrder(order.id, "stage = 'paid'");
   const paid = (await portal(`/c2w-links/${code}`)).body;
-  assert.equal(paid.stageIndex, 4, 'paid by the provider shows the customer Collected');
+  assert.deepEqual([paid.stageIndex, paid.stage], [4, 'collected'], 'paid by the provider shows the customer Collected');
   assert.deepEqual([paid.state, paid.holdUntil], [null, null], 'a collected bike isn’t “put aside”');
+});
+
+test('9.2 from the certificate on, a held or released bike says nothing of being put aside', async () => {
+  const { order, code } = await quoteFor(maya);
+  // The certificate clears the hold's day while the bike stays held for collection.
+  await setOrder(order.id, "stage = 'certificate', hold_until = NULL, certificate_pence = ?, certificate_number = '[n]', certificate_received_on = '2026-09-01'", 100000);
+  const held = (await portal(`/c2w-links/${code}`)).body;
+  assert.deepEqual([held.state, held.holdUntil, held.stageIndex], [null, null, 2]);
+  await setOrder(order.id, 'held_at = NULL, released_at = now()');
+  assert.equal((await portal(`/c2w-links/${code}`)).body.state, null);
+});
+
+test('9.2 a certificate for more than the total leaves nothing to pay at collection', async () => {
+  const { order, code } = await quoteFor(maya);
+  await setOrder(order.id, "stage = 'certificate', certificate_pence = ?, certificate_number = '[n]', certificate_received_on = '2026-09-01'", 200000);
+  assert.equal((await portal(`/c2w-links/${code}`)).body.customerPaysPence, 0);
 });
 
 test('9.2 the link is rate limited, like the stop page', async () => {
@@ -181,8 +199,13 @@ test('9.3 the account lists only the signed-in customer’s own orders, newest f
   assert.ok(ids.indexOf(second.order.id) < ids.indexOf(first.order.id), 'newest first');
   assert.ok(!ids.includes(notHers.order.id), 'not another customer’s');
   const row = res.body.find((o) => o.id === first.order.id);
-  assert.deepEqual(Object.keys(row).sort(), ['id', ...ALLOWED].sort());
+  assert.deepEqual(Object.keys(row).sort(), ACCOUNT);
   assert.equal(row.quoteRef, first.order.quoteRef);
+  assert.equal(res.cache, 'no-store');
+  await setOrder(first.order.id, "stage = 'certificate', certificate_pence = ?, certificate_number = '[n]', certificate_received_on = '2026-09-01'", 100000);
+  const after = (await portal('/c2w-orders', { cookie: mayaCookie })).body.find((o) => o.id === first.order.id);
+  assert.equal(after.customerPaysPence, 5000, 'what she pays at collection, on the account too');
+  assert.equal((await portal('/c2w-orders', { cookie: mayaCookie, shop: other })).status, 401, 'another shop’s address with her cookie');
 });
 
 test('9.3 one of the account’s orders opens by its id, only the customer’s own', async () => {
@@ -191,6 +214,9 @@ test('9.3 one of the account’s orders opens by its id, only the customer’s o
   const res = await portal(`/c2w-orders/${hers.order.id}`, { cookie: mayaCookie });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.quoteRef, hers.order.quoteRef);
+  assert.deepEqual(Object.keys(res.body).sort(), ACCOUNT);
+  assert.equal(res.cache, 'no-store');
+  assert.equal((await portal(`/c2w-orders/${hers.order.id}`, { cookie: mayaCookie, shop: other })).status, 401, 'another shop’s address with her cookie');
   assert.equal((await portal(`/c2w-orders/${notHers.order.id}`, { cookie: mayaCookie })).status, 404);
   assert.equal((await portal(`/c2w-orders/${hers.order.id}`)).status, 401);
   assert.equal((await portal('/c2w-orders/abc', { cookie: mayaCookie })).status, 404);
