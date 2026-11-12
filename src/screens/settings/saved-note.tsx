@@ -77,7 +77,7 @@ export function SavedNoteArea({ room, className, children }: { room: string; cla
       {note ? <div data-saved-note-space aria-hidden="true" style={{ height: space }} className="shrink-0" /> : null}
       <div role="status" data-saved-note>
         {note ? (
-          <div ref={shown} style={place ?? { visibility: 'hidden' }} className="fixed z-40 flex items-center gap-3 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm text-white shadow-[0_8px_24px_rgba(38,36,32,0.25)]">
+          <div ref={shown} style={place ?? { visibility: 'hidden' }} className="fixed z-40 flex items-center gap-3 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm text-[var(--wh-on-brand)] shadow-[var(--wh-shadow-note)]">
             <span className="inline-flex grow items-center gap-2">
               {note.failed ? <CircleAlert size={16} aria-hidden="true" className="shrink-0" /> : <Check size={16} aria-hidden="true" className="shrink-0" />}
               {note.text}
@@ -85,7 +85,7 @@ export function SavedNoteArea({ room, className, children }: { room: string; cla
             {note.action ? (
               // Pressing it keeps focus where it was, so a box being typed in
               // isn't left (and saved) before the click lands.
-              <button type="button" disabled={note.busy} onMouseDown={(e) => e.preventDefault()} onClick={note.action.run} className="min-h-11 rounded-[8px] border-0 bg-[rgba(255,255,255,0.14)] px-3.5 text-sm font-bold whitespace-nowrap text-white disabled:opacity-60">
+              <button type="button" disabled={note.busy} onMouseDown={(e) => e.preventDefault()} onClick={note.action.run} className="min-h-11 rounded-[8px] border-0 bg-[var(--wh-on-ink-tint)] px-3.5 text-sm font-bold whitespace-nowrap text-[var(--wh-on-brand)] disabled:opacity-60">
                 {note.action.label}
               </button>
             ) : null}
