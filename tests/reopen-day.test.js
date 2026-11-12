@@ -308,3 +308,13 @@ test('closing a past day again checks its reason and expected figure like today\
   assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY, countedPence: FLOAT, expectedPence: FLOAT + 5 })).status, 409);
   assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY })).status, 400, 'a count is needed');
 });
+
+test('a closed day\'s report says whether it can be reopened: only the latest, once', async () => {
+  const owner = await shop();
+  const yesterday = await closedYesterday(owner);
+  const today = await closeToday(owner, FLOAT);
+  assert.equal((await call(owner, `/api/reports/days/${today.id}`)).body.canReopen, true);
+  assert.equal((await call(owner, `/api/reports/days/${yesterday.id}`)).body.canReopen, false, 'an earlier day');
+  await reopen(owner, today.id);
+  assert.equal((await call(owner, `/api/reports/days/${yesterday.id}`)).body.canReopen, false, 'and not while the later day is reopened: it must be closed again first');
+});

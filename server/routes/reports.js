@@ -17,7 +17,7 @@ import { stockReport, stockCsv } from '../lib/report-stock.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { listSaved, createSaved, renameSaved, deleteSaved, undoSaved, SavedNotFound } from '../lib/saved-reports.js';
-import { closeOn, reopenClose } from './close-the-day.js';
+import { closeOn, reopenClose, canReopen } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
 const OWNER_ONLY = "Only the shop's owner can see reports";
@@ -106,7 +106,7 @@ export function register(route) {
     const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
     const close = row ? await closeOn(row.day) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
-    sendJson(res, 200, { close });
+    sendJson(res, 200, { close, canReopen: await canReopen(id) });
   });
   // Download as spreadsheet: each report's table as shown, for the period chosen.
   // screens: rp-sales

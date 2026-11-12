@@ -385,6 +385,16 @@ export async function reopenedOn(day = null) {
   return r ? { id: r.id, day: r.day, reason: r.reopen_reason, reopenedByName: r.by_name, reopenedAt: iso(r.reopened_at), reopenedExact: r.reopened_exact } : null;
 }
 
+// Whether a close can be reopened now (the rules `reopenClose` refuses on): it is the latest close, was made the
+// ordinary way, isn't reopened already, and no later day waits to be closed.
+export async function canReopen(id) {
+  const row = await prepare("SELECT reopened_at, to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
+  if (!row || row.reopened_at) return false;
+  if (await prepare('SELECT 1 FROM day_closes WHERE day > ?::date').get(row.day)) return false;
+  if (await countFor(row.day)) return false;
+  return !(await daysWaiting()).some((w) => w.for_day > row.day);
+}
+
 const REASON_WORDS = 'Say why you are reopening it (up to 500 characters)';
 
 // Reopen the latest closed day (rp-reopen; Jack's answers 1 and 4 of 12 Nov). Under the shop's lock: refused if
