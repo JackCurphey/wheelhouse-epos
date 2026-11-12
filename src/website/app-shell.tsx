@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api/client.ts';
 import { siteAddress } from './address.ts';
 import { SiteLayout } from './shell.tsx';
 import { H1 } from './parts.tsx';
+import { HomePage } from './home.tsx';
 
 /**
  * The customer website app (openspec/changes/website-browse, design 3): the
@@ -32,7 +33,7 @@ export const websiteRoutes: RouteObject[] = [
     Component: SiteLayout,
     ErrorBoundary: RouteErrorBoundary,
     children: [
-      { index: true, Component: Empty },
+      { index: true, Component: HomePage },
       { path: 'shop', Component: Empty },
       { path: '*', Component: Empty },
     ],

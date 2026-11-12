@@ -34,7 +34,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 3.2 Screen test: the shell (site): Skip to the main content, logo, Shop, Book a repair, Our shops, "Search the shop", chip, Account, Basket, footer links, current page marked
 - [x] 3.3 Screen test: the phone menu (site-menu) opens, closes on Esc and returns focus
 - [x] 3.4 Screen test: the main colour (site-ocean, site-ocean-menu) and "Find us" with one shop
-- [ ] 3.5 Screen tests: wb-home, wb-home-lower, wb-home-one-shop and wb-first-visit with the drawn example data; an empty section is left out; featured products are the newest four with a photo
+- [x] 3.5 Screen tests: wb-home, wb-home-lower, wb-home-one-shop and wb-first-visit with the drawn example data; an empty section is left out; featured products are the newest four with a photo
 - [ ] 3.6 Screen test: wb-shop lists the categories with their subcategories
 - [ ] 3.7 Screen tests: wb-not-found and wb-off
 - [ ] 3.8 Screen tests: Collection and returns, Privacy and Contact us show the published words and the shops' details
