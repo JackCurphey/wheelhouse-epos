@@ -79,11 +79,11 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 7. Risky — the chosen shop, Our shops and the shop page
 
-- [ ] 7.1 Test: the `wh_shop` cookie is set on choosing, read on every visit, and ignored when it names a shop the business doesn't have
-- [ ] 7.2 Screen tests: the chip ("Choose a shop", "Collecting from Bolton · Change") and wb-choose-shop ("Which shop will you collect from?", "We’ll remember it, and show when things are ready there")
-- [ ] 7.3 Screen tests: wb-shops (cards, today's hours, Book a repair here with the shop, Directions "(opens your maps app)") and wb-shop-page (today in bold, closures, Collect from here)
-- [ ] 7.4 Screen tests: wb-shop-collect (the drawn sentence, the chip changes) and wb-find-us (one shop, no Collect from here)
-- [ ] 7.5 Build the chip, the Which shop box, Our shops and the shop page
+- [x] 7.1 Test: the `wh_shop` cookie is set on choosing, read on every visit, and ignored when it names a shop the business doesn't have
+- [x] 7.2 Screen tests: the chip ("Choose a shop", "Collecting from Bolton · Change") and wb-choose-shop ("Which shop will you collect from?", "We’ll remember it, and show when things are ready there")
+- [x] 7.3 Screen tests: wb-shops (cards, today's hours, Book a repair here with the shop, Directions "(opens your maps app)") and wb-shop-page (today in bold, closures, Collect from here)
+- [x] 7.4 Screen tests: wb-shop-collect (the drawn sentence, the chip changes) and wb-find-us (one shop, no Collect from here)
+- [x] 7.5 Build the chip, the Which shop box, Our shops and the shop page
 - [ ] 7.6 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 8. Risky — cookies and the staff banner

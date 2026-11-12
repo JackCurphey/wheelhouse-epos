@@ -57,7 +57,7 @@ What this piece builds on:
 
 | Route | Answers | Screens |
 |---|---|---|
-| `GET /api/site` | Shop name, logo, main colour; the seven published parts; shops (sites) with name, address, phone, email, today's hours or next opening; tracking tools (kind and name only, never the ID until the visitor accepts); `preview` (staff of this shop, site off), `canTurnOn`, and `ownerNames` in preview when the visitor can't turn it on | shell, `wb-home`, `wb-off-preview*`, `wb-cookies-*` |
+| `GET /api/site` | Shop name, logo, main colour; the seven published parts; shops (sites) with name, address, phone, email, today's hours or next opening, the week's hours, closures and today's date in the shop's time zone (`todayDate`, so its page can mark today); tracking tools (kind and name only, never the ID until the visitor accepts); `preview` (staff of this shop, site off), `canTurnOn`, and `ownerNames` in preview when the visitor can't turn it on | shell, `wb-home`, `wb-off-preview*`, `wb-cookies-*` |
 | `GET /api/site/categories` | The tree, as a flat list: each category's id, name, path, product count, and `parentId` (its types are the categories naming it) | `wb-shop`, `wb-home` |
 | `GET /api/site/products?category=&filter[...]=&sort=&shop=&after=` | One page of products, plus the filters for that category (each detail's values with counts, brand, price range, availability) and the total | `wb-category*` |
 | `GET /api/site/products/:id?shop=` | The product, its photos, its specifications (the category's details with this product's answers), its sizes and colours with stock at each shop | `wb-product*` |
