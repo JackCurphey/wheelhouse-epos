@@ -201,13 +201,16 @@ test('once the date for more details has passed, payments stop', async (t) => {
   const shop = await freshShop(t, '[Date passed shop]', later);
   await connectPayments(shop.shop.id, { status: 'needs_details', needsDetailsBy: '2026-09-30' });
   assert.equal(ok(await shop.req('/api/workshop-settings')).paymentsConnected, false);
-  assert.equal(ok(await shop.req('/api/online-orders-settings')).buyingOnline, false);
+  const said = ok(await shop.req('/api/online-orders-settings'));
+  assert.equal(said.buyingOnline, false);
+  assert.equal(said.payments.connected, false, 'so the screen doesn’t offer the Buying online switch');
   assert.equal((await shop.req('/api/online-orders-settings', { method: 'PUT', body: { buyingOnline: true } })).status, 409);
 });
 
 test('a declined test card takes nothing and changes nothing; another card can try', async (t) => {
   const shop = await freshShop(t, '[Declined shop]');
   await connectThrough(shop, 'Finish');
+  assert.equal((await payments(shop)).connected, true);
   const back = await testPaymentThrough(shop, 'Pay with the test card that’s declined');
   assert.equal(back.location, `${SETTINGS_PAGE}&payments=declined`);
   assert.equal((await payments(shop)).state, 'connected');
@@ -215,6 +218,30 @@ test('a declined test card takes nothing and changes nothing; another card can t
   assert.equal(tried.location, `${SETTINGS_PAGE}&payments=tested`);
   const rows = await runWithShop(shop.shop.id, () => prepare('SELECT refunded_pence, status FROM pretend_payments').all());
   assert.deepEqual(rows, [{ refunded_pence: 100, status: 'refunded' }]);
+});
+
+test('a made-up card number on the test card page goes back as declined, not a server error', async (t) => {
+  const shop = await freshShop(t, '[Odd card shop]');
+  await connectThrough(shop, 'Finish');
+  const { address } = ok(await shop.req('/api/online-payments/test-payment', { method: 'POST' }));
+  const pay = shop.linkTo((await shop.visit(address)).html, 'Pay with the test card that works').replace(/card=\d+/, 'card=1234');
+  assert.ok(pay.includes('card=1234'));
+  const tried = await shop.visit(pay);
+  assert.equal(tried.status, 302);
+  assert.equal((await shop.visit(tried.location)).location, `${SETTINGS_PAGE}&payments=declined`);
+});
+
+test('a test payment started for an earlier connection doesn’t count for a new one', async (t) => {
+  const shop = await freshShop(t, '[Old trip shop]');
+  await connectThrough(shop, 'Finish');
+  const { address } = ok(await shop.req('/api/online-payments/test-payment', { method: 'POST' }));
+  const pay = shop.linkTo((await shop.visit(address)).html, 'Pay with the test card that works');
+  await runWithShop(shop.shop.id, () => prepare("UPDATE online_payment_account SET status = 'failed'").run());
+  await connectThrough(shop, 'Finish');
+  let next = await shop.visit(pay);
+  while (next.status === 302 && next.location.startsWith('/api/')) next = await shop.visit(next.location);
+  assert.equal(next.location, SETTINGS_PAGE);
+  assert.equal((await payments(shop)).state, 'connected', 'the new connection still asks for its own test payment');
 });
 
 test('a test payment needs a connection; connecting needs a provider on this server', async (t) => {

@@ -21,7 +21,7 @@ type PayState = 'none' | 'failed' | 'connected' | 'tested' | 'more';
 type OnlineOrders = {
   buyingOnline: boolean;
   payments: {
-    state: PayState; providerName: string | null; connectedByName: string | null; connectedAt: string | null;
+    state: PayState; connected: boolean; providerName: string | null; connectedByName: string | null; connectedAt: string | null;
     testPaidAt: string | null; payoutLast4: string | null; payoutTiming: string | null; needsDetailsBy: string | null; needsWhat: string | null;
   };
 };
@@ -53,7 +53,8 @@ export function BuyingOnline() {
   const d = online.data;
   if (!d) return null;
   const provider = providerText(d.payments.providerName);
-  const can = connectedNow(d.payments.state);
+  // Not once a more-details date has passed: payments have stopped (server/payments/provider.js isConnected).
+  const can = d.payments.connected;
   const on = can && d.buyingOnline;
 
   async function turn(next: boolean) {

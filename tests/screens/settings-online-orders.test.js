@@ -15,7 +15,7 @@ const PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const account = (state, over = {}) => ({
   buyingOnline: state === 'connected' || state === 'tested' || state === 'more',
   payments: {
-    state, providerName: null,
+    state, connected: state === 'connected' || state === 'tested' || state === 'more', providerName: null,
     connectedByName: state === 'none' || state === 'failed' ? null : 'Jack Lewis',
     connectedAt: state === 'none' || state === 'failed' ? null : '2026-09-10T10:00:00Z',
     testPaidAt: state === 'tested' ? '2026-09-10T10:05:00Z' : null,
@@ -135,4 +135,13 @@ test('a failed connection opened later, not just back from the provider, is show
   const said = await box.findByText((_, el) => el?.tagName === 'SPAN' && el.textContent.startsWith('Not connected. [payment provider] didn’t finish connecting'));
   assert.ok(said.closest('[role="alert"]') === null);
   assert.ok(box.getByRole('button', { name: 'Try again' }));
+});
+
+test('once the date for more details has passed, Buying online is off and has no switch', async () => {
+  const stopped = account('more');
+  const t = await openOnline({ ...stopped, buyingOnline: false, payments: { ...stopped.payments, connected: false } });
+  const box = await area(t);
+  assert.ok(await box.findByText('Off until you connect [payment provider]'));
+  assert.ok(box.queryByRole('switch', { name: 'Buying online' }) === null);
+  assert.ok(box.getByRole('button', { name: 'Add the details at [payment provider]' }));
 });

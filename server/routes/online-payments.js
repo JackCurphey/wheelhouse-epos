@@ -51,6 +51,8 @@ async function settingsBody() {
     buyingOnline: !!stored?.buying_online && isConnected(account),
     payments: {
       state: paymentsState(account),
+      // False once a more-details date has passed: payments have stopped, so no Buying online switch.
+      connected: isConnected(account),
       providerName: provider?.displayName ?? null,
       connectedByName: by?.name ?? null,
       connectedAt: account?.connected_at ?? null,
@@ -165,8 +167,9 @@ export function register(route) {
     if (!provider || !isConnected(account)) return sendJson(res, 409, NOT_CONNECTED);
     if (account.test_paid_at) return sendJson(res, 409, { error: 'The test payment has already been made.', code: 'already_tested' });
     // One payment per connection: connecting again makes a new one.
-    const { ref } = await provider.hold({ amountPence: TEST_PENCE, key: `test-payment:${provider.name}:${new Date(account.connected_at).getTime()}` });
-    sendJson(res, 200, { address: provider.payAddress(startTrip({ shopId, kind: 'test', ref })) });
+    const connectedMs = new Date(account.connected_at).getTime();
+    const { ref } = await provider.hold({ amountPence: TEST_PENCE, key: `test-payment:${provider.name}:${connectedMs}` });
+    sendJson(res, 200, { address: provider.payAddress(startTrip({ shopId, kind: 'test', ref, connectedMs })) });
   });
 
   // The pretend card page's answer, then back through the return below.
@@ -179,8 +182,9 @@ export function register(route) {
       try {
         await provider.card(trip.ref, query.get('card'));
       } catch (err) {
-        // Already paid (pressed twice): the return below finds it as it is.
-        if (!(err instanceof PaymentError && err.code === 'wrong_state')) throw err;
+        // Already paid (pressed twice), or a card number it doesn't know: the
+        // return below finds the payment as it is, and says declined if unpaid.
+        if (!(err instanceof PaymentError && ['wrong_state', 'bad_card'].includes(err.code))) throw err;
       }
     }
     redirect(res, `/api/online-payments/test-payment/return?state=${encodeURIComponent(query.get('state') || '')}`);
@@ -203,7 +207,11 @@ export function register(route) {
       // Two returns at once: the other one took and refunded it.
       if (!(err instanceof PaymentError) || (await provider.status(trip.ref)).status !== 'refunded') throw err;
     }
-    await prepare('UPDATE online_payment_account SET test_paid_at = COALESCE(test_paid_at, now()), updated_at = now()').run();
-    redirect(res, `${SETTINGS_PAGE}&payments=tested`);
+    // Counts only for the connection it was started for; a newer one asks for its own.
+    const marked = await prepare(
+      `UPDATE online_payment_account SET test_paid_at = COALESCE(test_paid_at, now()), updated_at = now()
+        WHERE floor(extract(epoch FROM connected_at) * 1000) = ? RETURNING shop_id`
+    ).get(trip.connectedMs);
+    redirect(res, marked ? `${SETTINGS_PAGE}&payments=tested` : SETTINGS_PAGE);
   });
 }

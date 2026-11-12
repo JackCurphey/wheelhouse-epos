@@ -216,6 +216,7 @@ export async function websiteState(row = null) {
   const names = await loginNames([website.draft_saved_by, website.published_by]);
   const parts = PARTS.map((p) => ({ key: p.key, name: p.name, page: p.page, ...draft.parts?.[p.key], checked: !!draft.parts?.[p.key]?.checked }));
   const partsToCheck = parts.filter((p) => !p.checked).map((p) => p.name);
+  const account = await paymentAccount();
   return {
     kind: website.kind,
     setUp: !!website.kind,
@@ -240,10 +241,7 @@ export async function websiteState(row = null) {
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
     // The Taking payments row: the same state as Settings › Online orders (design 6).
-    payments: await (async () => {
-      const account = await paymentAccount();
-      return { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null };
-    })(),
+    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },
   };
 }
 
