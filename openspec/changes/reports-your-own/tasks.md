@@ -22,11 +22,11 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 
 ## 3. PR 3: Rename, sharing greyed, and delete with Undo (not risky)
 
-- [ ] 3.1 Tests first: `PATCH` renames with both name messages; `DELETE` sets `deleted_at` and the report leaves the list; `POST …/undo` puts it back, and refuses with the name message when the name was used again; another person's report answers 404 for each. Verify: each fails first.
-- [ ] 3.2 The three routes in `server/routes/reports.js` and `server/lib/saved-reports.js`.
-- [ ] 3.3 Screen tests first: the "More for [name]" menu (`aria-haspopup="menu"`) with Rename, Share with managers (greyed with its reason) and Delete; Rename's popup; Delete shows "'[Report name]' deleted." with Undo, and Undo brings it back; Undo after a reused name opens Rename. Verify: each fails first.
-- [ ] 3.4 The menu, Rename and the deleted bar, to the drawings `rp-report-menu` and `rp-report-deleted`. Log the Rename popup in `decided-while-building`.
-- [ ] 3.5 `reviewer` self-review; lint and the related tests.
+- [x] 3.1 Tests first: `PATCH` renames with both name messages; `DELETE` sets `deleted_at` and the report leaves the list; `POST …/undo` puts it back, and refuses with the name message when the name was used again; another person's report answers 404 for each. Verify: each fails first.
+- [x] 3.2 The three routes in `server/routes/reports.js` and `server/lib/saved-reports.js`.
+- [x] 3.3 Screen tests first: the "More for [name]" menu (`aria-haspopup="menu"`) with Rename, Share with managers (greyed with its reason) and Delete; Rename's popup; Delete shows "'[Report name]' deleted." with Undo, and Undo brings it back; Undo after a reused name opens Rename. Verify: each fails first.
+- [x] 3.4 The menu, Rename and the deleted bar, to the drawings `rp-report-menu` and `rp-report-deleted`. Log the Rename popup in `decided-while-building`.
+- [x] 3.5 `reviewer` self-review; lint and the related tests.
 
 ## 4. PR 4: Workshop's Change what's shown, and Margin if it's ready (not risky)
 

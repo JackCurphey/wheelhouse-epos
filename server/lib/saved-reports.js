@@ -66,3 +66,57 @@ export async function createSaved(loginId, body) {
   }
   return shape(row, await onlyChoices());
 }
+
+// A saved report that isn't the person's own, is in another shop, or isn't in the state asked for
+// (not deleted to rename it, deleted to undo it) is simply not there.
+export class SavedNotFound extends Error {
+  name = 'SavedNotFound';
+  constructor() { super('That report isn’t there'); }
+}
+
+const own = (loginId, id, deleted) => prepare(
+  `SELECT * FROM saved_reports WHERE id = ? AND login_id = ? AND deleted_at IS ${deleted ? 'NOT NULL' : 'NULL'}`
+).get(id, loginId);
+
+async function setName(id, name) {
+  try {
+    return await prepare('UPDATE saved_reports SET name = ?, updated_at = now() WHERE id = ? RETURNING *').get(name, id);
+  } catch (err) {
+    if (err.code === '23505') throw new ValidationError(TAKEN);
+    throw err;
+  }
+}
+
+// Rename keeps everything else. The same name in other capitals, or the name it already has, is fine for itself.
+export async function renameSaved(loginId, id, rawName, body = {}) {
+  if (body.shared === true) throw new ValidationError(NO_MANAGERS);
+  const found = await own(loginId, id, false);
+  if (!found) throw new SavedNotFound();
+  const name = cleanName(rawName);
+  if (await nameIsTaken(loginId, name, id)) throw new ValidationError(TAKEN);
+  return shape(await setName(id, name), await onlyChoices());
+}
+
+// Delete keeps the row, with when, so Undo can bring it back as it was.
+export async function deleteSaved(loginId, id) {
+  const found = await own(loginId, id, false);
+  if (!found) throw new SavedNotFound();
+  await prepare('UPDATE saved_reports SET deleted_at = now(), updated_at = now() WHERE id = ?').run(id);
+  return { id, name: found.name };
+}
+
+// Undo puts it back, unless its name has been used again since: then it says so, and Undo can be sent again
+// with a new name to bring it back under that one.
+export async function undoSaved(loginId, id, body = {}) {
+  const found = await own(loginId, id, true);
+  if (!found) throw new SavedNotFound();
+  const name = body.name === undefined ? found.name : cleanName(body.name);
+  if (await nameIsTaken(loginId, name)) throw new ValidationError(TAKEN);
+  try {
+    const row = await prepare('UPDATE saved_reports SET name = ?, deleted_at = NULL, updated_at = now() WHERE id = ? RETURNING *').get(name, id);
+    return shape(row, await onlyChoices());
+  } catch (err) {
+    if (err.code === '23505') throw new ValidationError(TAKEN);
+    throw err;
+  }
+}
