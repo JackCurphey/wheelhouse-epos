@@ -227,7 +227,7 @@ function SwatchChoice({ swatch, chosen, onChoose }: { swatch: Swatch; chosen: st
   return (
     <label className="flex w-24 cursor-pointer flex-col items-center gap-1 text-center">
       <input type="radio" name="colour" checked={on} onChange={() => onChoose(swatch.hex)} aria-label={`${swatch.name}, ${swatch.hex}`} className="peer sr-only" />
-      <span aria-hidden="true" className={`size-[52px] rounded-[10px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--wh-ink)] ${on ? 'shadow-[0_0_0_3px_var(--wh-panel),0_0_0_5px_var(--wh-ink)]' : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]'}`} style={{ background: swatch.hex }} />
+      <span aria-hidden="true" className={`size-[52px] rounded-[10px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--wh-ink)] ${on ? 'shadow-[0_0_0_3px_var(--wh-panel),0_0_0_5px_var(--wh-ink)]' : 'shadow-[inset_0_0_0_1px_var(--wh-border)]'}`} style={{ background: swatch.hex }} />
       <span className="text-size-13 leading-[1.3] font-semibold">{swatch.name}</span>
       <span className="font-mono text-xs text-[var(--wh-muted)]">{swatch.hex}</span>
     </label>
