@@ -199,3 +199,44 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await noSideScroll(page);
   });
 }
+
+// Returning customers (openspec/changes/reports-ready-made, group 2; rp-returning): the
+// Owner opens it from its card, sees who came back, and widens "Not seen for", at a
+// computer and a phone width; at a phone width the figures sit two by two.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Returning customers and changes how long not seen`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      // Ann came in last year and again in February; Ben came in for the first time in June.
+      const ann = await prepare('INSERT INTO customers (name, marketing_permission) VALUES (?, true) RETURNING id').get('Ann Lee');
+      const ben = await prepare('INSERT INTO customers (name) VALUES (?) RETURNING id').get('Ben Shaw');
+      for (const [day, who] of [['2025-03-10', ann.id], ['2026-02-05', ann.id], ['2026-06-10', ben.id]] as const) {
+        await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id) VALUES (?, 20, 20, 'Cash', 20, ?)").run(`${day}T12:00:00Z`, who);
+      }
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Returning customers/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/returning`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Returning customers' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Customers' }).getByText('Up 1 on the 12 months before')).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Came back within 12 months' }).getByText('100%')).toBeVisible();
+    await expect(page.getByRole('img', { name: 'New and returning customers by month: most returning in Feb, most new in Jun. The figures are in the table below.' })).toBeVisible();
+    const lapsed = page.getByRole('table', { name: 'Not seen lately' });
+    await expect(lapsed.getByRole('link')).toHaveText(['Ann Lee']);
+    // On a phone the three figures sit two by two, as drawn.
+    const tops = (await Promise.all(['Customers', 'New', 'Came back within 12 months']
+      .map((n) => page.getByRole('group', { name: n, exact: true }).boundingBox()))).map((b) => Math.round(b!.y));
+    if (size === 'phone') expect([tops[0] === tops[1], tops[2] > tops[0]]).toEqual([true, true]);
+    else expect(new Set(tops).size).toBe(1);
+    await page.getByRole('textbox', { name: /^Not seen for/ }).fill('2');
+    await expect(page).toHaveURL(/months=2/);
+    await expect(lapsed.getByRole('link')).toHaveText(['Ben Shaw', 'Ann Lee']);
+    await noSideScroll(page);
+  });
+}

@@ -113,3 +113,69 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
     </figure>
   );
 }
+
+/** A month of a stacked graph: the lower part and the upper part, counts. */
+// The striped upper part as drawn: rounded top corners, outlined on three
+// sides, with no line along the bottom where it meets the solid part.
+function upperPart(left: number, bottom: number, w: number, height: number): string {
+  const r = Math.min(4, height, w / 2);
+  const top = bottom - height;
+  return `M${left},${bottom} V${top + r} Q${left},${top} ${left + r},${top} H${left + w - r} Q${left + w},${top} ${left + w},${top + r} V${bottom}`;
+}
+
+export type StackRow = { key: string; label: string; notReached: boolean; lower: number; upper: number };
+
+/**
+ * reports.mjs `graph` with `stacked` (leftover audit M5): one bar a month in
+ * two parts, the lower part solid and the upper part striped with an outline,
+ * so colour isn't the only signal; a count scale, the key and the spoken
+ * description as the other graphs have them.
+ */
+export function StackedGraph({ title, rows, keyLower, keyUpper, spoken }: { title: string; rows: StackRow[]; keyLower: string; keyUpper: string; spoken: string }) {
+  const phone = useMedia('(max-width: 767px)');
+  const W = phone ? NARROW : WIDE;
+  const LEFT = phone ? 36 : 44;
+  const max = niceCount(Math.max(0, ...rows.map((r) => r.lower + r.upper)));
+  const slot = (W - LEFT) / rows.length;
+  const x = (i: number) => LEFT + slot * i + slot / 2;
+  const h = (n: number) => (n / max) * H;
+  const barW = Math.min(56, slot * 0.6);
+  const step = Math.max(1, Math.ceil(30 / slot));
+  const stripes = `stripes-${title.replace(/\W+/g, '-')}`;
+  return (
+    <figure className="m-0 flex flex-col gap-3" role="img" aria-label={spoken}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <figcaption className="text-size-15 font-bold">{title}</figcaption>
+        <span className="inline-flex flex-wrap items-center gap-3.5 text-xs text-[var(--wh-ink)]">
+          <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-3 w-3 rounded-sm bg-[var(--wh-ink)] opacity-85" />{keyLower}</span>
+          <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-3 w-3 rounded-sm border border-[var(--wh-ink)]" style={{ background: 'repeating-linear-gradient(45deg, var(--wh-input-border) 0 2px, var(--wh-panel) 2px 6px)' }} />{keyUpper}</span>
+        </span>
+      </div>
+      <svg aria-hidden="true" viewBox={`0 0 ${W} ${TOP + H + 40}`} className="h-auto w-full overflow-visible">
+        <defs>
+          <pattern id={stripes} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="6" height="6" fill="var(--wh-panel)" /><rect width="2" height="6" fill="var(--wh-input-border)" />
+          </pattern>
+        </defs>
+        <Axis max={max} left={LEFT} width={W} label={(n) => String(Math.round(n))} />
+        {rows.map((r, i) => {
+          const base = TOP + H;
+          const low = h(r.lower);
+          const up = h(r.upper);
+          return (
+            <g key={r.key} data-month={r.key}>
+              {!r.notReached && r.lower > 0 ? <rect data-part="lower" x={x(i) - barW / 2} y={base - low} width={barW} height={low} fill="var(--wh-ink)" opacity="0.85" /> : null}
+              {!r.notReached && r.upper > 0 ? <path data-part="upper" d={upperPart(x(i) - barW / 2, base - low, barW, up)} fill={`url(#${stripes})`} stroke="var(--wh-ink)" /> : null}
+              {i % step === 0 ? (
+                <>
+                  <text x={x(i)} y={TOP + H + 16} textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--wh-ink)">{r.label}</text>
+                  {r.notReached ? <text x={x(i)} y={TOP + H + 30} textAnchor="middle" fontSize="12" fill="var(--wh-muted)">Not yet</text> : null}
+                </>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
+    </figure>
+  );
+}
