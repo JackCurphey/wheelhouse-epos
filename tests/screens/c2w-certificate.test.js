@@ -365,3 +365,87 @@ test('cw-marked-ready: a refusal shows the server’s words and leaves the order
   assert.ok(ui.queryByRole('button', { name: 'Undo' }) === null);
   await nextBox(ui, within, 'Next: get the bike ready');
 });
+
+// ---- The bike was released (cw-certificate-released) ----
+
+const RELEASED = { ...AWAY, releasedAt: `${day(-3)}T10:00:00.000Z`, releasedSold: true, next: 'order' };
+/** The certificate saves; the order still has no bike, as the server leaves a released order with no frame free. */
+const releasedSaved = (over = {}) => (body) => {
+  state.order = order({ ...RELEASED, stage: 'certificate', certificateNumber: body.number, certificatePence: body.amountPence, certificateReceivedOn: body.receivedOn, ...over });
+  return [200, { order: state.order }];
+};
+async function saveReleased({ over = {}, on = {} } = {}) {
+  const r = await openCertificate({ theOrder: order({ ...RELEASED, ...over }), on: { '/certificate': releasedSaved(over), ...on } });
+  type(r.fireEvent, r.dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(r.fireEvent, r.dialog.getByLabelText('Amount on the certificate'), '1040');
+  r.fireEvent.click(r.dialog.getByRole('button', { name: 'Save' }));
+  const popup = r.within(await r.ui.findByRole('dialog', { name: 'The bike was released' }));
+  return { ...r, popup };
+}
+
+test('cw-certificate-released: a released bike since sold; Order one from the supplier is chosen and Save orders it', async () => {
+  const on = { '/order': () => { state.order = order({ ...RELEASED, stage: 'certificate', onOrder: true, next: null }); return [200, { order: state.order, supplier: '[Supplier]' }]; } };
+  const { ui, waitFor, fireEvent, popup } = await saveReleased({ on });
+  assert.equal(posts('/certificate').length, 1);
+  assert.ok(popup.getByText('Maya Patel · certificate [certificate number] saved'));
+  assert.ok(popup.getByText(para(`[Bike] · [Size] was released on ${long(day(-3))} and has since been sold.`)));
+  assert.ok(popup.getByText('What to do for Maya'));
+  assert.equal(popup.getByRole('radio', { name: /Order one from \[Supplier\]/ }).checked, true);
+  assert.ok(popup.queryByRole('radio', { name: /Hold another/ }) === null, 'Hold another waits for Jack (question 8)');
+  fireEvent.click(popup.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.equal(posts('/order').length, 1));
+  assert.deepEqual(posts('/order')[0].body, {});
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+});
+
+test('cw-certificate-released: not sold yet says only when it was released; Decide later orders nothing', async () => {
+  const { ui, waitFor, fireEvent, popup } = await saveReleased({ over: { releasedSold: false } });
+  assert.ok(popup.getByText(para(`[Bike] · [Size] was released on ${long(day(-3))}.`)));
+  fireEvent.click(popup.getByRole('button', { name: 'Decide later' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+  assert.equal(posts('/order').length, 0);
+});
+
+test('cw-certificate-released: a refusal to order shows the server’s words and keeps the popup open', async () => {
+  const on = { '/order': () => [409, { error: '[The server’s reason]', code: 'no_supplier' }] };
+  const { fireEvent, popup } = await saveReleased({ on });
+  fireEvent.click(popup.getByRole('button', { name: 'Save' }));
+  assert.ok(await popup.findByText('[The server’s reason]'));
+  assert.ok(popup.getByRole('button', { name: 'Decide later' }));
+});
+
+test('cw-certificate: a released order already on order closes on Save with no popup', async () => {
+  const over = { onOrder: true, next: null };
+  const { ui, waitFor, fireEvent, dialog } = await openCertificate({ theOrder: order({ ...RELEASED, ...over }), on: { '/certificate': releasedSaved(over) } });
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1040');
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+  assert.equal(posts('/certificate').length, 1);
+});
+
+test('cw-certificate: a released order the shop’s rule doesn’t order yet closes on Save with no popup', async () => {
+  const over = { next: 'ready' };
+  const { ui, waitFor, fireEvent, dialog } = await openCertificate({ theOrder: order({ ...RELEASED, ...over }), on: { '/certificate': releasedSaved(over) } });
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1040');
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+  assert.equal(posts('/certificate').length, 1);
+});
+
+test('cw-certificate-released: with no supplier matched in Settings the choice is Order the bike', async () => {
+  const { popup } = await saveReleased({ over: { supplier: null } });
+  assert.equal(popup.getByRole('radio', { name: 'Order the bike' }).checked, true);
+  assert.ok(popup.queryByText(/\[supplier\]/) === null);
+});
+
+test('cw-certificate: a released order that holds a bike again closes on Save with no popup', async () => {
+  const over = { held: true, frameId: 41, inStock: true, next: 'ready' };
+  const { ui, waitFor, fireEvent, dialog } = await openCertificate({ theOrder: order({ ...RELEASED, ...over }), on: { '/certificate': releasedSaved(over) } });
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1040');
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog') === null));
+  assert.equal(posts('/certificate').length, 1);
+});
