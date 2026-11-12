@@ -18,6 +18,9 @@ test.use({ viewport: { width: 1440, height: 900 } });
 test.beforeAll(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: '[Shop name]' });
+  // The three-step start, answered through the server (the steps' screen is tested in tests/screens/website-start.test.js).
+  const setUp = await staffRequest(server.baseUrl, owner.cookie, '/api/website/set-up', { method: 'POST', body: { kind: 'wheelhouse', startWith: 'every', mainColour: '#1A3F66' } });
+  expect(setUp.status, JSON.stringify(setUp.body)).toBe(200);
 });
 
 test.afterAll(async () => {
