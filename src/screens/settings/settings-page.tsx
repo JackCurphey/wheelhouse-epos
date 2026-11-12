@@ -21,6 +21,7 @@ import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySum
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
 import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
+import { QuickButtonsSettings, useQuickButtonsSummary } from './quick-buttons-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
 import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
@@ -1040,6 +1041,7 @@ function OwnerSettings() {
   const countFirst = useCountFirstSummary();
   const c2w = useC2wSummaries();
   const tills = useTillsSummary();
+  const quickButtons = useQuickButtonsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
@@ -1053,6 +1055,8 @@ function OwnerSettings() {
       key: 'front-desk', name: 'Front desk', intro: 'The till, payments, messages to customers and closing the day.',
       areas: [
         { key: 'till', title: 'Till', intro: 'What staff see and use at the till.', folds: [
+          // First in Till, as drawn (setup.mjs tillFolds; set-till-quick).
+          { key: 'quick-buttons', title: 'Quick buttons', summary: quickButtons, body: <QuickButtonsSettings /> },
           { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
           // Last in Till, as drawn (setup.mjs tillFolds; till-setup).
           { key: 'tills', title: 'Tills', summary: tills, body: <TillsSettings /> },
