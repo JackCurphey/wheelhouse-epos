@@ -16,6 +16,8 @@ buttons on the server (#698) and in Settings, End of day (#701) and Ways to
 pay (#709) are in; quick buttons on the till waits for Mark's yes on #693,
 and the change is archived with it. `your-data-download` is in (#678).
 `finish-account` is built and archived (#657 to #666).
+Also on: WP-6.1 website management (`website-management`), built
+overnight from 12 Nov, pull requests 1 to 6b; 7 waits for WP-1.1, 8 for WP-8.1.
 
 **Jack next:**
 1. Products, stock, sizes and colours (WP-1.5): nine of ten pieces in.

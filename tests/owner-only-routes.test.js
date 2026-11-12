@@ -111,6 +111,16 @@ const ROUTES = [
   ['POST', `/api/till-setup/tills/${MISSING}/remove`, {}],
   ['PUT', `/api/till-setup/workshop/${MISSING}`, {}],
   ['POST', `/api/till-setup/workshop/${MISSING}/remove`, {}],
+  // The new Website page (openspec/changes/website-management, design 2).
+  ['GET', '/api/website'],
+  ['PUT', '/api/website/parts/no_such_part', {}],
+  ['POST', '/api/website/parts/no_such_part/photo', {}],
+  ['POST', '/api/website/logo', {}],
+  ['POST', '/api/website/discard', {}],
+  ['POST', '/api/website/turn-off', {}],
+  ['GET', '/api/website/history'],
+  ['GET', `/api/website/history/${MISSING}`],
+  ['POST', `/api/website/history/${MISSING}/restore`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
