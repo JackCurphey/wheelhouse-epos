@@ -42,7 +42,7 @@ function fakeServer(state) {
     rest.splice(at ?? rest.length, 0, b);
     state.buttons = [...state.buttons.filter((x) => x.groupId !== b.groupId && x.id !== b.id), ...rest];
   };
-  return (path, method, body) => {
+  return (path, method, body, search) => {
     const id = Number(path.split('/').pop());
     if (path === '/api/quick-buttons' && method === 'GET') return [200, list()];
     if (path === '/api/quick-buttons' && method === 'POST') {
@@ -53,8 +53,11 @@ function fakeServer(state) {
     if (path.startsWith('/api/quick-buttons/') && method === 'PUT') {
       const b = state.buttons.find((x) => x.id === id);
       const at = state.buttons.filter((x) => x.groupId === b.groupId).indexOf(b);
-      Object.assign(b, body.label !== undefined ? { label: body.label } : {});
-      place(b, body.position ?? at);
+      if ('label' in body) b.label = body.label;
+      if ('productId' in body || 'serviceId' in body) Object.assign(b, { productId: body.productId ?? null, serviceId: body.serviceId ?? null });
+      const moved = body.groupId !== undefined && body.groupId !== b.groupId;
+      if (moved) b.groupId = body.groupId;
+      place(b, body.position ?? (moved ? undefined : at));
       return [200, list()];
     }
     if (path.startsWith('/api/quick-buttons/') && method === 'DELETE') {
@@ -65,6 +68,17 @@ function fakeServer(state) {
       if (state.groups.some((g) => g.name.toLowerCase() === body.name.trim().toLowerCase())) return [409, { error: 'There’s already a group with that name', code: 'name_taken' }];
       state.groups.push({ id: nextId++, name: body.name.trim() });
       return [201, { id: state.groups.at(-1).id, ...list() }];
+    }
+    if (path.startsWith('/api/quick-button-groups/') && method === 'PUT') {
+      state.groups.find((g) => g.id === id).name = body.name;
+      return [200, list()];
+    }
+    if (path.startsWith('/api/quick-button-groups/') && method === 'DELETE') {
+      const count = state.buttons.filter((b) => b.groupId === id).length;
+      if (count && search !== '?confirm=1') return [409, { error: `This group has ${count} buttons`, code: 'has_buttons', count }];
+      state.groups = state.groups.filter((g) => g.id !== id);
+      state.buttons = state.buttons.filter((b) => b.groupId !== id);
+      return [200, list()];
     }
     return null;
   };
@@ -83,10 +97,13 @@ async function open({ empty = false } = {}) {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
     const u = new URL(url, 'http://localhost');
-    calls.push({ path: u.pathname, method, body });
+    calls.push({ path: u.pathname + u.search, method, body });
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
-    if (u.pathname.startsWith('/api/quick-button') && method !== 'GET' && state.offline) throw new TypeError('Failed to fetch');
-    const q = quick(u.pathname, method, body);
+    if (u.pathname.startsWith('/api/quick-button') && method !== 'GET') {
+      if (state.hold) await state.hold;
+      if (state.offline) throw new TypeError('Failed to fetch');
+    }
+    const q = quick(u.pathname, method, body, u.search);
     if (q) return reply(...q);
     if (u.pathname === '/api/auth/me') return reply(200, JACK);
     if (u.pathname === '/api/products') return reply(200, /brake/i.test(u.searchParams.get('search') ?? '') ? [PADS] : []);
@@ -281,4 +298,192 @@ test('a button whose item is off sale reads Not on sale (design 5 point 4)', asy
   t.state.offSale = [2];
   await ready(t);
   assert.deepEqual(rows(t)[1], ['Fit & adjust brakes', 'Labour · 30 min · Not on sale', '£18.00']);
+});
+
+// Review fixes (PR 2 drawing check).
+const held = (t) => { let release; t.state.hold = new Promise((r) => { release = () => { t.state.hold = null; r(); }; }); return () => release(); };
+async function openAdd(t) {
+  t.fireEvent.click(t.ui.getByRole('button', { name: '+ Add a button' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.fireEvent.change(box.getByRole('textbox', { name: 'Find a product or service' }), { target: { value: 'brake pads' } });
+  t.fireEvent.click(await box.findByRole('button', { name: /Shimano brake pads B05S-RX/ }));
+  return box;
+}
+
+test('a failed Add says so inside the box, which stays open as typed; pressing again saves', async () => {
+  const t = await open();
+  await ready(t);
+  const box = await openAdd(t);
+  assert.ok(box.getByRole('button', { name: 'Close' }), 'the header’s × as drawn (popup)');
+  t.state.offline = true;
+  t.fireEvent.click(box.getByRole('button', { name: 'Add the button' }));
+  await t.waitFor(() => assert.equal(box.getByRole('alert').textContent, FAILED));
+  assert.ok(t.ui.queryByRole('dialog') !== null);
+  assert.equal(box.getByRole('textbox', { name: 'Name on the button' }).value, 'Shimano brake pads B05S-RX');
+  assert.ok(!noteArea(t).textContent.includes(FAILED), 'not in the note behind the box');
+  t.state.offline = false;
+  t.fireEvent.click(box.getByRole('button', { name: 'Add the button' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.equal(t.state.buttons.length, 4);
+});
+
+test('a failed Edit says so inside the box', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.contextMenu(row(t, 'Standard service'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Edit Standard service' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.state.offline = true;
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.equal(box.getByRole('alert').textContent, FAILED));
+  assert.ok(t.ui.queryByRole('dialog') !== null);
+});
+
+test('pressing Add the button twice adds one button', async () => {
+  const t = await open();
+  await ready(t);
+  const box = await openAdd(t);
+  const release = held(t);
+  const add = box.getByRole('button', { name: 'Add the button' });
+  t.fireEvent.click(add);
+  await t.waitFor(() => assert.equal(add.disabled, true));
+  t.fireEvent.click(add);
+  release();
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.equal(sent(t, 'POST').length, 1);
+});
+
+test('pressing Add the group twice adds one group', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: '+ Add a group' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.fireEvent.change(box.getByRole('textbox', { name: 'Name' }), { target: { value: '[Group name]' } });
+  const release = held(t);
+  const add = box.getByRole('button', { name: 'Add the group' });
+  t.fireEvent.click(add);
+  await t.waitFor(() => assert.equal(add.disabled, true));
+  t.fireEvent.click(add);
+  release();
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.equal(sent(t, 'POST').length, 1);
+});
+
+test('a failed move, then Try again, keeps the list right', async () => {
+  const t = await open();
+  await ready(t);
+  t.state.offline = true;
+  t.fireEvent.keyDown(t.ui.getByRole('button', { name: 'Move Replace gear cable — drag, or use the arrow keys' }), { key: 'ArrowUp' });
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  t.state.offline = false;
+  const release = held(t);
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Try again' }));
+  await t.act(() => new Promise((r) => setTimeout(r, 20)));
+  assert.deepEqual(rows(t).map((r) => r[0]), ['Standard service', 'Replace gear cable', 'Fit & adjust brakes'], 'while it saves');
+  release();
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  assert.deepEqual(rows(t).map((r) => r[0]), ['Standard service', 'Replace gear cable', 'Fit & adjust brakes']);
+  assert.deepEqual(t.state.buttons.map((b) => b.id), [1, 3, 2]);
+});
+
+test('two quick moves save one after the other, and the server ends where the screen shows', async () => {
+  const t = await open();
+  await ready(t);
+  const release = held(t);
+  const handle = t.ui.getByRole('button', { name: 'Move Replace gear cable — drag, or use the arrow keys' });
+  t.fireEvent.keyDown(handle, { key: 'ArrowUp' });
+  t.fireEvent.keyDown(handle, { key: 'ArrowUp' });
+  await t.waitFor(() => assert.equal(rows(t)[0][0], 'Replace gear cable'));
+  assert.equal(sent(t, 'PUT').length, 1, 'the second waits for the first');
+  release();
+  await t.waitFor(() => assert.equal(sent(t, 'PUT').length, 2));
+  await t.waitFor(() => assert.match(noteArea(t).textContent, /^Saved/));
+  assert.deepEqual(sent(t, 'PUT').map((c) => c[1]), [{ position: 1 }, { position: 0 }]);
+  assert.deepEqual(t.state.buttons.map((b) => b.id), [3, 1, 2]);
+  assert.deepEqual(rows(t).map((r) => r[0]), ['Replace gear cable', 'Standard service', 'Fit & adjust brakes']);
+});
+
+test('after Remove the focus goes to the next row’s handle; closing Edit puts it back on Edit', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.contextMenu(row(t, 'Fit & adjust brakes'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }));
+  await t.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Move Replace gear cable — drag, or use the arrow keys'));
+  t.fireEvent.contextMenu(row(t, 'Replace gear cable'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Remove Replace gear cable' }));
+  await t.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Move Standard service — drag, or use the arrow keys'));
+  const edit = t.ui.getByRole('button', { name: 'Edit Standard service' });
+  t.fireEvent.click(edit);
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.fireEvent.click(box.getByRole('button', { name: 'Cancel' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  await t.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Edit Standard service'));
+});
+
+test('Edit’s Undo puts the name and group back', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.contextMenu(row(t, 'Fit & adjust brakes'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Edit Fit & adjust brakes' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  t.fireEvent.change(box.getByRole('textbox', { name: 'Name on the button' }), { target: { value: 'Brakes' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Parts' }));
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.deepEqual(rows(t).map((r) => r[0]), ['Standard service', 'Replace gear cable']));
+  assert.deepEqual(t.state.buttons.find((b) => b.id === 2), { id: 2, groupId: 2, productId: null, serviceId: 12, label: 'Brakes' });
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  t.fireEvent.click(t.within(area).getByRole('button', { name: 'Undo' }));
+  await t.waitFor(() => assert.deepEqual(rows(t), WORKSHOP));
+});
+
+test('a group’s … menu renames it, by keyboard or tap', async () => {
+  const t = await open();
+  await ready(t);
+  const more = t.ui.getByRole('button', { name: 'More for Workshop' });
+  assert.equal(more.getAttribute('aria-haspopup'), 'menu');
+  t.fireEvent.click(more);
+  const menu = t.within(t.ui.getByRole('menu', { name: 'Workshop' }));
+  await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Rename'));
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Rename', 'Remove']);
+  t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+  await t.waitFor(() => assert.ok(document.activeElement === more));
+  t.fireEvent.click(more);
+  t.fireEvent.click(t.within(t.ui.getByRole('menu', { name: 'Workshop' })).getByRole('menuitem', { name: 'Rename' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  assert.ok(box.getByRole('heading', { name: 'Edit Workshop' }));
+  t.fireEvent.change(box.getByRole('textbox', { name: 'Name' }), { target: { value: '[Group name]' } });
+  t.fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.deepEqual(sent(t, 'PUT'), [['/api/quick-button-groups/1', { name: '[Group name]' }]]);
+  // Right-click on a pill opens the same menu.
+  t.fireEvent.contextMenu(t.ui.getByRole('button', { name: 'Parts' }));
+  assert.ok(t.ui.getByRole('menu', { name: 'Parts' }));
+});
+
+test('removing a group with buttons says how many and asks first', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'More for Workshop' }));
+  t.fireEvent.click(t.within(t.ui.getByRole('menu', { name: 'Workshop' })).getByRole('menuitem', { name: 'Remove' }));
+  const box = t.within(await t.ui.findByRole('dialog'));
+  await t.waitFor(() => assert.equal(box.getByRole('alert').textContent, 'Workshop has 3 buttons. Removing the group removes them too.'));
+  assert.equal(t.state.groups.length, 3, 'nothing removed yet');
+  t.fireEvent.click(box.getByRole('button', { name: 'Remove the group and its buttons' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.deepEqual(sent(t, 'DELETE').map((c) => c[0]), ['/api/quick-button-groups/1', '/api/quick-button-groups/1?confirm=1']);
+  await t.waitFor(() => assert.deepEqual(pills(t.ui.getByRole('group', { name: 'Quick button groups' })).slice(0, 2), ['Parts (chosen)', 'Accessories']));
+});
+
+test('a group with no buttons shows the empty line; with no buttons at all the summary reads None yet', async () => {
+  const t = await open();
+  const fold = await ready(t);
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Parts' }));
+  assert.ok(t.ui.getByText('No quick buttons yet'));
+  assert.ok(t.ui.getByText('Add the things you sell most — they’ll show on the till, one tap each.'));
+  assert.match(fold.textContent, /Workshop, Parts, Accessories/);
+  t.state.buttons = [];
+  await current.shell.queryClient.invalidateQueries();
+  await t.waitFor(() => assert.match(fold.textContent, /None yet/));
 });
