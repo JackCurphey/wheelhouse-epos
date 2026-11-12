@@ -141,11 +141,12 @@ export function register(route) {
       const s = await db.prepare('UPDATE c2w_settings SET next_quote_number = next_quote_number + 1 RETURNING *, next_quote_number - 1 AS taken').get();
       if (s.quote_valid_days === null) throw new Refused(409, SETTINGS_NEEDED);
       const today = await shopDay();
+      const givenAt = currentMoment().toISOString();
       const total = bike.price_pence + extras.reduce((sum, a) => sum + a.pricePence, 0);
       const { id } = await db.prepare(`INSERT INTO c2w_orders (customer_id, provider_id, site_id, product_id, quote_number, quote_given_at,
         valid_until, hold_wanted, accessories, total_pence, customer_code)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?) RETURNING id`).get(
-        customerId, providerId, site, productId, s.taken, currentMoment().toISOString(),
+        customerId, providerId, site, productId, s.taken, givenAt,
         addDays(today, s.quote_valid_days), hold, JSON.stringify(extras), total, randomBytes(32).toString('hex'),
       );
       // Only a bike free here is held, under the stock lock; one that isn't is
@@ -155,7 +156,7 @@ export function register(route) {
       if (held) {
         if (s.hold_days === null) throw new Refused(409, SETTINGS_NEEDED);
         until = addDays(today, s.hold_days);
-        await db.prepare('UPDATE c2w_orders SET frame_id = ?, held_at = now(), hold_until = ? WHERE id = ? RETURNING id').get(held.frameId, until, id);
+        await db.prepare('UPDATE c2w_orders SET frame_id = ?, held_at = ?, hold_until = ? WHERE id = ? RETURNING id').get(held.frameId, givenAt, until, id);
       }
       const made = await loadOrder(id);
       // The line keeps the sentence the quote was given with, whatever Settings say later.

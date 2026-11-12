@@ -103,6 +103,9 @@ test('5.1 a quote with the hold takes one free frame at the site, linked to the 
   const full = await order(winner.id);
   assert.deepEqual(full.events.map((e) => e.kind), ['quote_given', 'held']);
   assert.equal(full.events[1].detail.until, '2026-09-08');
+  // Held when the quote was given, on the shop's clock (not the database's).
+  const times = await inShop(async () => prepare('SELECT held_at = quote_given_at AS same FROM c2w_orders WHERE id = ?').get(winner.id));
+  assert.equal(times.same, true, 'held at the moment of the quote');
   const stock = await stockOf(bike);
   assert.deepEqual(stock.sites.map((s) => [s.siteId, s.free, s.held]), [[site, 0, 1]]);
 });
