@@ -26,12 +26,12 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 1. Tables and Online orders settings — server (pull request 1, about 500 lines, risky: migration)
 
-- [ ] 1.1 Test (scratch database, migrating from empty): `online_orders`, `online_order_lines`, `online_order_events` exist with row-level security on `shop_id`; another shop's rows can't be read or named in a link
-- [ ] 1.2 Test: `online_payments.purpose` takes `'order'` with an `online_order_id` and refuses an order payment without one; old `'deposit'` rows are untouched; `checking` and `unknown` statuses are allowed on `online_payments` and `pretend_payments`
-- [ ] 1.3 Test: `online_order_settings` gains `sells` (`shelf` only), `wallets_on`, `store_credit_on`, `remind_days` (3), `keep_days` (7), `shelf_name`, `next_order_number`; `categories.show_online` starts true
-- [ ] 1.4 Test: `GET /api/online-orders-settings` returns the new settings beside WP-6.1's; `PUT` saves them; reminder 1–60, keeping 2–90 and longer than the reminder; refused for non-Owners (`ownerOnly`)
-- [ ] 1.5 Test: the order number comes from the shop's counter, one up, never reused; two at once get different numbers (shown as `[prefix]-` and the number until Jack names the prefix)
-- [ ] 1.6 Write the migration (the next free number at build time; latest on main is 149) and extend `server/routes/online-payments.js` to pass 1.1–1.5
+- [x] 1.1 Test (scratch database, migrating from empty): `online_orders`, `online_order_lines`, `online_order_events` exist with row-level security on `shop_id`; another shop's rows can't be read or named in a link
+- [x] 1.2 Test: `online_payments.purpose` takes `'order'` with an `online_order_id` and refuses an order payment without one; old `'deposit'` rows are untouched; `checking` and `unknown` statuses are allowed on `online_payments` and `pretend_payments`
+- [x] 1.3 Test: `online_order_settings` gains `sells` (`shelf` only), `wallets_on`, `store_credit_on`, `remind_days` (3), `keep_days` (7), `shelf_name`, `next_order_number`; `categories.show_online` starts true
+- [x] 1.4 Test: `GET /api/online-orders-settings` returns the new settings beside WP-6.1's; `PUT` saves them; reminder 1–60, keeping 2–90 and longer than the reminder; refused for non-Owners (`ownerOnly`)
+- [x] 1.5 Test: the order number comes from the shop's counter, one up, never reused; two at once get different numbers (shown as `[prefix]-` and the number until Jack names the prefix)
+- [x] 1.6 Write the migration (the next free number at build time; latest on main is 149) and extend `server/routes/online-payments.js` to pass 1.1–1.5
 - [ ] 1.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 2. Online orders settings — screen (pull request 2, about 550 lines)
@@ -65,7 +65,8 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 5. Paying — server and pretend outcomes (pull request 5, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
-- [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9
+- [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9 (so are `online_order_lines.refunded_at` and `refund_reason`, which migration 154 left out)
+- [ ] 5.0a `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
 
 - [ ] 5.1 Test: a card that works — in one transaction stock is checked and comes off the collecting shop, store credit is spent, one sale is recorded with "Paid online" and "Store credit" lines, the order gets its number and moves to To get ready, the payment is taken, and Order confirmation is queued
 - [ ] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
