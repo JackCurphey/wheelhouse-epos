@@ -75,9 +75,9 @@ const SHOP_DETAIL_FIELDS = [
   ['receiptFooter', 'receipt_footer', 'Words at the bottom', 500],
 ];
 function serializeShopDetails(row) {
-  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null, receiptFooter: row.receipt_footer ?? null };
+  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null, receiptFooter: row.receipt_footer ?? null, vatQuarterStartMonth: row.vat_quarter_start_month ?? null };
 }
-const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number, receipt_footer FROM shops WHERE id = ?';
+const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number, receipt_footer, vat_quarter_start_month FROM shops WHERE id = ?';
 
 export function register(route) {
   route('GET', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
@@ -98,6 +98,13 @@ export function register(route) {
       if (text.length > max) return badRequest(res, `${label} can be up to ${max} characters`);
       sets.push(`${column} = ?`);
       values.push(text === '' ? null : text);
+    }
+    // When the VAT quarter starts (openspec/changes/reports-ready-made, design 4):
+    // 1 January, 2 February, 3 March, and the quarters every three months on; null not said.
+    if (body.vatQuarterStartMonth !== undefined) {
+      if (body.vatQuarterStartMonth !== null && ![1, 2, 3].includes(body.vatQuarterStartMonth)) return badRequest(res, 'Choose the months your VAT quarters start in');
+      sets.push('vat_quarter_start_month = ?');
+      values.push(body.vatQuarterStartMonth);
     }
     // The column names come from SHOP_DETAIL_FIELDS above, never from the request.
     if (sets.length) {

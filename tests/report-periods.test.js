@@ -127,3 +127,36 @@ test('a week with British Summer Time ending inside it still has seven days', ()
   assert.deepEqual(p.buckets.map((b) => b.key)[6], '2026-11-01');
   assert.equal(p.buckets[0].key, '2026-10-26');
 });
+
+// VAT quarters (openspec/changes/reports-ready-made, design 4 and 5): the
+// shop's quarters start in month 1, 2 or 3 and every three months on; not
+// said yet, they are calendar quarters (January, April, July, October).
+test('This VAT quarter is the quarter today is in, for each start month, against the whole quarter before', () => {
+  const cases = [
+    [1, ['2026-07-01', '2026-09-30'], ['2026-04-01', '2026-06-30']],
+    [2, ['2026-08-01', '2026-10-31'], ['2026-05-01', '2026-07-31']],
+    [3, ['2026-09-01', '2026-11-30'], ['2026-06-01', '2026-08-31']],
+    [null, ['2026-07-01', '2026-09-30'], ['2026-04-01', '2026-06-30']],
+  ];
+  for (const [start, [from, to], [bFrom, bTo]] of cases) {
+    const p = periodFor({ period: 'this-vat-quarter', today: THU, quarterStartMonth: start });
+    assert.deepEqual([p.from, p.to, p.through, p.soFar], [from, to, THU, true], String(start));
+    assert.deepEqual([p.before.from, p.before.to], [bFrom, bTo], String(start));
+    assert.equal(p.against, 'the quarter before');
+    assert.equal(p.unit, 'month');
+    assert.equal(p.buckets.length, 3);
+  }
+  assert.equal(periodFor({ period: 'this-vat-quarter', today: THU, quarterStartMonth: 3 }).label, '1 September – 30 November');
+});
+
+test('Last VAT quarter is the whole quarter before this one, against the one before it, across a year', () => {
+  const p = periodFor({ period: 'last-vat-quarter', today: '2027-01-20', quarterStartMonth: 2 });
+  assert.deepEqual([p.from, p.to, p.through, p.soFar], ['2026-08-01', '2026-10-31', '2026-10-31', false]);
+  assert.deepEqual([p.before.from, p.before.to], ['2026-05-01', '2026-07-31']);
+  const q = periodFor({ period: 'last-vat-quarter', today: '2027-01-20', quarterStartMonth: 1 });
+  assert.deepEqual([q.from, q.to], ['2026-10-01', '2026-12-31']);
+  assert.equal(q.label, '1 October – 31 December');
+  const r = periodFor({ period: 'this-vat-quarter', today: '2027-01-20', quarterStartMonth: 3 });
+  assert.deepEqual([r.from, r.to], ['2026-12-01', '2027-02-28']);
+  assert.equal(r.label, '1 December 2026 – 28 February 2027');
+});
