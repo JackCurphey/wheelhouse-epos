@@ -246,10 +246,14 @@ function CategoryView({ pages, selection, sort, ids, shopId, more, loadingMore, 
   );
 }
 
-/** "Shop › Drivetrain › Derailleurs": each step up linked, this page marked (browse.mjs `crumbs`). */
-function Crumbs({ category, categories }: { category: ProductsPage['category']; categories: Category[] }) {
+/**
+ * "Shop › Drivetrain › Derailleurs": each step up linked, this page marked
+ * (browse.mjs `crumbs`). A product's page passes its name as `current`, and
+ * its category becomes a step; its category's parent comes from the tree.
+ */
+export function Crumbs({ category, categories, current }: { category: { id: number; name: string; parentId?: number | null }; categories: Category[]; current?: string }) {
   const above: Category[] = [];
-  let parentId = category.parentId;
+  let parentId = category.parentId !== undefined ? category.parentId : (categories.find((c) => c.id === category.id)?.parentId ?? null);
   // Twenty steps at most, so a loop in the tree can't hang the page.
   while (parentId !== null && above.length < 20) {
     const at = categories.find((c) => c.id === parentId);
@@ -268,7 +272,13 @@ function Crumbs({ category, categories }: { category: ProductsPage['category']; 
           {' › '}
         </React.Fragment>
       ))}
-      <span aria-current="page">{category.name}</span>
+      {current !== undefined && (
+        <>
+          <Link to={`/shop/${category.id}`} className={step} style={{ color: 'inherit' }}>{category.name}</Link>
+          {' › '}
+        </>
+      )}
+      <span aria-current="page">{current ?? category.name}</span>
     </nav>
   );
 }
@@ -482,7 +492,8 @@ function NothingMatches({ selection, page, onClear }: { selection: Selection; pa
   );
 }
 
-function AskTheShop() {
+/** "Ask the shop about it" (or `label`), showing each shop's phone and email in place. */
+export function AskTheShop({ label = 'Ask the shop about it' }: { label?: string }) {
   const { site, several } = useSiteContext();
   const [open, setOpen] = useState(false);
   const regionId = useId();
@@ -497,7 +508,7 @@ function AskTheShop() {
         onClick={() => setOpen((o) => !o)}
         className="inline-flex min-h-11 items-center self-start p-0 text-size-15 font-semibold text-[var(--wh-ink)] underline"
       >
-        Ask the shop about it
+        {label}
       </button>
       {open && (
         <div id={regionId} role="region" aria-label="Ask the shop" className="flex flex-col gap-1.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-3.5 text-size-15 leading-normal">

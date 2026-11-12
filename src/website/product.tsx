@@ -1,0 +1,270 @@
+import * as React from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router';
+import { Check, ChevronLeft, ChevronRight, CircleAlert, Minus, Plus, Store, X } from 'lucide-react';
+import { ApiError } from '@/lib/api/client.ts';
+import { Dialog } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { penceText } from '@/lib/money.ts';
+import { AskTheShop, Crumbs } from './category.tsx';
+import { NotFoundPage, usePageTitle } from './pages.tsx';
+import { Failed, H1, H2, linkButton, priceText } from './parts.tsx';
+import { useCategories, useProduct, useSiteContext, type PageStock, type Product } from './site-query.ts';
+
+/**
+ * A product's page (website-browse tasks 5.1-5.7, design 3 and 7; wb-product,
+ * wb-product-sizes, wb-product-size-other, wb-product-held and
+ * wb-product-photos in browse.mjs): the photos, the path, the name and
+ * price, the colour and size choosers with nothing chosen, the stock line at
+ * the chosen shop, buying, About it and Specifications. Add to basket opens
+ * the basket path until WP-6.3 (written line 1).
+ */
+export function ProductPage() {
+  const { id: raw = '' } = useParams();
+  const id = /^\d{1,9}$/.test(raw) ? Number(raw) : 0;
+  const { address, chosen } = useSiteContext();
+  const product = useProduct(address, id, chosen?.id ?? null);
+  if (id === 0 || (product.error instanceof ApiError && product.error.status === 404)) return <NotFoundPage />;
+  if (product.error) return <Failed onRetry={() => { void product.refetch(); }} />;
+  if (!product.data) return null;
+  return <ProductView key={product.data.id} product={product.data} />;
+}
+
+const OUT: PageStock['line'][] = ['elsewhere', 'sold-out'];
+const radio = (on: boolean) => cn('inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--wh-panel)] px-3.5 text-[14px] font-semibold text-[var(--wh-ink)]', on ? 'border-2 border-[var(--wh-ink)]' : 'border border-[var(--wh-input-border)]');
+
+function ProductView({ product }: { product: Product }) {
+  usePageTitle(product.name);
+  const { address, site, chosen } = useSiteContext();
+  const categories = useCategories(address);
+  const [colour, setColour] = useState<string | null>(null);
+  const [size, setSize] = useState<string | null>(null);
+  const outId = useId();
+  const hasColours = product.colours.length > 0;
+  const hasSizes = product.sizes.length > 0;
+  const sized = product.stock === null;
+  // A colour and size the shop doesn't have together counts as sold out at the chosen shop.
+  const missing: PageStock = chosen ? { line: 'sold-out', shop: chosen.name } : { line: 'none' };
+  const itemOf = (c: string | null, s: string | null) => product.items.find((i) => (!hasColours || i.colour === c) && (!hasSizes || i.size === s));
+  const picked = sized && (!hasColours || colour !== null) && (!hasSizes || size !== null);
+  const item = picked ? itemOf(colour, size) : undefined;
+  const stock: PageStock | null = !sized ? product.stock : picked ? (item?.stock ?? missing) : null;
+  const sizeOut = (s: string) => sized && (!hasColours || colour !== null) && OUT.includes((itemOf(colour, s)?.stock ?? missing).line);
+  const buy = stock === null || !OUT.includes(stock.line);
+  const inColour = hasSizes && hasColours ? ` in ${colour}` : '';
+  const specs = [
+    ...(hasSizes ? [['Sizes', product.sizes.join(', ')]] : []),
+    ...(hasColours ? [['Colours', product.colours.join(', ')]] : []),
+    ...product.specifications.map((d) => [d.name, d.unit ? `${d.value} ${d.unit}` : String(d.value)]),
+    ...(product.brand ? [['Brand', product.brand]] : []),
+  ];
+
+  const info = (
+    <div className="flex min-w-0 flex-col gap-4">
+      {product.category ? <Crumbs category={product.category} categories={categories.data ?? []} current={product.name} /> : null}
+      <div className="flex flex-col gap-1.5">
+        <H1>{product.name}</H1>
+        <span className="font-mono text-[24px] font-bold">{item ? penceText(item.pricePence) : priceText(product.pricePence, product.priceHighPence)}</span>
+        {product.brand && <span className="text-size-13 text-[var(--wh-muted)]">Includes VAT · {product.brand}</span>}
+      </div>
+      {hasColours && (
+        <div role="radiogroup" aria-label="Colour" className="flex flex-col gap-2">
+          <span className="text-size-15 font-bold">Colour: {colour ?? 'choose one'}</span>
+          <div className="flex flex-wrap gap-2">
+            {product.colours.map((c) => (
+              <button key={c} type="button" role="radio" aria-checked={c === colour} onClick={() => setColour(c)} className={radio(c === colour)}>
+                <span aria-hidden className="size-[18px] rounded-full border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-surface-muted)]" />
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {hasSizes && (
+        <div role="radiogroup" aria-label="Size" className="flex flex-col gap-2">
+          <span className="text-size-15 font-bold">Size: {size ?? 'choose one'}</span>
+          <div className="flex flex-wrap gap-2">
+            {product.sizes.map((s) => {
+              const out = sizeOut(s);
+              const on = s === size;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  aria-describedby={out && on ? outId : undefined}
+                  onClick={() => setSize(s)}
+                  className={cn(radio(on), 'min-w-14 justify-center text-size-15', out && 'bg-[var(--wh-surface-muted)]', out && !on && 'border-[var(--wh-border)] text-[var(--wh-muted)] line-through')}
+                >
+                  {s}
+                  {/* The space sits outside the hidden words, so every reader keeps it. */}
+                  {out && <> <span className="sr-only">— not in stock at {chosen?.name}</span></>}
+                </button>
+              );
+            })}
+          </div>
+          {size && sizeOut(size) && <span id={outId} className="text-size-13">{size} isn’t in stock at {chosen?.name}{inColour}.</span>}
+        </div>
+      )}
+      {stock === null ? (
+        <StockBox tone="grey">Choose a {[hasColours && 'colour', hasSizes && 'size'].filter(Boolean).join(' and ')} to see when it’s ready</StockBox>
+      ) : stock.line === 'ready' ? (
+        <StockBox tone="ok"><strong>Ready today at {stock.shop}</strong> · {stock.qty} in stock</StockBox>
+      ) : stock.line === 'sold-out' ? (
+        <StockBox tone="grey"><strong>Sold out at {stock.shop}</strong></StockBox>
+      ) : stock.line === 'elsewhere' ? (
+        <>
+          <StockBox tone="warn">
+            <strong>{(hasSizes ? size : hasColours ? colour : 'It')} isn’t in stock at {stock.shop}</strong>{inColour} — it’s in stock at our {stock.at} shop
+          </StockBox>
+          {/* Choosing the shop comes with pull request 7; until then this opens that shop's page, as the shop cards do. */}
+          <Link to={shopPath(site.shops, stock.at)} className={cn(linkButton('default'), 'self-start')}>Collect from {stock.at} instead</Link>
+        </>
+      ) : null}
+      {buy && <Buy name={product.name} />}
+      <AskTheShop label="Ask the shop about this" />
+    </div>
+  );
+
+  return (
+    <>
+      <div className="grid items-start gap-[22px] md:grid-cols-2 md:gap-10">
+        <Photos photos={product.photos} name={product.name} />
+        {info}
+      </div>
+      <div className="grid items-start gap-7 md:grid-cols-2">
+        <section aria-labelledby={`${outId}-about`} className="flex flex-col gap-2.5">
+          <H2 id={`${outId}-about`}>About it</H2>
+          <p className="m-0 whitespace-pre-line text-size-15 leading-relaxed">{product.description}</p>
+        </section>
+        {specs.length > 0 && (
+          <table className="w-full border-collapse text-size-15">
+            <caption className="pb-2 text-left text-[17px] font-bold">Specifications</caption>
+            <tbody>
+              {specs.map(([k, v], i) => (
+                <tr key={i}>
+                  <th scope="row" className="w-[45%] border-t border-[var(--wh-border)] py-[9px] text-left font-normal text-[var(--wh-muted)]">{k}</th>
+                  <td className="border-t border-[var(--wh-border)] py-[9px]">{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
+const shopPath = (shops: { id: number; name: string }[], name: string) => {
+  const shop = shops.find((s) => s.name === name);
+  return shop ? `/shops/${shop.id}` : '/shops';
+};
+
+/** The stock line's box (browse.mjs `readyBox`), read out as it changes. */
+function StockBox({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: React.ReactNode }) {
+  const Icon = tone === 'ok' ? Check : tone === 'warn' ? CircleAlert : Store;
+  return (
+    <p role="status" className={cn(
+      'm-0 flex items-start gap-2 rounded-lg px-3 py-2.5 text-size-15',
+      tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : tone === 'warn' ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]',
+    )}>
+      <Icon aria-hidden className="mt-0.5 size-[18px] shrink-0" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** How many, and Add to basket (browse.mjs `qty`); the number goes to the basket with WP-6.3. */
+function Buy({ name }: { name: string }) {
+  const [qty, setQty] = useState(1);
+  const step = 'inline-flex size-11 items-center justify-center border-0 bg-[var(--wh-panel)] text-[var(--wh-ink)]';
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div role="group" aria-label={`Quantity of ${name}`} className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--wh-input-border)]">
+        <button type="button" aria-label={`One fewer ${name}`} onClick={() => setQty((q) => Math.max(1, q - 1))} className={step}><Minus aria-hidden className="size-4" /></button>
+        <span aria-live="polite" className="min-w-10 text-center text-[16px] font-bold">{qty}</span>
+        <button type="button" aria-label={`One more ${name}`} onClick={() => setQty((q) => q + 1)} className={step}><Plus aria-hidden className="size-4" /></button>
+      </div>
+      <Link to="/basket" className={linkButton('accent')}>Add to basket</Link>
+    </div>
+  );
+}
+
+/**
+ * The photos (design 7): none, the name in a tile; one, that photo; more,
+ * the larger photo with a row of them under it, and the viewer: "Photo 2 of
+ * 4", moved by the arrows and the arrow keys, closed by Esc or Close, focus
+ * going back to the photo that opened it.
+ */
+function Photos({ photos, name }: { photos: string[]; name: string }) {
+  const [shown, setShown] = useState(0);
+  const [open, setOpen] = useState<number | null>(null);
+  const big = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const n = photos.length;
+  const wasOpen = useRef(false);
+  // Once the viewer has gone (by any way), focus goes back to the photo that opened it.
+  useEffect(() => {
+    if (wasOpen.current && open === null) big.current?.focus();
+    wasOpen.current = open !== null;
+  }, [open]);
+  const tall = 'h-[260px] w-full rounded-[10px] md:h-[380px]';
+  if (n === 0) return <span aria-hidden data-name-tile className={cn(tall, 'flex items-center justify-center bg-[var(--wh-surface-muted)] p-3 text-center text-size-15 font-semibold')}>{name}</span>;
+  if (n === 1) return <img src={photos[0]} alt={`Photo of ${name}`} className={cn(tall, 'object-cover')} />;
+  const move = (by: number) => setOpen((i) => (i === null ? i : (i + by + n) % n));
+  return (
+    <div className="flex flex-col gap-2.5">
+      <button ref={big} type="button" aria-label={`Open larger photo ${shown + 1} of ${n}`} onClick={() => setOpen(shown)} className="block w-full cursor-zoom-in border-0 bg-transparent p-0">
+        <img src={photos[shown]} alt={`Photo ${shown + 1} of ${n} — ${name}`} className={cn(tall, 'object-cover')} />
+      </button>
+      <div role="group" aria-label="Photos" className="flex flex-wrap gap-2">
+        {photos.map((url, i) => (
+          <button
+            key={url}
+            type="button"
+            aria-label={`Show photo ${i + 1} of ${n}`}
+            aria-current={i === shown ? 'true' : undefined}
+            onClick={() => setShown(i)}
+            className={cn('size-16 overflow-hidden rounded-lg bg-[var(--wh-surface-muted)] p-0', i === shown ? 'border-2 border-[var(--wh-ink)]' : 'border border-[var(--wh-input-border)]')}
+          >
+            <img src={url} alt="" className="size-full object-cover" />
+          </button>
+        ))}
+      </div>
+      {open !== null && (
+        <Dialog
+          open
+          onOpenChange={(o) => { if (!o) setOpen(null); }}
+          aria-labelledby={titleId}
+          aria-modal="true"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight') move(1);
+            else if (e.key === 'ArrowLeft') move(-1);
+            else if (e.key === 'Escape') { e.preventDefault(); setOpen(null); }
+          }}
+          className="m-0 h-dvh max-h-none w-screen max-w-none rounded-none bg-[var(--wh-panel)] md:m-auto md:h-[640px] md:max-h-[90vh] md:w-[900px] md:max-w-[90vw] md:rounded-xl"
+        >
+          <div className="flex h-full flex-col gap-3 p-4">
+            <div className="flex items-center justify-between">
+              <h2 id={titleId} className="m-0 text-[16px] font-bold">Photo {open + 1} of {n}</h2>
+              <button type="button" aria-label="Close photos" onClick={() => setOpen(null)} className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-ink)]">
+                <X aria-hidden className="size-5" />
+              </button>
+            </div>
+            <div className="flex min-h-0 grow items-center gap-3">
+              <button type="button" aria-label="Previous photo" onClick={() => move(-1)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]">
+                <ChevronLeft aria-hidden className="size-[18px]" />
+              </button>
+              <img src={photos[open]} alt={`Photo ${open + 1} of ${n} — ${name}`} className="h-full min-w-0 grow object-contain" />
+              <button type="button" aria-label="Next photo" onClick={() => move(1)} className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--wh-input-border)] bg-[var(--wh-panel)] text-[var(--wh-ink)]">
+                <ChevronRight aria-hidden className="size-[18px]" />
+              </button>
+            </div>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Left and right arrows change photo · Esc closes</p>
+          </div>
+        </Dialog>
+      )}
+    </div>
+  );
+}

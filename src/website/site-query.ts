@@ -169,3 +169,31 @@ export function useProductsPreview(address: SiteAddress, params: URLSearchParams
     ...once,
   });
 }
+
+/** A product page's stock line (server/site-products.js `pageStock`, design 3). */
+export type PageStock = { line: 'none' } | { line: 'ready'; shop: string; qty: number } | { line: 'elsewhere'; shop: string; at: string } | { line: 'sold-out'; shop: string };
+/** GET /api/site/products/:id: a product with sizes has `stock: null` and a line for each of its items. */
+export type Product = {
+  id: number;
+  name: string;
+  brand: string | null;
+  description: string;
+  pricePence: number;
+  priceHighPence: number | null;
+  category: { id: number; name: string; path: string } | null;
+  photos: string[];
+  specifications: { name: string; value: string | number; unit: string | null }[];
+  sizes: string[];
+  colours: string[];
+  items: { id: number; size: string | null; colour: string | null; pricePence: number; stock: PageStock }[];
+  stock: PageStock | null;
+};
+
+export function useProduct(address: SiteAddress, id: number, shopId: number | null) {
+  return useQuery({
+    queryKey: ['site', address.base, 'product', id, shopId],
+    queryFn: () => apiGet<Product>(apiPath(address, `/api/site/products/${id}`, { shop: shopId == null ? null : String(shopId) })),
+    enabled: id > 0,
+    ...once,
+  });
+}

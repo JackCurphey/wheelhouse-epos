@@ -57,14 +57,14 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 5. The product page
 
-- [ ] 5.1 Screen test: wb-product ("£28.00", "Includes VAT · Shimano", "Ready today at Bolton · [n] in stock", Add to basket, Ask the shop about this, About it, Specifications)
-- [ ] 5.2 Screen test: wb-product-sizes ("Colour: choose one", "Size: choose one", nothing chosen, "Choose a colour and size to see when it’s ready")
-- [ ] 5.3 Screen test: wb-product-size-other (struck size, the drawn sentence, " — not in stock at Bolton" for screen readers)
-- [ ] 5.4 Screen test: wb-product-held ("Sold out at Bolton")
-- [ ] 5.5 Screen test: wb-product-photos ("Photo 2 of 4", arrows, Esc closes and returns focus); one photo shows no viewer; no photo shows the name tile
-- [ ] 5.6 Screen test: a product that isn't online shows wb-not-found
-- [ ] 5.7 Build the product page and the photo viewer
-- [ ] 5.8 Browser test: choosing a colour and size on a phone
+- [x] 5.1 Screen test: wb-product ("£28.00", "Includes VAT · Shimano", "Ready today at Bolton · [n] in stock", Add to basket, Ask the shop about this, About it, Specifications)
+- [x] 5.2 Screen test: wb-product-sizes ("Colour: choose one", "Size: choose one", nothing chosen, "Choose a colour and size to see when it’s ready")
+- [x] 5.3 Screen test: wb-product-size-other (struck size, the drawn sentence, " — not in stock at Bolton" for screen readers)
+- [x] 5.4 Screen test: wb-product-held ("Sold out at Bolton")
+- [x] 5.5 Screen test: wb-product-photos ("Photo 2 of 4", arrows, Esc closes and returns focus); one photo shows no viewer; no photo shows the name tile
+- [x] 5.6 Screen test: a product that isn't online shows wb-not-found
+- [x] 5.7 Build the product page and the photo viewer
+- [x] 5.8 Browser test: choosing a colour and size on a phone
 - [ ] 5.9 Self-review (`reviewer`), full check, merge
 
 ## 6. Search
