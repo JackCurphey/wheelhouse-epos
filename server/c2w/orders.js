@@ -9,6 +9,7 @@
 // "What's happened" (c2w_order_events) is only ever added to.
 import { prepare } from '../db.js';
 import { shopToday } from '../clock.js';
+import { lockStock } from '../lib/stock.js';
 
 export const QUOTE_PREFIX = 'CW-';
 export const quoteRef = (n) => `${QUOTE_PREFIX}${n}`;
@@ -18,15 +19,24 @@ export const GROUPS = { waiting: ['quote', 'waiting'], certificate: ['certificat
 // "Paid · last 30 days" (design, decided while building 3).
 export const PAID_SHOWN_DAYS = 30;
 
-// The steps built so far; later pull requests add theirs here.
+// The steps built so far; later pull requests add theirs here. A step with no
+// `to` keeps the order at its stage.
 export const STEPS = {
   applied: { from: ['quote'], to: 'waiting' },
+  // From the certificate on the hold is firm until collection (decision 3,
+  // docs/decisions/2026-10-02-cycle-to-work-review.md): no end date to move, and
+  // nothing to release.
+  hold_longer: { from: ['quote', 'waiting'], to: null },
+  released: { from: ['quote', 'waiting'], to: null },
 };
+// The stages an order can still be holding a bike in.
+const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
 
 export class Refused extends Error {
   constructor(status, body) { super(body.error); this.status = status; this.body = body; }
 }
 export const WRONG_STAGE = { error: 'This order has moved on. Refresh to see where it is now.', code: 'wrong_stage' };
+export const NOT_HELD = { error: 'This bike isn’t held for the order any more. Refresh to see where it is now.', code: 'not_held' };
 
 export function addDays(day, n) {
   const d = new Date(`${day}T00:00:00Z`);
@@ -39,13 +49,45 @@ export const longDate = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString
 export const shopTimeZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
 export const shopDay = async () => shopToday(await shopTimeZone());
 
-// How many of the bike are free at the site: its frames in stock there, or, for a
-// bike with no frame numbers, the site's stock figure (design 4). Holding (pull
-// request 5) takes one under a lock and leaves held ones out.
+// How many of the bike are free at the site (design 4): its frames in stock there
+// (a held frame is 'held'), or, for a bike with no frame numbers, the site's stock
+// figure less the open orders holding it there as a count.
+const hasFrames = async (productId) => Boolean(await prepare('SELECT 1 FROM stock_frames WHERE product_id = ? LIMIT 1').get(productId));
+export async function heldHere(productId, siteId) {
+  return (await prepare(`SELECT count(*)::int AS n FROM c2w_orders WHERE product_id = ? AND site_id = ? AND held_at IS NOT NULL AND stage IN ${OPEN}`).get(productId, siteId)).n;
+}
 export async function freeHere(productId, siteId) {
-  const frames = await prepare("SELECT count(*)::int AS known, count(*) FILTER (WHERE state = 'in_stock' AND site_id = ?)::int AS free FROM stock_frames WHERE product_id = ?").get(siteId, productId);
-  if (frames.known > 0) return frames.free;
-  return (await prepare('SELECT qty FROM product_stock WHERE site_id = ? AND product_id = ?').get(siteId, productId))?.qty ?? 0;
+  if (await hasFrames(productId)) {
+    return (await prepare("SELECT count(*)::int AS n FROM stock_frames WHERE product_id = ? AND site_id = ? AND state = 'in_stock'").get(productId, siteId)).n;
+  }
+  const qty = (await prepare('SELECT qty FROM product_stock WHERE site_id = ? AND product_id = ?').get(siteId, productId))?.qty ?? 0;
+  return Math.max(0, qty - (await heldHere(productId, siteId)));
+}
+
+/**
+ * Holds one of the bike at the site for the order, in the caller's transaction:
+ * the product's stock lock first, so two quotes for the last one queue and only
+ * one gets it. A bike with frame numbers takes the frame booked in longest ago
+ * (locked FOR UPDATE); one without is a count on the order. Returns { frameId },
+ * or null when none is free.
+ */
+export async function takeHold(orderId, productId, siteId) {
+  await lockStock([productId]);
+  if (await hasFrames(productId)) {
+    const frame = await prepare("SELECT id FROM stock_frames WHERE product_id = ? AND site_id = ? AND state = 'in_stock' ORDER BY received_at, id LIMIT 1 FOR UPDATE").get(productId, siteId);
+    if (!frame) return null;
+    await prepare("UPDATE stock_frames SET state = 'held', c2w_order_id = ? WHERE id = ? RETURNING id").get(orderId, frame.id);
+    return { frameId: frame.id };
+  }
+  return (await freeHere(productId, siteId)) > 0 ? { frameId: null } : null;
+}
+
+// Lets the order's bike go: its frame back in stock, or its count back to free.
+// Only a frame still held for this order goes back on sale; one sold some other
+// way stays sold.
+export async function releaseHold(row) {
+  await lockStock([row.product_id]);
+  if (row.frame_id) await prepare("UPDATE stock_frames SET state = 'in_stock', c2w_order_id = NULL WHERE id = ? AND c2w_order_id = ? AND state = 'held' RETURNING id").get(row.frame_id, row.id);
 }
 
 // Dates come back as YYYY-MM-DD text, never as a Date at some time zone's midnight.
@@ -61,9 +103,9 @@ export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certif
 const iso = (t) => (t ? new Date(t).toISOString() : null);
 
 // Not in stock when quoted: the hold was wanted but there was nothing to hold
-// ("Don't hold" is only offered for a bike that's in stock, cw-new). Holding
-// (pull request 5) and ordering in (pull request 6) fill in the frame and the order line.
-export const notInStock = (r) => r.hold_wanted && !r.hold_until_day && !r.frame_id;
+// ("Don't hold" is only offered for a bike that's in stock, cw-new). A bike held
+// and then released was in stock. Ordering in (pull request 6) fills in the order line.
+export const notInStock = (r) => r.hold_wanted && !r.held_at && !r.released_at && !r.frame_id;
 
 // Ready to order: a bike that wasn't in stock, the shop's rule says it's time,
 // and nothing is on order for it yet.
@@ -99,7 +141,7 @@ export function serializeOrder(r) {
     appliedAt: iso(r.applied_at), applicationReference: r.application_reference,
     certificateNumber: r.certificate_number, certificatePence: r.certificate_pence, certificateReceivedOn: r.certificate_received_on_day,
     saleId: r.sale_id, collectedAt: iso(r.collected_at), paidOn: r.paid_on_day, closeReason: r.close_reason,
-    inStock: !notInStock(r), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
+    inStock: !notInStock(r), held: Boolean(r.held_at), releasedAt: iso(r.released_at), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
   };
 }
 
@@ -123,10 +165,13 @@ export async function eventsOf(orderId) {
  */
 export async function takeStep(orderId, stepName, who, change, { detail = {}, reason = null } = {}) {
   const step = STEPS[stepName];
-  const row = Number.isInteger(orderId) ? await prepare('SELECT * FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId) : null;
+  const row = Number.isInteger(orderId)
+    ? await prepare("SELECT *, to_char(hold_until, 'YYYY-MM-DD') AS hold_until_day FROM c2w_orders WHERE id = ? FOR UPDATE").get(orderId)
+    : null;
   if (!row) throw new Refused(404, { error: 'Not found' });
   if (!step.from.includes(row.stage)) throw new Refused(409, WRONG_STAGE);
-  const fields = { ...(await change(row)), stage: step.to };
+  // `change` may add to `detail` from the row it was given.
+  const fields = { ...(await change(row)), ...(step.to ? { stage: step.to } : {}) };
   const cols = Object.keys(fields);
   await prepare(`UPDATE c2w_orders SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).run(...Object.values(fields), orderId);
   await addEvent(orderId, stepName, who, { detail, reason });
