@@ -26,7 +26,8 @@ const SOFT_SAND_CHARCOAL = '#' + '2A2822';
 /** White, the text on a main-colour fill (the theme's own token). */
 const WHITE = 'var(--wh-on-brand)';
 
-function useMedia(query: string): boolean {
+/** Whether a media query matches, kept up to date; '(max-width: 767px)' is a phone. */
+export function useMedia(query: string): boolean {
   const subscribe = useCallback((onChange: () => void) => {
     const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
     mq?.addEventListener('change', onChange);

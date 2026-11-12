@@ -6,9 +6,11 @@
 // path under the shop, e.g. '/' or '/shop'.
 //
 // Every fetch is answered at once and recorded in `requests` ({url, method}).
-// `site`, `categories` and `home` answer GET /api/site, /api/site/categories
-// and /api/site/home; each is a body (sent with 200) or a function
-// (url) => ({ status, body }). Anything else answers 404.
+// `site`, `categories`, `home` and `products` answer GET /api/site,
+// /api/site/categories, /api/site/home and /api/site/products; each is a
+// body (sent with 200) or a function (url) => ({ status, body }). Anything
+// else answers 404. The native dialog's showModal and close, missing in
+// jsdom, are stubbed.
 //
 // `media(query)` says which media queries match, as a phone or tablet would
 // answer them; left out, nothing matches (a computer). `cookie` is set on
@@ -66,11 +68,15 @@ export const HOME = (stock) => ({
   ],
 });
 
-export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), media, cookie, strict = false, retry = false } = {}) {
+const NOT_FOUND = () => ({ status: 404, body: { error: 'We can’t find that page' } });
+
+export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, media, cookie, strict = false, retry = false } = {}) {
   const uninstall = installDom(`http://localhost${BASE}${url}`);
   if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
   if (cookie) document.cookie = cookie;
   window.scrollTo = () => {};
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() { this.open = false; this.dispatchEvent(new window.Event('close')); };
   const requests = [];
   globalThis.fetch = async (input, init) => {
     const address = String(input);
@@ -79,7 +85,8 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
     const source = pathname === `${BASE}/api/site` ? site
       : pathname === `${BASE}/api/site/categories` ? categories
         : pathname === `${BASE}/api/site/home` ? home
-          : () => ({ status: 404, body: { error: 'We can’t find that page' } });
+          : pathname === `${BASE}/api/site/products` ? products
+            : NOT_FOUND;
     const answer = typeof source === 'function' ? await source(address) : { status: 200, body: source };
     return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { 'content-type': 'application/json' } });
   };

@@ -45,14 +45,14 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 4. Category pages with filters
 
-- [ ] 4.1 Screen tests: wb-category (six, "Showing 6 of [n] products", Show more moving focus, nothing ticked) and wb-category-filtered (chips "Remove filter …", Clear all, the count)
-- [ ] 4.2 Screen tests: wb-category-parent, wb-category-child (path "Drivetrain › Derailleurs") and wb-category-no-shop
-- [ ] 4.3 Screen test: wb-category-empty, with "Nothing matches", the sentence naming what is ticked, "Clear all filters" and "Ask the shop about it" showing phones and emails in place (no "Show ones ready in [n] days" until WP-6.3, Jack's answer 2)
-- [ ] 4.4 Screen test: the sort menu, and filters and sort kept in the address for Back and a shared link
-- [ ] 4.5 Screen test: Price From/To applies on leaving the box or pressing Enter
-- [ ] 4.6 Screen test: the phone Filter panel's "Show [n] products" applies only when pressed
-- [ ] 4.7 Build the category page, the filters `aside` and the phone panel
-- [ ] 4.8 Browser test: filtering a category on a phone and a computer
+- [x] 4.1 Screen tests: wb-category (six, "Showing 6 of [n] products", Show more moving focus, nothing ticked) and wb-category-filtered (chips "Remove filter …", Clear all, the count)
+- [x] 4.2 Screen tests: wb-category-parent, wb-category-child (path "Drivetrain › Derailleurs") and wb-category-no-shop
+- [x] 4.3 Screen test: wb-category-empty, with "Nothing matches", the sentence naming what is ticked, "Clear all filters" and "Ask the shop about it" showing phones and emails in place (no "Show ones ready in [n] days" until WP-6.3, Jack's answer 2)
+- [x] 4.4 Screen test: the sort menu, and filters and sort kept in the address for Back and a shared link
+- [x] 4.5 Screen test: Price From/To applies on leaving the box or pressing Enter
+- [x] 4.6 Screen test: the phone Filter panel's "Show [n] products" applies only when pressed
+- [x] 4.7 Build the category page, the filters `aside` and the phone panel
+- [x] 4.8 Browser test: filtering a category on a phone and a computer
 - [ ] 4.9 Self-review (`reviewer`), full check, merge
 
 ## 5. The product page

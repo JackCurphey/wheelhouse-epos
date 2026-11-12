@@ -17,8 +17,8 @@ import { hasDetails, useSiteContext, type Category, type FirstShop, type Product
 /** The 44px-tall buttons the drawings use, as links. */
 export const linkButton = (variant: 'accent' | 'default') => cn(buttonVariants({ variant }), 'min-h-11 text-size-15 no-underline');
 
-export function H1({ children, id }: { children: React.ReactNode; id?: string }) {
-  return <h1 id={id} className="m-0 text-[24px] font-bold leading-tight md:text-size-30">{children}</h1>;
+export function H1({ children, id, tabIndex }: { children: React.ReactNode; id?: string; tabIndex?: number }) {
+  return <h1 id={id} tabIndex={tabIndex} className="m-0 text-[24px] font-bold leading-tight outline-none md:text-size-30">{children}</h1>;
 }
 
 export function H2({ children, id }: { children: React.ReactNode; id?: string }) {

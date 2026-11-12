@@ -23,10 +23,14 @@ export function siteAddress(location: { pathname: string; search: string; hostna
   return { base: '', slug: storefrontSlug ?? location.hostname.split('.')[0] ?? '', storefrontSlug };
 }
 
-/** An /api/site address for this shop, e.g. apiPath(address, '/api/site/home', { shop: '1' }). */
-export function apiPath(address: SiteAddress, path: string, params: Record<string, string | null | undefined> = {}): string {
+/**
+ * An /api/site address for this shop, e.g. apiPath(address, '/api/site/home', { shop: '1' }).
+ * URLSearchParams carry a key more than once (several ticks of one filter).
+ */
+export function apiPath(address: SiteAddress, path: string, params: Record<string, string | null | undefined> | URLSearchParams = {}): string {
   const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) if (value != null && value !== '') search.set(key, value);
+  const entries = params instanceof URLSearchParams ? [...params] : Object.entries(params);
+  for (const [key, value] of entries) if (value != null && value !== '') search.append(key, value);
   if (address.storefrontSlug) search.set('storefrontSlug', address.storefrontSlug);
   const query = search.toString();
   return `${address.base}${path}${query ? `?${query}` : ''}`;
