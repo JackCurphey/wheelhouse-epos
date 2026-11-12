@@ -37,7 +37,7 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
 
 ## 2. The Quick buttons fold (PR 2, about 550 lines)
 
-- [ ] 2.1 Write the tests first (`tests/screens/quick-buttons-settings.test.js`, `tests/browser/settings-quick-buttons.spec.ts`). They cover:
+- [x] 2.1 Write the tests first (`tests/screens/quick-buttons-settings.test.js`, `tests/browser/settings-quick-buttons.spec.ts`). They cover:
   - Front desk › Till shows the Quick buttons fold with its summary.
   - The group pills, the rows with name, line and price, and the note.
   - Hover shows Edit and Remove. Right-click does too.
@@ -51,7 +51,7 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
   - On a phone the rows and pills wrap.
 
   Verify: each fails first.
-- [ ] 2.2 Add `src/screens/settings/quick-buttons-settings.tsx` (the fold, the Add/Edit box, the group box), with the fold added to `OwnerSettings()`'s Till area. Verify: 2.1 passes.
+- [x] 2.2 Add `src/screens/settings/quick-buttons-settings.tsx` (the fold, the Add/Edit box, the group box), with the fold added to `OwnerSettings()`'s Till area. Verify: 2.1 passes.
 
 ## 3. Quick buttons on the till (PR 3, about 250 lines; waits for Mark's yes, because it edits `till-page.tsx`)
 
