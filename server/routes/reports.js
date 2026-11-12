@@ -237,6 +237,7 @@ export function register(route) {
     }
   });
 
+
   // Change what's shown (Sales, and Takings and cash-ups): another measure, split
   // and limits, read from the sale lines. A combination that doesn't fit is a 400
   // with its reason; the choices route answers any selection with one that fits.
