@@ -46,7 +46,7 @@ test('off and never published: the free address, Turn it on with its drawn lines
   assert.ok(summary.getByText('None — so there’s no cookie choice'));
   assert.ok(summary.getByText(/north-street\.wheelhouseepos\.com · your free address/));
   assert.ok(summary.getByText('Wheelhouse’s website'));
-  assert.equal(ui.getByRole('link', { name: 'Open Online orders settings' }).getAttribute('href'), '/workshop/settings');
+  assert.equal(ui.getByRole('link', { name: 'Open Online orders settings' }).getAttribute('href'), '/workshop/settings?room=front-desk&fold=paying-online');
 });
 
 test('Edit words and photos and the Pages row both take you to the Words and photos list', async () => {
@@ -57,7 +57,7 @@ test('Edit words and photos and the Pages row both take you to the Words and pho
   heading.blur();
   fireEvent.click(ui.getByRole('button', { name: /^Pages/ }));
   assert.ok(document.activeElement === heading);
-  assert.equal(ui.getByRole('link', { name: /^Taking payments/ }).getAttribute('href'), '/workshop/settings');
+  assert.equal(ui.getByRole('link', { name: /^Taking payments/ }).getAttribute('href'), '/workshop/settings?room=front-desk&fold=paying-online');
 });
 
 test('Turn it on publishes and switches on together, then the page says it is on', async () => {

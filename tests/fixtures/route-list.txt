@@ -374,6 +374,15 @@ DELETE /api/quick-button-groups/:id
 POST /api/quick-buttons
 PUT /api/quick-buttons/:id
 DELETE /api/quick-buttons/:id
+GET /api/online-orders-settings
+PUT /api/online-orders-settings
+POST /api/online-payments/connect
+GET /api/online-payments/pretend-connect
+GET /api/online-payments/pretend-card
+GET /api/online-payments/return
+POST /api/online-payments/test-payment
+GET /api/online-payments/pretend-card/pay
+GET /api/online-payments/test-payment/return
 GET /api/c2w/settings
 PUT /api/c2w/settings
 GET /api/c2w/providers
