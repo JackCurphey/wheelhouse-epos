@@ -127,7 +127,7 @@ export function PayingOnline() {
         ) : (
           <Note tone="warn"><strong>Not connected.</strong>{` Customers can’t buy online, “Pay now” for repairs is hidden and booking deposits are off, until you connect ${provider}.`}</Note>
         )}
-        <div><Button disabled={busy} onClick={connect}>{p.state === 'failed' ? 'Try again' : `Connect ${provider}`}</Button></div>
+        <div><Button variant="accent" disabled={busy} onClick={connect}>{p.state === 'failed' ? 'Try again' : `Connect ${provider}`}</Button></div>
         {said}
         {p.state === 'none' ? (
           <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">{`Opens ${provider}’s own page to sign up or sign in, then brings you back here. Your shop has its own account with them: card details, payouts and fees ([fees]) are between you and ${provider}.`}</p>

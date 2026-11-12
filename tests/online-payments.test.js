@@ -175,7 +175,9 @@ test('Add the details keeps who connected it and when, and asks the provider wha
     "UPDATE online_payment_account SET connected_at = '2026-09-01T07:00:00Z', status = 'needs_details', needs_details_by = '2026-09-30', needs_what = '[what they need]'"
   ).run());
   const was = await account(shop.shop.id);
-  await connectThrough(shop, 'Finish');
+  const back = await connectThrough(shop, 'Finish');
+  // Not "connected": the screen would say it connected just now (drawing check, PR 5).
+  assert.equal(back.location, `${SETTINGS_PAGE}&payments=details`);
   const now = await account(shop.shop.id);
   assert.equal(now.connected_at.toISOString(), was.connected_at.toISOString());
   assert.equal(now.connected_by, was.connected_by);

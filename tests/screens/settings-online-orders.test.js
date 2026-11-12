@@ -46,10 +46,10 @@ const area = async (t) => t.within(t.ui.getByRole('region', { name: 'Online orde
 const posted = (path) => calls.filter((c) => c.path === path && c.method === 'POST').length;
 const foldButton = (ui) => ui.getByRole('button', { name: /^Paying online/ });
 
-test('ws-pay-none: Online orders comes after End of day and Cycle to Work, Buying online is off until connected, and Connect goes to the provider', async () => {
+test('ws-pay-none: Online orders comes after End of day and before Cycle to Work, Buying online is off until connected, and Connect goes to the provider', async () => {
   const t = await openOnline(account('none'));
   const jump = t.within(t.ui.getByRole('navigation', { name: 'Jump to' }));
-  assert.deepEqual(jump.getAllByRole('link').map((a) => a.textContent).slice(-3), ['End of day', 'Cycle to Work', 'Online orders']);
+  assert.deepEqual(jump.getAllByRole('link').map((a) => a.textContent).slice(-3), ['End of day', 'Online orders', 'Cycle to Work']);
   const box = await area(t);
   assert.ok(box.getByText('What the website sells, paying online, and collecting orders.'));
   assert.ok(await box.findByText('Buying online'));
@@ -60,7 +60,9 @@ test('ws-pay-none: Online orders comes after End of day and Cycle to Work, Buyin
   assert.equal(foldButton(t.ui).getAttribute('aria-expanded'), 'true', 'the fold the link names is open');
   assert.ok(box.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Not connected. Customers can’t buy online, “Pay now” for repairs is hidden and booking deposits are off, until you connect [payment provider].'));
   assert.ok(box.getByText('Opens [payment provider]’s own page to sign up or sign in, then brings you back here. Your shop has its own account with them: card details, payouts and fees ([fees]) are between you and [payment provider].'));
-  t.fireEvent.click(box.getByRole('button', { name: 'Connect [payment provider]' }));
+  const connect = box.getByRole('button', { name: 'Connect [payment provider]' });
+  assert.ok(connect.className.includes('bg-[var(--accent)]'), 'drawn filled in the accent colour (ui.mjs button)');
+  t.fireEvent.click(connect);
   await t.waitFor(() => assert.equal(posted('/api/online-payments/connect'), 1));
 });
 
@@ -115,6 +117,7 @@ test('ws-pay-failed: not connected, nothing has changed, and Try again goes back
   assert.ok(said.closest('[role="alert"]'));
   assert.ok(box.getByText('Off until you connect [payment provider]'));
   await t.waitFor(() => assert.ok(foldButton(t.ui).textContent.includes('Not connected')));
+  assert.ok(box.getByRole('button', { name: 'Try again' }).className.includes('bg-[var(--accent)]'), 'drawn filled in the accent colour');
   t.fireEvent.click(box.getByRole('button', { name: 'Try again' }));
   await t.waitFor(() => assert.equal(posted('/api/online-payments/connect'), 1));
 });
@@ -144,4 +147,12 @@ test('once the date for more details has passed, Buying online is off and has no
   assert.ok(await box.findByText('Off until you connect [payment provider]'));
   assert.ok(box.queryByRole('switch', { name: 'Buying online' }) === null);
   assert.ok(box.getByRole('button', { name: 'Add the details at [payment provider]' }));
+});
+
+test('back from adding details, it doesn’t say connected just now, and announces nothing new', async () => {
+  const t = await openOnline(account('tested'), `${PAGE}&payments=details`);
+  const box = await area(t);
+  assert.ok(await box.findByText('Connected to [payment provider] by Jack Lewis on Thu 10 Sep'));
+  assert.ok(box.queryByText(/just now/) === null);
+  await t.waitFor(() => assert.equal(window.location.search, '?room=front-desk&fold=paying-online'));
 });
