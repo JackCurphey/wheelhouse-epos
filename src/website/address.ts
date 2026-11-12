@@ -51,8 +51,11 @@ export function chosenShopCookie(cookie: string = document.cookie): number | nul
   for (const part of cookie.split(';')) {
     const [name, ...rest] = part.trim().split('=');
     if (name !== 'wh_shop') continue;
-    const id = Number(rest.join('='));
-    return Number.isSafeInteger(id) && id > 0 ? id : null;
+    // Digits only, no leading zero: "1e0", "1.5", "-1" and "0" aren't ids. A malformed one is skipped, so a valid later one still counts.
+    const value = rest.join('=').trim();
+    if (!/^[1-9]\d*$/.test(value)) continue;
+    const id = Number(value);
+    if (Number.isSafeInteger(id)) return id;
   }
   return null;
 }

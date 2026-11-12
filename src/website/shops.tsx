@@ -55,9 +55,14 @@ export function closuresText(closures: FirstShop['closures']): string {
   return `Closed ${list}.`;
 }
 
-/** wb-shop-page's Opening hours: the week with today's row in bold, then the closures. */
+/**
+ * wb-shop-page's Opening hours: the week with today's row in bold, then the
+ * closures. Today's row shows the server's own today (`shop.today`), which
+ * already counts a closure, so a holiday reads Closed as the card does.
+ * Without todayDate no row is marked.
+ */
 function OpeningHours({ shop }: { shop: FirstShop }) {
-  const today = new Date(`${shop.todayDate}T12:00:00Z`).getUTCDay();
+  const today = shop.todayDate ? new Date(`${shop.todayDate}T12:00:00Z`).getUTCDay() : null;
   return (
     <Box>
       <H2 id="s-hours">Opening hours</H2>
@@ -65,8 +70,8 @@ function OpeningHours({ shop }: { shop: FirstShop }) {
         <table aria-labelledby="s-hours" className="border-collapse text-size-15">
           <tbody>
             {WEEK.map(([weekday, name]) => {
-              const hours = shop.hours.find((h) => h.weekday === weekday);
               const isToday = weekday === today;
+              const hours = isToday ? shop.today : shop.hours.find((h) => h.weekday === weekday);
               return (
                 <tr key={weekday} className={cn(isToday && 'font-bold')}>
                   <th scope="row" className="py-[7px] pr-6 text-left font-[inherit]">{name}{isToday && ' (today)'}</th>

@@ -219,6 +219,42 @@ test('a closure of one day reads as one date, and several are listed in order', 
   assert.ok(r.ui.getByText('Closed 7 September and 1 October to 2 October.'));
 });
 
+test('on a day the shop is closed for a holiday, today’s row says Closed, as the card does', async () => {
+  // Friday 25 December, inside a 25–26 December closure: Fridays normally open.
+  const closedDay = { ...BOLTON, todayDate: '2026-12-25', today: null, nextOpening: { date: '2026-12-28', open: '[open]' } };
+  r = await open('/shops/1', { site: { ...SHOPS, shops: [closedDay, SECOND] } });
+  const { within } = await rtl();
+  await r.ui.findByRole('heading', { level: 1, name: 'North Street Cycles, Bolton' });
+  const rows = within(r.ui.getByRole('table', { name: 'Opening hours' })).getAllByRole('row');
+  assert.deepEqual(rows.map((row) => row.textContent), [
+    'Monday[open]–[close]', 'Tuesday[open]–[close]', 'Wednesday[open]–[close]', 'Thursday[open]–[close]',
+    'Friday (today)Closed', 'Saturday[open]–[close]', 'SundayClosed',
+  ]);
+  assert.deepEqual(rows.map((row) => row.classList.contains('font-bold')), [false, false, false, false, true, false, false]);
+});
+
+test('today’s row follows the server’s today, which can differ from the week’s usual hours', async () => {
+  const special = { ...BOLTON, today: { open: '[late open]', close: '[early close]' } };
+  r = await open('/shops/1', { site: { ...SHOPS, shops: [special, SECOND] } });
+  const { within } = await rtl();
+  await r.ui.findByRole('heading', { level: 1, name: 'North Street Cycles, Bolton' });
+  const rows = within(r.ui.getByRole('table', { name: 'Opening hours' })).getAllByRole('row');
+  assert.equal(rows[3].textContent, 'Thursday (today)[late open]–[early close]');
+  assert.equal(rows[2].textContent, 'Wednesday[open]–[close]');
+});
+
+test('without today’s date the week still shows, with no row marked as today', async () => {
+  const { todayDate, ...noDate } = BOLTON;
+  assert.ok(todayDate);
+  r = await open('/shops/1', { site: { ...SHOPS, shops: [noDate, SECOND] } });
+  const { within } = await rtl();
+  await r.ui.findByRole('heading', { level: 1, name: 'North Street Cycles, Bolton' });
+  const rows = within(r.ui.getByRole('table', { name: 'Opening hours' })).getAllByRole('row');
+  assert.equal(rows.length, 7);
+  assert.ok(rows.every((row) => !row.classList.contains('font-bold')));
+  assert.ok(rows.every((row) => !row.textContent.includes('(today)')));
+});
+
 test('with no closures and no hours set, neither line nor table shows', async () => {
   r = await open('/shops/1', { site: { ...SHOPS, shops: [{ ...BOLTON, hours: [], today: null, closures: [] }, SECOND] } });
   await r.ui.findByRole('heading', { level: 1, name: 'North Street Cycles, Bolton' });
