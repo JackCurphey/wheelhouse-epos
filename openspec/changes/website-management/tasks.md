@@ -30,14 +30,14 @@ the code. While building, run only the related test files
 
 ## 2. The Website page — screen (pull request 2, about 550 lines)
 
-- [ ] 2.1 Screen test: `ws-page` — "Your website is off", the free address, Turn it on with its drawn line, the starting-wording pages named, the product counts with See them, the summary rows and the footer link
-- [ ] 2.2 Screen test: `ws-page-on` and `ws-page-changes` — "[n] unpublished changes", "Saved by Jack Lewis [time]", the open list with Publish and Discard changes, "Review in the editor" not shown
-- [ ] 2.3 Screen test: the Words and photos list — seven rows in the drawn order, "Check this" until saved once; Edit opens the form box; a photo part has a description and "This photo is only decoration"
-- [ ] 2.4 Screen test: the Published toasts (on and off), the Discard box with Keep editing, and History over the page with Go back to this
-- [ ] 2.5 Screen test: `ws-no-access` for Staff, naming the Owners, with Back to Today; Website not in a Staff sidebar
-- [ ] 2.6 Build `src/screens/website/` on the Settings page frame and the form box to pass 2.1–2.5; add Website to Office in the sidebar
-- [ ] 2.7 Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
-- [ ] 2.8 Log decided-while-building 1, 3, 4 and 5 (design) in your own month file
+- [x] 2.1 Screen test: `ws-page` — "Your website is off", the free address, Turn it on with its drawn line, the starting-wording pages named, the product counts with See them, the summary rows and the footer link
+- [x] 2.2 Screen test: `ws-page-on` and `ws-page-changes` — "[n] unpublished changes", "Saved by Jack Lewis [time]", the open list with Publish and Discard changes, "Review in the editor" not shown
+- [x] 2.3 Screen test: the Words and photos list — seven rows in the drawn order, "Check this" until saved once; Edit opens the form box; a photo part has a description and "This photo is only decoration"
+- [x] 2.4 Screen test: the Published toasts (on and off), the Discard box with Keep editing, and History over the page with Go back to this
+- [x] 2.5 Screen test: `ws-no-access` for Staff, naming the Owners, with Back to Today; Website not in a Staff sidebar
+- [x] 2.6 Build `src/screens/website/` on the Settings page frame and the form box to pass 2.1–2.5; add Website to Office in the sidebar
+- [ ] 2.7 (moved to pull request 3, decision 26) Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
+- [x] 2.8 Log decided-while-building 1, 3, 4 and 5 (design) in your own month file
 - [ ] 2.9 Self-review with `reviewer`; full check
 
 ## 3. The three-step start, logo and colour (pull request 3, about 450 lines)
