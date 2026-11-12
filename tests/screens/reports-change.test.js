@@ -161,12 +161,12 @@ test('Show report opens the changed report with its title, the line under it, gr
   assert.deepEqual([search.get('base'), search.get('measure'), search.get('split'), search.get('period')], ['sales', 'items', 'product', 'this-week']);
   assert.deepEqual(search.getAll('only'), ['Accessories']);
   assert.ok(ui.queryByText('Changed from Sales · Accessories only · So far: Mon 14 – Thu 17 September, against the same days last week') !== null);
-  const table = within(ui.getByRole('table', { name: 'Sales: items sold by product' }));
+  const table = within(ui.getByRole('table', { name: 'Items sold by product' }));
   assert.deepEqual(table.getAllByRole('columnheader').map((h) => h.textContent), ['Product', 'Items sold', 'Takings']);
   const rows = table.getAllByRole('row').map((r) => [...r.querySelectorAll('th,td')].map((c) => c.textContent));
   assert.deepEqual(rows[1], ['Water bottle', '3', '£17.67']);
   assert.deepEqual(rows.at(-1), ['Total, Accessories only', '5', '£29.67']);
-  assert.ok(ui.getByRole('img', { name: /^Sales: items sold by product: most sold Water bottle; up 4 on the same days last week\. The figures are in the table below\.$/ }) !== null);
+  assert.ok(ui.getByRole('img', { name: /^Items sold by product: most sold Water bottle; up 4 on the same days last week\. The figures are in the table below\.$/ }) !== null);
   assert.ok(ui.queryByRole('dialog', { name: 'Change what’s shown' }) === null, 'the panel closed');
 });
 
@@ -234,7 +234,7 @@ test('a refusal from the server is shown in its own words', async () => {
 
 test('with Show graphs off the changed report is the table alone', async () => {
   const { ui } = await openReports('/workshop/reports/changed?base=sales&measure=items&split=product&only=Accessories&period=this-week', { answers: served(), accessibility: { showGraphs: false } });
-  await ui.findByRole('table', { name: 'Sales: items sold by product' });
+  await ui.findByRole('table', { name: 'Items sold by product' });
   assert.ok(ui.queryByRole('img') === null);
 });
 
@@ -242,4 +242,29 @@ test('Takings and cash-ups carries the button as Sales does', async () => {
   const { ui } = await openReports('/workshop/reports/takings', { answers: served() });
   await ui.findByRole('heading', { level: 2, name: 'Takings and cash-ups' });
   assert.ok(ui.getByRole('button', { name: 'Change what’s shown' }) !== null);
+});
+
+test('the graph\'s key names only what is drawn, and the bar has its tick', async () => {
+  const answers = served({ '/api/reports/changed': () => [200, { ...ITEMS, showBefore: false }] });
+  const { ui } = await openReports('/workshop/reports/changed?base=sales&measure=items&split=week&period=this-week', { answers });
+  await ui.findByRole('table', { name: 'Items sold by product' });
+  assert.ok(ui.queryByText('Same days last week') === null, 'no dashed outline is drawn, so no key for it');
+  assert.ok(ui.getByRole('status').querySelector('svg') !== null, 'the done bar has its tick');
+});
+
+test('Show report waits while the choices are being checked, so it never opens an old choice', async () => {
+  let release;
+  const slow = new Promise((r) => { release = r; });
+  const answers = served({ '/api/reports/changed/choices': async (query) => { if (query.get('measure') === 'items') await slow; return [200, choices(query)]; } });
+  const { ui, within, fireEvent } = await openReports('/workshop/reports/sales', { answers });
+  await ui.findByRole('table', { name: 'Sales by day' });
+  fireEvent.click(ui.getByRole('button', { name: 'Change what’s shown' }));
+  const panel = within(await ui.findByRole('dialog', { name: 'Change what’s shown' }));
+  await panel.findByRole('radio', { name: 'Takings', checked: true });
+  fireEvent.click(panel.getByRole('radio', { name: 'Items sold' }));
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(panel.getByRole('button', { name: 'Show report' }).disabled, true);
+  release();
+  await panel.findByRole('radio', { name: 'Items sold', checked: true });
+  assert.equal(panel.getByRole('button', { name: 'Show report' }).disabled, false);
 });

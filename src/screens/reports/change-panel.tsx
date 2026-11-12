@@ -35,11 +35,13 @@ export function ChangePanel({ base, period, initial, onClose }: {
   });
   const data = answer.data;
   const sel = data?.selection;
-  const set = (next: Partial<Selection>) => { if (sel) setWant({ ...sel, ...next }); };
+  // While the server is still checking the last click, the choices on screen are the old ones: wait for it.
+  const checking = answer.isPlaceholderData;
+  const set = (next: Partial<Selection>) => { if (sel && !checking) setWant({ ...sel, ...next }); };
   const toggle = (value: string) => set({ only: sel!.only.includes(value) ? sel!.only.filter((o) => o !== value) : [...sel!.only, value] });
 
   function show() {
-    if (!sel) return;
+    if (!sel || checking) return;
     const next = new URLSearchParams({ base, ...Object.fromEntries(period) });
     for (const [k, v] of selectionParams(sel)) next.append(k, v);
     onClose();
@@ -76,7 +78,7 @@ export function ChangePanel({ base, period, initial, onClose }: {
       </DialogBody>
       <DialogFooter>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={!sel} onClick={show}>Show report</Button>
+        <Button variant="primary" disabled={!sel || checking} onClick={show}>Show report</Button>
       </DialogFooter>
     </Dialog>
   );

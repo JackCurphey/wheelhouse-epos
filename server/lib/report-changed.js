@@ -58,7 +58,7 @@ function parse(query) {
   const split = query.get('split') || BASES[base].split;
   if (!SPLITS.some(([v]) => v === split)) throw new ValidationError('Choose how to split it');
   return {
-    base, measure, split, splitAsked: query.has('split'),
+    base, measure, split, splitAsked: Boolean(query.get('split')),
     only: [...new Set(query.getAll('only'))], supplier: (query.get('supplier') || '').trim(),
     period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to'),
   };
@@ -146,7 +146,7 @@ async function grouped(split, from, to, tz, { only, supplier }) {
     where.push(`(${terms.join(' OR ')})`);
   }
   if (supplier) {
-    where.push('p.supplier = ?');
+    where.push('trim(p.supplier) = ?');
     params.push(supplier);
   }
   const rows = await prepare(
@@ -242,7 +242,8 @@ async function choicesFor(sel, period, tz, ctx) {
   return {
     ...fit,
     only: only.map((value) => ({ value, label: value })),
-    suppliers: [{ value: '', label: 'Any supplier' }, ...suppliers.map((value) => ({ value, label: value }))],
+    // The supplier already chosen stays a chip even when it sold nothing in this period.
+    suppliers: [{ value: '', label: 'Any supplier' }, ...[...new Set([...suppliers, ...(sel.supplier ? [sel.supplier] : [])])].sort().map((value) => ({ value, label: value }))],
   };
 }
 
@@ -306,7 +307,7 @@ export async function changedReport(query, today, ctx) {
       period: period.period, from: period.from, to: period.to, through: period.through, soFar: period.soFar,
       unit: period.unit, label: period.label, against: period.against,
     },
-    columns: [splitLabel, measureLabel, ...(sel.measure === 'items' ? ['Takings'] : [])],
+    columns: [splitLabel, measureLabel, ...(sel.measure === 'takings' ? [] : ['Takings'])],
     rows,
     total: { label: limitParts.length ? `Total, ${limitParts.join(', ')}` : 'Total', value, takingsPence },
     figures: { value, beforeValue, diffValue: nothingBefore ? null : value - beforeValue },
@@ -323,7 +324,7 @@ const pounds = (pence) => (pence === null || pence === undefined ? '—' : (penc
 export function changedCsv(report) {
   const money = report.measure === 'takings' || report.measure === 'margin';
   const cell = (value) => (value === null ? '—' : money ? pounds(value) : value);
-  const line = (label, value, takings) => [label, cell(value), ...(report.measure === 'items' ? [pounds(takings)] : [])];
+  const line = (label, value, takings) => [label, cell(value), ...(report.measure === 'takings' ? [] : [pounds(takings)])];
   return csvOf([
     report.columns,
     ...report.rows.map((r) => line(r.label, r.value, r.takingsPence)),

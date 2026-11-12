@@ -55,11 +55,11 @@ function Axis({ max, left, width, label }: { max: number; left: number; width: n
   );
 }
 
-function Key({ now, before, dashed }: { now: string; before: string; dashed: boolean }) {
+function Key({ now, before, dashed }: { now: string; before: string | null; dashed: boolean }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-3.5 text-xs text-[var(--wh-muted)]">
       <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="inline-block h-2.5 w-4 rounded-sm bg-[var(--wh-ink)]" />{now}</span>
-      <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className={`inline-block h-2.5 w-4 rounded-sm border border-dashed border-[var(--wh-muted)] ${dashed ? '' : ''}`} />{before}</span>
+      {before === null ? null : <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className={`inline-block h-2.5 w-4 rounded-sm border border-dashed border-[var(--wh-muted)] ${dashed ? '' : ''}`} />{before}</span>}
     </span>
   );
 }
@@ -87,7 +87,7 @@ export function ReportGraph({ title, rows, kind, keyNow, keyBefore, spoken, show
     <figure className="m-0 flex flex-col gap-3" role="img" aria-label={spoken}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <figcaption className="text-size-15 font-bold">{title}</figcaption>
-        <Key now={keyNow} before={keyBefore} dashed />
+        <Key now={keyNow} before={showBefore ? keyBefore : null} dashed />
       </div>
       <svg aria-hidden="true" viewBox={`0 0 ${W} ${TOP + H + 40}`} className="h-auto w-full overflow-visible">
         <Axis max={max} left={LEFT} width={W} label={scale === 'count' ? (n) => String(Math.round(n)) : scaleLabel} />

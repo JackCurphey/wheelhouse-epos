@@ -61,7 +61,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
 
     await expect(page.getByRole('heading', { level: 2, name: 'Sales: items sold by product' })).toBeVisible();
     await expect(page.getByText('Changed from Sales · Accessories only · So far: Mon 14 – Thu 17 September, against the same days last week')).toBeVisible();
-    const table = page.getByRole('table', { name: 'Sales: items sold by product' });
+    const table = page.getByRole('table', { name: 'Items sold by product' });
     await expect(table.getByRole('row', { name: /Water bottle 2 £16\.00/ })).toBeVisible();
     await expect(table.getByRole('row', { name: /Total, Accessories only 2 £16\.00/ })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

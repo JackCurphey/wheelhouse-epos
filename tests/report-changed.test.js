@@ -302,3 +302,30 @@ test('a category that has gone is left out, and the report shows what is left', 
   assert.deepEqual(res.body.only, ['Accessories']);
   assert.match(res.body.line, /^Changed from Sales · Accessories only · /);
 });
+
+test('a supplier typed with a stray space still matches the chip that lists it', async () => {
+  await runWithShop(owner.shop.id, () => prepare("UPDATE products SET supplier = 'Acme ' WHERE name = 'Track pump'").run());
+  try {
+    const res = await changed('base=sales&measure=takings&split=product&supplier=Acme&period=this-week');
+    assert.deepEqual(res.body.rows.map((r) => r.label).sort(), ['Track pump', 'Water bottle']);
+  } finally {
+    await runWithShop(owner.shop.id, () => prepare("UPDATE products SET supplier = '' WHERE name = 'Track pump'").run());
+  }
+});
+
+test('a supplier chosen that sold nothing in the period is still listed, so a chip is chosen', async () => {
+  const res = await changed('base=sales&measure=takings&split=day&supplier=Ghost&period=this-week');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(res.body.choices.suppliers.some((c) => c.value === 'Ghost'));
+});
+
+test('a split left empty in the address counts as not asked', async () => {
+  const res = await changed('base=sales&measure=takings&split=&period=last-12-months');
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.split, 'week');
+});
+
+test('Takings sits beside any measure that is not Takings', async () => {
+  const res = await changed('base=sales&measure=items&split=day&period=this-week');
+  assert.deepEqual(res.body.columns, ['Day', 'Items sold', 'Takings']);
+});

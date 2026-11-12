@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { Check } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { useShowGraphs } from '@/lib/your-settings.ts';
@@ -25,6 +26,9 @@ const KEY_NOW: Record<string, string> = {
 };
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// The graph and table are named by what they show, as the drawing has it ("Items sold by product"), without the report's name.
+const shortTitle = (report: ChangedReport) => report.title.replace(/^[^:]+: /, '').replace(/^./, (c) => c.toUpperCase());
+
 const spokenFor = (report: ChangedReport): string => {
   const reached = report.rows.filter((r) => !r.notReached && r.value !== null);
   const top = reached.reduce<(typeof reached)[number] | null>((best, r) => (best === null || (r.value ?? 0) > (best.value ?? 0) ? r : best), null);
@@ -37,7 +41,7 @@ const spokenFor = (report: ChangedReport): string => {
     const size = report.measure === 'items' ? String(Math.abs(diff)) : money(Math.abs(diff));
     parts.push(diff === 0 ? `no change on ${report.period.against}` : `${diff > 0 ? 'up' : 'down'} ${size} on ${report.period.against}`);
   }
-  return `${report.title}: ${parts.join('; ') || 'nothing sold'}. The figures are in the table below.`;
+  return `${shortTitle(report)}: ${parts.join('; ') || 'nothing sold'}. The figures are in the table below.`;
 };
 
 function ChangedTable({ report }: { report: ChangedReport }) {
@@ -45,10 +49,10 @@ function ChangedTable({ report }: { report: ChangedReport }) {
   const head = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
   const money_ = report.measure === 'takings' || report.measure === 'margin';
   const show = (v: number | null) => (v === null ? '—' : money_ ? money(v) : count(v));
-  const items = report.measure === 'items';
+  const items = report.measure !== 'takings'; // Takings sits beside any other measure
   return (
     <div className="overflow-x-auto">
-      <table aria-label={report.title} className="w-full border-collapse text-sm max-md:text-size-13">
+      <table aria-label={shortTitle(report)} className="w-full border-collapse text-sm max-md:text-size-13">
         <thead><tr>
           {report.columns.map((c, i) => <th key={c} scope="col" className={`${head} ${i === 0 ? 'text-left' : 'text-right'}`}>{c}</th>)}
         </tr></thead>
@@ -117,6 +121,7 @@ export function ChangedReportPage() {
         </div>
       </div>
       <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3.5 py-2.5 text-size-15 leading-snug">
+        <Check size={18} aria-hidden="true" />
         <span className="min-w-[260px] flex-1">You’ve changed this report. Save it to come back to it.</span>
         <Link to={`${BASE_PATH[base]}?${periodParams.toString()}`} className="inline-flex min-h-11 items-center px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Back to {BASE_LABEL[base]}</Link>
       </div>
@@ -129,7 +134,7 @@ export function ChangedReportPage() {
           <Box>
             {showGraphs ? (
               <ReportGraph
-                title={report.title} kind="bars" scale={report.measure === 'items' ? 'count' : 'money'} spoken={spokenFor(report)} showBefore={report.showBefore}
+                title={shortTitle(report)} kind="bars" scale={report.measure === 'items' ? 'count' : 'money'} spoken={spokenFor(report)} showBefore={report.showBefore}
                 keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(report.period.against.replace(/^the /, ''))}
                 rows={report.rows.map((r) => ({ key: r.key, label: r.label, notReached: Boolean(r.notReached), takingsPence: r.value, beforeTakingsPence: r.beforeValue ?? 0 }))}
               />
