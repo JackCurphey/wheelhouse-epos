@@ -1,5 +1,6 @@
 import { dbExec, prepare, pool, runWithShop } from './db.js';
 import { getShopifyConnection } from './shopify.js';
+import { liveTracking } from './website-tracking.js';
 
 export const THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
 
@@ -143,6 +144,7 @@ export async function getStorefrontInfo(shopRow) {
     logoUrl: settings.logo_url || null,
     heroImageUrl: settings.hero_image_url || null,
     themePreset: settings.theme_preset,
+    tracking: [],
     ...shopify,
   };
 }
@@ -162,6 +164,8 @@ function publishedInfo(content) {
     collectionReturns: part('collection_returns').text || '',
     privacy: part('privacy').text || '',
     mainColour: content.main_colour || null,
+    // For WP-6.2's cookie choice: only what may load, each with its kind.
+    tracking: liveTracking(content),
   };
 }
 

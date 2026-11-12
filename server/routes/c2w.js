@@ -183,7 +183,10 @@ export function register(route) {
   route('GET', '/api/c2w/orders/:id', async (req, res, params) => {
     const row = await loadOrder(Number(params.id));
     if (!row) return notFound(res);
-    sendJson(res, 200, { order: { ...serializeOrder(row), events: await eventsOf(row.id) }, today: shopToday(await shopTimeZone()) });
+    const today = shopToday(await shopTimeZone());
+    // The same next step as the list's row (cw-order-applied's Order from [supplier]).
+    const next = nextFor(row, (await settingsRow()).order_rule, today);
+    sendJson(res, 200, { order: { ...serializeOrder(row), next, events: await eventsOf(row.id) }, today });
   });
 
   // What the printed quote shows (cw-quote).

@@ -9,6 +9,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
 import { tryBooking, dayMaker } from './helpers/linkActions.js';
 
 let server;
@@ -22,6 +23,7 @@ const nextDay = dayMaker();
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'Diary Deposit Cycles' });
+  await connectPayments(owner.shop.id);
   other = await staffSignup(server.baseUrl, { shopName: 'Elsewhere Deposit Cycles' });
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});

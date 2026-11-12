@@ -5,6 +5,7 @@ import { hostedCopyRefusal } from './hosted-copy-guard.js';
 import { devAutologinRefusal } from './lib/dev-autologin.js';
 import { startSender } from './messaging/engine.js';
 import { startBringingAcross } from './move/bring-across.js';
+import { startShopifySending } from './shopify/sending.js';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -876,6 +877,7 @@ async function waitForPendingShopifyPushes(pendingPushes) {
 // Citrus Lime file across (openspec/changes/citrus-import-products, design 5).
 let stopMessageSender = null;
 let stopBringingAcross = null;
+let stopShopifySending = null;
 
 // Exported so tests can drive it directly against a fake server/pool without
 // spawning a real process for every assertion; production only ever calls it
@@ -887,7 +889,7 @@ export function gracefulShutdown(signal, {
   exit = process.exit,
   pendingPushes = pendingShopifyPushes,
   // Stops the messages timer; resolves once a sending round in flight is done.
-  stopSender = () => Promise.all([stopMessageSender?.(), stopBringingAcross?.()]),
+  stopSender = () => Promise.all([stopMessageSender?.(), stopBringingAcross?.(), stopShopifySending?.()]),
   // Only the real production httpServer (the default) is gated on the
   // module-level serverListening flag - tests inject their own fake
   // httpServer objects to drive the drain/force-exit paths directly and
@@ -1040,6 +1042,8 @@ if (isMainModule) {
         // The messages engine's timer (pretend senders for now).
         stopMessageSender = startSender();
         stopBringingAcross = startBringingAcross();
+        // Products the Owner pressed Send for, to their Shopify shop (website-management design 7).
+        stopShopifySending = startShopifySending();
         console.log(`\n  Wheelhouse running at http://localhost:${PORT}\n`);
       });
     })
