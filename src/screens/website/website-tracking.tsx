@@ -115,11 +115,11 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
 
       <div role="status">
         {toast ? (
-          <div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm whitespace-nowrap text-white shadow-[0_8px_24px_rgba(38,36,32,0.25)] max-md:whitespace-normal max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:translate-x-0">
+          <div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm whitespace-nowrap text-[var(--wh-on-brand)] shadow-[var(--wh-shadow-note)] max-md:whitespace-normal max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:translate-x-0">
             <Check aria-hidden="true" size={16} />
             <span className="grow pr-1.5">{`${toast.name} on · goes live when you publish`}</span>
             <button type="button" disabled={busy !== null} onClick={() => { const undo = toast; setToast(null); void save(undo, { on: false }); }}
-              className="min-h-11 cursor-pointer rounded-[8px] border-0 bg-white/[0.14] px-3.5 text-sm font-bold whitespace-nowrap text-white">Undo</button>
+              className="min-h-11 cursor-pointer rounded-[8px] border-0 bg-[var(--wh-on-ink-tint)] px-3.5 text-sm font-bold whitespace-nowrap text-[var(--wh-on-brand)]">Undo</button>
           </div>
         ) : null}
       </div>
@@ -140,7 +140,7 @@ function ToolRow({ tool, busy, value, onSwitch, onType, onDone }: {
       <div className="flex items-center gap-3">
         <span className="flex grow flex-col gap-1">
           <span className="text-base font-bold">{tool.name}</span>
-          <span><span className={`rounded-full px-2.5 py-[3px] text-size-12 font-semibold whitespace-nowrap ${marketing ? 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]' : 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]'}`}>{tool.kind}</span></span>
+          <span><span className={`rounded-full px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${marketing ? 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]' : 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]'}`}>{tool.kind}</span></span>
         </span>
         <span className="w-[180px] shrink-0 max-md:w-[110px]"><RowSwitch label={tool.name} hideLabel on={tool.on} disabled={busy} onChange={onSwitch} /></span>
       </div>
