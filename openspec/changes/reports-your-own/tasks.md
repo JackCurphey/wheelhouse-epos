@@ -13,11 +13,11 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 
 ## 2. PR 2: Saving a report and Your reports (risky: migration)
 
-- [ ] 2.1 Tests first, in `tests/saved-reports.test.js`: the migration runs twice and from empty; one person's reports are invisible to another (404); the same name twice for one person is refused with "You already have a report with this name. Choose another name.", and allowed for two people, and allowed again after a delete; an empty name says "Type its name"; a name over 80 characters is refused; `shared: true` is refused; a saved report keeps the kind of period, not dates; Owner only; shop isolation. Verify: each fails first.
-- [ ] 2.2 The migration: `saved_reports`, its unique name index where not deleted, row-level security, as design decision 7. Additive, safe to run twice. Test it from empty on a scratch database.
-- [ ] 2.3 `server/lib/saved-reports.js` and `GET` and `POST /api/reports/saved`, `// screens: rp-save, rp-save-taken, rp-home`.
-- [ ] 2.4 Screen tests first: the save popup ("Name (needed)", "Just me" chosen, "Me and the other managers" greyed with its reason, the note, both name messages); Your reports on the Reports page with the badge "Just you", the note when there are none, and opening one on the latest period (one saved on This week opened a week later shows the new week). Verify: each fails first.
-- [ ] 2.5 `save-report-dialog.tsx`, `your-reports.tsx` (list only; the menu is PR 3), "Save as my report" on the changed report's bar, to the drawings `rp-save`, `rp-save-taken` and `rp-home`.
+- [x] 2.1 Tests first, in `tests/saved-reports.test.js`: the migration runs twice and from empty; one person's reports are invisible to another (404); the same name twice for one person is refused with "You already have a report with this name. Choose another name.", and allowed for two people, and allowed again after a delete; an empty name says "Type its name"; a name over 80 characters is refused; `shared: true` is refused; a saved report keeps the kind of period, not dates; Owner only; shop isolation. Verify: each fails first.
+- [x] 2.2 The migration: `saved_reports`, its unique name index where not deleted, row-level security, as design decision 7. Additive, safe to run twice. Test it from empty on a scratch database.
+- [x] 2.3 `server/lib/saved-reports.js` and `GET` and `POST /api/reports/saved`, `// screens: rp-save, rp-save-taken, rp-home`.
+- [x] 2.4 Screen tests first: the save popup ("Name (needed)", "Just me" chosen, "Me and the other managers" greyed with its reason, the note, both name messages); Your reports on the Reports page with the badge "Just you", the note when there are none, and opening one on the latest period (one saved on This week opened a week later shows the new week). Verify: each fails first.
+- [x] 2.5 `save-report-dialog.tsx`, `your-reports.tsx` (list only; the menu is PR 3), "Save as my report" on the changed report's bar, to the drawings `rp-save`, `rp-save-taken` and `rp-home`.
 - [ ] 2.6 `/review`, the `risky-area-reviewer` agent, `reviewer`; lint and the related tests; a hand-run CI on the branch (`gh workflow run test.yml --ref <branch>`), merged when green; a line in the weekly digest issue.
 
 ## 3. PR 3: Rename, sharing greyed, and delete with Undo (not risky)

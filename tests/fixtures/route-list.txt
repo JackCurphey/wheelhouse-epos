@@ -370,6 +370,8 @@ GET /api/reports/workshop.csv
 GET /api/reports/changed
 GET /api/reports/changed/choices
 GET /api/reports/changed.csv
+GET /api/reports/saved
+POST /api/reports/saved
 GET /api/quick-buttons
 POST /api/quick-button-groups
 PUT /api/quick-button-groups/:id
@@ -389,10 +391,10 @@ POST /api/c2w/orders
 GET /api/c2w/orders/:id
 GET /api/c2w/orders/:id/quote
 POST /api/c2w/orders/:id/email-quote
-POST /api/c2w/orders/:id/applied
 POST /api/c2w/orders/:id/hold-longer
 POST /api/c2w/orders/:id/release
 GET /api/c2w/stock
 POST /api/c2w/orders/:id/certificate
 POST /api/c2w/orders/:id/ready
 POST /api/c2w/orders/:id/ready/undo
+POST /api/c2w/orders/:id/applied

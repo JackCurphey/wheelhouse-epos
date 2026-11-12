@@ -73,5 +73,28 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await page.getByRole('link', { name: 'Back to Sales' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Sales' })).toBeVisible();
     await expect(page.getByRole('radio', { name: 'This week' })).toBeChecked();
+
+    // Save it as my report, then open it from Your reports on the Reports page.
+    await page.goto(`${server!.baseUrl}/workshop/reports/changed?base=sales&measure=items&split=product&only=Accessories&period=this-week`);
+    await page.getByRole('button', { name: 'Save as my report' }).click();
+    const save = page.getByRole('dialog', { name: 'Save as my report' });
+    await expect(save.getByRole('radio', { name: 'Me and the other managers' })).toHaveAttribute('aria-disabled', 'true');
+    await save.getByRole('button', { name: 'Save' }).click();
+    await expect(save.getByText('Type its name')).toBeVisible();
+    await save.getByLabel('Name (needed)').fill('Bottles this week');
+    await save.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Saved as “Bottles this week”. It is in Your reports on the Reports page.')).toBeVisible();
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    const mine = page.getByRole('region', { name: 'Your reports' });
+    await expect(mine.getByText('Just you')).toBeVisible();
+    await mine.getByRole('link', { name: /Bottles this week/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Sales: items sold by product' })).toBeVisible();
+    // The same name again is refused, and the popup stays.
+    await page.getByRole('button', { name: 'Save as my report' }).click();
+    await page.getByLabel('Name (needed)').fill('bottles THIS week');
+    await page.getByRole('dialog', { name: 'Save as my report' }).getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('You already have a report with this name. Choose another name.')).toBeVisible();
+    const overflow2 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow2).toBeLessThanOrEqual(0);
   });
 }
