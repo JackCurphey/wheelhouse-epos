@@ -17,7 +17,7 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
 import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
-import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
@@ -1034,6 +1034,8 @@ function OwnerSettings() {
   const otherWays = useOtherWaysSummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
+  const closeEntry = useCloseEntrySummary();
+  const countFirst = useCountFirstSummary();
   const tills = useTillsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
@@ -1063,9 +1065,12 @@ function OwnerSettings() {
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
         ] },
-        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
+        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS, eodFolds): Float (set-eod),
+        // Close the day (set-eod-close) and Counting the cash (owner-setup-till-payments-eod design 3).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+          { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
+          { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
         ] },
       ],
     },

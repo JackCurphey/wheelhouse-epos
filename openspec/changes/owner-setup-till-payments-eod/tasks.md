@@ -69,7 +69,7 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
 
 ## 4. End of day: Close the day timing and Count first (PR 4, about 450 lines; migration, a risky area)
 
-- [ ] 4.1 Write the tests first (`tests/close-entry.test.js`, `tests/end-of-day-settings.test.js`). They cover:
+- [x] 4.1 Write the tests first (`tests/close-entry.test.js`, `tests/end-of-day-settings.test.js`). They cover:
   - `entryFor` with 0, 30 and 60 minutes, around a 17:30 close.
   - Shut today means all day. Closed means not shown.
   - The migration gives a new shop 30 minutes and Count first on, and moves existing shops to 30 minutes too (Jack's answer 2).
@@ -77,16 +77,16 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
   - `GET /api/close-the-day` sends `countFirst`.
 
   Verify: each fails first.
-- [ ] 4.2 Add the migration (two columns on `shops`), update `server/lib/close-entry.js` and `server/routes/shop-settings.js`, and add `countFirst` in `server/routes/close-the-day.js`'s GET. Verify: 4.1 passes.
-- [ ] 4.3 Write the tests first (screen and browser). They cover:
+- [x] 4.2 Add the migration (two columns on `shops`), update `server/lib/close-entry.js` and `server/routes/shop-settings.js`, and add `countFirst` in `server/routes/close-the-day.js`'s GET. Verify: 4.1 passes.
+- [x] 4.3 Write the tests first (screen and browser). They cover:
   - The Close the day fold's three choices, note, "Change opening hours", summary, Saved · Undo, and the failed save.
   - The Counting the cash fold's switch and its summary.
   - With Count first off, Close the day shows the expected amount and a live difference. With it on, as before.
   - The existing close-the-day tests still pass.
 
   Verify: each fails first.
-- [ ] 4.4 Add the folds in `src/screens/settings/end-of-day-settings.tsx` and `OwnerSettings()`, and the counting step in `src/screens/till/close-the-day.tsx`. Verify: 4.3 passes.
-- [ ] 4.5 Log the gaps from `design.md` section 5 (point 1).
+- [x] 4.4 Add the folds in `src/screens/settings/end-of-day-settings.tsx` and `OwnerSettings()`, and the counting step in `src/screens/till/close-the-day.tsx`. Verify: 4.3 passes.
+- [x] 4.5 Log the gaps from `design.md` section 5 (point 1).
 
 ## 5. Ways to pay: Cash and Other ways to pay (PR 5, about 350 lines; migration, a risky area)
 

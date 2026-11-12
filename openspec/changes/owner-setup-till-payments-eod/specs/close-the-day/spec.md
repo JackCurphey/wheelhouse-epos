@@ -34,4 +34,4 @@ When the shop has Count first on (Settings › End of day › Counting the cash)
 
 #### Scenario: Counting with the expected amount shown
 - **WHEN** Count first is off and Jack opens Close the day
-- **THEN** he sees the expected amount beside the total while he counts, and the difference changes as he types
+- **THEN** he sees “The till expects” and the amount in a row above the note-and-coin counter while he counts (eod-count-shown), and the difference changes as he types
