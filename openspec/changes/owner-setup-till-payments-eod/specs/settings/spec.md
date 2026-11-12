@@ -27,8 +27,8 @@ Each button row SHALL have a 44px drag handle labelled "Move [name] — drag, or
 "+ Add a button" SHALL open "Add a quick button", "To the [group] group" (`set-till-quick-add`). It SHALL have "Find a product or service", searching the shop's products on sale and active services; the picked item with its kind and price; "Name on the button", filled in with the item's name; the note "The price always comes from the product."; the group pills; Cancel; and "Add the button". The new button SHALL go last in its group.
 
 #### Scenario: Adding brake pads
-- **WHEN** Jack searches "brake pads", picks Shimano brake pads B05S-RX (Part, £28.00) and chooses "Add the button"
-- **THEN** the box closes, "Saved · Shimano brake pads added to Workshop" shows with Undo, and the button is last in Workshop (`set-till-quick-saved`)
+- **WHEN** Jack searches "brake pads", picks Shimano brake pads B05S-RX (Part, £28.00), shortens "Name on the button" to "Shimano brake pads" and chooses "Add the button"
+- **THEN** the box closes, "Saved · Shimano brake pads added to Workshop" shows with Undo, and the button, named Shimano brake pads, is last in Workshop (`set-till-quick-saved`). The note always uses the name on the button.
 
 #### Scenario: Nothing picked
 - **WHEN** Jack chooses "Add the button" without picking an item
@@ -106,14 +106,14 @@ Settings › Front desk › End of day SHALL have a Counting the cash fold with 
 - **THEN** "Saved" shows with Undo, the summary reads "Show the expected amount", and the next Close the day shows the expected figure while counting
 
 ### Requirement: Ways to pay shows Cash as always on
-The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL go on naming only the ways to pay that are built and on. The Card, Gift cards and Deposits switches and Store credit's earn-back SHALL not show until the till pieces that use them are built (Jack's answer 3).
+The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL name only the ways to pay that are built and on, Cash first, in the drawing's words ("Cash, card and 4 more"): "Cash", "Cash and store credit", "Cash, store credit and customer accounts". The Card, Gift cards and Deposits switches and Store credit's earn-back SHALL not show until the till pieces that use them are built (Jack's answer 3).
 
 #### Scenario: Cash
 - **WHEN** Jack opens Ways to pay
 - **THEN** Cash shows first, reading "Always on", with nothing to switch
 
 ### Requirement: The shop lists its other ways to pay
-Settings › Front desk › Payments SHALL have an Other ways to pay fold (`set-pay-other`) listing the shop's other ways to pay, each with its line and an outlined Remove. Under the list SHALL be "Add another way to pay" with Add, and the note "These sit under “Other” at the bottom of Take payment, one tap away." Add and Remove SHALL save at once, with "Saved" and Undo. The summary SHALL name them, or read "None".
+Settings › Front desk › Payments SHALL have an Other ways to pay fold (`set-pay-other`) listing the shop's other ways to pay, each with its line and a borderless ✕ button named "Remove" and the way's name, as drawn (`setup.mjs` otherRow). Under the list SHALL be "Add another way to pay" with Add, and the note "These sit under “Other” at the bottom of Take payment, one tap away." Add and Remove SHALL save at once, with "Saved" and Undo. The summary SHALL name them as they are written, joined with commas, or read "None".
 
 #### Scenario: Adding the shop's own
 - **WHEN** Jack types "Bank transfer" and chooses Add
@@ -135,4 +135,4 @@ A shop SHALL start with Finance ("Recorded at the till; the finance company pays
 
 #### Scenario: The starting list
 - **WHEN** Jack first opens Other ways to pay
-- **THEN** he sees Finance, Cycle to Work and Payment link with their lines, and the summary reads "Finance, Cycle to Work, payment link"
+- **THEN** he sees Finance, Cycle to Work and Payment link with their lines, and the summary reads "Finance, Cycle to Work, Payment link"
