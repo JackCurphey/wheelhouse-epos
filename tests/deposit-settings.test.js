@@ -7,6 +7,7 @@ import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
 
 let server;
 let unconnected;
@@ -17,6 +18,7 @@ before(async () => {
   server = await startLiveServer();
   unconnected = await startLiveServer({ env: { PAYMENTS_PROVIDER: 'none' } });
   owner = await staffSignup(server.baseUrl, { shopName: 'Deposit Cycles' });
+  await connectPayments(owner.shop.id);
   other = await staffSignup(unconnected.baseUrl, { shopName: 'No Provider Cycles' });
 });
 after(async () => {

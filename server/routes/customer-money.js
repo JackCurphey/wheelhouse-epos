@@ -11,6 +11,7 @@ import { whoIsBooking } from './purchase-orders.js';
 import { SAVE_LOCK_WAIT } from './products.js';
 import { isDay, shopToday } from '../clock.js';
 import { sendEmailTo } from '../messaging/engine.js';
+import { DRAWN_OTHER_WAYS } from '../lib/drawn-other-ways.js';
 import { statementEmail } from '../messaging/statement-email.js';
 import {
   AMOUNT_WORDS, MAX_REASON, accountEntries, accountFigures, changeAmount, creditEntries, creditOf, lockCustomer, owedOf, owingInAll,
@@ -64,6 +65,43 @@ async function accountOf(customerId, settings) {
     today: shopToday(await shopZone()) };
 }
 
+// ---------- Other ways to pay (owner-setup-till-payments-eod, design 4; set-pay-other) ----------
+const MAX_WAY_NAME = 30;
+const WAY_TAKEN = { error: 'That way to pay is already on the list', code: 'name_taken' };
+const WAY_GONE = { error: 'That way to pay has already been removed' };
+const WAYS_BUSY = { error: 'Someone else is changing the other ways to pay just now. Try again in a moment.', code: 'busy' };
+const otherWays = async () => ({ ways: await db.prepare('SELECT id, name, note, position FROM payment_ways_other ORDER BY position, id').all() });
+async function renumberWays(ids) {
+  if (ids.length) await db.prepare('UPDATE payment_ways_other t SET position = o.n - 1 FROM unnest(?::int[]) WITH ORDINALITY AS o(id, n) WHERE t.id = o.id').run(ids);
+}
+// As the signing-in settings save: BEGIN, the rows read FOR UPDATE, the write, COMMIT, then
+// the whole list. The shop's row is held FOR NO KEY UPDATE, so two saves queue (an empty list
+// has no rows to hold) without blocking inserts that check the shop link; then the list's rows
+// in id order, waiting at most SAVE_LOCK_WAIT for them, as the file's other saves do. change(held)
+// gets them in list order and returns extra fields, or [status, body] to refuse, which writes nothing.
+async function changeOtherWays(res, shopId, status, change) {
+  let extra;
+  await db.exec('BEGIN');
+  try {
+    await db.prepare(`SET LOCAL lock_timeout = '${SAVE_LOCK_WAIT}'`).run();
+    await db.prepare('SELECT id FROM shops WHERE id = ? FOR NO KEY UPDATE').get(shopId);
+    const held = await db.prepare('SELECT id, position, lower(name) AS key FROM payment_ways_other ORDER BY id FOR UPDATE').all();
+    const result = await change(held.sort((a, b) => a.position - b.position || a.id - b.id));
+    if (Array.isArray(result)) {
+      await db.exec('ROLLBACK');
+      return sendJson(res, result[0], result[1]);
+    }
+    extra = result;
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK').catch(() => {});
+    if (err.code === '23505') return sendJson(res, 409, WAY_TAKEN);
+    if (err.code === '55P03') return sendJson(res, 503, WAYS_BUSY);
+    throw err;
+  }
+  return sendJson(res, status, { ...extra, ...(await otherWays()) });
+}
+
 export function register(route) {
   // screens: set-pay-ways
   route('GET', '/api/payment-settings', async (req, res) => {
@@ -101,6 +139,45 @@ export function register(route) {
       }
       if (sets.length) await db.prepare(`UPDATE payment_settings SET ${sets.join(', ')}, updated_at = now() WHERE id = ?`).run(...args, row.id);
       return [200, serializePaymentSettings(await db.prepare('SELECT * FROM payment_settings WHERE id = ?').get(row.id))];
+    });
+  });
+
+  // screens: set-pay-other
+  // Anyone signed in reads the list (Take payment will offer it under "Other"); the Owner changes it.
+  route('GET', '/api/payment-ways-other', async (req, res) => {
+    sendJson(res, 200, await otherWays());
+  });
+
+  // Last on the list, or at `position` (Undo puts a removed one back there, with its line).
+  route('POST', '/api/payment-ways-other', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const body = (await readJsonBody(req)) ?? {};
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (name.length < 1 || name.length > MAX_WAY_NAME) return badRequest(res, `A way to pay’s name is 1 to ${MAX_WAY_NAME} characters`);
+    const note = body.note ?? null;
+    // A shop's own rows have no line (design 4); a drawn row's line comes back with it on Undo.
+    if (note !== null && !DRAWN_OTHER_WAYS.some((w) => w.note === note)) return badRequest(res, 'Only the ways to pay a shop starts with have a line');
+    const at = body.position;
+    if (at !== undefined && !(Number.isInteger(at) && at >= 0 && at <= 2_147_483_647)) return badRequest(res, 'A position is a whole number');
+    return changeOtherWays(res, shopId, 201, async (held) => {
+      if (held.some((w) => w.key === name.toLowerCase())) return [409, WAY_TAKEN];
+      const row = await db.prepare('INSERT INTO payment_ways_other (name, note, position) VALUES (?, ?, ?) RETURNING id').get(name, note || null, held.length);
+      const ids = held.map((w) => w.id);
+      const i = at === undefined ? ids.length : Math.min(at, ids.length);
+      await renumberWays([...ids.slice(0, i), row.id, ...ids.slice(i)]);
+      return { id: row.id };
+    });
+  });
+
+  route('DELETE', '/api/payment-ways-other/:id', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res)) return;
+    const id = Number(params.id);
+    if (!validId(id)) return sendJson(res, 404, WAY_GONE);
+    return changeOtherWays(res, shopId, 200, async (held) => {
+      if (!held.some((w) => w.id === id)) return [404, WAY_GONE];
+      await db.prepare('DELETE FROM payment_ways_other WHERE id = ?').run(id);
+      await renumberWays(held.map((w) => w.id).filter((x) => x !== id));
+      return {};
     });
   });
 

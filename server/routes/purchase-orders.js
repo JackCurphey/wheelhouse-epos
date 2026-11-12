@@ -17,6 +17,7 @@ import { currentCheckin, ownAccountHere } from './till-pins.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { recordPriceChanges } from '../lib/price-changes.js';
 import { penceToPounds, wholePence } from '../lib/pence.js';
+import { bookedInForOrder } from '../c2w/orders.js';
 import { alreadyInStock, bikeKinds, frameInStock, frameKey, framesInStock, isBike, MAX_FRAME } from '../lib/bikes.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -135,23 +136,27 @@ export async function loadPoLineItems(items, costs, onDraft = new Map()) {
 // Replacing a draft's lines keeps the job each was for (restock-list, design 4): an item may
 // say its job (forJobId, a job of this business, or null for none); one that doesn't takes the
 // job of the draft's earlier line for the same product, in turn, so an edit that knows nothing
-// of jobs (the old app) doesn't drop them.
+// of jobs (the old app) doesn't drop them. A line for a Cycle to Work order keeps its order
+// the same way, in turn (openspec/changes/cycle-to-work, task 6.3).
 async function keepLineJobs(loaded, before) {
   const earlier = new Map();
   for (const l of before) {
     if (!earlier.has(l.product_id)) earlier.set(l.product_id, []);
-    earlier.get(l.product_id).push(l.workshop_job_id);
+    earlier.get(l.product_id).push({ jobId: l.workshop_job_id, c2wOrderId: l.c2w_order_id ?? null });
   }
   const out = [];
   for (const l of loaded) {
     let jobId;
-    if (l.forJobId === undefined) jobId = earlier.get(l.product.id)?.shift() ?? null;
+    // Only an item that says nothing of jobs takes the earlier line's job and order.
+    const was = l.forJobId === undefined ? earlier.get(l.product.id)?.shift() : undefined;
+    const c2wOrderId = was?.c2wOrderId ?? null;
+    if (l.forJobId === undefined) jobId = was?.jobId ?? null;
     else if (l.forJobId === null) jobId = null;
     else {
       jobId = Number(l.forJobId);
       if (!Number.isInteger(jobId) || !(await db.prepare('SELECT 1 FROM workshop_jobs WHERE id = ?').get(jobId))) throw new ValidationError('Job not found');
     }
-    out.push({ ...l, jobId });
+    out.push({ ...l, jobId, c2wOrderId });
   }
   return out;
 }
@@ -291,6 +296,10 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
     const left = outstanding(line);
     if (n > left) return refuse(`Cannot receive ${n} of "${line.product_name}" - only ${left} outstanding`);
   }
+  // The Cycle to Work orders these lines were ordered for, in turn, before any stock: an
+  // order's own steps lock the order and then its stock, so this keeps to the same order.
+  const c2wIds = [...new Set([...taken.keys()].map((itemId) => itemsById.get(itemId).c2w_order_id).filter(Boolean))].sort((a, b) => a - b);
+  for (const c2wId of c2wIds) await db.prepare('SELECT id FROM c2w_orders WHERE id = ? FOR UPDATE').get(c2wId);
   // A product not on an order must be the shop's, and on sale.
   const items = [];
   for (const x of lines) {
@@ -353,15 +362,19 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
       'INSERT INTO delivery_lines (delivery_id, product_id, product_name, product_sku, purchase_order_id, purchase_order_item_id, qty, unit_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).run(deliveryId, product.id, product.name, product.sku, fromOrder?.id ?? null, itemId ?? null, qty, orderLine ? orderLine.unit_cost : product.cost)).lastInsertRowid;
     // Each bike's frame, in stock at the shop its stock line went to (frame-numbers, design 3).
+    const frameIds = [];
+    const moveId = moved.lineOf.get(productId);
+    const siteOf = async () => (await db.prepare('SELECT site_id FROM stock_movements WHERE id = ?').get(moveId)).site_id;
     if (needsFrames && frames?.length) {
-      const moveId = moved.lineOf.get(productId);
-      const { site_id: siteId } = await db.prepare('SELECT site_id FROM stock_movements WHERE id = ?').get(moveId);
+      const siteId = await siteOf();
       for (const f of frames) {
-        await db.prepare(
+        frameIds.push((await db.prepare(
           'INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, delivery_id, delivery_line_id, stock_movement_id, received_by_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).run(productId, siteId, f, frameKey(f), deliveryId, lineId, moveId, who.name ?? null);
+        ).run(productId, siteId, f, frameKey(f), deliveryId, lineId, moveId, who.name ?? null)).lastInsertRowid);
       }
     }
+    // A line ordered for a Cycle to Work order puts its bike aside for it (rs-frame-c2w, rs-booked-c2w).
+    if (orderLine?.c2w_order_id) await bookedInForOrder(orderLine.c2w_order_id, frameIds[0] ?? null, await siteOf(), who);
     shopifyPushes.push(...moved.pushes);
     booked += qty;
   }
@@ -516,7 +529,7 @@ export function register(route) {
           return badRequest(res, 'A purchase order must include at least one item');
         }
         try {
-          const lines = await db.prepare('SELECT product_id, unit_cost, workshop_job_id FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(id);
+          const lines = await db.prepare('SELECT product_id, unit_cost, workshop_job_id, c2w_order_id FROM purchase_order_items WHERE purchase_order_id = ? ORDER BY id').all(id);
           loaded = await loadPoLineItems(items, costs, new Map(lines.map((l) => [l.product_id, l.unit_cost])));
           loaded = await keepLineJobs(loaded, lines);
         } catch (err) {
@@ -531,11 +544,11 @@ export function register(route) {
       ).run(supplierId, reference, notes, nowIso(), id);
       if (loaded) {
         await db.prepare('DELETE FROM purchase_order_items WHERE purchase_order_id = ?').run(id);
-        for (const { product, qty, unitCost, jobId } of loaded) {
+        for (const { product, qty, unitCost, jobId, c2wOrderId } of loaded) {
           await db.prepare(
-            `INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered, unit_cost, workshop_job_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
-          ).run(id, product.id, product.name, product.sku, qty, unitCost, jobId);
+            `INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, product_sku, qty_ordered, unit_cost, workshop_job_id, c2w_order_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(id, product.id, product.name, product.sku, qty, unitCost, jobId, c2wOrderId);
         }
       }
       await db.exec('COMMIT');

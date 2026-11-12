@@ -1171,7 +1171,7 @@ export function register(route) {
       // Step 4 words its button by it (Jack, 19 Oct, auto-confirm; drawn as bk-details-auto).
       confirmsAutomatically: settings?.confirm_bookings_automatically === 1,
       // Step 4 asks for the deposit's hold only when one is taken (deposit-pay-screen design 1).
-      takesDeposit: settings?.deposit_on === 1 && paymentsConnected(),
+      takesDeposit: settings?.deposit_on === 1 && await paymentsConnected(),
       full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
       categories: categories
         .map((c) => ({

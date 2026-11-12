@@ -97,7 +97,7 @@ export function apiGet<T>(path: string): Promise<T> {
 export function apiMutate<T>(
   path: string,
   body: unknown,
-  opts: { method?: 'POST' | 'PUT' | 'DELETE' } = {},
+  opts: { method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE' } = {},
 ): Promise<T> {
   return request<T>(path, {
     method: opts.method ?? 'POST',

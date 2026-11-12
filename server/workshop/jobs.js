@@ -17,6 +17,7 @@ import { bookingRequest } from './state-machines.js';
 import { applyEvent } from './transitions.js';
 import { isEmployeeId } from './sign-off.js';
 import { allocateReference } from './references.js';
+import { penceText, wholePoundsText } from '../lib/money-text.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -702,7 +703,7 @@ export async function agreeWithinLimit({ quoteId, loginId = null }) {
     if (bill.spendLimit === null) return refuse('This customer asked to be asked before any extra work. Send a quote instead.');
     // The limit is whole pounds; the bill is pence.
     if (bill.wholeBillPence > bill.spendLimit * 100) {
-      return refuse(`That takes the whole bill to £${(bill.wholeBillPence / 100).toFixed(2)}, over the £${bill.spendLimit} limit. Send a quote instead.`);
+      return refuse(`That takes the whole bill to ${penceText(bill.wholeBillPence)}, over the ${wholePoundsText(bill.spendLimit)} limit. Send a quote instead.`);
     }
     await db.prepare(
       `UPDATE workshop_quote_lines SET decision = 'approved', decided_via = 'limit', decided_by_login_id = ?, decided_at = now()
