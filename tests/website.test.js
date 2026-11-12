@@ -284,6 +284,7 @@ test('only an Owner can read or change the website; staff are told who can', asy
     ['PUT', '/api/website/parts/headline'], ['POST', '/api/website/publish'], ['POST', '/api/website/discard'],
     ['POST', '/api/website/turn-on'], ['POST', '/api/website/turn-off'], ['GET', '/api/website/history'],
     ['POST', '/api/website/history/1/restore'], ['POST', '/api/website/logo'], ['POST', '/api/website/parts/big_photo/photo'],
+    ['PUT', '/api/website/colour'], ['PUT', '/api/website/tracking/google_analytics'],
   ]) {
     const res = await asJo(p, { method, body: method === 'GET' ? undefined : { text: 'x' } });
     assert.equal(res.status, 403, `${method} ${p}`);

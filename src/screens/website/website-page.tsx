@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Box, Page, Refusal } from '@/screens/reports/reports-bits.tsx';
 import { DiscardBox, HistoryBox, PartBox } from './website-boxes.tsx';
 import { WebsiteStart } from './website-start.tsx';
+import { TrackingTools, liveTools } from './website-tracking.tsx';
 import { changeWords, customerSite, plural, when, type Part, type WebsiteState } from './website-types.ts';
 
 /**
@@ -27,6 +28,7 @@ export function WebsitePage() {
   const [editing, setEditing] = useState<Part | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [history, setHistory] = useState(false);
+  const [tracking, setTracking] = useState(false);
   const wordsHeading = useRef<HTMLHeadingElement>(null);
   const historyTip = useId();
 
@@ -62,6 +64,16 @@ export function WebsitePage() {
   const undescribed = s.parts.find((p) => p.photo && !String(p.description ?? '').trim() && !p.decoration)
     ?? s.parts.find((p) => 'photo' in p) ?? null;
   const hasChanges = s.changeCount > 0;
+  const live = liveTools(s.tracking);
+
+  if (tracking) {
+    return (
+      <>
+        <TrackingTools state={s} onState={saved} onBack={() => setTracking(false)} onEditPrivacy={() => setEditing(partNamed('Privacy'))} />
+        {editing ? <PartBox part={editing} onState={saved} onSaved={(next) => { saved(next); setEditing(null); }} onClose={() => setEditing(null)} /> : null}
+      </>
+    );
+  }
 
   return (
     <Page>
@@ -152,7 +164,7 @@ export function WebsitePage() {
       <ul aria-label="Your website" className="m-0 flex list-none flex-col overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-0">
         <SummaryRow name="Taking payments" to={ROUTES.settings} badge="Not connected">Not connected · customers can look but not buy · open to connect [payment provider] · in Settings › Front desk › Online orders</SummaryRow>
         <SummaryRow name="Pages">Home, About us, Contact us, Collection and returns, Privacy, Cookies</SummaryRow>
-        <SummaryRow name="Tracking tools">{s.tracking.length ? `${s.tracking.map((t) => t.name).join(', ')} · cookie choice on` : 'None — so there’s no cookie choice'}</SummaryRow>
+        <SummaryRow name="Tracking tools" onOpen={() => setTracking(true)}>{live.length ? `${live.map((t) => t.name).join(', ')} · cookie choice on` : 'None — so there’s no cookie choice'}</SummaryRow>
         <SummaryRow name="Web address">{`${s.address} · your free address · Wheelhouse sets up your own address for you`}</SummaryRow>
         <SummaryRow name="Wheelhouse’s website or Shopify">{s.kind === 'shopify' ? 'Shopify' : 'Wheelhouse’s website'}</SummaryRow>
       </ul>
@@ -197,7 +209,7 @@ export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'
 }
 
 /** website.mjs `row`: a title over its line; Taking payments opens its settings. */
-function SummaryRow({ name, badge, to, children }: { name: string; badge?: string; to?: string; children: ReactNode }) {
+function SummaryRow({ name, badge, to, onOpen, children }: { name: string; badge?: string; to?: string; onOpen?: () => void; children: ReactNode }) {
   const inner = (
     <>
       <span className="flex min-w-0 grow flex-col gap-[3px]">
@@ -205,13 +217,15 @@ function SummaryRow({ name, badge, to, children }: { name: string; badge?: strin
         <span className="text-sm text-[var(--wh-muted)]">{children}</span>
       </span>
       {badge ? <span className="rounded-full bg-[var(--wh-warn-bg)] px-2.5 py-0.5 text-size-13 font-semibold whitespace-nowrap text-[var(--wh-warn-ink)]">{badge}</span> : null}
-      {to ? <ChevronRight aria-hidden="true" size={18} /> : null}
+      {to || onOpen ? <ChevronRight aria-hidden="true" size={18} /> : null}
     </>
   );
   const look = 'flex min-h-16 items-center gap-3.5 px-[18px] py-2.5 text-[var(--wh-ink)] no-underline';
   return (
     <li className="border-t border-[var(--wh-border)] first:border-t-0">
-      {to ? <Link to={to} className={look}>{inner}</Link> : <div className={look}>{inner}</div>}
+      {to ? <Link to={to} className={look}>{inner}</Link>
+        : onOpen ? <button type="button" onClick={onOpen} className={`${look} w-full cursor-pointer border-0 bg-transparent text-left`}>{inner}</button>
+          : <div className={look}>{inner}</div>}
     </li>
   );
 }

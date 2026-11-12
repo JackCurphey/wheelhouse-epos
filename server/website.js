@@ -9,6 +9,7 @@
 // it is replaced (design 1).
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
+import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
 
 // History keeps 90 days (spec question 3, default taken:
 // docs/decisions/2026-11-12-website-defaults-taken.md).
@@ -142,8 +143,10 @@ function partValue(content, key) {
   return JSON.stringify(PART_BY_KEY.get(key).fields.map((f) => rest[f] ?? null));
 }
 
+// Only what customers' browsers would load counts as a change: a tool
+// waiting for a right ID changes nothing they see.
 function validTracking(content) {
-  return JSON.stringify((content?.tracking || []).map((t) => [t.tool, t.id, !!t.on]));
+  return JSON.stringify(liveTracking(content));
 }
 
 // The changes saved since the last publish, part by part, grouped by page in
@@ -230,7 +233,7 @@ export async function websiteState(row = null) {
     ready: !!website.kind && partsToCheck.length === 0,
     logo: draft.logo ?? null,
     mainColour: draft.main_colour || SOFT_SAND_CHARCOAL,
-    tracking: draft.tracking || [],
+    tracking: trackingList(draft),
     productCounts: await productCounts(),
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
@@ -494,4 +497,28 @@ export async function saveColour(colour, loginId) {
   // Before set-up the colour is chosen in the three steps, and sent with them.
   if (!saved.changes) throw new WebsiteError(409, 'Set up the website first');
   return websiteState();
+}
+
+const MAX_TRACKING_ID = 64;
+
+// Switching a tool on or off, or changing its ID, changes the draft only. A
+// wrong ID is kept so the shop can correct it; off keeps the ID (design 5).
+export async function saveTracking(key, body, loginId) {
+  const tool = TOOL_BY_KEY.get(key);
+  if (!tool) throw new WebsiteError(404, 'There is no such tracking tool');
+  if (typeof body?.on !== 'boolean') throw new WebsiteError(400, 'Say whether the tool is on or off');
+  if (body.id !== undefined && typeof body.id !== 'string') throw new WebsiteError(400, 'The ID must be text');
+  const id = body.id === undefined ? undefined : body.id.trim();
+  if (id !== undefined && id.length > MAX_TRACKING_ID) throw new WebsiteError(400, `That’s too long for an ID: up to ${MAX_TRACKING_ID} characters`);
+  return inTransaction(async () => {
+    const website = await lockWebsite();
+    if (!website.kind) throw new WebsiteError(409, 'Set up the website first');
+    const others = (website.draft.tracking || []).filter((t) => t.tool !== key);
+    const entry = { tool: key, id: id ?? savedTool(website.draft, key)?.id ?? '', on: body.on };
+    const tracking = TRACKING_TOOLS.map((t) => (t.key === key ? entry : others.find((o) => o.tool === t.key))).filter(Boolean);
+    await prepare(
+      "UPDATE website SET draft = jsonb_set(draft, '{tracking}', ?::jsonb), draft_saved_by = ?, draft_saved_at = now(), updated_at = now()"
+    ).run(JSON.stringify(tracking), loginId);
+    return websiteState(await prepare('SELECT * FROM website').get());
+  });
 }
