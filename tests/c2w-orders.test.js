@@ -23,6 +23,8 @@ let provider;
 let bike;
 let lock;
 let maya;
+let away;
+let site;
 const as = (who) => (p, options) => staffRequest(server.baseUrl, who.cookie, p, options);
 const own = (p, options) => as(owner)(p, options);
 const inShop = (fn, shop = owner.shop.id) => runWithShop(shop, fn);
@@ -41,6 +43,10 @@ before(async () => {
   bike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 2 });
   lock = await seedProduct(owner.shop.id, { name: '[Lock]', price: '40.00', stock: 5 });
   maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: `maya-${tag()}@example.test` } })).body;
+  // The bike is in stock at the shop; "away" is a bike with none here (cw-new-not-in-stock).
+  site = await inShop(async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get()).id);
+  await inShop(async () => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 2) RETURNING product_id').get(site, bike));
+  away = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 0 });
 });
 after(async () => {
   for (const shop of [owner, other]) if (shop) await deleteTestShop(shop.shop.id);
@@ -51,6 +57,23 @@ after(async () => {
 const quote = (body = {}, who = owner) => as(who)('/api/c2w/orders', {
   method: 'POST', body: { customerId: maya.id, providerId: provider.id, productId: bike, accessoryIds: [], ...body },
 });
+// A till of its own at the shop, signed in as the Owner, with nobody checked in.
+async function tillNobodyIn() {
+  const jar = new Map();
+  const own = await staffFreshCookie(owner.loginId);
+  const send = async (path, body) => {
+    const cookie = [own, ...[...jar].map(([k, v]) => `${k}=${v}`)].join('; ');
+    const res = await fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    for (const line of res.headers.getSetCookie()) {
+      const [pair] = line.split(';');
+      jar.set(pair.slice(0, pair.indexOf('=')), pair.slice(pair.indexOf('=') + 1));
+    }
+    const text = await res.text();
+    return { status: res.status, body: text ? JSON.parse(text) : null };
+  };
+  assert.equal((await send('/api/till-setup', { siteId: site, number: 9 })).status, 201);
+  return send;
+}
 const order = async (id, who = owner) => (await as(who)(`/api/c2w/orders/${id}`)).body.order;
 const raw = (id) => inShop(async () => prepare('SELECT * FROM c2w_orders WHERE id = ?').get(id));
 const events = (id) => inShop(async () => prepare('SELECT kind FROM c2w_order_events WHERE order_id = ? ORDER BY id').all(id));
@@ -80,6 +103,10 @@ test('3.2 valid-until and hold-until come from Settings; the total includes acce
   assert.deepEqual(held.accessories.map((a) => [a.productId, a.name, a.pricePence]), [[lock, '[Lock]', 4000]]);
   const unheld = (await quote({ hold: false })).body.order;
   assert.deepEqual([unheld.holdUntil, unheld.holdWanted, unheld.totalPence], [null, false, 100000]);
+  // Not in stock here: nothing to hold, whatever the tick says (cw-new-not-in-stock, decision H5).
+  const notHere = (await quote({ productId: away })).body.order;
+  assert.deepEqual([notHere.holdUntil, notHere.inStock], [null, false]);
+  assert.equal(held.inStock, true);
   // A shop that hasn't set its days yet is asked to, not given a quote with no dates.
   const elsewhere = (await staffRequest(server.baseUrl, other.cookie, '/api/c2w/settings')).body;
   assert.equal(elsewhere.settings.quoteValidDays, null);
@@ -94,6 +121,15 @@ test('3.2 valid-until and hold-until come from Settings; the total includes acce
   assert.equal(crossed.status, 400, JSON.stringify(crossed.body));
   assert.equal((await quote({ customerId: theirCustomer.id })).status, 400);
   assert.equal((await quote({ providerId: theirs.id })).status, 400);
+  // The refused quote took no number: the shop's first quote is still number 1.
+  assert.equal((await staffRequest(server.baseUrl, other.cookie, '/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, quoteValidDays: 30 } })).status, 200);
+  const first = await staffRequest(server.baseUrl, other.cookie, '/api/c2w/orders', { method: 'POST', body: { customerId: theirCustomer.id, providerId: theirs.id, productId: theirBike, accessoryIds: [] } });
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  assert.equal(first.body.order.quoteNumber, 1);
+  // A customer merged into another is no longer one to quote.
+  const gone = (await own('/api/customers', { method: 'POST', body: { name: '[Customer]' } })).body;
+  await inShop(async () => prepare('UPDATE customers SET active = 0, merged_into_id = ? WHERE id = ?').run(maya.id, gone.id));
+  assert.equal((await quote({ customerId: gone.id })).status, 400);
 });
 
 // ---------- 3.3 and 3.4 ----------
@@ -112,6 +148,11 @@ test('3.3 each step adds a “What’s happened” line saying who and when; not
     const r = await own(`/api/c2w/orders/${made.id}/events`, { method, body: {} });
     assert.equal(r.status, 404, `${method} on the history isn’t a route`);
   }
+  // The quote line keeps the closing sentence it was given with.
+  assert.match(seen.events[0].detail.closing, /^We’re holding your bike until /);
+  // Applied before the quote was given is refused.
+  const later = (await quote()).body.order;
+  assert.equal((await own(`/api/c2w/orders/${later.id}/applied`, { method: 'POST', body: { appliedOn: '2026-08-31' } })).status, 400);
 });
 
 test('3.4 a step not allowed from the order’s stage is refused and changes nothing', async () => {
@@ -134,10 +175,14 @@ test('3.5 the list groups orders by stage, gives the top counts and the sidebar 
     await inShop(async () => prepare(`UPDATE c2w_orders SET ${sets} WHERE id = ?`).run(...Object.values(fields), id));
     return id;
   };
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, remindDays: 2, quoteValidDays: 30, howToApply: '[How to apply]', noCertificateDays: 14 } })).status, 200);
   const before = (await own('/api/c2w/orders')).body;
   const ending = await at({ hold_until: '2026-09-02' });
   const ended = await at({ hold_until: '2026-08-30' });
-  const ready = await at({ stage: 'certificate', hold_until: null });
+  const ready = await at({ stage: 'certificate', hold_until: null, product_id: away });
+  const heldCertificate = await at({ stage: 'certificate', hold_until: '2026-09-20' });
+  const inStockUnheld = await at({ stage: 'certificate', hold_until: null, hold_wanted: false });
+  const stale = await at({ quote_given_at: '2026-08-10T10:00:00Z', hold_until: '2026-09-20' });
   const late = await at({ stage: 'collected', hold_until: null, expected_pence: 95000, expected_by: '2026-08-31', collected_at: '2026-08-01T10:00:00Z' });
   const paid = await at({ stage: 'paid', hold_until: null, paid_pence: 95000, paid_on: '2026-08-20' });
   const oldPaid = await at({ stage: 'paid', hold_until: null, paid_pence: 95000, paid_on: '2026-07-01' });
@@ -150,9 +195,11 @@ test('3.5 the list groups orders by stage, gives the top counts and the sidebar 
   assert.ok(!Object.values(list.groups).flat().some((o) => o.id === oldPaid), 'paid more than 30 days ago drops off');
   assert.equal(list.groups.waiting.find((o) => o.id === ended).next, 'choose');
   assert.equal(list.groups.certificate.find((o) => o.id === ready).next, 'order');
+  assert.notEqual(list.groups.certificate.find((o) => o.id === heldCertificate).next, 'order', 'a held bike is never ordered');
+  assert.notEqual(list.groups.certificate.find((o) => o.id === inStockUnheld).next, 'order', 'nor one in stock left unheld');
   const grew = (k) => list.counts[k] - before.counts[k];
-  assert.deepEqual([grew('holdEndingSoon'), grew('holdEnded'), grew('readyToOrder'), grew('paymentLate')], [1, 1, 1, 1]);
-  assert.equal(list.count - before.count, 4);
+  assert.deepEqual([grew('holdEndingSoon'), grew('holdEnded'), grew('readyToOrder'), grew('noCertificate'), grew('paymentLate')], [1, 1, 1, 1, 1]);
+  assert.equal(list.count - before.count, 5);
   assert.equal(list.counts.owedPence - before.counts.owedPence, 95000);
   assert.equal((await own('/api/c2w/count')).body.count, list.count);
   const row = list.groups.waiting.find((o) => o.id === ending);
@@ -160,8 +207,10 @@ test('3.5 the list groups orders by stage, gives the top counts and the sidebar 
   const hers = (await as(jo)('/api/c2w/orders')).body;
   assert.equal(hers.count, list.count);
   assert.ok(!('owedPence' in hers.counts) && !('owedLate' in hers.counts), 'no money owed for someone who can’t see costs');
+  // Staff still see what's expected (decision H3); never the commission.
   const seen = await order(late, jo);
-  assert.ok(!('expectedPence' in seen) && !('commissionValue' in seen));
+  assert.deepEqual([seen.expectedPence, seen.expectedBy], [95000, '2026-08-31']);
+  assert.ok(!('commissionValue' in seen) && !('commissionPence' in seen));
 });
 
 // ---------- 3.6 ----------
@@ -178,6 +227,13 @@ test('3.6 the quote document follows the order, and Email queues it', async () =
   assert.equal(doc.howToApply, '[How to apply]');
   const unheld = (await quote({ hold: false })).body.order;
   assert.equal((await own(`/api/c2w/orders/${unheld.id}/quote`)).body.quote.closing, 'This quote is valid until 1 October 2026.');
+  const notHere = (await quote({ productId: away })).body.order;
+  assert.equal((await own(`/api/c2w/orders/${notHere.id}/quote`)).body.quote.closing,
+    '[Bike] · [Size] isn’t in stock. We’ll order it once your certificate reaches us, and let you know when it arrives. This quote is valid until 1 October 2026.');
+  // A till with nobody checked in emails nothing: the line would name no one.
+  const till = await tillNobodyIn();
+  const nobody = await till(`/api/c2w/orders/${made.id}/email-quote`, {});
+  assert.deepEqual([nobody.status, nobody.body.code], [409, 'check_in_first']);
 
   assert.equal((await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: { email: 'not an address' } })).status, 400);
   const sent = await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} });
@@ -190,7 +246,9 @@ test('3.6 the quote document follows the order, and Email queues it', async () =
   assert.deepEqual((await events(made.id)).map((e) => e.kind), ['quote_given', 'quote_emailed']);
   // Five an hour for one customer, then it waits.
   for (let i = 0; i < 4; i += 1) await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} });
-  assert.equal((await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} })).status, 429);
+  const tooMany = await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} });
+  assert.equal(tooMany.status, 429);
+  assert.match(tooMany.body.error, /Cycle to Work quotes/);
 });
 
 // ---------- 3.7 ----------

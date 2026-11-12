@@ -1,28 +1,30 @@
 // screens: cw-list, cw-new, cw-quote, cw-email, cw-order
 // Cycle to Work orders and quotes (openspec/changes/cycle-to-work, design 2,
 // 3 and 7; tasks 3.1–3.8). Anyone signed in sees the list, makes quotes and
-// marks a customer applied (design 7); what the provider is expected to pay
-// and the owed totals go only to someone who can see costs (canSeeCosts).
+// marks a customer applied (design 7). Everyone sees what the provider is
+// expected to pay (decision H3); the owed totals go only to someone who can
+// see costs (canSeeCosts; decision M6).
 // Staff routes: a handler gets (req, res, params, query, afterRelease, shopId)
 // with the shop's row-level security already bound.
 import { randomBytes } from 'node:crypto';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { currentSession } from '../lib/session.js';
 import { dbExec, prepare } from '../db.js';
-import { currentMoment, isDay } from '../clock.js';
+import { currentMoment, isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import {
-  GROUPS, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, nextFor,
-  quoteClosing, quoteItems, quoteRef, readyToOrder, serializeOrder, shopDay, takeStep,
+  GROUPS, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, nextFor,
+  quoteClosing, quoteItems, quoteRef, readyToOrder, serializeOrder, shopDay, shopTimeZone, takeStep,
 } from '../c2w/orders.js';
 
 const db = { prepare, exec: dbExec };
 const EMAILS_PER_HOUR = 5;
-const SETTINGS_NEEDED = { error: 'Set how long quotes are valid and how long bikes are held in Settings › Cycle to Work first', code: 'settings_needed' };
+const SETTINGS_NEEDED = { error: 'Set how long quotes are valid and how long bikes are held in Settings › Front desk › Cycle to Work first', code: 'settings_needed' };
+const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
 // BEGIN, the change, COMMIT; a refusal rolls back.
 async function save(res, status, change) {
@@ -58,17 +60,21 @@ function optionalWords(v, label, max) {
   return s || null;
 }
 
-// The list's top line and the sidebar's number (design, decided while building 4).
-function countsFor(rows, settings, today, costs) {
+// The list's top line and the sidebar's number: what's due or late (decision M3;
+// decided while building, 12 Nov, item 7). The sidebar counts each order once.
+function countsFor(rows, settings, today, tz, costs) {
   const active = rows.filter((r) => r.stage === 'quote' || r.stage === 'waiting');
   const soon = addDays(today, settings.remind_days ?? 0);
-  const counts = {
-    holdEndingSoon: active.filter((r) => r.hold_until_day && r.hold_until_day >= today && r.hold_until_day <= soon).length,
-    holdEnded: active.filter((r) => r.hold_until_day && r.hold_until_day < today).length,
-    readyToOrder: rows.filter((r) => readyToOrder(r, settings.order_rule)).length,
-    paymentLate: rows.filter((r) => r.stage === 'collected' && r.expected_by_day && r.expected_by_day < today).length,
+  const staleBy = settings.no_certificate_days ? addDays(today, -settings.no_certificate_days) : null;
+  const due = {
+    holdEndingSoon: active.filter((r) => r.hold_until_day && r.hold_until_day >= today && r.hold_until_day <= soon),
+    holdEnded: active.filter((r) => r.hold_until_day && r.hold_until_day < today),
+    readyToOrder: rows.filter((r) => readyToOrder(r, settings.order_rule)),
+    noCertificate: staleBy ? active.filter((r) => shopToday(tz, new Date(r.quote_given_at)) <= staleBy) : [],
+    paymentLate: rows.filter((r) => r.stage === 'collected' && r.expected_by_day && r.expected_by_day < today),
   };
-  const count = counts.holdEndingSoon + counts.holdEnded + counts.readyToOrder + counts.paymentLate;
+  const counts = Object.fromEntries(Object.entries(due).map(([k, list]) => [k, list.length]));
+  const count = new Set(Object.values(due).flat().map((r) => r.id)).size;
   if (costs) {
     const owed = (r) => Math.max(0, (r.expected_pence ?? 0) - (r.paid_pence ?? 0));
     const collected = rows.filter((r) => r.stage === 'collected');
@@ -85,24 +91,25 @@ async function listRows(today) {
 export function register(route) {
   route('GET', '/api/c2w/orders', async (req, res) => {
     const costs = await canSeeCosts(req);
-    const [settings, today] = [await settingsRow(), await shopDay()];
+    const [settings, tz] = [await settingsRow(), await shopTimeZone()];
+    const today = shopToday(tz);
     const rows = await listRows(today);
     const groups = Object.fromEntries(Object.entries(GROUPS).map(([g, stages]) => [g, rows.filter((r) => stages.includes(r.stage))
-      .map((r) => ({ ...serializeOrder(r, costs), next: nextFor(r, settings.order_rule, today) }))]));
+      .map((r) => ({ ...serializeOrder(r), next: nextFor(r, settings.order_rule, today) }))]));
     const providers = (await db.prepare('SELECT count(*)::int AS n FROM c2w_providers WHERE retired_at IS NULL').get()).n;
-    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, costs), providers });
+    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, tz, costs), providers });
   });
 
   route('GET', '/api/c2w/count', async (req, res) => {
-    const [settings, today] = [await settingsRow(), await shopDay()];
-    sendJson(res, 200, { count: countsFor(await listRows(today), settings, today, false).count });
+    const [settings, tz] = [await settingsRow(), await shopTimeZone()];
+    const today = shopToday(tz);
+    sendJson(res, 200, { count: countsFor(await listRows(today), settings, today, tz, false).count });
   });
 
   route('POST', '/api/c2w/orders', async (req, res) => {
     const body = await readJsonBody(req);
     const who = await whoIsBooking(req);
     if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
-    const costs = await canSeeCosts(req);
     const site = (await siteHere(req)) ?? (await oldestSite());
     await save(res, 201, async () => {
       const customerId = wholeId(body.customerId, 'the customer');
@@ -114,7 +121,8 @@ export function register(route) {
       const hold = body.hold ?? true;
       if (typeof hold !== 'boolean') throw new ValidationError('Hold is yes or no');
 
-      if (!(await db.prepare('SELECT 1 FROM customers WHERE id = ?').get(customerId))) throw new ValidationError('Choose the customer');
+      // A customer merged into another is hidden (active = 0) and isn't offered.
+      if (!(await db.prepare('SELECT 1 FROM customers WHERE id = ? AND active <> 0').get(customerId))) throw new ValidationError('Choose the customer');
       const provider = await db.prepare('SELECT retired_at FROM c2w_providers WHERE id = ?').get(providerId);
       if (!provider) throw new ValidationError('Choose the scheme provider');
       if (provider.retired_at) throw new Refused(400, { error: 'This provider is retired. Choose another.', code: 'retired_provider' });
@@ -127,28 +135,34 @@ export function register(route) {
         extras.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
       }
 
+      // Only a bike in stock here is held; one that isn't is ordered (cw-new-not-in-stock).
+      const holdNow = hold && (await freeHere(productId, site)) > 0;
+
       // The shop's counter, taken under the row's lock: two quotes never share a number.
+      // A refusal after this rolls the counter back with everything else.
       await settingsRow();
       const s = await db.prepare('UPDATE c2w_settings SET next_quote_number = next_quote_number + 1 RETURNING *, next_quote_number - 1 AS taken').get();
-      if (s.quote_valid_days === null || (hold && s.hold_days === null)) throw new Refused(409, SETTINGS_NEEDED);
+      if (s.quote_valid_days === null || (holdNow && s.hold_days === null)) throw new Refused(409, SETTINGS_NEEDED);
       const today = await shopDay();
       const total = bike.price_pence + extras.reduce((sum, a) => sum + a.pricePence, 0);
       const { id } = await db.prepare(`INSERT INTO c2w_orders (customer_id, provider_id, site_id, product_id, quote_number, quote_given_at,
         valid_until, hold_until, hold_wanted, accessories, total_pence, customer_code)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?) RETURNING id`).get(
         customerId, providerId, site, productId, s.taken, currentMoment().toISOString(),
-        addDays(today, s.quote_valid_days), hold ? addDays(today, s.hold_days) : null, hold, JSON.stringify(extras), total,
+        addDays(today, s.quote_valid_days), holdNow ? addDays(today, s.hold_days) : null, hold, JSON.stringify(extras), total,
         randomBytes(32).toString('hex'),
       );
-      await addEvent(id, 'quote_given', who, { detail: { quoteRef: quoteRef(s.taken) } });
-      return { order: serializeOrder(await loadOrder(id), costs) };
+      const made = await loadOrder(id);
+      // The line keeps the sentence the quote was given with, whatever Settings say later.
+      await addEvent(id, 'quote_given', who, { detail: { quoteRef: quoteRef(s.taken), closing: quoteClosing(made, s.order_rule) } });
+      return { order: serializeOrder(made) };
     });
   });
 
   route('GET', '/api/c2w/orders/:id', async (req, res, params) => {
     const row = await loadOrder(Number(params.id));
     if (!row) return notFound(res);
-    sendJson(res, 200, { order: { ...serializeOrder(row, await canSeeCosts(req)), events: await eventsOf(row.id) } });
+    sendJson(res, 200, { order: { ...serializeOrder(row), events: await eventsOf(row.id) } });
   });
 
   // What the printed quote shows (cw-quote).
@@ -165,7 +179,7 @@ export function register(route) {
         shop: { name: shop.name, address: shop.address, phone: shop.phone, email: shop.email, vatNumber: shop.vat_number, logoUrl: shop.logo_url ?? null },
         quoteRef: quoteRef(row.quote_number), givenOn: day(row.quote_given_at), revisedOn: day(row.quote_revised_at), validUntil: row.valid_until_day,
         customerName: row.customer_name, providerName: row.provider_name,
-        items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row), howToApply: settings.how_to_apply,
+        items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row, settings.order_rule), howToApply: settings.how_to_apply,
       },
     });
   });
@@ -175,20 +189,23 @@ export function register(route) {
     const body = await readJsonBody(req);
     const row = await loadOrder(Number(params.id));
     if (!row) return notFound(res);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
     const to = typeof body.email === 'string' && body.email.trim() ? body.email.trim() : row.customer_email;
     if (!to || !EMAIL_RE.test(to)) return sendJson(res, 400, { error: 'Type an email address, like name@example.com', code: 'bad_address' });
-    const { n } = await db.prepare("SELECT count(*)::int AS n FROM customer_messages WHERE customer_id = ? AND template_key = 'c2w_quote' AND created_at > now() - interval '1 hour'").get(row.customer_id);
-    if (n >= EMAILS_PER_HOUR) return sendJson(res, 429, { error: 'This quote has been emailed five times in the last hour. Try again later.', code: 'too_many' });
-    const who = (await whoIsBooking(req)) ?? { employeeId: null, name: null };
     const settings = await settingsRow();
     const first = row.customer_name.split(/\s+/)[0];
     const text = [
       `Hi ${first}, here’s your quote ${quoteRef(row.quote_number)} for ${row.bike_name}, for your Cycle to Work scheme through ${row.provider_name}.`,
-      emailClosing(row),
+      emailClosing(row, settings.order_rule),
       settings.how_to_apply ? `How to apply: ${settings.how_to_apply}` : null,
     ].filter(Boolean).join('\n\n');
     const ctx = await currentSession(req);
     await save(res, 200, async () => {
+      // Counted under the customer's lock, so two presses at once can't both slip under five.
+      await db.prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(row.customer_id);
+      const { n } = await db.prepare("SELECT count(*)::int AS n FROM customer_messages WHERE customer_id = ? AND template_key = 'c2w_quote' AND created_at > now() - interval '1 hour'").get(row.customer_id);
+      if (n >= EMAILS_PER_HOUR) throw new Refused(429, TOO_MANY);
       await sendEmailTo({ to, subject: 'Your Cycle to Work quote', body: text, customerId: row.customer_id, loginId: ctx.login.id, templateKey: 'c2w_quote' });
       await addEvent(row.id, 'quote_emailed', who, { detail: { to } });
       return { sent: true, to };
@@ -200,18 +217,21 @@ export function register(route) {
     const body = await readJsonBody(req);
     const who = await whoIsBooking(req);
     if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
-    const costs = await canSeeCosts(req);
     const id = Number(params.id);
+    const tz = await shopTimeZone();
     await save(res, 200, async () => {
-      const today = await shopDay();
+      const today = shopToday(tz);
       const appliedOn = body.appliedOn ?? today;
       if (!isDay(appliedOn) || appliedOn > today) throw new ValidationError('Applied on is a date, today or earlier');
       const employer = optionalWords(body.employer, 'The employer', 120);
       const reference = optionalWords(body.reference, 'The application reference', 60);
       const detail = { appliedOn, ...(employer ? { employer } : {}), ...(reference ? { reference } : {}) };
       // Noon UTC is the same day in the UK all year round.
-      await takeStep(id, 'applied', who, () => ({ applied_at: `${appliedOn}T12:00:00Z`, application_reference: reference }), { detail });
-      return { order: serializeOrder(await loadOrder(id), costs) };
+      await takeStep(id, 'applied', who, (row) => {
+        if (appliedOn < shopToday(tz, new Date(row.quote_given_at))) throw new ValidationError('Applied on is a date on or after the day the quote was given');
+        return { applied_at: `${appliedOn}T12:00:00Z`, application_reference: reference };
+      }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
     });
   });
 }

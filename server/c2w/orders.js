@@ -36,9 +36,16 @@ export function addDays(day, n) {
 // "8 September 2026", as the quote and its email print a date.
 export const longDate = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
-export async function shopDay() {
-  const tz = (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-  return shopToday(tz);
+export const shopTimeZone = async () => (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
+export const shopDay = async () => shopToday(await shopTimeZone());
+
+// How many of the bike are free at the site: its frames in stock there, or, for a
+// bike with no frame numbers, the site's stock figure (design 4). Holding (pull
+// request 5) takes one under a lock and leaves held ones out.
+export async function freeHere(productId, siteId) {
+  const frames = await prepare("SELECT count(*)::int AS known, count(*) FILTER (WHERE state = 'in_stock' AND site_id = ?)::int AS free FROM stock_frames WHERE product_id = ?").get(siteId, productId);
+  if (frames.known > 0) return frames.free;
+  return (await prepare('SELECT qty FROM product_stock WHERE site_id = ? AND product_id = ?').get(siteId, productId))?.qty ?? 0;
 }
 
 // Dates come back as YYYY-MM-DD text, never as a Date at some time zone's midnight.
@@ -53,11 +60,15 @@ export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certif
 
 const iso = (t) => (t ? new Date(t).toISOString() : null);
 
-// Ready to order: the shop's rule says it's time, and no frame is held and
-// nothing is on order for it yet. Holding (pull request 5) and ordering in
-// (pull request 6) fill in the frame and the order line.
+// Not in stock when quoted: the hold was wanted but there was nothing to hold
+// ("Don't hold" is only offered for a bike that's in stock, cw-new). Holding
+// (pull request 5) and ordering in (pull request 6) fill in the frame and the order line.
+export const notInStock = (r) => r.hold_wanted && !r.hold_until_day && !r.frame_id;
+
+// Ready to order: a bike that wasn't in stock, the shop's rule says it's time,
+// and nothing is on order for it yet.
 export function readyToOrder(r, rule) {
-  if (r.frame_id || r.on_order) return false;
+  if (!notInStock(r) || r.on_order) return false;
   if (rule === 'certificate') return r.stage === 'certificate';
   if (rule === 'applied') return r.stage === 'waiting' || r.stage === 'certificate';
   return false;
@@ -75,8 +86,10 @@ export function nextFor(r, rule, today) {
   return null;
 }
 
-export function serializeOrder(r, costs) {
-  const o = {
+// Staff without "Can see costs and margin" still see what's expected (decision H3);
+// the commission is on the provider, and the owed totals are on the list, for costs only.
+export function serializeOrder(r) {
+  return {
     id: r.id, stage: r.stage, quoteNumber: r.quote_number, quoteRef: quoteRef(r.quote_number),
     customerId: r.customer_id, customerName: r.customer_name, providerId: r.provider_id, providerName: r.provider_name,
     productId: r.product_id, bike: r.bike_name, siteId: r.site_id, frameId: r.frame_id,
@@ -86,10 +99,8 @@ export function serializeOrder(r, costs) {
     appliedAt: iso(r.applied_at), applicationReference: r.application_reference,
     certificateNumber: r.certificate_number, certificatePence: r.certificate_pence, certificateReceivedOn: r.certificate_received_on_day,
     saleId: r.sale_id, collectedAt: iso(r.collected_at), paidOn: r.paid_on_day, closeReason: r.close_reason,
+    inStock: !notInStock(r), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
   };
-  // What the provider is expected to pay is the shop's money after commission: a cost.
-  if (costs) Object.assign(o, { expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference });
-  return o;
 }
 
 export async function addEvent(orderId, kind, who, { reason = null, detail = {} } = {}) {
@@ -121,16 +132,19 @@ export async function takeStep(orderId, stepName, who, change, { detail = {}, re
   await addEvent(orderId, stepName, who, { detail, reason });
 }
 
-// The closing paragraph of the quote (cw-quote): held, or just how long it's valid.
-// Not in stock (the "applied" wording) comes with holding, in pull request 5.
-export function quoteClosing(r) {
+// The closing paragraph of the quote (cw-quote, cw-new-not-in-stock; decision H5):
+// the hold, or what makes the shop order the bike, then how long it's valid.
+const orderSentence = (r, rule) => `${r.bike_name} isn’t in stock. We’ll order it once ${rule === 'applied' ? 'you’ve applied' : 'your certificate reaches us'}, and let you know when it arrives.`;
+export function quoteClosing(r, rule) {
   const valid = `This quote is valid until ${longDate(r.valid_until_day)}.`;
   if (r.hold_until_day) return `We’re holding your bike until ${longDate(r.hold_until_day)}. ${valid} Once your certificate reaches us, it’s yours to collect.`;
+  if (notInStock(r)) return `${orderSentence(r, rule)} ${valid}`;
   return valid;
 }
 // The email's middle paragraph (cw-email) says the same with its own last sentence.
-export function emailClosing(r) {
+export function emailClosing(r, rule) {
   const valid = `This quote is valid until ${longDate(r.valid_until_day)}.`;
+  if (notInStock(r)) return `${orderSentence(r, rule)} ${valid}`;
   const tail = 'We’ll let you know as soon as your certificate reaches us.';
   return r.hold_until_day ? `We’re holding your bike until ${longDate(r.hold_until_day)}. ${valid} ${tail}` : `${valid} ${tail}`;
 }
