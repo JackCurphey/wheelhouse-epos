@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -87,13 +87,19 @@ export function BuyingOnline() {
 /** website.mjs PAY: the fold's body for each state, and what coming back from the provider says. */
 export function PayingOnline() {
   const online = useOnlineOrders();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  // What coming back from the provider says, read once and then dropped from
+  // the address, so a reload or a later visit doesn't announce it again.
+  const [back] = useState(() => params.get('payments'));
+  useEffect(() => {
+    if (!params.has('payments')) return;
+    setParams((now) => { const next = new URLSearchParams(now); next.delete('payments'); return next; }, { replace: true });
+  }, [params, setParams]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const p = online.data?.payments;
   if (!p) return null;
   const provider = providerText(p.providerName);
-  const back = params.get('payments');
 
   // Off to the provider's page; it brings the Owner back here.
   async function go(path: string) {
@@ -116,7 +122,7 @@ export function PayingOnline() {
     return (
       <div className="flex flex-col gap-3">
         {p.state === 'failed' ? (
-          <Note tone="bad" live><strong>Not connected.</strong>{` ${provider} didn’t finish connecting, so nothing has changed. Try again — if it keeps happening, ${provider}’s support can see why.`}</Note>
+          <Note tone="bad" live={back === 'failed'}><strong>Not connected.</strong>{` ${provider} didn’t finish connecting, so nothing has changed. Try again — if it keeps happening, ${provider}’s support can see why.`}</Note>
         ) : (
           <Note tone="warn"><strong>Not connected.</strong>{` Customers can’t buy online, “Pay now” for repairs is hidden and booking deposits are off, until you connect ${provider}.`}</Note>
         )}

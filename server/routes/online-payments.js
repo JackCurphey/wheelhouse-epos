@@ -118,10 +118,14 @@ export function register(route) {
     const trip = provider && endTrip(query.get('state'), shopId, 'connect');
     if (!trip) return badRequest(res, 'That link has expired. Press Connect again.');
     const before = await paymentAccount();
+    // Adding details to the same connection keeps who connected it and when, and
+    // its test payment; a new connection (none before, failed, or another
+    // provider's) starts again and asks for a new test payment.
+    const same = isConnected(before) || before?.status === 'needs_details';
     const answer = await provider.connectFinish(query);
     if (!answer.connected) {
       // Cancelling "Add the details" leaves a connected shop as it was: nothing has changed.
-      if (!isConnected(before)) {
+      if (!same) {
         await prepare(
           `INSERT INTO online_payment_account (provider, status) VALUES (?, 'failed')
            ON CONFLICT (shop_id) DO UPDATE SET provider = EXCLUDED.provider, status = 'failed', updated_at = now()
@@ -130,17 +134,25 @@ export function register(route) {
       }
       return redirect(res, `${SETTINGS_PAGE}&payments=failed`);
     }
+    // Asked, not assumed: whether the provider still wants more details by a date.
+    const state = await provider.accountState();
+    const needsBy = state?.needsDetailsBy ?? null;
     await prepare(
-      `INSERT INTO online_payment_account (provider, status, connected_by, connected_at, payout_last4, payout_timing)
-       VALUES (?, 'connected', ?, now(), ?, ?)
-       ON CONFLICT (shop_id) DO UPDATE SET provider = EXCLUDED.provider, status = 'connected',
-         connected_by = EXCLUDED.connected_by, connected_at = EXCLUDED.connected_at,
-         needs_details_by = NULL, needs_what = NULL,
-         payout_last4 = EXCLUDED.payout_last4, payout_timing = EXCLUDED.payout_timing, updated_at = now()
+      `INSERT INTO online_payment_account (provider, status, connected_by, connected_at, needs_details_by, needs_what, payout_last4, payout_timing)
+       VALUES (?, ?, ?, now(), ?, ?, ?, ?)
+       ON CONFLICT (shop_id) DO UPDATE SET provider = EXCLUDED.provider, status = EXCLUDED.status,
+         connected_by = CASE WHEN ? THEN online_payment_account.connected_by ELSE EXCLUDED.connected_by END,
+         connected_at = CASE WHEN ? THEN online_payment_account.connected_at ELSE EXCLUDED.connected_at END,
+         test_paid_at = CASE WHEN ? THEN online_payment_account.test_paid_at END,
+         needs_details_by = EXCLUDED.needs_details_by, needs_what = EXCLUDED.needs_what,
+         payout_last4 = COALESCE(EXCLUDED.payout_last4, CASE WHEN ? THEN online_payment_account.payout_last4 END),
+         payout_timing = COALESCE(EXCLUDED.payout_timing, CASE WHEN ? THEN online_payment_account.payout_timing END),
+         updated_at = now()
    RETURNING shop_id`
-    ).run(provider.name, trip.loginId, answer.payoutLast4, answer.payoutTiming);
+    ).run(provider.name, needsBy ? 'needs_details' : 'connected', trip.loginId, needsBy, state?.needsWhat ?? null,
+      answer.payoutLast4, answer.payoutTiming, same, same, same, same, same);
     // Connecting switches Buying online on (ws-pay-connected); adding details later leaves the Owner's choice.
-    if (!isConnected(before)) await setBuyingOnline(true);
+    if (!same) await setBuyingOnline(true);
     redirect(res, `${SETTINGS_PAGE}&payments=connected`);
   });
 
@@ -152,16 +164,18 @@ export function register(route) {
     const account = await paymentAccount();
     if (!provider || !isConnected(account)) return sendJson(res, 409, NOT_CONNECTED);
     if (account.test_paid_at) return sendJson(res, 409, { error: 'The test payment has already been made.', code: 'already_tested' });
-    const { ref } = await provider.hold({ amountPence: TEST_PENCE, key: `test-payment:${shopId}` });
+    // One payment per connection: connecting again makes a new one.
+    const { ref } = await provider.hold({ amountPence: TEST_PENCE, key: `test-payment:${provider.name}:${new Date(account.connected_at).getTime()}` });
     sendJson(res, 200, { address: provider.payAddress(startTrip({ shopId, kind: 'test', ref })) });
   });
 
   // The pretend card page's answer, then back through the return below.
-  route('GET', '/api/online-payments/pretend-card/pay', async (req, res, params, query) => {
+  route('GET', '/api/online-payments/pretend-card/pay', async (req, res, params, query, afterRelease, shopId) => {
     const provider = payments();
     if (provider?.name !== 'pretend') return notFound(res);
     const trip = trips.get(query.get('state'));
-    if (trip?.kind === 'test') {
+    // Only the shop that started it, within its time; anyone else goes on to the return, which turns them away.
+    if (trip?.kind === 'test' && trip.shopId === shopId && trip.expires >= Date.now()) {
       try {
         await provider.card(trip.ref, query.get('card'));
       } catch (err) {

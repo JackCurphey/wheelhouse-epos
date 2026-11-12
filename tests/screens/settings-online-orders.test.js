@@ -69,6 +69,8 @@ test('ws-pay-connected: back from the provider, connected just now, the test pay
   const box = await area(t);
   const line = await box.findByText('Connected to [payment provider] by Jack Lewis just now');
   assert.ok(line.closest('[role="status"]'));
+  await t.waitFor(() => assert.equal(window.location.search, '?room=front-desk&fold=paying-online'), 'read once, then dropped from the address so a reload doesn’t say it again');
+  assert.ok(box.getByText('Connected to [payment provider] by Jack Lewis just now'), 'still says it after the address changes');
   assert.ok(box.getByRole('heading', { name: 'Make a test payment before customers use it' }));
   assert.ok(box.getByText('Pay £1.00 with your own card to check everything works. It’s refunded; [what the provider charges on a refund].'));
   assert.equal(box.getByRole('switch', { name: 'Buying online' }).getAttribute('aria-checked'), 'true');
@@ -125,4 +127,12 @@ test('ws-pay-more: the provider needs more details by a date, Add the details, a
   assert.equal(box.getByRole('switch', { name: 'Buying online' }).getAttribute('aria-checked'), 'true');
   t.fireEvent.click(box.getByRole('button', { name: 'Add the details at [payment provider]' }));
   await t.waitFor(() => assert.equal(posted('/api/online-payments/connect'), 1));
+});
+
+test('a failed connection opened later, not just back from the provider, is shown but not announced', async () => {
+  const t = await openOnline(account('failed'));
+  const box = await area(t);
+  const said = await box.findByText((_, el) => el?.tagName === 'SPAN' && el.textContent.startsWith('Not connected. [payment provider] didn’t finish connecting'));
+  assert.ok(said.closest('[role="alert"]') === null);
+  assert.ok(box.getByRole('button', { name: 'Try again' }));
 });

@@ -6,6 +6,7 @@
 // there is none, so a shop running Wheelhouse for real never takes a pretend
 // payment, whatever its stored connection says.
 import { prepare } from '../db.js';
+import { shopToday } from '../clock.js';
 
 const PROVIDERS = ['pretend', 'none'];
 
@@ -26,11 +27,15 @@ export async function paymentAccount() {
   return row ?? null;
 }
 
-// Connected, or connected and asked for more details by a date: either way
-// payments still go through until that date (pay-settings-more).
-export const isConnected = (account) => account?.status === 'connected' || account?.status === 'needs_details';
+// Connected, or connected and asked for more details by a date: payments
+// still go through until that date has passed, then stop (ws-pay-more:
+// "or online payments will stop"). The date is the shop's day in the UK.
+export function isConnected(account) {
+  if (account?.status === 'connected') return true;
+  if (account?.status !== 'needs_details') return false;
+  return !account.needs_details_by || account.needs_details_by >= shopToday('Europe/London');
+}
 
-/** Deposits, "Pay now" and Buying online need this shop connected. Runs in the shop's context. */
 /** What Settings and the Website page show: none, connected, tested (the £1 test payment made), failed or more (details wanted). */
 export function paymentsState(account) {
   if (!account) return 'none';
@@ -39,6 +44,7 @@ export function paymentsState(account) {
   return account.test_paid_at ? 'tested' : 'connected';
 }
 
+/** Deposits, "Pay now" and Buying online need this shop connected. Runs in the shop's context. */
 export async function paymentsConnected() {
   return isConnected(await paymentAccount());
 }

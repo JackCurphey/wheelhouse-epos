@@ -1,4 +1,4 @@
-// Migration 136 (openspec/changes/website-management design 6, task 5.1): a
+// Migration 142 (openspec/changes/website-management design 6, task 5.1): a
 // payments connection per shop and the Online orders settings. A shop that
 // already takes booking deposits is marked connected through the pretend
 // provider, the only one there has been; the server's own provider is checked
@@ -16,7 +16,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '136_online_payments_setup.sql';
+const FILE = '142_online_payments_setup.sql';
 const SQL = readFileSync(path.join(ROOT, 'server/migrations', FILE), 'utf8');
 
 function adminUrlOrSkip(t) {
@@ -37,10 +37,10 @@ const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8'
 const one = async (c, sql, args) => (await c.query(sql, args)).rows[0];
 const asShop = (c, id) => c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(id)]);
 
-test('136 makes the payments connection and Online orders settings per shop, marks deposit shops connected, and runs twice', async (t) => {
+test('142 makes the payments connection and Online orders settings per shop, marks deposit shops connected, and runs twice', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig136_${process.pid}`;
+  const name = `epos_mig142_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));

@@ -152,6 +152,59 @@ test('the £1 test payment is one payment of 100p, taken and refunded, even if p
   assert.equal(again.status, 409);
 });
 
+test('connecting again after a test payment asks for a new one, with a new payment', async (t) => {
+  const shop = await freshShop(t, '[Connect again shop]');
+  await connectThrough(shop, 'Finish');
+  await testPaymentThrough(shop);
+  assert.equal((await payments(shop)).state, 'tested');
+  // The connection fails (or another provider's was stored), then the Owner connects again.
+  for (const change of ["status = 'failed'", "provider = 'stripe'"]) {
+    await runWithShop(shop.shop.id, () => prepare(`UPDATE online_payment_account SET ${change}`).run());
+    await connectThrough(shop, 'Finish');
+    assert.equal((await payments(shop)).state, 'connected', `after ${change}, the test payment is asked for again`);
+    assert.equal((await testPaymentThrough(shop)).location, `${SETTINGS_PAGE}&payments=tested`);
+  }
+  const rows = await runWithShop(shop.shop.id, () => prepare('SELECT status FROM pretend_payments').all());
+  assert.equal(rows.length, 3, 'each connection makes its own test payment');
+});
+
+test('Add the details keeps who connected it and when, and asks the provider what it still needs', async (t) => {
+  const shop = await freshShop(t, '[Details shop]');
+  await connectThrough(shop, 'Finish');
+  await runWithShop(shop.shop.id, () => prepare(
+    "UPDATE online_payment_account SET connected_at = '2026-09-01T07:00:00Z', status = 'needs_details', needs_details_by = '2026-09-30', needs_what = '[what they need]'"
+  ).run());
+  const was = await account(shop.shop.id);
+  await connectThrough(shop, 'Finish');
+  const now = await account(shop.shop.id);
+  assert.equal(now.connected_at.toISOString(), was.connected_at.toISOString());
+  assert.equal(now.connected_by, was.connected_by);
+  assert.equal(now.status, 'connected', 'the pretend provider needs nothing more once the details are added');
+});
+
+test('the test card page only pays for the shop that started it', async (t) => {
+  const a = await freshShop(t, '[Card shop A]');
+  const b = await freshShop(t, '[Card shop B]');
+  await connectThrough(a, 'Finish');
+  const { address } = ok(await a.req('/api/online-payments/test-payment', { method: 'POST' }));
+  const pay = a.linkTo((await a.visit(address)).html, 'Pay with the test card that works');
+  const tried = await b.visit(pay);
+  assert.equal(tried.status, 302, 'no server error for another shop');
+  assert.equal((await b.visit(tried.location)).status, 400);
+  const rows = await runWithShop(a.shop.id, () => prepare('SELECT status FROM pretend_payments').all());
+  assert.deepEqual(rows.map((r) => r.status), ['waiting'], 'nothing paid for shop A');
+});
+
+test('once the date for more details has passed, payments stop', async (t) => {
+  const later = await startLiveServer({ env: { WHEELHOUSE_TEST_CLOCK: '2026-10-01T09:00:00Z' } });
+  t.after(() => later.stop());
+  const shop = await freshShop(t, '[Date passed shop]', later);
+  await connectPayments(shop.shop.id, { status: 'needs_details', needsDetailsBy: '2026-09-30' });
+  assert.equal(ok(await shop.req('/api/workshop-settings')).paymentsConnected, false);
+  assert.equal(ok(await shop.req('/api/online-orders-settings')).buyingOnline, false);
+  assert.equal((await shop.req('/api/online-orders-settings', { method: 'PUT', body: { buyingOnline: true } })).status, 409);
+});
+
 test('a declined test card takes nothing and changes nothing; another card can try', async (t) => {
   const shop = await freshShop(t, '[Declined shop]');
   await connectThrough(shop, 'Finish');
@@ -185,6 +238,10 @@ test('only the Owner sees or changes online payments and Buying online', async (
   ]) {
     const res = await staffRequest(server.baseUrl, staff.cookie, path, { method, body });
     assert.equal(res.status, 403, `${method} ${path}`);
+  }
+  for (const path of ['/api/online-payments/return?state=x&outcome=finished', '/api/online-payments/test-payment/return?state=x']) {
+    const res = await staffRequest(server.baseUrl, staff.cookie, path);
+    assert.equal(res.status, 403, path);
   }
 });
 

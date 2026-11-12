@@ -42,8 +42,9 @@ export const pretend = {
   ]),
   // What the provider says when the Owner comes back. Nothing invented: no payout account or timing.
   connectFinish: (query) => ({ connected: query.get('outcome') === 'finished', payoutLast4: null, payoutTiming: null }),
-  // Whether it now wants more details: the pretend provider has nothing to add, so what is stored stands.
-  accountState: async () => undefined,
+  // Whether it still wants more details, asked after the Owner comes back: the
+  // pretend provider never wants any, so finishing on its page settles them.
+  accountState: async () => ({ needsDetailsBy: null, needsWhat: null }),
   // The £1 test payment's card page, answering as Stripe's test cards do.
   payAddress: (state) => `/api/online-payments/pretend-card?state=${q(state)}`,
   payPage: (state) => page('Pay £1.00', [
