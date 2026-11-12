@@ -19,6 +19,7 @@ import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
+import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { QuickButtonsSettings, useQuickButtonsSummary } from './quick-buttons-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
@@ -1045,6 +1046,7 @@ function OwnerSettings() {
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
   const bikeWarranties = useBikeWarrantiesSummary();
+  const payingOnline = usePayingOnlineSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1078,7 +1080,13 @@ function OwnerSettings() {
           { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
           { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
         ] },
-        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        // After End of day, before Cycle to Work, as drawn (settings-frame.mjs roomOf; website.mjs
+        // ONLINE_INTRO, ws-pay-*): Buying online above
+        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
+        { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
+          { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
+        ] },
+        // After Online orders, as drawn (settings-frame.mjs roomOf and c2wFolds; c2w.mjs cw-settings).
         { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
           { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
           { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },
