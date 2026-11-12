@@ -5136,8 +5136,11 @@ Decided here, for Jack to overrule.
    thousands, but a customer's own account limit and a transfer amount fill in
    plain. A spend limit is whole pounds and is built separately: it showed
    "£1,500" on the staff side already and now does on the booking page too.
-   The server's own text (receipts, emails, messages) follows in its own
-   pull request.
+   The server's own text (receipts, emailed and texted amounts, the
+   customer statement, a spending-limit refusal) uses the same grouping from
+   `server/lib/money-text.js` (second pull request); the spreadsheet formatters
+   (`server/lib/report-csv.js`, `shop-data-copy.js`, `customer-data-copy.js`,
+   `penceToPounds`) are deliberately left plain.
 6. **The period choices are drawn as the drawing's chip:** the chosen one
    dark with a tick, the others plain (`reports.mjs:58-61`, `icon('check', 14)`;
    audit M3, "one chip look for every choice"). Each is still a native
