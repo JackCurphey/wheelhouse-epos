@@ -25,7 +25,7 @@ import {
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
 import { currentSession, signedInSession, rememberSession, rememberCustomerSession } from './lib/session.js';
 import { SESSION_COOKIE } from './auth.js';
-import { SITE_OFF, sitePath, isSiteApi, siteRateLimited, handleSiteRequest } from './routes/site.js';
+import { SITE_OFF, SITE_FAILED, sitePath, isSiteApi, siteRateLimited, handleSiteRequest } from './routes/site.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -552,17 +552,20 @@ async function dispatch(req, res) {
     // where "View website" goes; on the shop's own address they see what
     // customers see (Jack's answer 4, 12 Nov). Looked up before runWithShop
     // takes this request's connection, and only when there is a staff cookie.
-    let staff = null;
-    const atStorePath = pathname === `/store/${storefrontSlug}` || pathname.startsWith(`/store/${storefrontSlug}/`);
-    if (atStorePath && parseCookies(req)[SESSION_COOKIE]) {
-      staff = await signedInSession(req);
-      rememberSession(req, staff);
-    }
-    const storefrontShop = await resolveStorefrontShop(req, url, staff?.shop.id);
-    if (!storefrontShop) {
-      return notFound(res, siteApi ? SITE_OFF : 'Storefront not found');
-    }
+    // The whole branch is in one try/catch, the session lookup and the shop
+    // lookup included: a failed read of the website's own answers says
+    // "Something went wrong — try again" (design 2).
     try {
+      let staff = null;
+      const atStorePath = pathname === `/store/${storefrontSlug}` || pathname.startsWith(`/store/${storefrontSlug}/`);
+      if (atStorePath && parseCookies(req)[SESSION_COOKIE]) {
+        staff = await signedInSession(req);
+        rememberSession(req, staff);
+      }
+      const storefrontShop = await resolveStorefrontShop(req, url, staff?.shop.id);
+      if (!storefrontShop) {
+        return notFound(res, siteApi ? SITE_OFF : 'Storefront not found');
+      }
       if (siteApi) {
         const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff));
         if (!answered) notFound(res, 'Unknown website route');
@@ -571,7 +574,9 @@ async function dispatch(req, res) {
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
     } catch (err) {
       console.error(err);
-      sendJson(res, 500, { error: 'Internal server error' });
+      if (res.headersSent) return;
+      if (siteApi) sendJson(res, 503, { error: SITE_FAILED });
+      else sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
   }

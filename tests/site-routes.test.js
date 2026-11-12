@@ -174,6 +174,83 @@ test('preview and canTurnOn are set only for signed-in staff of this shop, with 
   }
 });
 
+const savedPublished = async (shop) => (await runWithShop(shop.shop.id, () => prepare('SELECT published FROM website').get())).published;
+const restorePublished = (shop, published) => runWithShop(shop.shop.id, () => prepare('UPDATE website SET is_on = true, published = ?::jsonb').run(JSON.stringify(published)));
+
+test('preview shows what is published, or the draft when nothing has been published yet', async () => {
+  const marker = `[Draft headline ${randomUUID().slice(0, 8)}]`;
+  const published = await savedPublished(north);
+  await runWithShop(north.shop.id, () => prepare("UPDATE website SET is_on = false, draft = jsonb_set(draft, '{parts,headline,text}', to_jsonb(?::text))").run(marker));
+  try {
+    // Published, then switched off: staff see what customers would, not the unpublished edits.
+    const wasPublished = ok(await site(north, '', { cookie: north.cookie }));
+    assert.equal(wasPublished.preview, true);
+    assert.equal(wasPublished.parts.headline, north.shop.name);
+    assert.ok(!JSON.stringify(wasPublished).includes(marker));
+    // Never published: staff see what Turn it on would publish, the draft
+    // (decided while building, Jack's November file). Customers see nothing.
+    await runWithShop(north.shop.id, () => prepare('UPDATE website SET published = NULL').run());
+    assert.equal(ok(await site(north, '', { cookie: north.cookie })).parts.headline, marker);
+    assert.deepEqual((await site(north)).body, OFF);
+  } finally {
+    await restorePublished(north, published);
+  }
+});
+
+test('a shop that has not opened the Website page yet previews by the old switch', async () => {
+  const fresh = await staffSignup(server.baseUrl, { shopName: 'East Lane Cycles' });
+  try {
+    assert.ok(!(await runWithShop(fresh.shop.id, () => prepare('SELECT 1 FROM website').get())), 'no website row yet');
+    // The old switch (storefront_settings) is off, so its own staff get the banner.
+    const owner = ok(await site(fresh, '', { cookie: fresh.cookie }));
+    assert.equal(owner.preview, true);
+    assert.equal(owner.canTurnOn, true);
+    assert.deepEqual((await site(fresh)).body, OFF);
+  } finally {
+    await deleteTestShop(fresh.shop.id);
+  }
+});
+
+test('twelve staff previews at once each get an answer, more than the server has connections', async () => {
+  // Each request holds one database connection; the staff session found
+  // before it must be reused inside it, not looked up on a second one.
+  await setOn(north, false);
+  try {
+    const answers = await Promise.all(Array.from({ length: 12 }, () => site(north, '', { cookie: jo.cookie })));
+    for (const res of answers) assert.equal(ok(res).preview, true);
+  } finally {
+    await setOn(north, true);
+  }
+});
+
+test('each published part reaches its own place in the answer, and a decoration photo has no description', async () => {
+  const published = await savedPublished(north);
+  const parts = {
+    headline: { text: '[Headline]' },
+    about_line: { text: '[About line]' },
+    big_photo: { photo: '/uploads/[big].jpg', description: '[Big photo description]', decoration: false },
+    shop_words: { text: '[Shop words]', photo: '/uploads/[shop].jpg', description: '[Shop photo description]', decoration: true },
+    workshop_words: { text: '[Workshop words]' },
+    collection_returns: { text: '[Collection and returns]' },
+    privacy: { text: '[Privacy]' },
+  };
+  await runWithShop(north.shop.id, () => prepare("UPDATE website SET published = jsonb_set(published, '{parts}', ?::jsonb)").run(JSON.stringify(parts)));
+  try {
+    assert.deepEqual(ok(await site(north)).parts, {
+      headline: '[Headline]',
+      aboutLine: '[About line]',
+      shopWords: '[Shop words]',
+      bigPhoto: { url: '/uploads/[big].jpg', description: '[Big photo description]' },
+      shopPhoto: { url: '/uploads/[shop].jpg', description: '' },
+      workshopWords: '[Workshop words]',
+      collectionReturns: '[Collection and returns]',
+      privacy: '[Privacy]',
+    });
+  } finally {
+    await restorePublished(north, published);
+  }
+});
+
 test('GET /api/site/categories answers the tree, counting online, active, priced products only', async () => {
   const tree = ok(await site(north, '/categories'));
   const byPath = Object.fromEntries(tree.map((c) => [c.path, c]));
@@ -232,6 +309,16 @@ test("today's hours and the next opening are worked out in the shop's time zone"
     assert.deepEqual(bolton.nextOpening, { date: '2026-09-04', open: '09:00' });
     assert.deepEqual(bolton.closures, [{ from: '2026-09-01', to: '2026-09-03' }]);
     assert.ok(!JSON.stringify(body).includes('staff-only reason'), 'the reason is for staff only');
+  } finally {
+    await runWithShop(north.shop.id, () => prepare('DELETE FROM workshop_unavailability').run());
+  }
+
+  // A mechanic's day off leaves the shop open: it isn't a closure.
+  await runWithShop(north.shop.id, () => prepare("INSERT INTO workshop_unavailability (kind, employee_id, start_date, end_date) VALUES ('dates', (SELECT id FROM employees LIMIT 1), '2026-09-01', '2026-09-01')").run());
+  try {
+    bolton = ok(await site(north)).shops[0];
+    assert.deepEqual(bolton.today, { open: '09:00', close: '17:30' });
+    assert.deepEqual(bolton.closures, []);
   } finally {
     await runWithShop(north.shop.id, () => prepare('DELETE FROM workshop_unavailability').run());
   }

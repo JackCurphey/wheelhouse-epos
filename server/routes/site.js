@@ -10,19 +10,18 @@ import { currentSession } from '../lib/session.js';
 import { shopToday } from '../clock.js';
 import { effectiveHours, openingHoursFor, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
+import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames } from '../website.js';
 
 export const SITE_OFF = 'This website isn’t available';
-const SITE_FAILED = 'Something went wrong — try again';
+export const SITE_FAILED = 'Something went wrong — try again';
 
-// One limit per visitor address for every /api/site route, and suggestions
-// limited apart, as they are asked for at every key press (design 2). The
-// numbers suit a customer browsing: a page asks for two or three answers, so
+// One limit per visitor address for every /api/site route (design 2). The
+// number suits a customer browsing: a page asks for two or three answers, so
 // 300 a minute is a page every second or so (decided while building, Jack's
-// November file).
+// November file). Suggestions get their own limit with their route (PR 2).
 const siteLimiter = makeRateLimiter(300, 60 * 1000);
-const suggestLimiter = makeRateLimiter(120, 60 * 1000);
 
 // The path after /store/<slug> when the website is reached that way, or the
 // path as asked on the shop's own address.
@@ -37,8 +36,7 @@ export function isSiteApi(path) {
 
 /** Turns a visitor away past the limit; true when it answered. Run before any database work. */
 export function siteRateLimited(req, res, path) {
-  const limiter = path === '/api/site/suggest' ? suggestLimiter : siteLimiter;
-  if (limiter.check(clientIp(req))) return false;
+  if (siteLimiter.check(clientIp(req))) return false;
   sendJson(res, 429, { error: 'Too many requests — try again in a minute' });
   return true;
 }
@@ -57,9 +55,14 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
     // A shop whose website is its Shopify shop has no Wheelhouse website (design 2).
     if (website?.kind === 'shopify') return sendJson(res, 404, { error: SITE_OFF }), true;
     // resolveStorefrontShop let a switched-off website through only for this
-    // shop's own staff, so staff and an off website mean the staff preview.
-    const preview = !!staff && !isOn(website);
-    sendJson(res, 200, await handler({ req, shop, website, preview }));
+    // shop's own staff; checking the shop again here keeps a website switched
+    // off a moment later from previewing for another shop's staff.
+    const preview = staff?.shop.id === shop.id && !(await isOn(website));
+    const answer = await handler({ req, shop, website, preview });
+    // Staff and customers ask at the same address, and a preview can carry
+    // the draft: nothing in between may keep an answer.
+    res.setHeader('Cache-Control', 'no-store');
+    sendJson(res, 200, answer);
   } catch (err) {
     // A failed read never stops the server, and the page says so (design 2).
     console.error(err);
@@ -68,7 +71,8 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
   return true;
 }
 
-const isOn = (website) => (website ? website.is_on : true);
+// A shop that hasn't opened the Website page yet has the old switch (as resolveStorefrontShop reads it).
+const isOn = async (website) => (website ? website.is_on : !!(await prepare('SELECT enabled FROM storefront_settings LIMIT 1').get())?.enabled);
 
 const READS = {
   // screens: wb-home, wb-home-lower, wb-home-one-shop, wb-first-visit, wb-off-preview, wb-off-preview-ask, wb-cookies-banner, wb-shops, wb-shop-page, wb-find-us
@@ -131,19 +135,19 @@ async function shopsAnswer() {
 }
 
 const LOOK_AHEAD_DAYS = 62;
-const addDays = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
-// The week's hours, today's in the shop's own time zone or the next opening,
-// and the closures still to come. A closure is a whole-day block with no
-// mechanic (migration 023); its reason is for staff only.
+// The week's hours, today's in the shop's own time zone or the next opening
+// within LOOK_AHEAD_DAYS, and the closures in that time. A closure is a
+// block with no mechanic, always whole days (the shop_all_day check); a
+// mechanic's day off isn't one, and a closure's reason is for staff only.
 async function openingAnswer() {
   const settings = toCapacitySettings(await prepare('SELECT * FROM workshop_settings LIMIT 1').get());
   const today = shopToday(settings.timeZone);
   const closures = (await prepare(
     `SELECT start_date, end_date FROM workshop_unavailability
-      WHERE kind = 'dates' AND employee_id IS NULL AND start_time IS NULL AND end_date >= ?
-      ORDER BY start_date, end_date LIMIT 20`
-  ).all(today)).map((c) => ({ from: c.start_date, to: c.end_date }));
+      WHERE kind = 'dates' AND employee_id IS NULL AND end_date >= ? AND start_date <= ?
+      ORDER BY start_date, end_date`
+  ).all(today, addDays(today, LOOK_AHEAD_DAYS))).map((c) => ({ from: c.start_date, to: c.end_date }));
   const hoursOn = (date) => (closures.some((c) => c.from <= date && date <= c.to) ? null : effectiveHours(settings, weekdayOf(date)));
   const todays = hoursOn(today);
   let nextOpening = null;
@@ -157,7 +161,9 @@ async function openingAnswer() {
   return { hours: openingHoursFor(settings), today: todays, nextOpening, closures };
 }
 
-// Every category, with how many products a customer can see in it and beneath it.
+// Every category, with how many products a customer can see in it and beneath
+// it. A flat list in path order; parentId gives each category's types (its
+// subcategories), from which the screen builds the tree.
 async function categoriesAnswer() {
   const rows = await prepare('SELECT id, name, parent_id, path FROM product_categories ORDER BY path').all();
   const counts = await prepare(
