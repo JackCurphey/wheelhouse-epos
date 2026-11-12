@@ -8,7 +8,7 @@ export const DRAWN_OTHER_WAYS = [
 ];
 
 const literal = (s) => `'${s.replace(/'/g, "''")}'`;
-// Run with the business set, in a transaction of the caller's. Migration 133 does the
+// Run with the business set, in a transaction of the caller's. Migration 140 does the
 // same for businesses already there.
 export const SEED_OTHER_WAYS = `INSERT INTO payment_ways_other (shop_id, name, note, position)
   SELECT current_setting('app.current_shop_id')::int, w.name, w.note, w.position FROM (VALUES

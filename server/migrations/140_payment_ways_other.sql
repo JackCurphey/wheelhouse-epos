@@ -3,7 +3,7 @@
 -- the shop's list of ways to pay that sit under "Other" at the bottom of Take
 -- payment, in order. Settings only for now; the till reads it once Take payment
 -- offers "Other". Additive; running it twice changes nothing for a shop that has rows.
--- (130, 131 and 132 are taken by other pieces in progress.)
+-- (First written as 133; renumbered to 140, after main's 137 and the End of day piece's 139, with 138 reserved.)
 
 CREATE TABLE IF NOT EXISTS payment_ways_other (
   id SERIAL PRIMARY KEY,

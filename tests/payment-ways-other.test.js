@@ -22,7 +22,7 @@ import { deleteTestShop } from './helpers/testShop.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '133_payment_ways_other.sql';
+const FILE = '140_payment_ways_other.sql';
 const LATER = readdirSync(path.join(ROOT, 'server/migrations')).filter((f) => f.endsWith('.sql') && f >= FILE);
 // The drawn rows and their lines (setup.mjs payOther).
 const DRAWN = [
@@ -61,10 +61,10 @@ async function scratch(t, tag) {
 
 // ---------- The migration ----------
 
-test('133 seeds Finance, Cycle to Work and Payment link with their lines for every shop; each shop sees only its own', async (t) => {
+test('140 seeds Finance, Cycle to Work and Payment link with their lines for every shop; each shop sees only its own', async (t) => {
   const db = await scratch(t, 'seed');
   if (!db) return;
-  // Everything before 133, from empty.
+  // Everything before 140, from empty.
   await withClient(db.url, async (c) => {
     await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
     for (const f of LATER) await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [f]);
