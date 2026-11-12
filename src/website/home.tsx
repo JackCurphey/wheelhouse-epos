@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
 import { bookPath } from './address.ts';
 import { useCategories, useHome, useSiteContext } from './site-query.ts';
+import { usePageTitle } from './pages.tsx';
 import { Box, CategoryCard, Failed, Grid, H2, MoreLink, ProductCard, Section, ShopCards, linkButton, topCategories } from './parts.tsx';
 
 /**
@@ -12,6 +13,7 @@ import { Box, CategoryCard, Failed, Grid, H2, MoreLink, ProductCard, Section, Sh
  * in it is left out (spec: "An empty section is left out").
  */
 export function HomePage() {
+  usePageTitle(null);
   const { address, site, chosen, several } = useSiteContext();
   const categories = useCategories(address);
   const home = useHome(address, chosen?.id ?? null);

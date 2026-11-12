@@ -64,7 +64,7 @@ test('the shell on a computer (site): skip link, name, menu, search, chip, Accou
   const links = [...footer.querySelectorAll('a')];
   assert.deepEqual(links.map((a) => a.textContent), ['Contact us', 'Collection and returns', 'Privacy', 'Cookies']);
   assert.deepEqual(links.map(href), [`${BASE}/contact`, `${BASE}/collection-returns`, `${BASE}/privacy`, `${BASE}/cookies`]);
-  assert.equal(document.title, 'North Street Cycles');
+  assert.equal(document.title, 'Shop · North Street Cycles');
 });
 
 test('the chip names the chosen shop from the wh_shop cookie, and ignores a shop the business doesn’t have', async () => {
@@ -189,4 +189,14 @@ test('Book a repair names the chosen shop when there are several', async () => {
   r = await renderWebsite({ cookie: 'wh_shop=2' });
   const nav = await r.ui.findByRole('navigation', { name: 'Website' });
   assert.equal(href([...nav.querySelectorAll('a')][1]), '/book/north?site=2');
+});
+
+test('following a link moves focus to the new page, as a full page load would', async () => {
+  r = await renderWebsite({ url: '/' });
+  const { fireEvent } = await import('@testing-library/react');
+  const nav = await r.ui.findByRole('navigation', { name: 'Website' });
+  assert.ok(document.activeElement !== document.getElementById('main-content'), 'not on first load');
+  fireEvent.click(nav.querySelector('a'));
+  await r.ui.findByRole('heading', { level: 1, name: 'Shop' });
+  assert.ok(document.activeElement === document.getElementById('main-content'));
 });

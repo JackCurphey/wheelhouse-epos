@@ -7,6 +7,7 @@ import { siteAddress } from './address.ts';
 import { SiteLayout } from './shell.tsx';
 import { H1 } from './parts.tsx';
 import { HomePage } from './home.tsx';
+import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 
 /**
  * The customer website app (openspec/changes/website-browse, design 3): the
@@ -25,8 +26,6 @@ function RouteErrorBoundary() {
   );
 }
 
-const Empty = () => null;
-
 export const websiteRoutes: RouteObject[] = [
   {
     path: '/',
@@ -34,8 +33,12 @@ export const websiteRoutes: RouteObject[] = [
     ErrorBoundary: RouteErrorBoundary,
     children: [
       { index: true, Component: HomePage },
-      { path: 'shop', Component: Empty },
-      { path: '*', Component: Empty },
+      { path: 'shop', Component: ShopPage },
+      { path: 'contact', Component: ContactPage },
+      { path: 'collection-returns', Component: CollectionReturnsPage },
+      { path: 'privacy', Component: PrivacyPage },
+      { path: 'basket', Component: BasketPage },
+      { path: '*', Component: NotFoundPage },
     ],
   },
 ];

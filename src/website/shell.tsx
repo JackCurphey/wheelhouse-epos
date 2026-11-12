@@ -124,8 +124,6 @@ function Frame() {
   const location = useLocation();
   const first = useRef(true);
 
-  useEffect(() => { document.title = site.name; }, [site.name]);
-
   // A new page: close the menu and move focus to the page, as a full page load would.
   useEffect(() => {
     if (first.current) { first.current = false; return; }

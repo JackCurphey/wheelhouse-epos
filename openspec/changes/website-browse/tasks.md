@@ -35,11 +35,11 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 3.3 Screen test: the phone menu (site-menu) opens, closes on Esc and returns focus
 - [x] 3.4 Screen test: the main colour (site-ocean, site-ocean-menu) and "Find us" with one shop
 - [x] 3.5 Screen tests: wb-home, wb-home-lower, wb-home-one-shop and wb-first-visit with the drawn example data; an empty section is left out; featured products are the newest four with a photo
-- [ ] 3.6 Screen test: wb-shop lists the categories with their subcategories
-- [ ] 3.7 Screen tests: wb-not-found and wb-off
-- [ ] 3.8 Screen tests: Collection and returns, Privacy and Contact us show the published words and the shops' details
-- [ ] 3.9 Basket and Add to basket open the basket path's "can't take orders online yet" message until WP-6.3 (written line 1); log it in this month's decided-while-building file
-- [ ] 3.10 Build `src/website/` (shell, home, Shop, not found, off, footer pages)
+- [x] 3.6 Screen test: wb-shop lists the categories with their subcategories
+- [x] 3.7 Screen tests: wb-not-found and wb-off
+- [x] 3.8 Screen tests: Collection and returns, Privacy and Contact us show the published words and the shops' details
+- [x] 3.9 Basket and Add to basket open the basket path's "can't take orders online yet" message until WP-6.3 (written line 1); log it in this month's decided-while-building file
+- [x] 3.10 Build `src/website/` (shell, home, Shop, not found, off, footer pages)
 - [ ] 3.11 Browser test: the home page on a phone and a computer
 - [ ] 3.12 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
