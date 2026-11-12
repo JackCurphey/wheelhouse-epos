@@ -53,10 +53,12 @@ const shortLines = async (owner) => {
 
 test('the Owner sets the float in whole pence; until then it is not set', async () => {
   const owner = await shop({ float: null });
-  assert.deepEqual((await call(owner, '/api/end-of-day-settings')).body, { floatPence: null });
+  // End of day's other settings, as a new shop starts (owner-setup-till-payments-eod design 3).
+  const rest = { closeEntryMinutes: 30, countFirst: true };
+  assert.deepEqual((await call(owner, '/api/end-of-day-settings')).body, { floatPence: null, ...rest });
   const saved = await call(owner, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: FLOAT } });
-  assert.deepEqual([saved.status, saved.body], [200, { floatPence: FLOAT }]);
-  assert.deepEqual((await call(owner, '/api/end-of-day-settings')).body, { floatPence: FLOAT });
+  assert.deepEqual([saved.status, saved.body], [200, { floatPence: FLOAT, ...rest }]);
+  assert.deepEqual((await call(owner, '/api/end-of-day-settings')).body, { floatPence: FLOAT, ...rest });
   for (const bad of [12.5, -1, '15000', null, 10_000_001]) {
     const res = await call(owner, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: bad } });
     assert.equal(res.status, 400, `${JSON.stringify(bad)}: ${JSON.stringify(res.body)}`);
@@ -64,7 +66,7 @@ test('the Owner sets the float in whole pence; until then it is not set', async 
   assert.equal((await call(owner, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: 0 } })).status, 200);
   const jo = await teamMember(owner, 'Jo Taylor', { isCashier: true });
   assert.equal((await call(jo, '/api/end-of-day-settings', { method: 'PUT', body: { floatPence: FLOAT } })).status, 403);
-  assert.deepEqual((await call(jo, '/api/end-of-day-settings')).body, { floatPence: 0 });
+  assert.deepEqual((await call(jo, '/api/end-of-day-settings')).body, { floatPence: 0, ...rest });
 });
 
 test('on the first day the float must be counted; the count is kept with who and when', async () => {
