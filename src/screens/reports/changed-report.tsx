@@ -138,7 +138,7 @@ export function ChangedReportPage() {
       {answer.isError ? <Refusal error={answer.error} /> : null}
       {report ? (
         report.empty ? (
-          <Box><div className="flex flex-col items-center gap-2 px-3 py-9 text-center"><span className="text-size-17 font-bold">Nothing sold in this period</span><Note>Nothing matches what you chose for these dates.</Note></div></Box>
+          <Box><div className="flex flex-col items-center gap-2 px-3 py-9 text-center"><span className="text-size-17 font-bold">Nothing to show in this period</span><Note>Nothing matches what you chose for this period.</Note></div></Box>
         ) : (
           <Box>
             {showGraphs ? (

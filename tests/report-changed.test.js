@@ -330,3 +330,15 @@ test('Takings sits beside any measure that is not Takings', async () => {
   const res = await changed('base=sales&measure=items&split=day&period=this-week');
   assert.deepEqual(res.body.columns, ['Day', 'Items sold', 'Takings']);
 });
+
+test('the same choices on a later date open on the latest period: a saved This week shows the new week', async () => {
+  const { changedReport } = await import('../server/lib/report-changed.js');
+  const query = () => new URLSearchParams('base=sales&measure=takings&split=day&period=this-week');
+  const [thisWeek, nextWeek] = await runWithShop(owner.shop.id, async () => [
+    await changedReport(query(), '2026-09-17', { canSeeCosts: true }),
+    await changedReport(query(), '2026-09-24', { canSeeCosts: true }),
+  ]);
+  assert.equal(thisWeek.period.from, '2026-09-14');
+  assert.equal(nextWeek.period.from, '2026-09-21');
+  assert.equal(nextWeek.period.label, 'So far: Mon 21 – Thu 24 September');
+});
