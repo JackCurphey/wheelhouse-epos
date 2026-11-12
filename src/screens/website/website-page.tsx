@@ -63,7 +63,6 @@ export function WebsitePage() {
 
   return (
     <Page>
-      <h1 className="m-0 text-size-22 font-bold">Website</h1>
       <div role="status">{toast ? <Toast state={toast} address={customerSite(s.address)} /> : null}</div>
       {problem ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{problem}</p> : null}
 
