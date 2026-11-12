@@ -26,14 +26,14 @@ Front desk › Cycle to Work SHALL list the open orders grouped under "Waiting f
 - **THEN** it is listed under "Ready to collect" with "Hand over"
 
 ### Requirement: The list's top line says what needs doing
-The list SHALL start with a line naming what needs acting on, in the drawn words: "[n] hold ending soon" or "[n] hold ended — choose", "[n] bike ready to order", "[n] payment late". For someone who can see costs it SHALL also say "Owed by providers £[£] · [n] late".
+The list SHALL start with a line naming what needs acting on, in the drawn words: "[n] hold ending soon" or "[n] hold ended — choose", "[n] bike ready to order", "[n] payment late", and the quotes with no certificate after the days set in Settings (decision M3). For someone who can see costs it SHALL also say "Owed by providers £[£] · [n] late" (decision M6).
 
 #### Scenario: Staff don't see the owed total
 - **WHEN** Jo Taylor, who can't see costs and margin, opens the list
 - **THEN** the top line has no "Owed by providers" total
 
 ### Requirement: The sidebar shows how many orders need acting on
-Cycle to Work in the Front desk sidebar SHALL show a count of the orders that need someone to act.
+Cycle to Work in the Front desk sidebar SHALL show a count of the orders that need someone to act: holds ending, bikes ready to order, quotes with no certificate after the days set, and payments late (decision M3), each order counted once.
 
 #### Scenario: A hold ending adds to the count
 - **WHEN** one hold ends within the reminder days and nothing else needs acting on
@@ -157,7 +157,7 @@ When the certificate arrives for an order whose bike was released, the box SHALL
 - **THEN** the box has no ticks and still offers "Hand over at the till"
 
 ### Requirement: The provider's expected payment
-A collected order SHALL show "Expected: £[£] by [date]": what the provider pays less its commission, by the collection date plus the provider's days to pay. Someone who can't see costs and margin SHALL see neither the commission nor the expected amount.
+A collected order SHALL show "Expected: £[£] by [date]": what the provider pays less its commission, by the collection date plus the provider's days to pay. Someone who can't see costs and margin SHALL not see the commission, but still sees what's expected (decision H3).
 
 #### Scenario: The date comes from the provider's terms
 - **WHEN** the provider pays in about [n] days and the bike is collected
@@ -206,11 +206,11 @@ Anyone signed in SHALL be able to cancel an order with no deposit. For an order 
 - **THEN** the order is cancelled
 
 ### Requirement: Costs and commission are hidden without permission
-Someone without "Can see costs and margin" SHALL see no cost price, commission or expected payment anywhere in Cycle to Work, and the server SHALL leave them out of its replies.
+Someone without "Can see costs and margin" SHALL see no cost price, commission or owed totals anywhere in Cycle to Work, and the server SHALL leave them out of its replies. They still see what each provider is expected to pay for an order (decision H3).
 
 #### Scenario: The order reply leaves out commission
 - **WHEN** Jo Taylor opens an order
-- **THEN** the reply carries no commission or expected amount
+- **THEN** the reply carries no commission, and does carry the expected amount and date
 
 ### Requirement: The customer can see their order through a private link
 Each order SHALL have a private "See your order" link that opens "Your Cycle to Work bike" without signing in, showing the quote number, shop, provider, the line for its state, Bike, Accessories and "Total (includes VAT)", with "See your quote" and "Ask the shop a question". It SHALL never show commission or staff names.
