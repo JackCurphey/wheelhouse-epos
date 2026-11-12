@@ -479,3 +479,45 @@ test('a search that finds nothing answers empty', async () => {
   // Another shop's products are never found.
   assert.equal(ok(await site(south, '/search', { q: 'brake' })).total, 0);
 });
+
+test('the home page answers the newest four online products with a photo, and the repairs with prices as the booking site shows them', async () => {
+  // Lights added after everything else: five with a photo, one without, one switched off.
+  const lights = [];
+  await runWithShop(north.shop.id, async () => {
+    await prepare("INSERT INTO product_categories (name, path) VALUES ('[Lights]', '[Lights]')").run();
+    const add = async (n, extra = {}) => (await prepare(
+      `INSERT INTO products (sku, name, category, price, cost, photo_url, show_online, active, created_at, updated_at)
+       VALUES (?, ?, '[Lights]', 10, 1, ?, ?, 1, ?::timestamptz, now()) RETURNING id`
+    ).get(`[light ${n}]`, `[Light ${n}]`, extra.photo === undefined ? `/uploads/[light ${n}].jpg` : extra.photo, extra.online ?? true, new Date(Date.UTC(2026, 8, 1, 2, n)).toISOString())).id;
+    for (const n of [1, 2, 3, 4, 5]) lights.push(await add(n));
+    lights.push(await add(6, { photo: null }));
+    lights.push(await add(7, { online: false }));
+    await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 2) RETURNING product_id').get(ids.bolton, lights[4]);
+  });
+  try {
+    const home = ok(await site(north, '/home', { shop: ids.bolton }));
+    assert.deepEqual(home.featured.map((p) => p.name), ['[Light 5]', '[Light 4]', '[Light 3]', '[Light 2]']);
+    assert.equal(home.featured[0].photo, '/uploads/[light 5].jpg');
+    assert.equal(home.featured[0].pricePence, 1000);
+    assert.deepEqual(home.featured[0].stock, { line: 'ready', shop: 'Bolton' });
+    assert.deepEqual(home.featured[1].stock, { line: 'sold-out', shop: 'Bolton' });
+    // Only the services booked online and switched on, priced because the shop shows prices online.
+    assert.deepEqual(home.repairs, [{ id: home.repairs[0].id, name: 'Brake service', pricePence: 3500 }]);
+    // Never cost or supplier.
+    assert.ok(!JSON.stringify(home).includes('cost'));
+    // No shop chosen: no stock line.
+    assert.deepEqual(ok(await site(north, '/home')).featured[0].stock, { line: 'none' });
+    await runWithShop(north.shop.id, () => prepare('UPDATE workshop_settings SET show_prices_online = 0').run());
+    assert.deepEqual(ok(await site(north, '/home')).repairs.map((r) => r.pricePence), [null]);
+    // Another shop's products and services are never in it.
+    const southHome = ok(await site(south, '/home'));
+    assert.deepEqual(southHome, { featured: [], repairs: [] });
+  } finally {
+    await runWithShop(north.shop.id, async () => {
+      await prepare('UPDATE workshop_settings SET show_prices_online = 1').run();
+      await prepare('DELETE FROM product_stock WHERE product_id = ANY(?::int[])').run(lights);
+      await prepare('DELETE FROM products WHERE id = ANY(?::int[])').run(lights);
+      await prepare("DELETE FROM product_categories WHERE path = '[Lights]'").run();
+    });
+  }
+});

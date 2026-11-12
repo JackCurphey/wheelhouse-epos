@@ -14,7 +14,7 @@ import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames } from '../website.js';
 import { JOIN } from '../lib/categories.js';
-import { NotFound, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
+import { NotFound, homeAnswer, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
 
 export const SITE_OFF = 'This website isn’t available';
 export const SITE_FAILED = 'Something went wrong — try again';
@@ -86,6 +86,8 @@ const isOn = async (website) => (website ? website.is_on : !!(await prepare('SEL
 const READS = {
   // screens: wb-home, wb-home-lower, wb-home-one-shop, wb-first-visit, wb-off-preview, wb-off-preview-ask, wb-cookies-banner, wb-shops, wb-shop-page, wb-find-us
   '/api/site': siteAnswer,
+  // screens: wb-home, wb-home-lower, wb-home-one-shop, wb-first-visit
+  '/api/site/home': homeAnswer,
   // screens: wb-shop, wb-home
   '/api/site/categories': categoriesAnswer,
   // screens: wb-category, wb-category-filtered, wb-category-empty, wb-category-no-shop, wb-category-parent, wb-category-child

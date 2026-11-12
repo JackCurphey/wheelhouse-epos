@@ -292,9 +292,13 @@ const named = (name, words) => words.length > 0 && words.every((w) => lower(name
 
 async function repairsFor(words) {
   if (!words.length) return [];
+  return (await bookableRepairs()).filter((s) => named(s.name, words));
+}
+// The workshop's services booked online, priced only where the shop shows prices online (as the booking site does).
+async function bookableRepairs() {
   const prices = !!(await prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get())?.show_prices_online;
   const all = await prepare('SELECT id, name, price_pence FROM workshop_services WHERE active = 1 AND bookable_online = 1 ORDER BY name, id').all();
-  return all.filter((s) => named(s.name, words)).map((s) => ({ id: s.id, name: s.name, pricePence: prices ? s.price_pence : null }));
+  return all.map((s) => ({ id: s.id, name: s.name, pricePence: prices ? s.price_pence : null }));
 }
 const pagesFor = (words) => PAGES.filter((p) => named(p.name, words));
 
@@ -355,6 +359,18 @@ export async function searchAnswer({ query }) {
       detail: { id: measure.detail.id, name: measure.detail.name, unit: measure.detail.unit },
       value: measure.value,
     },
+  };
+}
+
+const FEATURED = 4;
+
+/** GET /api/site/home?shop=: the newest four online products with a photo, until the editor lets the shop choose (written line 2), and the repairs. */
+export async function homeAnswer({ query }) {
+  const ctx = await catalogue(query, { light: true });
+  const withPhoto = ctx.units.filter((u) => u.photo ?? u.items.some((i) => i.photo_url));
+  return {
+    featured: withPhoto.sort(SORTS.newest).slice(0, FEATURED).map((u) => card(u, ctx)),
+    repairs: await bookableRepairs(),
   };
 }
 
