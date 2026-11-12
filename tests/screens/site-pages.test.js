@@ -76,6 +76,34 @@ test('a failed read of the site says so, and Try again asks again', async () => 
   assert.ok(await ui.findByRole('navigation', { name: 'Website' }));
 });
 
+test('a server failure is asked again by the app’s own rule before saying so', async () => {
+  // The page leaves retrying to the query client (app-shell.tsx): a 503 is asked again.
+  let calls = 0;
+  r = await renderWebsite({ retry: 1, site: () => (++calls === 1 ? { status: 503, body: { error: 'Something went wrong — try again' } } : { status: 200, body: TWO_SHOPS }) });
+  assert.ok(await r.ui.findByRole('navigation', { name: 'Website' }));
+  assert.equal(calls, 2);
+});
+
+test('a page that breaks while drawing says so with Try again, which reloads the page', async () => {
+  // A site answer the page can't draw (no shops list) stands in for any fault in a page.
+  const realError = console.error;
+  console.error = () => {};
+  try {
+    r = await renderWebsite({ site: { ...TWO_SHOPS, shops: null } });
+    assert.ok(await r.ui.findByRole('heading', { level: 1, name: 'Something went wrong — try again' }));
+    assert.ok(r.ui.getByRole('button', { name: 'Try again' }));
+  } finally {
+    console.error = realError;
+  }
+});
+
+test('an address with a broken escape in the shop’s part still gives an address, not a crash', async () => {
+  const { siteAddress } = await import(new URL('../../.test-build/website/address.js', import.meta.url).href);
+  const address = siteAddress({ pathname: '/store/%E0%A4%A/', search: '', hostname: 'localhost' });
+  assert.deepEqual(address, { base: '/store/%E0%A4%A', slug: '%E0%A4%A', storefrontSlug: null });
+  assert.equal(siteAddress({ pathname: '/store/caf%C3%A9/', search: '', hostname: 'localhost' }).slug, 'café');
+});
+
 test('Collection and returns shows the shop’s published words', async () => {
   r = await renderWebsite({ url: '/collection-returns' });
   assert.ok(await r.ui.findByRole('heading', { level: 1, name: 'Collection and returns' }));

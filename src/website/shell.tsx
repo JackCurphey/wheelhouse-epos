@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Menu, Search, ShoppingBasket, Store, User, X } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
@@ -27,14 +27,12 @@ const SOFT_SAND_CHARCOAL = '#' + '2A2822';
 const WHITE = 'var(--wh-on-brand)';
 
 function useMedia(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
-      mq?.addEventListener('change', onChange);
-      return () => mq?.removeEventListener('change', onChange);
-    },
-    () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
-  );
+  const subscribe = useCallback((onChange: () => void) => {
+    const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
+    mq?.addEventListener('change', onChange);
+    return () => mq?.removeEventListener('change', onChange);
+  }, [query]);
+  return useSyncExternalStore(subscribe, () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false));
 }
 
 export const oceanColour = (site: Site): string | null =>
@@ -58,7 +56,7 @@ export function SiteOff() {
 }
 
 /** The site itself couldn't be read: the server's words and a way to ask again. */
-function SiteFailed({ onRetry }: { onRetry: () => void }) {
+export function SiteFailed({ onRetry }: { onRetry: () => void }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center text-[var(--wh-ink)]">
       <H1>Something went wrong — try again</H1>

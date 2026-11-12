@@ -1,7 +1,8 @@
 // Renders the customer website (src/website/, openspec/changes/website-browse)
 // in jsdom, the way the website app mounts it: its routes (`websiteRoutes`
 // from the app shell, test build) in a memory router whose basename is
-// /store/north, with a query client that never retries. `url` is the page's
+// /store/north, with a query client that never retries unless `retry` says
+// how many times (a number, or the app's own rule), with no wait between. `url` is the page's
 // path under the shop, e.g. '/' or '/shop'.
 //
 // Every fetch is answered at once and recorded in `requests` ({url, method}).
@@ -65,7 +66,7 @@ export const HOME = (stock) => ({
   ],
 });
 
-export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), media, cookie, strict = false } = {}) {
+export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), media, cookie, strict = false, retry = false } = {}) {
   const uninstall = installDom(`http://localhost${BASE}${url}`);
   if (media) window.matchMedia = (q) => ({ matches: media(q), media: q, addEventListener() {}, removeEventListener() {} });
   if (cookie) document.cookie = cookie;
@@ -89,7 +90,7 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
   const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
   const { websiteRoutes } = await importFresh(new URL('website/app-shell.js', BUILD).href);
   const router = createMemoryRouter(websiteRoutes, { initialEntries: [`${BASE}${url}`], basename: BASE });
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry, retryDelay: 0, gcTime: Infinity } } });
   const tree = h(QueryClientProvider, { client }, h(RouterProvider, { router }));
   const ui = render(strict ? h(StrictMode, null, tree) : tree);
   return { ui, client, router, uninstall, requests };

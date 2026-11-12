@@ -4,8 +4,7 @@ import { createBrowserRouter, useRouteError, type RouteObject } from 'react-rout
 import { RouterProvider } from 'react-router/dom';
 import { ApiError } from '@/lib/api/client.ts';
 import { siteAddress } from './address.ts';
-import { SiteLayout } from './shell.tsx';
-import { H1 } from './parts.tsx';
+import { SiteFailed, SiteLayout } from './shell.tsx';
 import { HomePage } from './home.tsx';
 import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 
@@ -19,11 +18,8 @@ import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPa
 function RouteErrorBoundary() {
   const error = useRouteError();
   console.error(error);
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
-      <H1>Something went wrong — try again</H1>
-    </main>
-  );
+  // A page that broke while drawing: asking again is loading the page again.
+  return <SiteFailed onRetry={() => window.location.reload()} />;
 }
 
 export const websiteRoutes: RouteObject[] = [

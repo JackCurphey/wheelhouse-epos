@@ -423,9 +423,6 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     if (bookSlug && bookSlug !== shop.slug) return notFound(res, 'Storefront not found');
     return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
-  // The React apps' built files (Vite's /dist/): on the shop's own address
-  // every path reaches here, the website app's own scripts included.
-  if (pathname.startsWith('/dist/')) return serveStatic(req, res, pathname, PUBLIC_DIR);
   const storePrefix = `/store/${shop.slug}`;
   // The website app's router reads its addresses under /store/<slug>/, so
   // the bare store path goes to the slash form, keeping the query.
@@ -548,6 +545,11 @@ async function dispatch(req, res) {
   }
 
   const storefrontSlug = parseStorefrontSlugCandidate(req, url);
+  // The React apps' built files (Vite's /dist/) are the same for every shop:
+  // on a shop's own address every path lands here, and the website app's
+  // script must load even for a switched-off or unknown shop, whose 404 page
+  // needs it to say "This website isn't available" (wb-off).
+  if (storefrontSlug && pathname.startsWith('/dist/')) return serveStatic(req, res, pathname, PUBLIC_DIR);
   if (storefrontSlug) {
     const sitePathname = sitePath(pathname, storefrontSlug);
     const siteApi = isSiteApi(sitePathname);
@@ -572,9 +574,9 @@ async function dispatch(req, res) {
       if (!storefrontShop) {
         if (siteApi) return notFound(res, SITE_OFF);
         // A page of the website gets the website's own page with a 404; the
-        // old JSON answer stays for the storefront API, the booking app and
-        // the built files, which aren't pages of the website.
-        const notAPage = pathname.startsWith('/api/') || pathname.startsWith('/dist/') || pathname === '/book' || pathname.startsWith('/book/');
+        // old JSON answer stays for the storefront API and the booking app,
+        // which aren't pages of the website.
+        const notAPage = pathname.startsWith('/api/') || pathname === '/book' || pathname.startsWith('/book/');
         if (notAPage) return notFound(res, 'Storefront not found');
         return serveWebsitePage(res, 404);
       }

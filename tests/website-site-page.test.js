@@ -6,10 +6,12 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import http from 'node:http';
 import '../server/load-env.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { STOREFRONT_BASE_DOMAIN } from '../server/storefront.js';
 
 let server;
 let on;
@@ -88,5 +90,32 @@ test('the website app script it names is really there, on the shop’s own addre
     assert.equal(res.status, 200, suffix);
     assert.match(res.headers.get('content-type') || '', /javascript/, suffix);
     await res.arrayBuffer();
+  }
+});
+
+// fetch can't set Host, so the shop's own address (<slug>.<base domain>) is asked with node:http.
+function onHost(host, path) {
+  const { hostname, port } = new URL(server.baseUrl);
+  return new Promise((resolve, reject) => {
+    const req = http.request({ hostname, port, path, headers: { host } }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => resolve({ status: res.statusCode, type: res.headers['content-type'] || '', body }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+test('a switched-off or unknown shop’s own address still loads the website app’s script, so wb-off shows', async () => {
+  for (const slug of [off.shop.slug, 'no-such-shop-anywhere']) {
+    const host = `${slug}.${STOREFRONT_BASE_DOMAIN}`;
+    const page = await onHost(host, '/');
+    assert.equal(page.status, 404, host);
+    assert.ok(page.body.includes(`src="${websiteScript}"`), `no website entry script at ${host}`);
+    const script = await onHost(host, websiteScript);
+    assert.equal(script.status, 200, `${host}${websiteScript}`);
+    assert.match(script.type, /javascript/, host);
   }
 });

@@ -11,9 +11,14 @@
  */
 export type SiteAddress = { base: string; slug: string; storefrontSlug: string | null };
 
+/** The slug as written, when its escapes don't decode: no shop has it, and the page says so (wb-off). */
+function decoded(part: string): string {
+  try { return decodeURIComponent(part); } catch { return part; }
+}
+
 export function siteAddress(location: { pathname: string; search: string; hostname: string } = window.location): SiteAddress {
   const store = /^\/store\/([^/]+)/.exec(location.pathname);
-  if (store) return { base: `/store/${store[1]}`, slug: decodeURIComponent(store[1]), storefrontSlug: null };
+  if (store) return { base: `/store/${store[1]}`, slug: decoded(store[1]), storefrontSlug: null };
   const storefrontSlug = new URLSearchParams(location.search).get('storefrontSlug');
   return { base: '', slug: storefrontSlug ?? location.hostname.split('.')[0] ?? '', storefrontSlug };
 }

@@ -60,7 +60,8 @@ export type Home = { featured: ProductCardData[]; repairs: Repair[] };
 
 export const hasDetails = (shop: ShopEntry): shop is FirstShop => 'address' in shop;
 
-const once = { retry: false, refetchOnWindowFocus: false } as const;
+// Retrying is the query client's rule (app-shell.tsx): server and network failures, not a 4xx.
+const once = { refetchOnWindowFocus: false } as const;
 
 export function useSite(address: SiteAddress) {
   return useQuery({ queryKey: ['site', address.base], queryFn: () => apiGet<Site>(apiPath(address, '/api/site')), ...once });
