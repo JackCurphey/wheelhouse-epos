@@ -7,6 +7,7 @@ import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, PeriodChips
 import { compareWords, count, longDate, money, type SalesReport } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
+import { ChangeWhatsShown } from './change-panel.tsx';
 
 /**
  * Sales (rp-sales, rp-sales-year, rp-sales-empty and rp-pick-dates in
@@ -93,7 +94,10 @@ export function SalesReportPage() {
           <h2 className="m-0 text-xl font-bold">Sales</h2>
           {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
         </div>
-        <DownloadButton path={`/api/reports/sales.csv?${query}`} />
+        <div className="flex flex-wrap items-start gap-2">
+          <ChangeWhatsShown base="sales" period={new URLSearchParams(query)} />
+          <DownloadButton path={`/api/reports/sales.csv?${query}`} />
+        </div>
       </div>
       <PeriodChips value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
       {sales.isError ? <Refusal error={sales.error} /> : null}

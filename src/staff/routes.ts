@@ -38,6 +38,9 @@ export const ROUTES = {
   'rp-takings': '/workshop/reports/takings',
   // Workshop (rp-workshop): jobs, workshop takings, quotes and how full each mechanic was.
   'rp-workshop': '/workshop/reports/workshop',
+  // A changed report (rp-changed), from "Change what's shown" on Sales or Takings and cash-ups
+  // (openspec/changes/reports-your-own); its choices and period are in the address.
+  'rp-changed': '/workshop/reports/changed',
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',
