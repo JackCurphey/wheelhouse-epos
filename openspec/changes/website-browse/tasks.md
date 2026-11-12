@@ -31,9 +31,9 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 ## 3. Risky — the website app: shell, home, Shop, not found, off, footer pages
 
 - [ ] 3.1 Add the `website` entry to `vite.config` (`src/website/main.tsx`) and serve it in `server/server.js` at `/store/<slug>/…` and `<slug>.wheelhouseepos.com/…`, in place of `public-storefront/`; test that both addresses get the new app and that `/book/<slug>` is unchanged
-- [ ] 3.2 Screen test: the shell (site): Skip to the main content, logo, Shop, Book a repair, Our shops, "Search the shop", chip, Account, Basket, footer links, current page marked
-- [ ] 3.3 Screen test: the phone menu (site-menu) opens, closes on Esc and returns focus
-- [ ] 3.4 Screen test: the main colour (site-ocean, site-ocean-menu) and "Find us" with one shop
+- [x] 3.2 Screen test: the shell (site): Skip to the main content, logo, Shop, Book a repair, Our shops, "Search the shop", chip, Account, Basket, footer links, current page marked
+- [x] 3.3 Screen test: the phone menu (site-menu) opens, closes on Esc and returns focus
+- [x] 3.4 Screen test: the main colour (site-ocean, site-ocean-menu) and "Find us" with one shop
 - [ ] 3.5 Screen tests: wb-home, wb-home-lower, wb-home-one-shop and wb-first-visit with the drawn example data; an empty section is left out; featured products are the newest four with a photo
 - [ ] 3.6 Screen test: wb-shop lists the categories with their subcategories
 - [ ] 3.7 Screen tests: wb-not-found and wb-off

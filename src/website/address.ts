@@ -1,0 +1,48 @@
+/**
+ * Where the customer website is (openspec/changes/website-browse, design 1).
+ *
+ * The same app answers at /store/<slug>/… and on the shop's own address,
+ * <slug>.<base domain>/…. `base` is '/store/<slug>' in the first case and ''
+ * in the second: the router's basename, and the start of every /api/site
+ * address. `slug` names the shop for the booking app's links (/book/<slug>),
+ * which live outside the website. On the shop's own address the slug is the
+ * first part of the host name, or ?storefrontSlug= where the server reads it
+ * in its place (server/storefront.js).
+ */
+export type SiteAddress = { base: string; slug: string; storefrontSlug: string | null };
+
+export function siteAddress(location: { pathname: string; search: string; hostname: string } = window.location): SiteAddress {
+  const store = /^\/store\/([^/]+)/.exec(location.pathname);
+  if (store) return { base: `/store/${store[1]}`, slug: decodeURIComponent(store[1]), storefrontSlug: null };
+  const storefrontSlug = new URLSearchParams(location.search).get('storefrontSlug');
+  return { base: '', slug: storefrontSlug ?? location.hostname.split('.')[0] ?? '', storefrontSlug };
+}
+
+/** An /api/site address for this shop, e.g. apiPath(address, '/api/site/home', { shop: '1' }). */
+export function apiPath(address: SiteAddress, path: string, params: Record<string, string | null | undefined> = {}): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value != null && value !== '') search.set(key, value);
+  if (address.storefrontSlug) search.set('storefrontSlug', address.storefrontSlug);
+  const query = search.toString();
+  return `${address.base}${path}${query ? `?${query}` : ''}`;
+}
+
+/** The booking app for this shop, with the chosen shop when there are several (design 1). */
+export function bookPath(address: SiteAddress, siteId: number | null): string {
+  return `/book/${encodeURIComponent(address.slug)}${siteId != null ? `?site=${siteId}` : ''}`;
+}
+
+/**
+ * The shop the visitor collects from: the `wh_shop` cookie (design 4), a
+ * site id, or null when there is none. Choosing a shop, which sets it, comes
+ * with the chip's "Which shop will you collect from?" (pull request 7).
+ */
+export function chosenShopCookie(cookie: string = document.cookie): number | null {
+  for (const part of cookie.split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name !== 'wh_shop') continue;
+    const id = Number(rest.join('='));
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
+  return null;
+}
