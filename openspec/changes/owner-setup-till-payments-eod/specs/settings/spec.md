@@ -27,8 +27,8 @@ Each button row SHALL have a 44px drag handle labelled "Move [name] — drag, or
 "+ Add a button" SHALL open "Add a quick button", "To the [group] group" (`set-till-quick-add`). It SHALL have "Find a product or service", searching the shop's products on sale and active services; the picked item with its kind and price; "Name on the button", filled in with the item's name; the note "The price always comes from the product."; the group pills; Cancel; and "Add the button". The new button SHALL go last in its group.
 
 #### Scenario: Adding brake pads
-- **WHEN** Jack searches "brake pads", picks Shimano brake pads B05S-RX (Part, £28.00) and chooses "Add the button"
-- **THEN** the box closes, "Saved · Shimano brake pads added to Workshop" shows with Undo, and the button is last in Workshop (`set-till-quick-saved`)
+- **WHEN** Jack searches "brake pads", picks Shimano brake pads B05S-RX (Part, £28.00), shortens "Name on the button" to "Shimano brake pads" and chooses "Add the button"
+- **THEN** the box closes, "Saved · Shimano brake pads added to Workshop" shows with Undo, and the button, named Shimano brake pads, is last in Workshop (`set-till-quick-saved`). The note always uses the name on the button.
 
 #### Scenario: Nothing picked
 - **WHEN** Jack chooses "Add the button" without picking an item
