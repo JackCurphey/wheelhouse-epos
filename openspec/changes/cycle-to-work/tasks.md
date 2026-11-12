@@ -7,13 +7,11 @@ WP-1.1 roles and WP-1.2's activity log, 13 for the accounts link, the
 Margin report, the till working offline and till refunds. Sizes are
 estimates of changed lines, tests included.
 
-**Waiting for Jack** (12 Nov, `docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md`): pull requests 7 and 8 —
-money taken at the till is his to approve — and within them the paid box
-wording (7.5, `till-c2w-paid-cert`); and the two messages beyond his
-decision's four (9.1; the "no longer put aside" half of `cw-texts-hold`,
-and `cw-texts-cancelled`). Build order meanwhile: 1, 2, 3, 4, 5, 6, 10, then
-9 with the four messages only. Pull request 10's late-payment lines show
-nothing until pull request 7 sets expected payments.
+**Answered by Jack** (12 Nov evening, `docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md`
+items 3 and 4): six messages, as drawn, and the paid box as `till-c2w-paid-cert`
+draws it. Pull requests 7 and 8 go ahead under the risky-area rules; then the
+rest of 10, whose late-payment lines show nothing until pull request 7 sets
+expected payments.
 
 Every test is written first and watched failing for the right reason before
 the code. Example data comes from the drawings; unknowns stay bracketed.
@@ -109,9 +107,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 Split in three while building (decided-while-building, 12 Nov): 9a the
 customer's link and the account's orders on the server (9.2, 9.3); 9b their
 screens (the `cw-customer-view` and `ac-account-c2w` parts of 9.4); 9c the
-four messages (9.1 and the message parts of 9.4).
+four messages (9.1 and the message parts of 9.4); 9e the two more Jack chose
+on 12 Nov ("Your bike is no longer put aside", sent on Release; "Your order is
+cancelled", its three drawn wordings, sent by pull request 8's Cancel).
 
-- [ ] 9.1 Test: the four message keys the decision names, with the drawn wording; each sent at its step only when on (**waiting for Jack:** "Your bike is no longer put aside" and "Your order is cancelled")
+- [ ] 9.1 Test: the six message keys (the decision's four, and "Your bike is no longer put aside" and "Your order is cancelled", Jack 12 Nov), with the drawn wording; each sent at its step only when on
 - [ ] 9.2 Test: `GET /api/portal/c2w-links/:code` gives the allowed fields only; a wrong code gives nothing; rate limited
 - [ ] 9.3 Test: the signed-in account lists only the customer's own orders, with "What you pay at collection"
 - [ ] 9.4 Screen test: `cw-messages`, `cw-email`, `cw-email-certificate-revised`, `cw-texts-certificate`, `cw-texts-hold`, `cw-texts-cancelled`, `cw-customer-view` with `-released` and `-cancelled`, `ac-account-c2w`, `-collected`

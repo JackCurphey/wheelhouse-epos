@@ -1,6 +1,8 @@
-// The four Cycle to Work messages (openspec/changes/cycle-to-work, task 9.1;
-// decision 2026-10-02-cycle-to-work-review point 6; wording drawn on cw-texts-certificate,
-// cw-texts-hold and cw-messages in docs/design/user-journeys/generator/c2w.mjs and setup.mjs).
+// The six Cycle to Work messages (openspec/changes/cycle-to-work, task 9.1;
+// decision 2026-10-02-cycle-to-work-review point 6, made six by Jack on 12 Nov,
+// docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md item 3; wording drawn on
+// cw-texts-certificate, cw-texts-hold, cw-texts-cancelled and cw-messages in
+// docs/design/user-journeys/generator/c2w.mjs and setup.mjs).
 // "Your hold ends on [date]" isn't drawn: its wording is the default taken
 // (spec-c2w.md question 6). Amounts here are made-up test values.
 //
@@ -17,6 +19,7 @@ import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedProduct } from './helpers/till.js';
 import { queueHoldEndings } from '../server/c2w/messages.js';
+import { TEMPLATES, render } from '../server/messaging/templates.js';
 import { sendDueForShop } from '../server/messaging/engine.js';
 
 let server;
@@ -238,7 +241,8 @@ test('9.1 Your bike is put aside: not sent once the bike is released within its 
   assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
   await dueNow(maya);
   await sendDueForShop(owner.shop.id);
-  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone']]);
+  // Put aside is undone; the released message (journey 6, as Jack answered on 12 Nov) goes in its place.
+  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone'], ['c2w_released', 'delivered']]);
   // A bike still held is told as usual.
   const kept = await newMaya();
   await quote(kept, await framedBike(1));
@@ -275,26 +279,62 @@ test('9.1 Your hold ends on [date]: not sent for a hold no longer than the remin
   assert.deepEqual((await messagesTo(longer)).map((m) => m.template_key), ['c2w_put_aside', 'c2w_hold_ending']);
 });
 
+test('9.1 Your bike is no longer put aside: sent when the bike is released, with the drawn words (cw-texts-hold)', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
+  const sent = await messagesTo(maya);
+  assert.deepEqual(sent.map((m) => m.template_key), ['c2w_put_aside', 'c2w_released']);
+  assert.equal(sent[1].intent_state, 'intended', 'waits for Undo, like every automatic message');
+  assert.equal(sent[1].body, 'Hi Maya, [Bike] · [Size] is no longer put aside. We’ll still get you one when your certificate comes. See your Cycle to Work bike: [link]');
+});
+
+test('9.1 Your bike is no longer put aside: still sent once its minute has passed, as the bike stays released', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
+  await dueNow(maya);
+  await sendDueForShop(owner.shop.id);
+  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone'], ['c2w_released', 'delivered']]);
+});
+
+// Cancelling is pull request 8's (tasks 8.5, 8.6), and the deposit section 11's:
+// until then the three drawn wordings are checked as Wheelhouse fills them in.
+test('9.1 Your order is cancelled: the three drawn wordings, with no link (cw-texts-cancelled)', async () => {
+  const vars = { 'Customer’s first name': 'Maya', 'Quote number': 'Q-[n]', 'Deposit amount': '£[£]', 'Shop phone': '[shop phone]' };
+  const words = (key) => render(TEMPLATES[key].wording, vars);
+  assert.equal(words('c2w_cancelled'), 'Hi Maya, your Cycle to Work order, quote Q-[n], is cancelled. Questions? Call [shop phone].');
+  assert.equal(words('c2w_cancelled_kept'), 'Hi Maya, your Cycle to Work order, quote Q-[n], is cancelled. Your £[£] deposit is kept, as your quote said, because the bike was ordered in for you. Questions? Call [shop phone].');
+  assert.equal(words('c2w_cancelled_refunded'), 'Hi Maya, your Cycle to Work order, quote Q-[n], is cancelled. Your £[£] deposit is being refunded, the way you paid it. Questions? Call [shop phone].');
+  // The two deposit wordings are part of the one message: one on/off, one subject.
+  for (const key of ['c2w_cancelled_kept', 'c2w_cancelled_refunded']) {
+    assert.equal(TEMPLATES[key].partOf, 'c2w_cancelled');
+    assert.equal(TEMPLATES[key].subject, TEMPLATES.c2w_cancelled.subject);
+  }
+});
+
 test('9.1 each message switched off in Settings › Messages is not sent', async () => {
-  for (const key of ['c2w_put_aside', 'c2w_certificate', 'c2w_ready', 'c2w_hold_ending']) await switchOff(key);
+  for (const key of ['c2w_put_aside', 'c2w_certificate', 'c2w_ready', 'c2w_hold_ending', 'c2w_released']) await switchOff(key);
   try {
     const maya = await newMaya();
     const a = await quote(maya, await framedBike(1));
     const b = await quote(maya, await framedBike(1), { accessoryIds: [pump] });
     const c = await quote(maya, await framedBike(1));
+    const d = await quote(maya, await framedBike(1));
     assert.equal((await post(`/api/c2w/orders/${a.id}/hold-longer`, {})).status, 200);
     assert.equal((await certify(a.id, { amountPence: 100000 })).status, 200);
     assert.equal((await certify(b.id, { amountPence: 90000, difference: 'keep' })).status, 200, 'the for-less wording follows Certificate received');
     assert.equal((await post(`/api/c2w/orders/${a.id}/ready`, {})).status, 200);
+    assert.equal((await post(`/api/c2w/orders/${d.id}/release`, {})).status, 200);
     await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-09-02' WHERE id = ?").run(c.id));
     await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
     assert.deepEqual(await messagesTo(maya), []);
   } finally {
-    for (const key of ['c2w_put_aside', 'c2w_certificate', 'c2w_ready', 'c2w_hold_ending']) await switchOn(key);
+    for (const key of ['c2w_put_aside', 'c2w_certificate', 'c2w_ready', 'c2w_hold_ending', 'c2w_released']) await switchOn(key);
   }
 });
 
-test('9.1 Settings › Messages lists the four, grouped as Cycle to Work, with the drawn names and when they go', async () => {
+test('9.1 Settings › Messages has the six, grouped as Cycle to Work, with the drawn names and when they go', async () => {
   const res = await own('/api/message-templates');
   assert.equal(res.status, 200);
   const rows = res.body.filter((t) => t.group === 'c2w' && !t.partOf);
@@ -303,6 +343,10 @@ test('9.1 Settings › Messages lists the four, grouped as Cycle to Work, with t
     ['c2w_certificate', 'Certificate received', 'When the scheme certificate arrives'],
     ['c2w_ready', 'Ready to collect', 'When the Cycle to Work bike is ready'],
     ['c2w_hold_ending', 'Your hold ends on [date]', '[n] days before a hold ends'],
+    ['c2w_released', 'Your bike is no longer put aside', 'When a held bike is released — the order stays open'],
+    ['c2w_cancelled', 'Your order is cancelled', 'When a Cycle to Work order is cancelled, with what happens to any deposit'],
   ]);
-  assert.ok(rows.every((t) => t.enabled && t.live));
+  assert.ok(rows.every((t) => t.enabled));
+  // Listed once something sends it: cancelling comes with pull request 8.
+  assert.deepEqual(rows.filter((t) => !t.live).map((t) => t.key), ['c2w_cancelled']);
 });

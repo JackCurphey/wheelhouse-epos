@@ -275,6 +275,7 @@ export function register(route) {
         if (row.frame_id) detail.frameId = row.frame_id;
         return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
       }, { detail });
+      await queueC2wMessage(id, 'c2w_released', { req, loginId: who.loginId });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });

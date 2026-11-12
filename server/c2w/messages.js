@@ -1,5 +1,5 @@
-// The four Cycle to Work messages (decision 2026-10-02-cycle-to-work-review point 6;
-// openspec/changes/cycle-to-work design 9): queued like every automatic message,
+// The Cycle to Work messages (decision 2026-10-02-cycle-to-work-review point 6,
+// six from Jack's 12 Nov answer; openspec/changes/cycle-to-work design 9): queued like every automatic message,
 // sent the customer's chosen way after the Undo wait, and not at all when the shop
 // has switched that message off. Inside the shop's runWithShop, on the request's
 // own connection, so a step that is rolled back sends nothing.
