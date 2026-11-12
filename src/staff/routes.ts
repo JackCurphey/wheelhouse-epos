@@ -20,6 +20,10 @@ export const ROUTES = {
   till: '/workshop/till',
   orders: '/workshop/orders',
   c2w: '/workshop/c2w',
+  // A Cycle to Work order (cw-order-held) and its quote (cw-quote), from the list
+  // (openspec/changes/cycle-to-work group 4).
+  'cw-order-held': '/workshop/c2w/:id',
+  'cw-quote': '/workshop/c2w/:id/quote',
   customers: '/workshop/customers',
   messages: '/workshop/messages',
   diary: '/workshop/diary',
