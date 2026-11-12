@@ -238,6 +238,7 @@ export function register(route) {
     }
   });
 
+
   // Margin and stock value, the stock half for now: what is on the shelves at
   // what it cost, and the stock written off in the period. What things cost
   // is behind canSeeCosts too (design 1).
@@ -269,6 +270,7 @@ export function register(route) {
       throw err;
     }
   });
+
 
   // Change what's shown (Sales, and Takings and cash-ups): another measure, split
   // and limits, read from the sale lines. A combination that doesn't fit is a 400

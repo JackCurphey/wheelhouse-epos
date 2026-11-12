@@ -229,6 +229,8 @@ export async function bookedInForOrder(orderId, frameId, siteId, who) {
   const ready = row.stage === 'certificate';
   await prepare(`UPDATE c2w_orders SET frame_id = ?, held_at = now()${ready ? ", stage = 'ready'" : ''} WHERE id = ?`).run(held.frameId, orderId);
   await addEvent(orderId, 'booked_in', who, { detail: { ...(held.frameId ? { frameId: held.frameId } : {}), ...(ready ? { ready: true } : {}) } });
+  // Ready with the bike's arrival: the customer is told (design 9).
+  if (ready) await (await import('./messages.js')).queueC2wMessage(orderId, 'c2w_ready', { loginId: who.loginId ?? null });
 }
 
 // The closing paragraph of the quote (cw-quote, cw-new-not-in-stock; decision H5):

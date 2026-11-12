@@ -106,6 +106,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 9. Messages and the customer's view (pull request 9, about 500 lines, risky: messaging and public route)
 
+Split in three while building (decided-while-building, 12 Nov): 9a the
+customer's link and the account's orders on the server (9.2, 9.3); 9b their
+screens (the `cw-customer-view` and `ac-account-c2w` parts of 9.4); 9c the
+four messages (9.1 and the message parts of 9.4).
+
 - [ ] 9.1 Test: the four message keys the decision names, with the drawn wording; each sent at its step only when on (**waiting for Jack:** "Your bike is no longer put aside" and "Your order is cancelled")
 - [ ] 9.2 Test: `GET /api/portal/c2w-links/:code` gives the allowed fields only; a wrong code gives nothing; rate limited
 - [ ] 9.3 Test: the signed-in account lists only the customer's own orders, with "What you pay at collection"
@@ -121,6 +126,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [ ] 10.4 Screen test: `cw-today`, `cw-today-held`, `op-today-c2w`, `cs-search-c2w`, `cs-page-c2w`, `-collected`, `rp-c2w`; the Takings report counts Cycle to Work money in
 - [ ] 10.5 Build to pass 10.1–10.4
 - [ ] 10.6 Self-review with `reviewer`; full check
+- Pull request 10a (`claude/c2w-10a-today-search`) built part of 10.1, 10.2 and 10.4: Today's "hold ended — choose" line with Hold longer and Release the bike (`op-today-c2w`, `cw-today-held`), the header search (`cs-search-c2w`) and the orders on the customer's page (`cs-page-c2w`, `-collected`), logged in `docs/decisions/decided-while-building/2026-11-jack.md`. Still to do: the no-certificate line (`cw-today`, after pull request 6), the late-payment line, 10.3 `rp-c2w` and Takings (pull requests 7 and 8), on `cs-page-c2w-collected` the sale number and the bike in her Bikes (after the hand over, pull request 8), and on `cw-today-held` the note's Undo and “She’s sent ‘Your bike is put aside’” (they wait for a step that undoes Hold longer and for pull request 9). At archive, the header search's spec gains “certificate number” among what it finds. So the boxes stay unticked.
 
 ## 11. Deposits (pull request 11, about 450 lines, risky: money — waits for Mark's till deposit for orders)
 

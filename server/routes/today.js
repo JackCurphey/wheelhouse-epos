@@ -18,6 +18,7 @@ import { toHHMM } from '../capacity.js';
 import { TILL_ORDER } from '../till/this-till.js';
 import { restockList, newSince } from '../lib/restock.js';
 import { openDeletions } from '../privacy-requests.js';
+import { c2wTodayLines } from '../c2w/today.js';
 
 const iso = (v) => (v ? new Date(v).toISOString() : null);
 
@@ -203,7 +204,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision
