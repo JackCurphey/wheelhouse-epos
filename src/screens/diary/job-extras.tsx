@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
 import { STATE_LABEL, dayLabel, type DiaryState } from './rules.ts';
+import { poundsText } from '@/lib/money.ts';
 
 /**
  * The diary's extras (piece 5b): the hover summary, View overview, the
@@ -19,7 +20,7 @@ export type DiaryJob = WorkshopJob & { state: DiaryState; partId: number };
 type Order = { id: number; total: number; items: { id: number; name: string; qty: number; lineTotal: number }[] };
 type Quote = { id: number; state: string; lines: { id: number; description: string; quantity: number; lineTotal: number; decision: string }[] };
 
-const money = (n: number) => `£${Number(n).toFixed(2)}`;
+const money = (n: number) => poundsText(Number(n));
 const ANSWERED = new Set(['approved', 'partly_approved', 'declined']);
 
 export const headOf = (j: WorkshopJob) => [j.title, j.reference].filter(Boolean).join(' · ');

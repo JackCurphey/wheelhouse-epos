@@ -351,3 +351,12 @@ GET /api/reports/days/:id
 GET /api/reports/sales.csv
 GET /api/reports/takings.csv
 GET /api/reports/days/:id/csv
+GET /api/reports/workshop
+GET /api/reports/workshop.csv
+GET /api/quick-buttons
+POST /api/quick-button-groups
+PUT /api/quick-button-groups/:id
+DELETE /api/quick-button-groups/:id
+POST /api/quick-buttons
+PUT /api/quick-buttons/:id
+DELETE /api/quick-buttons/:id

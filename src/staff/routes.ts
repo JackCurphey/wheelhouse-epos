@@ -36,6 +36,8 @@ export const ROUTES = {
   'rp-sales': '/workshop/reports/sales',
   // Takings and cash-ups (rp-takings); ?day=[close id] opens that closed day's report (rp-day).
   'rp-takings': '/workshop/reports/takings',
+  // Workshop (rp-workshop): jobs, workshop takings, quotes and how full each mechanic was.
+  'rp-workshop': '/workshop/reports/workshop',
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',

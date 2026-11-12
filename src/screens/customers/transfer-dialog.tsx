@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiMutate } from '@/lib/api/client.ts';
+import { penceInput } from '@/lib/money.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Field } from './customers-page.tsx';
@@ -13,7 +14,7 @@ import { canSay, useInvalidate } from './account-dialog.tsx';
  */
 export function TransferDialog({ customerId, first, owed, today, onClose }: { customerId: number; first: string; owed: number; today: string; onClose: () => void }) {
   const invalidate = useInvalidate(customerId);
-  const [amount, setAmount] = useState((owed / 100).toFixed(2));
+  const [amount, setAmount] = useState(penceInput(owed));
   const [day, setDay] = useState(today);
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);

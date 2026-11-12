@@ -1,3 +1,4 @@
+import { poundsText } from '../../lib/money.ts';
 /**
  * The till's sums, kept in pence so £0.10 + £0.20 is £0.30.
  * Spec: docs/superpowers/specs/2026-10-03-till-sale-design.md
@@ -18,7 +19,7 @@ export type TillLine = {
 };
 
 export const pence = (pounds: number) => Math.round(Number(pounds) * 100);
-export const money = (pounds: number) => `£${(pence(pounds) / 100).toFixed(2)}`;
+export const money = (pounds: number) => poundsText(pence(pounds) / 100);
 
 export function lineTotal(l: TillLine) {
   return pence(l.unitPrice) * l.qty / 100;
