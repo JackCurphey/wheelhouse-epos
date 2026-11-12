@@ -51,12 +51,13 @@ export async function freeHere(productId, siteId) {
 // Dates come back as YYYY-MM-DD text, never as a Date at some time zone's midnight.
 const DAY = (col) => `to_char(o.${col}, 'YYYY-MM-DD') AS ${col}_day`;
 export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certificate_received_on', 'expected_by', 'paid_on'].map(DAY).join(', ')},
-  c.name AS customer_name, c.email AS customer_email, p.name AS provider_name, pr.name AS bike_name,
+  c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone, p.name AS provider_name, pr.name AS bike_name, st.name AS site_name,
   EXISTS (SELECT 1 FROM purchase_order_items i WHERE i.c2w_order_id = o.id) AS on_order
   FROM c2w_orders o
   JOIN customers c ON c.id = o.customer_id
   JOIN c2w_providers p ON p.id = o.provider_id
-  JOIN products pr ON pr.id = o.product_id`;
+  JOIN products pr ON pr.id = o.product_id
+  LEFT JOIN sites st ON st.id = o.site_id`;
 
 const iso = (t) => (t ? new Date(t).toISOString() : null);
 
@@ -92,7 +93,9 @@ export function serializeOrder(r) {
   return {
     id: r.id, stage: r.stage, quoteNumber: r.quote_number, quoteRef: quoteRef(r.quote_number),
     customerId: r.customer_id, customerName: r.customer_name, providerId: r.provider_id, providerName: r.provider_name,
-    productId: r.product_id, bike: r.bike_name, siteId: r.site_id, frameId: r.frame_id,
+    // The customer's number and email, and the site's name, for the order page (cw-order-held; PR 4).
+    customerPhone: r.customer_phone ?? null, customerEmail: r.customer_email ?? null,
+    productId: r.product_id, bike: r.bike_name, siteId: r.site_id, siteName: r.site_name ?? null, frameId: r.frame_id,
     quoteGivenAt: iso(r.quote_given_at), quoteRevisedAt: iso(r.quote_revised_at),
     validUntil: r.valid_until_day, holdUntil: r.hold_until_day, holdWanted: r.hold_wanted,
     accessories: r.accessories, totalPence: r.total_pence,
