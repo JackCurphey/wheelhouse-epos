@@ -210,6 +210,8 @@ test('Till › Receipts has Words at the bottom, which saves when it’s left', 
   assert.ok(has(ui.queryByRole('heading', { name: 'Till' })));
   assert.ok(has(ui.queryByText('What staff see and use at the till.')));
   assert.ok(has(ui.queryByRole('heading', { name: /^Receipts/ })));
+  // Quick buttons opens first in Till, as drawn; Receipts opens when chosen.
+  fireEvent.click(ui.getByRole('button', { name: /^Receipts/ }));
   const words = await ui.findByLabelText('Words at the bottom');
   assert.equal(words.tagName, 'TEXTAREA');
   assert.equal(words.getAttribute('placeholder'), 'e.g. your returns policy, a thank-you');
