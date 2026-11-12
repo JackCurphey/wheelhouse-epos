@@ -238,7 +238,7 @@ export function useSearchDetailIds(address: SiteAddress, q: string, categoryId: 
   });
 }
 
-/** Search results six at a time, as useCategoryProducts; the last answer for the same words stays while new filters load. */
+/** Search results six at a time, as useCategoryProducts; the last answer stays while new words or filters load. */
 export function useSearchProducts(address: SiteAddress, q: string, categoryId: number | null, params: URLSearchParams | null) {
   const client = useQueryClient();
   return useInfiniteQuery({
@@ -253,8 +253,8 @@ export function useSearchProducts(address: SiteAddress, q: string, categoryId: n
     initialPageParam: 0,
     getNextPageParam: (last: SearchPage) => last.after ?? undefined,
     enabled: params !== null,
-    // Only for the same words: new words are a new page, not new filters.
-    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[3] === q ? previous : undefined),
+    // New words too: the results page keeps the last list, not a blank page, until the new answer arrives.
+    placeholderData: keepPreviousData,
     ...once,
   });
 }

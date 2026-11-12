@@ -133,16 +133,21 @@ const MEASURE = /^(-?\d{1,9}(?:\.\d{1,4})?)([a-z]+)?$/i;
 
 /**
  * The words without the measurement the server read from them ("bearing
- * 30mm" with 30 mm is "bearing"): the first word that is the value, in the
- * detail's unit or with none. Words with no such word stay as they are.
+ * 30mm" or "bearing 30 mm" with 30 mm is "bearing"): the first word that is
+ * the value, in the detail's unit or with none, and with none, the next word
+ * too when it is the unit, as server/site-products.js measureOf reads it.
+ * Words with no such word stay as they are.
  */
 export function withoutMeasure(q: string, value: number, unit: string | null): string {
   const words = q.trim().split(/\s+/);
+  const same = (word: string | undefined) => word !== undefined && unit !== null && word.toLowerCase() === unit.toLowerCase();
   const at = words.findIndex((w) => {
     const m = MEASURE.exec(w);
-    return m !== null && Number(m[1]) === value && (!m[2] || (unit !== null && m[2].toLowerCase() === unit.toLowerCase()));
+    return m !== null && Number(m[1]) === value && (!m[2] || same(m[2]));
   });
-  return at < 0 ? q.trim() : words.filter((_, i) => i !== at).join(' ');
+  if (at < 0) return q.trim();
+  const spaced = !MEASURE.exec(words[at])?.[2] && same(words[at + 1]);
+  return words.filter((_, i) => i !== at && !(spaced && i === at + 1)).join(' ');
 }
 
 /** A value as the filter shows it: a number with its unit ("30 mm"), words as written. */

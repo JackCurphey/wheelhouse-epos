@@ -27,6 +27,15 @@ import {
 /** How long typing must pause before suggestions are asked for (task 6.1). */
 export const SUGGEST_WAIT_MS = 250;
 
+/**
+ * The most letters a search reads: mirrors QUERY_LETTERS in
+ * server/site-products.js (server code, so not imported here). The box takes
+ * no more, and the results show only these, as the server searches only these.
+ */
+export const QUERY_LETTERS = 100;
+/** The words a results address searches: its first QUERY_LETTERS letters, trimmed. */
+const wordsOf = (params: URLSearchParams) => (params.get('q') ?? '').trim().slice(0, QUERY_LETTERS);
+
 const resultsPath = (q: string) => `/search?${new URLSearchParams({ q })}`;
 
 type Option = { key: string; to?: string; href?: string; main: React.ReactNode; sub?: string; right?: React.ReactNode };
@@ -35,9 +44,12 @@ type Option = { key: string; to?: string; href?: string; main: React.ReactNode; 
  * The search box as a WAI-ARIA combobox (decision 4; audit H4, M9): the
  * list of suggestions sits inside the role="search" area, focus stays in the
  * box, and the arrow keys move the picked suggestion (aria-activedescendant).
- * Enter opens the picked one, or the results with none picked; Escape closes
- * the list. `top` is the search across the top on a tablet or phone, with
- * Cancel; `header` is the computer's box in the header.
+ * As wb-search-typing draws it, the first row is picked when the list shows,
+ * and again when a new answer arrives; while the list is still the answer for
+ * older words, nothing is. Enter opens the picked one, or the results with
+ * none picked; Escape closes the list. `top` is the search across the top
+ * on a tablet or phone, with Cancel; `header` is the computer's box in the
+ * header.
  */
 export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'header' | 'top'; placeholder?: string; onCancel?: () => void }) {
   const { address, chosen, several } = useSiteContext();
@@ -45,11 +57,12 @@ export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'head
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const fromAddress = location.pathname === '/search' ? (params.get('q') ?? '') : null;
+  const fromAddress = location.pathname === '/search' ? wordsOf(params) : null;
   const [text, setText] = useState(fromAddress ?? '');
   const [waited, setWaited] = useState('');
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
+  // The row an arrow key picked; null is the drawn default (the first row, once the list answers the box).
+  const [active, setActive] = useState<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const area = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -61,7 +74,7 @@ export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'head
   if (seen !== here) {
     setSeen(here);
     setOpen(false);
-    setActive(-1);
+    setActive(null);
     if (fromAddress !== null) setText(fromAddress);
   }
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -69,27 +82,35 @@ export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'head
 
   const suggest = useSuggestions(address, waited.trim(), chosen?.id ?? null);
   const data = suggest.data;
-  // A new answer: nothing is picked until an arrow key is pressed.
+  // A new answer: its first row is picked again.
   const [seenData, setSeenData] = useState(data);
   if (seenData !== data) {
     setSeenData(data);
-    setActive(-1);
+    setActive(null);
   }
 
-  const options = useMemo(() => (data ? optionsOf(data, waited.trim(), categories.data ?? [], bookPath(address, several && chosen ? chosen.id : null)) : []), [data, waited, categories.data, address, several, chosen]);
+  // See all results says the words in the box, even while the list is the last answer's.
+  const options = useMemo(() => (data ? optionsOf(data, text.trim(), categories.data ?? [], bookPath(address, several && chosen ? chosen.id : null)) : []), [data, text, categories.data, address, several, chosen]);
   const shown = open && text.trim().length >= 2 && waited.trim().length >= 2 && data !== undefined;
-  const picked = shown && active >= 0 && active < options.length ? active : -1;
+  // The list answers what is in the box: not older words still waiting, nor the last answer kept while the next loads.
+  const current = text.trim() === waited.trim() && !suggest.isPlaceholderData;
+  const picked = !shown ? -1
+    : active !== null ? (active < options.length ? active : -1)
+      : current && options.length > 0 ? 0 : -1;
   const optionId = (i: number) => `${listId}-${i}`;
 
   const type = (value: string) => {
     setText(value);
     setOpen(true);
+    setActive(null);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setWaited(value), SUGGEST_WAIT_MS);
   };
-  const close = () => { setOpen(false); setActive(-1); };
+  const close = () => { setOpen(false); setActive(null); };
   const go = (option: Option | null) => {
     close();
+    // Gone from here: the suggestions waited for would be asked for nothing.
+    if (timer.current) clearTimeout(timer.current);
     if (option?.href) { window.location.assign(option.href); return; }
     const to = option?.to ?? (text.trim() ? resultsPath(text.trim()) : null);
     if (to) void navigate(to, { flushSync: true });
@@ -98,7 +119,7 @@ export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'head
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const last = options.length - 1;
-      if (!shown) { setOpen(true); setActive(e.key === 'ArrowDown' ? (last >= 0 ? 0 : -1) : last); return; }
+      if (!shown) { setOpen(true); setActive(e.key === 'ArrowDown' ? (last >= 0 ? 0 : null) : (last >= 0 ? last : null)); return; }
       if (last < 0) return;
       // Round the ends: past the last is the first, before the first the last.
       setActive(e.key === 'ArrowDown' ? (picked >= last ? 0 : picked + 1) : (picked <= 0 ? last : picked - 1));
@@ -205,6 +226,7 @@ export function SearchCombo({ variant, placeholder, onCancel }: { variant: 'head
       aria-controls={shown ? listId : undefined}
       aria-activedescendant={picked >= 0 ? optionId(picked) : undefined}
       placeholder={placeholder}
+      maxLength={QUERY_LETTERS}
       value={text}
       onChange={(e) => type(e.target.value)}
       onKeyDown={onKeyDown}
@@ -282,7 +304,7 @@ type Draft = { selection: Selection; category: number | null };
 export function SearchPage() {
   const { address, chosen } = useSiteContext();
   const [params] = useSearchParams();
-  const q = (params.get('q') ?? '').trim();
+  const q = wordsOf(params);
   const categoryParam = /^\d{1,9}$/.test(params.get('category') ?? '') ? Number(params.get('category')) : null;
   const selection = useMemo(() => readSelection(params), [params]);
   const sort = searchSortOf(params.get('sort'));

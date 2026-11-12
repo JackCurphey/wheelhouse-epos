@@ -9,9 +9,9 @@ import { runWithShop, prepare } from '../../server/db.js';
 // Search in a real browser against the real server (openspec/changes/
 // website-browse, task 6.6; drawings wb-search-typing, wb-search-results,
 // wb-search-measure, wb-search-none): on a computer the header's box suggests
-// after a pause with one request for fast typing, the arrow keys pick a
-// suggestion, Enter goes to the results, and a measurement narrows to its
-// category; on a phone Search the shop opens a search across the top. The
+// after a pause with one request for fast typing, the first suggestion is
+// picked and the arrow keys move it, Enter with the list closed goes to the
+// results, and a measurement, "30mm" or "30 mm", narrows to its category; on a phone Search the shop opens a search across the top. The
 // browser-coverage rule (#351).
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
@@ -62,7 +62,7 @@ test.afterAll(async () => {
 const countLine = (page: import('@playwright/test').Page, text: string) =>
   expect(page.locator('[aria-live="polite"]', { hasText: new RegExp(`^${text}$`) })).toBeVisible();
 
-test('on a computer: one request for fast typing, arrow keys pick, Enter goes to the results, and a measurement narrows', async ({ page }) => {
+test('on a computer: one request for fast typing, the first row picked, arrow keys move it, Enter goes to the results, and a measurement narrows', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const suggests: string[] = [];
   page.on('request', (r) => { if (r.url().includes('/api/site/suggest')) suggests.push(new URL(r.url()).searchParams.get('q') ?? ''); });
@@ -75,11 +75,15 @@ test('on a computer: one request for fast typing, arrow keys pick, Enter goes to
   await expect(list.getByRole('option', { name: 'See all results for “bearing”' })).toBeVisible();
   expect(suggests).toEqual(['bearing']);
 
-  // The arrow keys pick, focus staying in the box; Escape closes; Enter with nothing picked searches.
-  await box.press('ArrowDown');
+  // The first row is picked, as drawn; the arrow keys move it, focus staying in the box; Escape closes; Enter with nothing picked searches.
   const first = list.getByRole('option').first();
   await expect(box).toHaveAttribute('aria-activedescendant', (await first.getAttribute('id'))!);
   await expect(first).toHaveAttribute('aria-selected', 'true');
+  await box.press('ArrowDown');
+  const second = list.getByRole('option').nth(1);
+  await expect(box).toHaveAttribute('aria-activedescendant', (await second.getAttribute('id'))!);
+  await expect(second).toHaveAttribute('aria-selected', 'true');
+  await expect(first).toHaveAttribute('aria-selected', 'false');
   await expect(box).toBeFocused();
   await box.press('Escape');
   await expect(list).toHaveCount(0);
@@ -93,12 +97,24 @@ test('on a computer: one request for fast typing, arrow keys pick, Enter goes to
   await expect(box).toHaveValue('bearing');
 
   // A measurement: the category, with the value ticked; removing it searches the other words in the category.
+  // Escape first, so Enter searches the words even if suggestions have arrived.
   await box.fill('bearing 30mm');
+  await box.press('Escape');
   await box.press('Enter');
   await expect(page.getByRole('heading', { level: 1, name: 'Results for “bearing 30mm”' })).toBeVisible();
   await countLine(page, 'Bearings with an inner diameter of 30 mm · 3 products');
   await expect(page.getByRole('button', { name: 'Remove filter Category: Bearings' })).toBeVisible();
   await expect(page.getByRole('complementary', { name: 'Filters' }).getByRole('checkbox', { name: /^30 mm/ })).toBeChecked();
+  await page.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }).click();
+  await expect(page).toHaveURL(new RegExp(`/search\\?q=bearing&category=${bearings}$`));
+  await countLine(page, '8 products match');
+
+  // Spaced, "bearing 30 mm": the same, and removing it leaves "bearing", not "bearing mm".
+  await box.fill('bearing 30 mm');
+  await box.press('Escape');
+  await box.press('Enter');
+  await expect(page.getByRole('heading', { level: 1, name: 'Results for “bearing 30 mm”' })).toBeVisible();
+  await countLine(page, 'Bearings with an inner diameter of 30 mm · 3 products');
   await page.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }).click();
   await expect(page).toHaveURL(new RegExp(`/search\\?q=bearing&category=${bearings}$`));
   await countLine(page, '8 products match');

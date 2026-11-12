@@ -85,7 +85,7 @@ function searchAnswer(url) {
       categories: [{ id: 30, name: '[Category]', count: 2 }, { id: 31, name: '[Another category]', count: 1 }],
     }, { repairs: [{ id: 1, name: 'Brake service', pricePence: null }] });
   }
-  if (q === 'bearing 30mm') {
+  if (q === 'bearing 30mm' || q === 'bearing 30 mm') {
     const ticked = p.getAll('d1');
     const values = ticked.length ? ticked.map(Number) : [30];
     const bearings = [card(201, '[Bearing]', 1000, stock(true)), card(202, '[Bearing]', 1100, stock(false)), card(203, '[Bearing]', 1200, stock(true))];
@@ -135,13 +135,15 @@ test('typing "brake" asks once, 250 ms after the last letter, and lists Products
   assert.ok(list.closest('[role="search"]') === box.closest('[role="search"]'));
   assert.equal(box.getAttribute('aria-expanded'), 'true');
   assert.equal(box.getAttribute('aria-controls'), list.id);
-  assert.ok(!box.hasAttribute('aria-activedescendant'), 'nothing is picked until an arrow key is pressed');
 
   const groups = within(list).getAllByRole('group');
   assert.deepEqual(groups.map((g) => g.getAttribute('aria-label')), ['Products', 'Repairs', 'Categories', 'Pages']);
   const options = within(list).getAllByRole('option');
   assert.equal(options.length, 6);
-  assert.ok(options.every((o) => o.getAttribute('aria-selected') === 'false'));
+  // As drawn, the first row is picked.
+  assert.equal(box.getAttribute('aria-activedescendant'), options[0].id);
+  assert.equal(options[0].getAttribute('aria-selected'), 'true');
+  assert.ok(options.slice(1).every((o) => o.getAttribute('aria-selected') === 'false'));
   // Products: name and part code, the stock line, the price.
   assert.ok(options[0].textContent.includes('Shimano brake pads B05S-RX'));
   assert.ok(options[0].textContent.includes('Ready today at Bolton'));
@@ -168,7 +170,7 @@ test('typing "brake" asks once, 250 ms after the last letter, and lists Products
   await waitFor(() => assert.ok(list.querySelector('[aria-live="polite"]')?.textContent === '6 suggestions'));
 });
 
-test('the arrow keys move through the suggestions, Enter opens the one picked, Escape closes the list', async () => {
+test('the first row is picked; the arrow keys move through the suggestions, Enter opens the one picked, Escape closes the list', async () => {
   r = await open('/');
   const { ui } = r;
   const { fireEvent, within } = await rtl();
@@ -179,7 +181,6 @@ test('the arrow keys move through the suggestions, Enter opens the one picked, E
   const options = within(list).getAllByRole('option');
   const picked = () => box.getAttribute('aria-activedescendant');
 
-  fireEvent.keyDown(box, { key: 'ArrowDown' });
   assert.equal(picked(), options[0].id);
   assert.ok(options[0].id !== '');
   assert.equal(options[0].getAttribute('aria-selected'), 'true');
@@ -214,7 +215,7 @@ test('the arrow keys move through the suggestions, Enter opens the one picked, E
   assert.ok(ui.queryByRole('listbox') === null);
 });
 
-test('Enter with nothing picked goes to the results for what was typed', async () => {
+test('Enter straight after the suggestions show opens the first one, as drawn', async () => {
   r = await open('/');
   const { ui } = r;
   const { fireEvent } = await rtl();
@@ -222,11 +223,89 @@ test('Enter with nothing picked goes to the results for what was typed', async (
   await typeFast(box, 'brake');
   await ui.findByRole('listbox', { name: 'Suggestions' });
   fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(where(), '/store/north/products/101');
+});
+
+test('Enter with the list closed goes to the results for what was typed', async () => {
+  r = await open('/');
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  const box = await ui.findByRole('combobox', { name: 'Search the shop' });
+  await typeFast(box, 'brake');
+  await ui.findByRole('listbox', { name: 'Suggestions' });
+  fireEvent.keyDown(box, { key: 'Escape' });
+  fireEvent.keyDown(box, { key: 'Enter' });
   assert.equal(where(), '/store/north/search?q=brake');
   assert.ok(ui.queryByRole('listbox') === null);
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Results for “brake”' }));
   // The results keep the words in the box (audit M9).
   assert.equal(ui.getByRole('combobox', { name: 'Search the shop' }).value, 'brake');
+});
+
+test('Enter before the wait is over: no suggestions are asked for afterwards', async () => {
+  r = await open('/');
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  const box = await ui.findByRole('combobox', { name: 'Search the shop' });
+  await typeFast(box, 'brake');
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(where(), '/store/north/search?q=brake');
+  await wait(400);
+  assert.equal(asks('suggest').length, 0);
+});
+
+/** "br" answered and shown, then "brake" typed, its answer held until `late` is resolved. */
+async function brThenBrake(late) {
+  r = await open('/', {
+    suggest: async (url) => {
+      if (new URL(url, 'http://localhost').searchParams.get('q') === 'brake') await late.promise;
+      return suggestAnswer(url);
+    },
+  });
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  const box = await ui.findByRole('combobox', { name: 'Search the shop' });
+  box.focus();
+  await typeFast(box, 'br');
+  const list = await ui.findByRole('listbox', { name: 'Suggestions' });
+  const old = within(list).getAllByRole('option');
+  assert.equal(old.length, 2);
+  // Pick "See all results for “br”", then type on.
+  fireEvent.keyDown(box, { key: 'ArrowDown' });
+  assert.equal(box.getAttribute('aria-activedescendant'), old[1].id);
+  fireEvent.change(box, { target: { value: 'brake' } });
+  return { ui, box };
+}
+
+test('typing after picking a row: nothing old stays picked, See all says the new words, and Enter searches them', async () => {
+  const late = deferred();
+  const { ui, box } = await brThenBrake(late);
+  const { fireEvent, within } = await rtl();
+  // The old list stays up until the new answer arrives.
+  const list = ui.getByRole('listbox', { name: 'Suggestions' });
+  assert.ok(within(list).getByText('[An older answer]'));
+  assert.ok(!box.hasAttribute('aria-activedescendant'));
+  assert.ok(within(list).getAllByRole('option').every((o) => o.getAttribute('aria-selected') === 'false'));
+  const seeAll = within(list).getByRole('option', { name: /^See all results/ });
+  assert.equal(seeAll.textContent, 'See all results for “brake”');
+  assert.equal(href(seeAll), `${BASE}/search?q=brake`);
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(where(), '/store/north/search?q=brake');
+  late.resolve();
+});
+
+test('typing after picking a row: when the new answer arrives its first row is picked, and Enter opens it', async () => {
+  const late = deferred();
+  const { ui, box } = await brThenBrake(late);
+  const { fireEvent, within, waitFor } = await rtl();
+  late.resolve();
+  const list = ui.getByRole('listbox', { name: 'Suggestions' });
+  await waitFor(() => assert.ok(within(list).queryByText('Shimano brake pads') !== null));
+  const options = within(list).getAllByRole('option');
+  assert.equal(box.getAttribute('aria-activedescendant'), options[0].id);
+  assert.equal(options[0].getAttribute('aria-selected'), 'true');
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(where(), '/store/north/products/101');
 });
 
 test('one letter asks nothing; suggestions start from the second', async () => {
@@ -420,6 +499,75 @@ test('removing the measurement’s category searches the other words everywhere'
   const { fireEvent } = await rtl();
   fireEvent.click(await ui.findByRole('button', { name: 'Remove filter Category: Bearings' }));
   assert.equal(where(), '/store/north/search?q=bearing');
+});
+
+test('a spaced measurement, "bearing 30 mm": its chip, unticking it, and its category all leave "bearing"', async () => {
+  r = await open(`/search?q=${encodeURIComponent('bearing 30 mm')}`);
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  assert.ok(await ui.findByText('Bearings with an inner diameter of 30 mm · 3 products', { selector: '[aria-live="polite"]' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove filter Inner diameter: 30 mm' }));
+  assert.equal(where(), '/store/north/search?q=bearing&category=10');
+
+  r.router.navigate(`/search?q=${encodeURIComponent('bearing 30 mm')}`);
+  await ui.findByText('Bearings with an inner diameter of 30 mm · 3 products', { selector: '[aria-live="polite"]' });
+  fireEvent.click(within(ui.getByRole('complementary', { name: 'Filters' })).getByRole('checkbox', { name: /^30 mm/ }));
+  assert.equal(where(), '/store/north/search?q=bearing&category=10');
+
+  r.router.navigate(`/search?q=${encodeURIComponent('bearing 30 mm')}`);
+  fireEvent.click(await ui.findByRole('button', { name: 'Remove filter Category: Bearings' }));
+  assert.equal(where(), '/store/north/search?q=bearing');
+});
+
+test('new words keep the last results on screen, under the new heading, until their answer arrives', async () => {
+  const late = deferred();
+  r = await open('/search?q=brake', {
+    search: async (url) => {
+      if (new URL(url, 'http://localhost').searchParams.get('q') === 'bearing') await late.promise;
+      return searchAnswer(url);
+    },
+  });
+  const { ui } = r;
+  const { fireEvent, waitFor } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: 'Results for “brake”' });
+  assert.ok(await ui.findByText('3 products', { selector: '[aria-live="polite"]' }));
+  const box = ui.getByRole('combobox', { name: 'Search the shop' });
+  fireEvent.change(box, { target: { value: 'bearing' } });
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(where(), '/store/north/search?q=bearing');
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Results for “bearing”' }));
+  assert.ok(main().textContent.includes('Shimano brake pads B05S-RX'), 'the last results stay while the new ones load');
+  late.resolve();
+  await waitFor(() => assert.ok(main().textContent.includes('[Bearing]')));
+  assert.ok(!main().textContent.includes('Shimano brake pads B05S-RX'));
+  assert.ok(ui.getByRole('heading', { level: 1, name: 'Results for “bearing”' }));
+});
+
+test('long words: the box takes 100 letters, and the results show the first 100 of a longer address', async () => {
+  const long = `zz${'q'.repeat(148)}`;
+  const first = long.slice(0, 100);
+  r = await open(`/search?q=${long}`);
+  const { ui } = r;
+  assert.ok(await ui.findByRole('heading', { level: 1, name: `No results for “${first}”` }));
+  assert.equal(document.title, `No results for “${first}” · North Street Cycles`);
+  const box = ui.getByRole('combobox', { name: 'Search the shop' });
+  assert.equal(box.maxLength, 100);
+  assert.equal(box.value, first);
+});
+
+test('words with &, # and % go through the address and back unchanged', async () => {
+  const words = 'a&b #1 50%';
+  r = await open('/');
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  const box = await ui.findByRole('combobox', { name: 'Search the shop' });
+  await typeFast(box, words);
+  fireEvent.keyDown(box, { key: 'Enter' });
+  assert.equal(r.router.state.location.pathname, '/store/north/search');
+  assert.equal(new URLSearchParams(r.router.state.location.search).get('q'), words);
+  assert.ok(await ui.findByRole('heading', { level: 1, name: `No results for “${words}”` }));
+  assert.equal(asks('search').at(-1).searchParams.get('q'), words);
+  assert.equal(ui.getByRole('combobox', { name: 'Search the shop' }).value, words);
 });
 
 test('no results (wb-search-none): the words, what to try, Book a repair, and Ask the shop open', async () => {
