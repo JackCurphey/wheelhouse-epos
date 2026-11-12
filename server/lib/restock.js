@@ -19,7 +19,7 @@ export const NO_SUPPLIER = 'No supplier';
 
 // A supplier's name as typed, compared ignoring capitals and spaces at either end (Jack's
 // 4 Nov answer 10: matched by name).
-const nameKey = (s) => String(s ?? '').trim().toLocaleLowerCase('en-GB');
+export const nameKey = (s) => String(s ?? '').trim().toLocaleLowerCase('en-GB');
 
 // Sales at the till and online: stock lines of type sale and till_sale (every sale moves stock
 // through moveStock, so this is the one place they all are).
