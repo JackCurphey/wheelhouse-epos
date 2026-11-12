@@ -12,7 +12,7 @@ import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, s
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
 import { currentSession } from '../lib/session.js';
 import {
-  WebsiteError, discard, history, ownerNames, publish, restore, saveLogo, savePart, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
+  WebsiteError, discard, history, historyVersion, ownerNames, publish, restore, saveLogo, savePart, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
 } from '../website.js';
 
 // Public-storefront on/off switch plus its branding fields (tagline,
@@ -90,6 +90,10 @@ function registerWebsite(route) {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
     await answer(res, () => history());
   });
+  route('GET', '/api/website/history/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, () => historyVersion(Number(params.id)));
+  });
   route('POST', '/api/website/history/:id/restore', async (req, res, params) => {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
     await answer(res, async () => restore(Number(params.id), await loginId(req)));
@@ -105,8 +109,11 @@ export function register(route) {
   route('PUT', '/api/storefront-settings', async (req, res) => {
     // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
     if (await ownerOnly(req, res)) return;
-    if (await websiteInUse()) return sendJson(res, 409, { error: USE_WEBSITE_PAGE, code: 'use_website_page' });
     const body = await readJsonBody(req);
+    // Only the theme is still set here once the Website page is in use.
+    if (Object.keys(body || {}).some((k) => k !== 'themePreset') && await websiteInUse()) {
+      return sendJson(res, 409, { error: USE_WEBSITE_PAGE, code: 'use_website_page' });
+    }
     try {
       const updated = await updateStorefrontSettings(body);
       sendJson(res, 200, serializeStorefrontSettings(updated));

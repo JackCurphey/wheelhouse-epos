@@ -180,9 +180,11 @@ async function loginNames(ids) {
 
 async function productCounts() {
   const row = await prepare(
-    `SELECT count(*) FILTER (WHERE show_online) AS go_online,
-            count(*) FILTER (WHERE show_online AND (photo_url IS NULL OR photo_url = '')) AS no_photo,
-            count(*) FILTER (WHERE price = 0) AS no_price
+    // ws-page counts: an unpriced product "stays off until priced", so it is
+    // counted as having no price, not as going online.
+    `SELECT count(*) FILTER (WHERE show_online AND price > 0) AS go_online,
+            count(*) FILTER (WHERE show_online AND price > 0 AND (photo_url IS NULL OR photo_url = '')) AS no_photo,
+            count(*) FILTER (WHERE show_online AND price = 0) AS no_price
      FROM products WHERE active = 1`
   ).get();
   return { goOnline: Number(row.go_online), noPhoto: Number(row.no_photo), noPrice: Number(row.no_price) };
@@ -194,7 +196,7 @@ export async function websiteState(row = null) {
   const shop = await currentShop();
   const draft = website.draft;
   const changes = changesBetween(draft, website.published);
-  const names = await loginNames([website.draft_saved_by]);
+  const names = await loginNames([website.draft_saved_by, website.published_by]);
   const parts = PARTS.map((p) => ({ key: p.key, name: p.name, page: p.page, ...draft.parts?.[p.key], checked: !!draft.parts?.[p.key]?.checked }));
   const partsToCheck = parts.filter((p) => !p.checked).map((p) => p.name);
   return {
@@ -203,6 +205,9 @@ export async function websiteState(row = null) {
     isOn: website.is_on,
     neverPublished: !website.published,
     publishedAt: website.published_at,
+    // null for a site that was already live on the old website (decision 14).
+    publishedBy: names.get(website.published_by) || null,
+    keepDays: HISTORY_KEEP_DAYS,
     changes,
     changeCount: changedNames(changes).length,
     photosWithoutDescription: photosWithoutDescription(draft),
@@ -219,7 +224,7 @@ export async function websiteState(row = null) {
   };
 }
 
-function cleanPartPatch(key, body) {
+function cleanPartPatch(key, body, uploaded) {
   const part = PART_BY_KEY.get(key);
   if (!part) throw new WebsiteError(404, 'There is no such part of the website');
   if (!body || typeof body !== 'object') throw new WebsiteError(400, 'Nothing to save');
@@ -231,6 +236,8 @@ function cleanPartPatch(key, body) {
       if (typeof value !== 'boolean') throw new WebsiteError(400, 'Decoration is yes or no');
       patch.decoration = value;
     } else if (field === 'photo') {
+      // A photo is set only by uploading it; saving the part can only take it away.
+      if (value !== null && !uploaded) throw new WebsiteError(400, 'Add a photo by uploading it');
       if (value !== null && (typeof value !== 'string' || value.length > MAX_SHORT)) throw new WebsiteError(400, 'That photo can’t be used');
       patch.photo = value || null;
     } else {
@@ -245,8 +252,8 @@ function cleanPartPatch(key, body) {
 
 // Saving one part changes the draft only and marks the part checked. One
 // statement merges the part in, so two parts saved at once both stay (design 1).
-export async function savePart(key, body, loginId) {
-  const patch = cleanPartPatch(key, body);
+export async function savePart(key, body, loginId, uploaded = false) {
+  const patch = cleanPartPatch(key, body, uploaded);
   await getOrCreateWebsite();
   await prepare(
     `UPDATE website SET draft = jsonb_set(draft, ARRAY['parts', ?::text], coalesce(draft->'parts'->?::text, '{}'::jsonb) || ?::jsonb),
@@ -259,7 +266,7 @@ export async function savePart(key, body, loginId) {
 // decoration tick start again, because they were about the old photo.
 export async function savePartPhoto(key, url, loginId) {
   if (!PHOTO_PARTS.includes(key)) throw new WebsiteError(404, 'That part has no photo');
-  return savePart(key, { photo: url, description: '', decoration: false }, loginId);
+  return savePart(key, { photo: url, description: '', decoration: false }, loginId, true);
 }
 
 export async function saveLogo(url, loginId) {
@@ -336,13 +343,24 @@ async function keepDraftInHistory(website, loginId) {
   return true;
 }
 
+// The published version with the "checked" marks of parts the draft has the
+// same words for: a page checked without changing it stays checked.
+function keepChecked(published, draft) {
+  const parts = { ...published.parts };
+  for (const { key } of PARTS) {
+    if (draft.parts?.[key]?.checked && parts[key] && partValue(draft, key) === partValue(published, key)) parts[key] = { ...parts[key], checked: true };
+  }
+  return { ...published, parts };
+}
+
 // Discard keeps the draft in History and puts the published version back.
 export async function discard(loginId) {
   await inTransaction(async () => {
     const website = await lockWebsite();
     if (!website.published) throw new WebsiteError(409, 'Nothing has been published yet, so there is nothing to go back to');
     if (!await keepDraftInHistory(website, loginId)) throw new WebsiteError(409, 'There are no changes to discard');
-    await prepare('UPDATE website SET draft = published, draft_saved_by = ?, draft_saved_at = now(), updated_at = now()').run(loginId);
+    await prepare('UPDATE website SET draft = ?::jsonb, draft_saved_by = ?, draft_saved_at = now(), updated_at = now()')
+      .run(JSON.stringify(keepChecked(website.published, website.draft)), loginId);
   });
   await cleanUpHistory();
   return websiteState();
@@ -384,6 +402,19 @@ export async function history() {
   };
 }
 
+// One version, for History's View (ws-history).
+export async function historyVersion(versionId) {
+  const row = Number.isInteger(versionId) && versionId > 0
+    ? await prepare('SELECT id, kind, content, changed, made_by, made_at, first_published FROM website_versions WHERE id = ?').get(versionId)
+    : null;
+  if (!row) throw new WebsiteError(404, 'That version isn’t in History');
+  const names = await loginNames([row.made_by]);
+  return {
+    id: row.id, kind: row.kind, content: row.content, changed: row.changed,
+    by: names.get(row.made_by) || null, at: row.made_at, firstPublished: row.first_published,
+  };
+}
+
 // The names of the shop's Owners, for "Ask [Owner]" when someone else opens
 // the Website page (ws-no-access). logins has no row-level security, so the
 // shop is named here, as in server/team.js.
@@ -395,10 +426,4 @@ export async function ownerNames(shopId) {
 // refused: they could neither turn the site off nor change what customers see.
 export async function websiteInUse() {
   return !!(await prepare('SELECT 1 AS yes FROM website').get());
-}
-
-// What the customer site shows: the published version only (design 1).
-// null when the shop has no website row yet (the old settings still apply).
-export async function publishedWebsite() {
-  return prepare('SELECT is_on, published FROM website').get();
 }

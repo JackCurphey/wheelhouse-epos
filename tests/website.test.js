@@ -178,12 +178,14 @@ test('two parts saved at the same moment both stay', async () => {
   assert.equal(state.ready, false);
 });
 
+let newPhoto;
 test('a photo with no description and no decoration tick is counted; decoration is not', async () => {
-  let state = await save('big_photo', { photo: '/uploads/new.jpg', description: '', decoration: false });
+  let state = ok(await own('/api/website/parts/big_photo/photo', { method: 'POST', body: PNG }));
+  newPhoto = state.parts.find((p) => p.key === 'big_photo').photo;
   assert.equal(state.photosWithoutDescription, 1);
-  state = await save('big_photo', { photo: '/uploads/new.jpg', description: '', decoration: true });
+  state = await save('big_photo', { description: '', decoration: true });
   assert.equal(state.photosWithoutDescription, 0);
-  state = await save('big_photo', { photo: '/uploads/new.jpg', description: '[A photo of the shop]', decoration: false });
+  state = await save('big_photo', { description: '[A photo of the shop]', decoration: false });
   assert.equal(state.photosWithoutDescription, 0);
 });
 
@@ -192,11 +194,11 @@ test('publish makes the draft live and keeps History; nothing to publish is refu
   assert.deepEqual(state.changes, []);
   const info = await (await customerInfo()).json();
   assert.equal(info.headline, '[New headline]');
-  assert.equal(info.heroImageUrl, '/uploads/new.jpg');
+  assert.equal(info.heroImageUrl, newPhoto);
   // The old customer site's own fields follow what is published.
   const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled, hero_image_url FROM storefront_settings').get());
   assert.equal(old.enabled, true);
-  assert.equal(old.hero_image_url, '/uploads/new.jpg');
+  assert.equal(old.hero_image_url, newPhoto);
   const history = ok(await own('/api/website/history')).versions;
   assert.equal(history.length, 2);
   assert.equal(history[0].current, true);
@@ -377,4 +379,72 @@ test('a part saved while another save holds the row keeps both', async (t) => {
   const state = ok(await req('/api/website'));
   assert.equal(state.parts.find((p) => p.key === 'headline').text, '[Held]');
   assert.equal(state.parts.find((p) => p.key === 'workshop_words').text, '[Waited]');
+});
+
+// ---------- Found in /review ----------
+
+test('a photo is only set by uploading it: saving a part with a web address as its photo is refused', async (t) => {
+  const { req } = await freshShop(t, '[Address shop]');
+  const refused = await req('/api/website/parts/big_photo', { method: 'PUT', body: { photo: 'https://example.test/pixel.gif' } });
+  assert.equal(refused.status, 400);
+  const state = ok(await req('/api/website'));
+  assert.ok(state.parts.find((p) => p.key === 'big_photo').photo === null);
+  // Taking a photo away is still allowed.
+  ok(await req('/api/website/parts/big_photo/photo', { method: 'POST', body: PNG }));
+  const cleared = ok(await req('/api/website/parts/big_photo', { method: 'PUT', body: { photo: null } }));
+  assert.ok(cleared.parts.find((p) => p.key === 'big_photo').photo === null);
+});
+
+test('"no price" counts only products that would go online', async (t) => {
+  const { shop, req } = await freshShop(t, '[Count shop]');
+  await runWithShop(shop.id, async () => {
+    const add = prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, show_online, updated_at) VALUES (?, '[Product]', 'Parts', ?, 0, 0, ?, now())");
+    await add.run('[online no price]', 0, 1);
+    await add.run('[shop only no price]', 0, 0);
+    await add.run('[online priced]', 5, 1);
+  });
+  const { productCounts } = ok(await req('/api/website'));
+  // An unpriced product stays off until priced, so it isn't among those going online.
+  assert.equal(productCounts.goOnline, 1);
+  assert.equal(productCounts.noPrice, 1);
+});
+
+test('the old Settings route can still change the theme once the Website page is in use, and nothing else', async (t) => {
+  const { req } = await freshShop(t, '[Theme shop]');
+  ok(await req('/api/website'));
+  const theme = ok(await req('/api/storefront-settings', { method: 'PUT', body: { themePreset: 'plum' } }));
+  assert.equal(theme.themePreset, 'plum');
+  assert.equal((await req('/api/storefront-settings', { method: 'PUT', body: { themePreset: 'plum', tagline: '[Old]' } })).status, 409);
+});
+
+test('discarding keeps the "checked" marks of pages saved unchanged', async (t) => {
+  const { req } = await freshShop(t, '[Checked shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  const before = ok(await req('/api/website'));
+  const privacy = before.parts.find((p) => p.key === 'privacy');
+  ok(await req('/api/website/parts/privacy', { method: 'PUT', body: { text: privacy.text } }));
+  ok(await req('/api/website/parts/headline', { method: 'PUT', body: { text: '[Thrown away]' } }));
+  const after = ok(await req('/api/website/discard', { method: 'POST' }));
+  assert.equal(after.parts.find((p) => p.key === 'privacy').checked, true);
+  assert.deepEqual(after.partsToCheck, ['Collection and returns']);
+  assert.equal(after.parts.find((p) => p.key === 'headline').text, before.parts.find((p) => p.key === 'headline').text);
+});
+
+// ---------- Found in the drawing check ----------
+
+test('the page says who published last and how long History keeps changes; View opens one version', async (t) => {
+  const { shop, req } = await freshShop(t, '[View shop]');
+  const first = ok(await req('/api/website'));
+  assert.ok(first.publishedBy === null);
+  assert.equal(first.keepDays, 90);
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  ok(await req('/api/website/parts/headline', { method: 'PUT', body: { text: '[Second]' } }));
+  const state = ok(await req('/api/website/publish', { method: 'POST' }));
+  assert.equal(state.publishedBy, 'Test Owner');
+  const versions = ok(await req('/api/website/history')).versions;
+  const older = versions.find((v) => v.firstPublished);
+  const view = ok(await req(`/api/website/history/${older.id}`));
+  assert.equal(view.content.parts.headline.text, shop.name);
+  assert.equal(view.firstPublished, true);
+  assert.equal((await req('/api/website/history/999999999')).status, 404);
 });

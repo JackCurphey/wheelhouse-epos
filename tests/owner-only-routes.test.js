@@ -119,6 +119,7 @@ const ROUTES = [
   ['POST', '/api/website/discard', {}],
   ['POST', '/api/website/turn-off', {}],
   ['GET', '/api/website/history'],
+  ['GET', `/api/website/history/${MISSING}`],
   ['POST', `/api/website/history/${MISSING}/restore`, {}],
 ];
 

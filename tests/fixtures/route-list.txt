@@ -43,6 +43,7 @@ POST /api/website/discard
 POST /api/website/turn-on
 POST /api/website/turn-off
 GET /api/website/history
+GET /api/website/history/:id
 POST /api/website/history/:id/restore
 GET /api/storefront-settings
 PUT /api/storefront-settings
