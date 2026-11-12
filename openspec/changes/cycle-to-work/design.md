@@ -50,7 +50,9 @@ and `website-management` also plans 130, so check before writing).
   `quote_valid_days`, `order_rule` (`certificate` | `applied` |
   `deposit`), `deposit_kind` (`pounds` | `percent`), `deposit_value`,
   `deposit_on_certificate` (`refund` | `count`), `deposit_on_pull_out`
-  (`refund` | `keep`), `how_to_apply`, `today_lines` (on or off).
+  (`refund` | `keep`), `how_to_apply`, `today_lines` (on or off),
+  `no_certificate_days` and `payment_late_days` (the two `[n]`s in the On
+  Today fold), `next_quote_number` (the shop's quote counter).
   The shop's rule for keeping a deposit, printed on the quote, is built
   from `deposit_on_pull_out`. Follows the one-table-per-area pattern of
   `workshop_settings` and `payment_settings`, since the settings store
@@ -64,12 +66,15 @@ and `website-management` also plans 130, so check before writing).
   (null when not held or firm), `hold_wanted` (false for "Don't hold this
   one"), `product_id`, `frame_id` (the held frame, nullable),
   `accessories` (lines with product and price), `total_pence`,
-  `certificate_number`, `certificate_pence`, `certificate_received_on`,
+  `applied_at`, `application_reference`, `certificate_number`, `certificate_pence`, `certificate_received_on`,
   `difference_choice`, `sale_id`, `collected_at`, `expected_pence`,
   `expected_by`, `paid_pence`, `paid_on`, `provider_reference`,
   `customer_code` (the private link), `close_reason`.
   Money is kept in pence, so this piece doesn't add to the pounds-to-pence
-  move (WP-1.6).
+  move (WP-1.6). The customer, provider, product, site, frame and sale
+  links all carry the shop (`(id, shop_id)`), so an order can only name its
+  own shop's rows; migration 137 adds the `(id, shop_id)` indexes on
+  `customers`, `stock_frames` and `sales` this needs.
 - `c2w_order_events`: "What's happened": `order_id`, `kind`,
   `employee_id`, `reason`, `detail` (JSON), `created_at`. Only ever
   added to.
