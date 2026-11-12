@@ -10,6 +10,7 @@ import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { categoryFor } from '../lib/categories.js';
+import { categoryShowsOnline } from '../online-orders/showing.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { moveStock } from '../lib/stock.js';
 import { recordPriceChanges } from '../lib/price-changes.js';
@@ -84,13 +85,14 @@ async function inUse(sizes, own = []) {
   return hit.barcode && barcodes.includes(hit.barcode) ? `Barcode "${hit.barcode}" is already in use` : `SKU "${hit.sku}" is already in use`;
 }
 
-// A new size: its own product, then its starting stock, if any, through moveStock.
+// A new size: its own product, showing online as its category does (website-buy-online),
+// then its starting stock, if any, through moveStock.
 async function addSize(group, s, who) {
   const made = await db.prepare(
-    `INSERT INTO products (name, sku, barcode, category, price, cost, low_stock_threshold, group_id, size, colour, active, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now()) RETURNING id`
+    `INSERT INTO products (name, sku, barcode, category, price, cost, low_stock_threshold, group_id, size, colour, active, show_online, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now()) RETURNING id`
   ).get(nameOf(group.name, s), s.sku ?? null, s.barcode ?? null, group.category, s.money.price ?? 0, s.money.cost ?? 0,
-    s.lowStockThreshold ?? 3, group.id, s.size, s.colour, s.active ?? 1);
+    s.lowStockThreshold ?? 3, group.id, s.size, s.colour, s.active ?? 1, await categoryShowsOnline(group.category));
   if (s.stock) await moveStock([{ productId: made.id, change: s.stock, type: 'intake', note: 'Initial stock' }], who);
   return made.id;
 }

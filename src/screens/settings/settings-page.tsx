@@ -19,7 +19,7 @@ import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
-import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
+import { BuyingOnline, NotCollected, PayingOnline, ShowingProducts, useOnlineOrdersSummaries, usePayingOnlineSummary, WhatTheWebsiteSells, WhereReadyOrdersWait } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { QuickButtonsSettings, useQuickButtonsSummary } from './quick-buttons-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
@@ -1078,6 +1078,7 @@ function OwnerSettings() {
   const categories = useCategoriesSummary();
   const bikeWarranties = useBikeWarrantiesSummary();
   const payingOnline = usePayingOnlineSummary();
+  const online = useOnlineOrdersSummaries();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1112,10 +1113,14 @@ function OwnerSettings() {
           { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
         ] },
         // After End of day, before Cycle to Work, as drawn (settings-frame.mjs roomOf; website.mjs
-        // ONLINE_INTRO, ws-pay-*): Buying online above
-        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
+        // ONLINE_INTRO, ws-pay-*): Buying online above the folds in settings-frame.mjs onlineFolds'
+        // order (website-management design 6; website-buy-online pull request 2).
         { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
+          { key: 'website-sells', title: 'What the website sells', summary: online.sells, body: <WhatTheWebsiteSells /> },
+          { key: 'showing-products', title: 'Showing products', summary: online.showing, body: <ShowingProducts /> },
           { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
+          { key: 'not-collected', title: 'Not collected', summary: online.notCollected, body: <NotCollected /> },
+          { key: 'ready-orders-wait', title: 'Where ready orders wait', summary: online.shelf, body: <WhereReadyOrdersWait /> },
         ] },
         // After Online orders, as drawn (settings-frame.mjs roomOf and c2wFolds; c2w.mjs cw-settings).
         { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [

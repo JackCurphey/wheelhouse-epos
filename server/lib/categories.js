@@ -36,9 +36,12 @@ export async function categoryFor(text) {
     const find = () => prepare('SELECT id FROM product_categories WHERE path = ? FOR KEY SHARE').get(here);
     let found = await find();
     if (!found) {
+      // A new category shows on the website as the one above it does (website-buy-online, Showing products).
       found = await prepare(
-        'INSERT INTO product_categories (parent_id, name, path) VALUES (?, ?, ?) ON CONFLICT (shop_id, path) DO NOTHING RETURNING id'
-      ).get(parent, parts[i - 1], here) ?? await find();
+        `INSERT INTO product_categories (parent_id, name, path, show_online)
+         VALUES (?, ?, ?, COALESCE((SELECT show_online FROM product_categories WHERE id = ?), true))
+         ON CONFLICT (shop_id, path) DO NOTHING RETURNING id`
+      ).get(parent, parts[i - 1], here, parent) ?? await find();
     }
     parent = found.id;
   }

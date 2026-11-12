@@ -11,6 +11,7 @@ import { currentSession } from '../lib/session.js';
 import { endTrip, html, peekTrip, redirect, startTrip } from '../lib/trips.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { isConnected, paymentAccount, paymentsState } from '../payments/provider.js';
+import { setCategoryShowing, showingProducts } from '../online-orders/showing.js';
 
 const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
@@ -45,6 +46,8 @@ async function settingsBody() {
     keepDays: stored.keep_days,
     // Where ready orders wait: none until the Owner names it.
     shelfName: stored.shelf_name,
+    // Showing products: each category's switch (design, decided while planning 15).
+    showing: await showingProducts(),
     payments: {
       state: paymentsState(account),
       // False once a more-details date has passed: payments have stopped, so no Buying online switch.
@@ -149,6 +152,18 @@ export function register(route) {
       if (err instanceof Refused) return sendJson(res, err.status, err.body);
       throw err;
     }
+    sendJson(res, 200, await settingsBody());
+  });
+
+  // screens: on-settings-show
+  // A category's switch sets every product in it, and the categories under it.
+  route('PUT', '/api/online-orders-settings/categories/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res)) return;
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) return notFound(res, 'Category not found');
+    const body = (await readJsonBody(req)) ?? {};
+    if (typeof body.showOnline !== 'boolean') return badRequest(res, 'Say whether the category shows on the website');
+    if (!(await setCategoryShowing(id, body.showOnline))) return notFound(res, 'Category not found');
     sendJson(res, 200, await settingsBody());
   });
 

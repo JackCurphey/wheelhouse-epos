@@ -13,6 +13,7 @@ import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
 import { linkState } from './shopify/link.js';
 import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
+import { startWith } from './online-orders/showing.js';
 
 // History keeps 90 days (spec question 3, default taken:
 // docs/decisions/2026-11-12-website-defaults-taken.md).
@@ -503,7 +504,8 @@ export async function setUp(body, loginId) {
     if (website.kind) throw new WebsiteError(409, 'The website is already set up');
     // Every product online: active ones with a price; one with no price stays
     // off until priced. Nothing online: every product off, inactive ones too.
-    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
+    // Every category is switched the same way (server/online-orders/showing.js).
+    await startWith(body.startWith === 'every');
     await prepare(
       `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
               draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`

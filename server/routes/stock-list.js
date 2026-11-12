@@ -10,6 +10,7 @@ import { newestFirst, priceChangesOf } from '../lib/price-changes.js';
 import { oldestSite } from '../lib/stock.js';
 import { siteHere } from './purchase-orders.js';
 import { bikeKinds, isBike } from '../lib/bikes.js';
+import { setDifferentlyIds } from '../online-orders/showing.js';
 
 const db = { prepare, exec: dbExec };
 
@@ -25,7 +26,13 @@ const SHOWS = {
   // As server/website.js counts them: a price of exactly 0 (one below zero is neither).
   'no-price': (p) => Number(p.price_pence) === 0,
 };
-function showsOf(query) {
+// Settings › Online orders' See them (website-buy-online, on-settings-show): the products
+// set differently from their category, as Settings counts them.
+async function showsOf(query) {
+  if (query.get('show') === 'set-differently') {
+    const ids = await setDifferentlyIds();
+    return Object.assign((p) => ids.has(p.id), { on: true });
+  }
   const which = SHOWS[query.get('show')];
   if (!which) return Object.assign(() => true, { on: false });
   const online = query.get('online') === '1';
@@ -150,7 +157,7 @@ export function register(route) {
     const search = String(query.get('search') ?? '').trim();
     const words = await conditionsOf(search.split(/\s+/).filter(Boolean));
     const kept = await filtersOf(query);
-    const shows = showsOf(query);
+    const shows = await showsOf(query);
     const groups = new Map((await db.prepare('SELECT id, name, category FROM product_groups').all()).map((g) => [g.id, g]));
     const products = await db.prepare(`SELECT * FROM products ${all ? '' : 'WHERE active = 1'} ORDER BY category, name, id`).all();
     const singles = new Map();

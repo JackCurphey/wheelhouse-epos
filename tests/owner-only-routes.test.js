@@ -124,6 +124,8 @@ const ROUTES = [
   // Online orders settings (openspec/changes/website-buy-online, task 1.4).
   ['GET', '/api/online-orders-settings'],
   ['PUT', '/api/online-orders-settings', {}],
+  // A category's Showing products switch (task 2.4).
+  ['PUT', `/api/online-orders-settings/categories/${MISSING}`, { showOnline: false }],
 ];
 
 for (const [method, path, body] of ROUTES) {

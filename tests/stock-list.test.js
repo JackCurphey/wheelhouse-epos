@@ -117,6 +117,8 @@ test('show=no-photo and show=no-price list just the products the Website page co
   const free = await pads({ name: 'Website pads no price', price: 0 });
   await runWithShop(owner.shop.id, async () => {
     await prepare('UPDATE products SET show_online = true WHERE id = ANY(?::int[])').run([shown.id, pictured.id, free.id]);
+    // A new product follows its category, which starts on (website-buy-online), so hidden is switched off.
+    await prepare('UPDATE products SET show_online = false WHERE id = ?').run(hidden.id);
     await prepare("UPDATE products SET photo_url = '/photos/[photo].jpg' WHERE id = ?").run(pictured.id);
   });
   const names = async (q) => {
@@ -147,6 +149,8 @@ test('show= lists one row per counted product, with the same edges as the counts
     await prepare("UPDATE products SET photo_url = '' WHERE id = ?").run(blank.id);
     await prepare('UPDATE products SET active = 0 WHERE id = ?').run(gone.id);
     await prepare('UPDATE products SET price = -1 WHERE id = ?').run(below.id);
+    // A new product follows its category, which starts on (website-buy-online).
+    await prepare('UPDATE products SET show_online = false WHERE id = ?').run(offline.id);
   });
   const rows = async (q) => {
     const res = await staff(`/api/stock-list?search=${encodeURIComponent('Counted pads')}&${q}`);

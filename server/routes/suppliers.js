@@ -11,6 +11,7 @@ import { bikeKinds } from '../lib/bikes.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { poundsOf } from '../lib/pence.js';
 import { categoryFor } from '../lib/categories.js';
+import { categoryShowsOnline } from '../online-orders/showing.js';
 import { emptyComputer, notProductEditor } from '../lib/product-editor.js';
 import { limitLockWait, moveStock } from '../lib/stock.js';
 import { CHECK_IN_FIRST, whoIsBooking } from './purchase-orders.js';
@@ -166,10 +167,11 @@ export function register(route) {
         const category = await categoryFor(body.category);
         info = await db
           .prepare(
-            `INSERT INTO products (sku, barcode, name, category, price, cost, supplier, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO products (sku, barcode, name, category, price, cost, supplier, show_online, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
-          .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, supplier.name, nowIso());
+          // Showing online as its category does (website-buy-online).
+          .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, supplier.name, await categoryShowsOnline(category), nowIso());
         if (who) await moveStock([{ productId: info.lastInsertRowid, change: item.stock_qty, type: 'intake', note: `Imported from ${supplier.name}’s catalogue` }], who);
         await db
           .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)

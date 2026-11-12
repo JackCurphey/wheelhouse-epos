@@ -396,6 +396,7 @@ PUT /api/quick-buttons/:id
 DELETE /api/quick-buttons/:id
 GET /api/online-orders-settings
 PUT /api/online-orders-settings
+PUT /api/online-orders-settings/categories/:id
 POST /api/online-payments/connect
 GET /api/online-payments/pretend-connect
 GET /api/online-payments/pretend-card
