@@ -13,12 +13,15 @@ import { ORDER_SELECT, shopTimeZone } from './orders.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysFrom = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
 
-// A hold that reached its date with nobody choosing (UX walk-through 5 M3):
-// still held, before the certificate, asking someone to choose. The list's own
-// rule ("hold ended — choose", nextFor), the longest ended first.
+// A hold that ended: still held, before the certificate, past its date. The
+// list's own rule ("hold ended — choose", nextFor); `?` is the shop's today.
+const HOLD_ENDED = "o.stage IN ('quote', 'waiting') AND o.hold_until IS NOT NULL AND o.hold_until < ?::date";
+
+// A hold that reached its date with nobody choosing (UX walk-through 5 M3),
+// asking someone to choose, the longest ended first.
 export async function holdsEnded(today) {
   const rows = await prepare(`${ORDER_SELECT}
-    WHERE o.stage IN ('quote', 'waiting') AND o.hold_until IS NOT NULL AND o.hold_until < ?::date
+    WHERE ${HOLD_ENDED}
     ORDER BY o.hold_until, o.id`).all(today);
   return rows.map((r) => ({ kind: 'c2w_hold_ended', orderId: r.id, customerName: r.customer_name, bike: r.bike_name, holdUntil: r.hold_until_day }));
 }
@@ -28,14 +31,19 @@ export async function holdsEnded(today) {
 // list's own rule (decided while building, 12 Nov, item 7), counted in the
 // shop's days. An order whose hold ended is left to that line, which says
 // "no certificate yet" too, so each order has one line. Oldest first.
+// Hold longer takes the line away (cw-today-held): it comes back when the
+// same days have passed since the hold was last lengthened, still saying
+// when the quote was given (decided while building, 12 Nov, PR 10b item 6).
 export async function noCertificate(today, tz, days) {
   if (!days) return [];
-  const rows = await prepare(`${ORDER_SELECT}
-    WHERE o.stage IN ('quote', 'waiting') AND NOT (o.hold_until IS NOT NULL AND o.hold_until < ?::date)
-    ORDER BY o.quote_given_at, o.id`).all(today);
+  const rows = await prepare(`SELECT x.*, (SELECT max(e.created_at) FROM c2w_order_events e
+      WHERE e.order_id = x.id AND e.kind = 'hold_longer') AS held_longer_at
+    FROM (${ORDER_SELECT} WHERE o.stage IN ('quote', 'waiting') AND NOT (${HOLD_ENDED})) x
+    ORDER BY x.quote_given_at, x.id`).all(today);
+  const daysSince = (t) => daysFrom(shopToday(tz, new Date(t)), today);
   return rows
-    .map((r) => ({ r, quotedDays: daysFrom(shopToday(tz, new Date(r.quote_given_at)), today) }))
-    .filter(({ quotedDays }) => quotedDays >= days)
+    .map((r) => ({ r, quotedDays: daysSince(r.quote_given_at) }))
+    .filter(({ r, quotedDays }) => quotedDays >= days && (!r.held_longer_at || daysSince(r.held_longer_at) >= days))
     .map(({ r, quotedDays }) => ({
       kind: 'c2w_no_certificate', orderId: r.id, customerName: r.customer_name, bike: r.bike_name, quotedDays,
       holdUntil: r.hold_until_day,

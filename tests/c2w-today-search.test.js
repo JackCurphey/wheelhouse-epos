@@ -147,6 +147,34 @@ test('10.1 Today: a quote given the “No certificate after” days ago or more 
   assert.ok(!(await c2wLines()).some((l) => l.kind === 'c2w_no_certificate'), 'no days set in Settings, no line');
 });
 
+test('10.1 Today: Hold longer on a “no certificate yet” line takes it away; it comes back the “No certificate after” days after the hold was lengthened', async () => {
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 5 } })).status, 200);
+  const made = await quote();
+  await set(made.id, { quote_given_at: `${day(-9)}T12:00:00.000Z` });
+  const mine = async () => (await c2wLines()).filter((l) => l.orderId === made.id);
+  assert.equal((await mine()).length, 1, 'a quote given 9 days ago is a line');
+  const held = await own(`/api/c2w/orders/${made.id}/hold-longer`, { method: 'POST', body: {} });
+  assert.equal(held.status, 200, JSON.stringify(held.body));
+  assert.deepEqual(await mine(), [], 'Hold longer, done in one press: the line goes (cw-today-held)');
+  const lengthened = (when) => inShop(async () => prepare("UPDATE c2w_order_events SET created_at = ? WHERE order_id = ? AND kind = 'hold_longer' RETURNING id").get(when, made.id));
+  await lengthened(`${day(-4)}T12:00:00.000Z`);
+  assert.deepEqual(await mine(), [], 'lengthened 4 days ago: not yet');
+  await lengthened(`${day(-5)}T12:00:00.000Z`);
+  assert.deepEqual((await mine()).map((l) => [l.kind, l.quotedDays]), [['c2w_no_certificate', 9]], 'lengthened 5 days ago: back, still saying when it was quoted');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: null } })).status, 200);
+});
+
+test('10.1 Today: the “no certificate yet” days count in the shop’s days, so a quote given at 23:30 on a summer evening was given the next day in London', async () => {
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 5 } })).status, 200);
+  const late = await quote();
+  const earlier = await quote();
+  await set(late.id, { quote_given_at: `${day(-5)}T23:30:00.000Z` });
+  await set(earlier.id, { quote_given_at: `${day(-6)}T23:30:00.000Z` });
+  const ours = (await c2wLines()).filter((l) => [late.id, earlier.id].includes(l.orderId));
+  assert.deepEqual(ours.map((l) => [l.orderId, l.quotedDays]), [[earlier.id, 5]], '23:30 UTC is 00:30 the next day in London: 4 days, not 5');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: null } })).status, 200);
+});
+
 // ---------- 10.2 Search ----------
 
 test('10.2 search finds an order by the customer’s name, its quote number and its certificate number, for anyone signed in', async () => {

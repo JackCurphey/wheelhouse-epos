@@ -13,7 +13,7 @@ import { HOW, dayText } from '@/screens/customers/privacy-requests.tsx';
 import { PAYING_ONLINE, providerText } from '@/screens/settings/online-orders-settings.tsx';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
@@ -285,7 +285,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           right={(
             <span className="inline-flex flex-col gap-1.5 whitespace-nowrap">
               {i.holdUntil && <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Hold ${possessive(i.customerName)} bike longer`} onClick={() => void choose(i, 'hold-longer')}>Hold longer</Button>}
-              <Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.customerName)} order`} className={linkButton(touch)}>Open the order</Link>
+              <Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.customerName)} order`} className={`${buttonVariants({ size })}${touch ? ' min-h-11' : ''}`}>Open the order</Link>
             </span>
           )} />
       );

@@ -126,6 +126,12 @@ test('cw-today: a quote with no certificate yet says how long ago it was given a
   const openIt = box.getByRole('link', { name: 'Open Maya Patel’s order' });
   assert.equal(openIt.textContent, 'Open the order');
   assert.equal(openIt.getAttribute('href'), '/workshop/c2w/31');
+  // The drawing draws the two as the same button: the link takes the small button's look.
+  const hold = box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' });
+  for (const look of ['text-size-13', 'py-[5px]', 'px-2.5']) {
+    assert.ok(hold.className.includes(look), `Hold longer has ${look}`);
+    assert.ok(openIt.className.includes(look), `Open the order has ${look}`);
+  }
 });
 
 test('cw-today: a quote with no bike held has no hold to lengthen, only Open the order; one day reads “1 day”', async () => {
