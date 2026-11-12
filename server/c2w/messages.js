@@ -10,8 +10,7 @@ import { shopToday } from '../clock.js';
 import { ORDER_SELECT, longDate, quoteRef, providerPays, addEvent } from './orders.js';
 import { c2wLinkPath } from './customer-view.js';
 import { isHttpsRequest } from '../proxy-trust.js';
-
-const pounds = (pence) => `£${(pence / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { pounds } from '../lib/customer-money.js';
 
 // The link's start: the app's public address, or the request's own host (as the
 // workshop's messages do). A message queued with no request (booked in, the
@@ -27,6 +26,8 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
   const r = await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId);
   if (!r) return { skipped: 'no_order' };
   const shop = await prepare("SELECT name, slug FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
+  // One size of a bike with sizes is named with its size, as drawn ("[Bike] · [Size]", cw-texts-*).
+  const size = (await prepare('SELECT size FROM products WHERE id = ?').get(r.product_id))?.size;
   const base = baseFor(req);
   const link = await messageLink(async () => (base ? `${base}${c2wLinkPath(shop.slug, r.customer_code)}` : null));
   // Never a message without its link, and never a booking-in stopped for one.
@@ -36,7 +37,7 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
   }
   const vars = {
     'Customer’s first name': (r.customer_name ?? '').trim().split(/\s+/)[0],
-    Bike: r.bike_name,
+    Bike: size ? `${r.bike_name} · ${size}` : r.bike_name,
     'Hold until': r.hold_until_day ? longDate(r.hold_until_day) : '',
     'Quote number': quoteRef(r.quote_number),
     'Link to your Cycle to Work bike': link,
@@ -78,7 +79,7 @@ export async function undoReadyMessage(orderId) {
  * hold ends within the shop's reminder days (and hasn't ended), once for that
  * date. Releasing the bike or the certificate clears hold_until, so neither is reminded. The order's line records it. Inside runWithShop, not throttled.
  */
-export async function queueHoldEndings(shopId, now = new Date()) {
+export async function queueHoldEndings(now = new Date()) {
   const s = await prepare('SELECT remind_days FROM c2w_settings LIMIT 1').get();
   if (!s || s.remind_days === null) return 0;
   const tz = (await prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
@@ -111,5 +112,5 @@ export async function holdEndingRound(shopId, now = new Date()) {
   const last = lastChecked.get(shopId) ?? 0;
   if (now.getTime() - last < 60_000) return 0;
   lastChecked.set(shopId, now.getTime());
-  return queueHoldEndings(shopId, now);
+  return queueHoldEndings(now);
 }

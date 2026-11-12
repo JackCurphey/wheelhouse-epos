@@ -45,10 +45,16 @@ after(async () => {
 
 // Each test has its own Maya, so her messages are only that test's.
 const newMaya = async () => (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: `maya-${tag()}@example.test` } })).body;
-// A £1,000 bike with frame numbers, `frames` of them in stock at the shop's site.
-async function framedBike(frames) {
-  const id = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: frames });
+// A £1,000 bike with frame numbers, `frames` of them in stock at the shop's site:
+// one size of a bike with sizes, so the messages name it "[Bike] · [Size]" as drawn,
+// unless `sized` is false.
+async function framedBike(frames, { sized = true } = {}) {
+  const id = await seedProduct(owner.shop.id, { name: '[Bike]', price: '1000.00', stock: frames });
   await inShop(async () => {
+    if (sized) {
+      const group = await prepare("INSERT INTO product_groups (name) VALUES ('[Bike]') RETURNING id").get();
+      await prepare("UPDATE products SET group_id = ?, size = '[Size]' WHERE id = ?").run(group.id, id);
+    }
     await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').get(site, id, frames);
     for (let i = 0; i < frames; i += 1) {
       const key = `[FRAME-${tag()}]`;
@@ -81,6 +87,12 @@ test('9.1 Your bike is put aside: sent when a quote holds the bike, with the dat
   assert.equal(m.template_key, 'c2w_put_aside');
   assert.equal(m.intent_state, 'intended', 'waits for Undo, like every automatic message');
   assert.equal(m.body, `Hi Maya, we’re now holding [Bike] · [Size] for you until 8 September 2026. Quote ${made.quoteRef}. See your Cycle to Work bike: [link]`);
+});
+
+test('9.1 a bike without sizes is named on its own', async () => {
+  const maya = await newMaya();
+  await quote(maya, await framedBike(1, { sized: false }));
+  assert.match((await messagesTo(maya))[0].body, /holding \[Bike\] for you until/);
 });
 
 test('9.1 Your bike is put aside: nothing when the bike isn’t held (not in stock, or Don’t hold)', async () => {
@@ -176,18 +188,18 @@ test('9.1 Your hold ends on [date]: sent once, the shop’s reminder days before
   const maya = await newMaya();
   const made = await quote(maya, await framedBike(1));
   const now = new Date('2026-09-01T10:00:00Z');
-  await inShop(() => queueHoldEndings(owner.shop.id, now));
+  await inShop(() => queueHoldEndings(now));
   assert.equal((await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending').length, 0, 'ends 8 Sep: not yet');
   // Two days before (Settings: remind 2 days before).
   await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-09-03' WHERE id = ?").run(made.id));
-  await inShop(() => queueHoldEndings(owner.shop.id, now));
-  await inShop(() => queueHoldEndings(owner.shop.id, now));
+  await inShop(() => queueHoldEndings(now));
+  await inShop(() => queueHoldEndings(now));
   const ending = (await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending');
   assert.equal(ending.length, 1, 'once for that date');
   assert.equal(ending[0].body, `Hi Maya, your hold on [Bike] · [Size] ends on 3 September 2026. Quote ${made.quoteRef}. See your Cycle to Work bike: [link]`);
   // Held longer, to a date that comes round again: a new reminder for the new date.
   await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-09-02' WHERE id = ?").run(made.id));
-  await inShop(() => queueHoldEndings(owner.shop.id, now));
+  await inShop(() => queueHoldEndings(now));
   assert.equal((await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending').length, 2);
 });
 
@@ -199,7 +211,7 @@ test('9.1 Your hold ends on [date]: not for a hold already ended, a released bik
   assert.equal((await post(`/api/c2w/orders/${released.id}/release`, {})).status, 200);
   assert.equal((await certify(certified.id, { amountPence: 100000 })).status, 200);
   await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-08-31' WHERE id = ?").run(ended.id));
-  await inShop(() => queueHoldEndings(owner.shop.id, new Date('2026-09-01T10:00:00Z')));
+  await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
   assert.equal((await messagesTo(maya)).filter((m) => m.template_key === 'c2w_hold_ending').length, 0);
 });
 
@@ -215,7 +227,7 @@ test('9.1 each message switched off in Settings › Messages is not sent', async
     assert.equal((await certify(b.id, { amountPence: 90000, difference: 'keep' })).status, 200, 'the for-less wording follows Certificate received');
     assert.equal((await post(`/api/c2w/orders/${a.id}/ready`, {})).status, 200);
     await inShop(() => prepare("UPDATE c2w_orders SET hold_until = '2026-09-02' WHERE id = ?").run(c.id));
-    await inShop(() => queueHoldEndings(owner.shop.id, new Date('2026-09-01T10:00:00Z')));
+    await inShop(() => queueHoldEndings(new Date('2026-09-01T10:00:00Z')));
     assert.deepEqual(await messagesTo(maya), []);
   } finally {
     for (const key of ['c2w_put_aside', 'c2w_certificate', 'c2w_ready', 'c2w_hold_ending']) await switchOn(key);
