@@ -40,12 +40,12 @@ before(async () => {
   const set = await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, remindDays: 2, quoteValidDays: 30, howToApply: '[How to apply]' } });
   assert.equal(set.status, 200, JSON.stringify(set.body));
   provider = (await own('/api/c2w/providers', { method: 'POST', body: { name: '[Provider]', commissionKind: 'percent', commissionValue: 500 } })).body.provider;
-  bike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 2 });
+  bike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 100 });
   lock = await seedProduct(owner.shop.id, { name: '[Lock]', price: '40.00', stock: 5 });
   maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900 142', email: `maya-${tag()}@example.test` } })).body;
   // The bike is in stock at the shop; "away" is a bike with none here (cw-new-not-in-stock).
   site = await inShop(async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get()).id);
-  await inShop(async () => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 2) RETURNING product_id').get(site, bike));
+  await inShop(async () => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 100) RETURNING product_id').get(site, bike));
   away = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 0 });
 });
 after(async () => {
@@ -155,9 +155,9 @@ test('3.3 each step adds a “What’s happened” line saying who and when; not
   assert.equal(applied.status, 200, JSON.stringify(applied.body));
   assert.equal(applied.body.order.stage, 'waiting');
   const seen = await order(made.id);
-  assert.deepEqual(seen.events.map((e) => [e.kind, e.by]), [['quote_given', 'Jack Lewis'], ['applied', 'Jack Lewis']]);
+  assert.deepEqual(seen.events.map((e) => [e.kind, e.by]), [['quote_given', 'Jack Lewis'], ['held', 'Jack Lewis'], ['applied', 'Jack Lewis']]);
   assert.ok(seen.events.every((e) => !Number.isNaN(Date.parse(e.at))));
-  assert.deepEqual(seen.events[1].detail, { appliedOn: '2026-09-01', employer: '[Employer]', reference: '[reference]' });
+  assert.deepEqual(seen.events[2].detail, { appliedOn: '2026-09-01', employer: '[Employer]', reference: '[reference]' });
   assert.equal(seen.applicationReference, '[reference]');
   for (const method of ['PUT', 'DELETE']) {
     const r = await own(`/api/c2w/orders/${made.id}/events`, { method, body: {} });
@@ -178,7 +178,7 @@ test('3.4 a step not allowed from the order’s stage is refused and changes not
   assert.equal(again.status, 409);
   assert.equal(again.body.code, 'wrong_stage');
   assert.deepEqual(await raw(made.id), before);
-  assert.equal((await events(made.id)).length, 2);
+  assert.equal((await events(made.id)).length, 3, 'quote given, held, applied');
 });
 
 // ---------- 3.5 ----------
@@ -194,7 +194,7 @@ test('3.5 the list groups orders by stage, gives the top counts and the sidebar 
   const before = (await own('/api/c2w/orders')).body;
   const ending = await at({ hold_until: '2026-09-02' });
   const ended = await at({ hold_until: '2026-08-30' });
-  const ready = await at({ stage: 'certificate', hold_until: null, product_id: away });
+  const ready = await at({ stage: 'certificate', hold_until: null, held_at: null, product_id: away });
   const heldCertificate = await at({ stage: 'certificate', hold_until: '2026-09-20' });
   const inStockUnheld = await at({ stage: 'certificate', hold_until: null, hold_wanted: false });
   const stale = await at({ quote_given_at: '2026-08-10T10:00:00Z', hold_until: '2026-09-20' });
@@ -258,7 +258,7 @@ test('3.6 the quote document follows the order, and Email queues it', async () =
   assert.ok(msg.body.startsWith(`Hi Maya, here’s your quote ${made.quoteRef} for [Bike] · [Size], for your Cycle to Work scheme through [Provider].`), msg.body);
   assert.ok(msg.body.includes('We’re holding your bike until 8 September 2026. This quote is valid until 1 October 2026. We’ll let you know as soon as your certificate reaches us.'), msg.body);
   assert.ok(msg.body.includes('How to apply: [How to apply]'), msg.body);
-  assert.deepEqual((await events(made.id)).map((e) => e.kind), ['quote_given', 'quote_emailed']);
+  assert.deepEqual((await events(made.id)).map((e) => e.kind), ['quote_given', 'held', 'quote_emailed']);
   // Five an hour for one customer, then it waits.
   for (let i = 0; i < 4; i += 1) await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} });
   const tooMany = await own(`/api/c2w/orders/${made.id}/email-quote`, { method: 'POST', body: {} });

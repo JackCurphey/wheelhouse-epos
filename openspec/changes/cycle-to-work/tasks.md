@@ -65,12 +65,12 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 5. Holding bikes and stock (pull request 5, about 450 lines, risky: stock)
 
-- [ ] 5.1 Test: making a quote with the hold holds one free frame at the site, linked to the order; two quotes for the last frame — only one holds it
-- [ ] 5.2 Test: a hold never ends by itself; the reminder day and the end date drive "hold ending soon" and "hold ended — choose"
-- [ ] 5.3 Test: Hold longer moves the date; Release the bike frees the frame and keeps the order open
-- [ ] 5.4 Test: a held frame is left out of available stock in the till search, the Stock page and the storefront (sold out when it's the last); the till refuses it in any other sale
-- [ ] 5.5 Screen test: `cw-hold-ending`, `cw-list-hold-ended`; the Stock page's "Held for [Customer] until [date] · Cycle to Work — not for sale"
-- [ ] 5.6 Build to pass 5.1–5.5
+- [x] 5.1 Test: making a quote with the hold holds one free frame at the site, linked to the order; two quotes for the last frame — only one holds it
+- [x] 5.2 Test: a hold never ends by itself; the reminder day and the end date drive "hold ending soon" and "hold ended — choose"
+- [x] 5.3 Test: Hold longer moves the date; Release the bike frees the frame and keeps the order open
+- [ ] 5.4 (its own pull request, 5b: decided-while-building 12 Nov, PR 5 item 7) Test: a held frame is left out of available stock in the till search, the Stock page and the storefront (sold out when it's the last); the till refuses it in any other sale
+- [ ] 5.5 (with 5.4, in pull request 5b) Screen test: `cw-hold-ending`, `cw-list-hold-ended`; the Stock page's "Held for [Customer] until [date] · Cycle to Work — not for sale"
+- [ ] 5.6 Build to pass 5.1–5.5 (5.1–5.3 built in pull request 5)
 - [ ] 5.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 6. Certificate, applied and ordering in (pull request 6, about 550 lines, risky: stock)
