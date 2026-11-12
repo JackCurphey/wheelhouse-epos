@@ -12,7 +12,7 @@ import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, s
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
 import { currentSession } from '../lib/session.js';
 import {
-  WebsiteError, discard, history, ownerNames, publish, restore, saveLogo, savePart, savePartPhoto, turnOff, turnOn, websiteState,
+  WebsiteError, discard, history, ownerNames, publish, restore, saveLogo, savePart, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
 } from '../website.js';
 
 // Public-storefront on/off switch plus its branding fields (tagline,
@@ -45,12 +45,16 @@ async function answer(res, fn) {
 }
 const loginId = async (req) => (await currentSession(req)).login.id;
 
+// The old Settings screen's words, photos and switch, refused once the
+// Website page is in use (decided while building, 12 Nov).
+const USE_WEBSITE_PAGE = 'The website is now changed on the Website page.';
+
 function registerWebsite(route) {
-  route('GET', '/api/website', async (req, res) => {
+  route('GET', '/api/website', async (req, res, params, query, afterRelease, shopId) => {
     const ctx = await currentSession(req);
     if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
     if (!ctx.login.is_owner) {
-      return sendJson(res, 403, { error: WEBSITE_REFUSED, code: 'owner_only', owners: await ownerNames() });
+      return sendJson(res, 403, { error: WEBSITE_REFUSED, code: 'owner_only', owners: await ownerNames(shopId) });
     }
     sendJson(res, 200, await websiteState());
   });
@@ -101,6 +105,7 @@ export function register(route) {
   route('PUT', '/api/storefront-settings', async (req, res) => {
     // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
     if (await ownerOnly(req, res)) return;
+    if (await websiteInUse()) return sendJson(res, 409, { error: USE_WEBSITE_PAGE, code: 'use_website_page' });
     const body = await readJsonBody(req);
     try {
       const updated = await updateStorefrontSettings(body);
@@ -154,6 +159,7 @@ export function register(route) {
   route('POST', '/api/storefront-settings/logo', async (req, res) => {
     // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
     if (await ownerOnly(req, res)) return;
+    if (await websiteInUse()) return sendJson(res, 409, { error: USE_WEBSITE_PAGE, code: 'use_website_page' });
     let logoUrl;
     try {
       logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
@@ -167,6 +173,7 @@ export function register(route) {
   route('POST', '/api/storefront-settings/hero', async (req, res) => {
     // Owner only, as all Settings until roles (Jack, 22 Oct; Mark's audit P2 1).
     if (await ownerOnly(req, res)) return;
+    if (await websiteInUse()) return sendJson(res, 409, { error: USE_WEBSITE_PAGE, code: 'use_website_page' });
     let heroImageUrl;
     try {
       heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);

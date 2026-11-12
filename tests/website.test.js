@@ -58,12 +58,16 @@ test('135 runs from empty: website and website_versions, each shop sees only its
     await c.query(`INSERT INTO website (draft) VALUES ('{"parts":{}}')`);
     await c.query(`INSERT INTO website_versions (kind, content, changed) VALUES ('published', '{"parts":{}}', '{}')`);
     await assert.rejects(c.query(`INSERT INTO website_versions (kind, content, changed) VALUES ('other', '{}', '{}')`), /check/i);
-    await assert.rejects(c.query(`INSERT INTO website (draft, kind) VALUES ('{}', 'wix')`), /check|duplicate/i);
+    await assert.rejects(c.query(`UPDATE website SET kind = 'wix'`), /check/i);
     await asShop(c, other);
     assert.equal((await c.query('SELECT 1 FROM website')).rowCount, 0);
     assert.equal((await c.query('SELECT 1 FROM website_versions')).rowCount, 0);
     // Writing a row for another shop is refused too.
-    await assert.rejects(c.query(`INSERT INTO website (shop_id, draft) VALUES ($1, '{}')`, [shop]), /row-level security|duplicate/i);
+    await asShop(c, shop);
+    await assert.rejects(c.query(`INSERT INTO website (shop_id, draft) VALUES ($1, '{}')`, [other]), /row-level security/i);
+    await assert.rejects(c.query(`INSERT INTO website_versions (shop_id, kind, content) VALUES ($1, 'published', '{}')`, [other]), /row-level security/i);
+    // Safe to run twice.
+    assert.doesNotThrow(() => execFileSync('node', [MIGRATE], { env: { ...process.env, DATABASE_URL: url.href }, stdio: 'pipe' }));
   });
 });
 
@@ -92,6 +96,7 @@ const own = (p, options) => staffRequest(server.baseUrl, owner.cookie, p, option
 const ok = (res, status = 200) => { assert.equal(res.status, status, JSON.stringify(res.body)); return res.body; };
 const page = async () => ok(await own('/api/website'));
 const save = async (key, body) => ok(await own(`/api/website/parts/${key}`, { method: 'PUT', body }));
+const PNG = { dataBase64: Buffer.from('[a test image]').toString('base64'), contentType: 'image/png' };
 const customerInfo = () => fetch(`${server.baseUrl}/api/storefront/info?storefrontSlug=${owner.shop.slug}`);
 
 test('the first GET makes the website, seeded from the old settings, with two pages to check', async () => {
@@ -196,7 +201,8 @@ test('publish makes the draft live and keeps History; nothing to publish is refu
   assert.equal(history.length, 2);
   assert.equal(history[0].current, true);
   assert.equal(history[1].current, false);
-  assert.ok(history[0].changed.includes('Headline'));
+  // History names the pages that changed, as ws-history draws "Home page, …".
+  assert.ok(history[0].changed.includes('Home page'));
   assert.equal((await own('/api/website/publish', { method: 'POST' })).status, 409);
 });
 
@@ -207,7 +213,7 @@ test('discard keeps the draft in History and puts the published version back', a
   assert.equal(state.parts.find((p) => p.key === 'headline').text, '[New headline]');
   const history = ok(await own('/api/website/history')).versions;
   assert.equal(history[0].kind, 'discarded');
-  assert.deepEqual(history[0].changed, ['Headline']);
+  assert.deepEqual(history[0].changed, ['Home page']);
   assert.equal((await own('/api/website/discard', { method: 'POST' })).status, 409);
 });
 
@@ -219,7 +225,7 @@ test('going back keeps unpublished changes as a discarded draft first, and custo
   assert.equal(state.parts.find((p) => p.key === 'about_line').text, '[Tagline]');
   const history = ok(await own('/api/website/history')).versions;
   assert.equal(history[0].kind, 'discarded');
-  assert.deepEqual(history[0].changed, ['A line about the shop']);
+  assert.deepEqual(history[0].changed, ['Home page']);
   assert.equal((await (await customerInfo()).json()).headline, '[New headline]');
   assert.equal((await own('/api/website/history/999999/restore', { method: 'POST' })).status, 404);
 });
@@ -240,7 +246,11 @@ test('turn off hides the website and keeps what is published; turn on shows it a
   const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
   assert.equal(old.enabled, false);
   // The old settings switch no longer decides once the new Website page is in use.
-  ok(await own('/api/storefront-settings', { method: 'PUT', body: { enabled: true } }));
+  // The old Settings route and uploads are refused, so they can neither turn
+  // it back on nor change words that the next publish would overwrite.
+  assert.equal((await own('/api/storefront-settings', { method: 'PUT', body: { enabled: true } })).status, 409);
+  assert.equal((await own('/api/storefront-settings/logo', { method: 'POST', body: PNG })).status, 409);
+  assert.equal((await own('/api/storefront-settings/hero', { method: 'POST', body: PNG })).status, 409);
   assert.equal((await customerInfo()).status, 404);
   const state = ok(await own('/api/website/turn-on', { method: 'POST' }));
   assert.equal(state.isOn, true);
@@ -259,7 +269,15 @@ test('only an Owner can read or change the website; staff are told who can', asy
   const read = await asJo('/api/website');
   assert.equal(read.status, 403);
   assert.equal(read.body.code, 'owner_only');
-  assert.ok(read.body.owners.length >= 1, 'names the Owners');
+  // Only this shop's Owners: logins has no row-level security, so another
+  // shop's Owner must never be named.
+  const elsewhere = await staffSignup(server.baseUrl, { shopName: '[Elsewhere]' });
+  try {
+    const again = await asJo('/api/website');
+    assert.deepEqual(again.body.owners, ['Test Owner']);
+  } finally {
+    await deleteTestShop(elsewhere.shop.id);
+  }
   for (const [method, p] of [
     ['PUT', '/api/website/parts/headline'], ['POST', '/api/website/publish'], ['POST', '/api/website/discard'],
     ['POST', '/api/website/turn-on'], ['POST', '/api/website/turn-off'], ['GET', '/api/website/history'],
@@ -284,4 +302,79 @@ test('a shop already live on the old website starts on and published, so custome
   } finally {
     await deleteTestShop(live.shop.id);
   }
+});
+
+// ---------- Found in self-review ----------
+
+async function freshShop(t, name) {
+  const s = await staffSignup(server.baseUrl, { shopName: name });
+  t.after(() => deleteTestShop(s.shop.id));
+  const req = (p, options) => staffRequest(server.baseUrl, s.cookie, p, options);
+  const info = () => fetch(`${server.baseUrl}/api/storefront/info?storefrontSlug=${s.shop.slug}`);
+  return { shop: s.shop, req, info };
+}
+
+test('a new photo clears its description and decoration tick; a part with no photo refuses one', async (t) => {
+  const { req } = await freshShop(t, '[Photo shop]');
+  ok(await req('/api/website/parts/big_photo', { method: 'PUT', body: { description: '[The old photo]', decoration: true } }));
+  const state = ok(await req('/api/website/parts/big_photo/photo', { method: 'POST', body: PNG }));
+  const part = state.parts.find((p) => p.key === 'big_photo');
+  assert.match(part.photo, /^\/api\/uploaded-images\//);
+  assert.equal(part.description, '');
+  assert.equal(part.decoration, false);
+  assert.equal(state.photosWithoutDescription, 1);
+  assert.equal((await req('/api/website/parts/headline/photo', { method: 'POST', body: PNG })).status, 404);
+});
+
+test('a new logo goes in the draft and is listed under Every page', async (t) => {
+  const { req, info } = await freshShop(t, '[Logo shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  const state = ok(await req('/api/website/logo', { method: 'POST', body: PNG }));
+  assert.match(state.logo, /^\/api\/uploaded-images\//);
+  assert.deepEqual(state.changes, [{ page: 'Every page', parts: ['Logo'] }]);
+  assert.equal((await (await info()).json()).logoUrl, null);
+});
+
+test('publishing while the website is off keeps it off', async (t) => {
+  const { shop, req, info } = await freshShop(t, '[Off shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  ok(await req('/api/website/turn-off', { method: 'POST' }));
+  ok(await req('/api/website/parts/headline', { method: 'PUT', body: { text: '[Published while off]' } }));
+  const state = ok(await req('/api/website/publish', { method: 'POST' }));
+  assert.equal(state.isOn, false);
+  assert.deepEqual(state.changes, []);
+  assert.equal((await info()).status, 404);
+  const old = await runWithShop(shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
+  assert.equal(old.enabled, false);
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  assert.equal((await (await info()).json()).headline, '[Published while off]');
+});
+
+test('turning on a website published before shows what was published, not the unpublished changes', async (t) => {
+  const { shop, req, info } = await freshShop(t, '[Again shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  ok(await req('/api/website/turn-off', { method: 'POST' }));
+  ok(await req('/api/website/parts/headline', { method: 'PUT', body: { text: '[Not yet]' } }));
+  const state = ok(await req('/api/website/turn-on', { method: 'POST' }));
+  assert.equal(state.changeCount, 1);
+  assert.equal((await (await info()).json()).headline, shop.name);
+});
+
+test('a part saved while another save holds the row keeps both', async (t) => {
+  const { shop, req } = await freshShop(t, '[Clash shop]');
+  ok(await req('/api/website'));
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  t.after(() => client.end());
+  await asShop(client, shop.id);
+  await client.query('BEGIN');
+  await client.query(`UPDATE website SET draft = jsonb_set(draft, '{parts,headline,text}', '"[Held]"') WHERE shop_id = $1`, [shop.id]);
+  // This save starts while the row is held, and has to wait for it.
+  const saving = req('/api/website/parts/workshop_words', { method: 'PUT', body: { text: '[Waited]' } });
+  await new Promise((r) => setTimeout(r, 400));
+  await client.query('COMMIT');
+  ok(await saving);
+  const state = ok(await req('/api/website'));
+  assert.equal(state.parts.find((p) => p.key === 'headline').text, '[Held]');
+  assert.equal(state.parts.find((p) => p.key === 'workshop_words').text, '[Waited]');
 });

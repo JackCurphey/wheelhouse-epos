@@ -160,6 +160,9 @@ export function changesBetween(draft, published) {
   return PAGE_ORDER.filter((p) => byPage.has(p)).map((page) => ({ page, parts: byPage.get(page) }));
 }
 const changedNames = (changes) => changes.flatMap((c) => c.parts);
+// What a History row names (ws-history: "Home page, Theme colour"): the page
+// for a part on one page, and the part itself for one on every page.
+const historyNames = (changes) => [...new Set(changes.flatMap((c) => (c.page === 'Every page' || c.page === 'Tracking tools' ? c.parts : [c.page])))];
 
 export function photosWithoutDescription(content) {
   return PHOTO_PARTS.filter((key) => {
@@ -282,7 +285,7 @@ async function publishLocked(website, loginId) {
   if (!first && !changes.length) throw new WebsiteError(409, 'There are no changes to publish');
   const version = await prepare(
     "INSERT INTO website_versions (kind, content, changed, made_by, first_published) VALUES ('published', ?::jsonb, ?::text[], ?, ?)"
-  ).run(JSON.stringify(website.draft), changedNames(changes), loginId, first);
+  ).run(JSON.stringify(website.draft), historyNames(changes), loginId, first);
   await prepare(
     'UPDATE website SET published = draft, published_at = now(), published_by = ?, live_version_id = ?, updated_at = now()'
   ).run(loginId, version.lastInsertRowid);
@@ -329,7 +332,7 @@ async function keepDraftInHistory(website, loginId) {
   if (!changes.length) return false;
   await prepare(
     "INSERT INTO website_versions (kind, content, changed, made_by) VALUES ('discarded', ?::jsonb, ?::text[], ?)"
-  ).run(JSON.stringify(website.draft), changedNames(changes), loginId);
+  ).run(JSON.stringify(website.draft), historyNames(changes), loginId);
   return true;
 }
 
@@ -382,9 +385,16 @@ export async function history() {
 }
 
 // The names of the shop's Owners, for "Ask [Owner]" when someone else opens
-// the Website page (ws-no-access).
-export async function ownerNames() {
-  return (await prepare('SELECT name FROM logins WHERE is_owner AND active ORDER BY id').all()).map((r) => r.name);
+// the Website page (ws-no-access). logins has no row-level security, so the
+// shop is named here, as in server/team.js.
+export async function ownerNames(shopId) {
+  return (await prepare('SELECT name FROM logins WHERE is_owner AND active AND shop_id = ? ORDER BY id').all(shopId)).map((r) => r.name);
+}
+
+// Once the Website page is in use, the old Settings route and uploads are
+// refused: they could neither turn the site off nor change what customers see.
+export async function websiteInUse() {
+  return !!(await prepare('SELECT 1 AS yes FROM website').get());
 }
 
 // What the customer site shows: the published version only (design 1).
