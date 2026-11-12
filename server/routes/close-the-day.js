@@ -205,7 +205,7 @@ async function windowFor(day, start) {
 // and the day after its day.
 async function previousClose(day) {
   const r = await prepare(`SELECT id, to_char(day, 'YYYY-MM-DD') AS day, closed_at::text AS at, to_char(day + 1, 'YYYY-MM-DD') AS from_day
-    FROM day_closes WHERE day < ? AND reopened_at IS NULL ORDER BY closed_at DESC, id DESC LIMIT 1`).get(day);
+    FROM day_closes WHERE day < ? ORDER BY closed_at DESC, id DESC LIMIT 1`).get(day);
   return r ? { id: r.id, day: r.day, at: r.at, fromDay: r.from_day } : null;
 }
 // What a day nobody closed should have held at its count, from its own
@@ -227,7 +227,7 @@ const refreshCount = (count, expectedPence) => prepare('UPDATE float_checks SET 
 const TAKEN_OUT = 'c.banked_pence - GREATEST(0, c.float_pence - (c.counted_pence - c.carried_pence))';
 async function bankedForEarlier(day, from, until = null) {
   const { n } = await prepare(`SELECT COALESCE(SUM(${TAKEN_OUT}), 0)::int AS n FROM day_closes c
-    WHERE c.day < ? AND c.reopened_at IS NULL AND c.closed_at > ? AND (?::timestamptz IS NULL OR c.closed_at <= ?)`).get(day, from, until, until);
+    WHERE c.day < ? AND c.closed_at > ? AND (?::timestamptz IS NULL OR c.closed_at <= ?)`).get(day, from, until, until);
   return n;
 }
 
@@ -237,7 +237,7 @@ export async function daysWaiting() {
   return prepare(`SELECT f.id, to_char(f.for_day, 'YYYY-MM-DD') AS for_day, to_char(f.day, 'YYYY-MM-DD') AS day, f.counted_pence, f.reason, f.checked_at,
       COALESCE(e.name, l.name) AS by_name, t.code AS till_code
     FROM float_checks f JOIN logins l ON l.id = f.login_id LEFT JOIN employees e ON e.id = f.employee_id LEFT JOIN tills t ON t.id = f.till_id
-    WHERE f.for_day IS NOT NULL AND NOT EXISTS (SELECT 1 FROM day_closes c WHERE c.day = f.for_day AND c.reopened_at IS NULL) ORDER BY f.for_day`).all();
+    WHERE f.for_day IS NOT NULL AND NOT EXISTS (SELECT 1 FROM day_closes c WHERE c.day = f.for_day) ORDER BY f.for_day`).all();
 }
 // The morning count made for a day, closed or not.
 async function countFor(day) {
@@ -255,7 +255,7 @@ async function countFor(day) {
 export async function unclosedBefore(today) {
   const prev = await prepare(`SELECT to_char(max(day), 'YYYY-MM-DD') AS day FROM float_checks WHERE day < ?`).get(today);
   if (!prev?.day) return null;
-  const { open, before } = await prepare('SELECT EXISTS (SELECT 1 FROM day_closes WHERE day = ? AND reopened_at IS NULL) AS open, EXISTS (SELECT 1 FROM day_closes WHERE day < ? AND reopened_at IS NULL) AS before').get(prev.day, prev.day);
+  const { open, before } = await prepare('SELECT EXISTS (SELECT 1 FROM day_closes WHERE day = ?) AS open, EXISTS (SELECT 1 FROM day_closes WHERE day < ?) AS before').get(prev.day, prev.day);
   if (open || !before) return null;
   const start = await floatStartOn(prev.day);
   const d = await drawer(prev.day, start, await openSales(prev.day), null, { missed: true });
@@ -341,6 +341,8 @@ async function closeLate(res, ctx, shopId, day, today) {
     if (!count) return { status: 404, body: NOT_WAITING };
     const older = (await daysWaiting()).find((w) => w.for_day < day);
     if (older) return { status: 409, body: earlierOpen(older.for_day) };
+    const reopenedBefore = await reopenedOn();
+    if (reopenedBefore && reopenedBefore.day < day) return { status: 409, body: earlierOpen(reopenedBefore.day) };
     const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
     if (floatPence === null) return { status: 409, body: { error: 'The shop has no float set', code: 'no_float' } };
     const late = await lateDay(day, count);
@@ -372,12 +374,15 @@ async function closeLate(res, ctx, shopId, day, today) {
 }
 
 // A reopened day (reports-accounts-and-reopen design 1): the close is still the one row for its day, marked
-// reopened with who, when and why, and it counts as not closed everywhere until it is closed again. At most
+// reopened with who, when and why. It counts as not closed for its own report, Today, paid-outs and closing it
+// again; for every other day's carry-over (the previous close, cash banked since a morning's check, whether
+// a morning needs a count) it stays the close it was, with its figures, until it is closed again, so a night
+// spent reopened changes nothing about the next morning (money review of the reopen change). At most
 // one is reopened at a time, the latest closed day.
 export async function reopenedOn(day = null) {
-  const r = await prepare(`SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.reopened_at, c.reopen_reason, l.name AS by_name
+  const r = await prepare(`SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.reopened_at, c.reopened_at::text AS reopened_exact, c.reopen_reason, l.name AS by_name
     FROM day_closes c JOIN logins l ON l.id = c.reopened_by WHERE c.reopened_at IS NOT NULL${day ? ' AND c.day = ?' : ''} ORDER BY c.day LIMIT 1`).get(...(day ? [day] : []));
-  return r ? { id: r.id, day: r.day, reason: r.reopen_reason, reopenedByName: r.by_name, reopenedAt: iso(r.reopened_at) } : null;
+  return r ? { id: r.id, day: r.day, reason: r.reopen_reason, reopenedByName: r.by_name, reopenedAt: iso(r.reopened_at), reopenedExact: r.reopened_exact } : null;
 }
 
 const REASON_WORDS = 'Say why you are reopening it (up to 500 characters)';
@@ -398,6 +403,8 @@ export async function reopenClose(shopId, ctx, id, rawReason) {
       return { status: 409, body: { error: 'Only the latest closed day can be reopened', code: 'not_latest' } };
     }
     if (await countFor(row.day_text)) return { status: 409, body: { error: 'A day closed late can’t be reopened', code: 'closed_late' } };
+    // A later day still waiting for Close it would be closed after it, and it could then never be closed again.
+    if ((await daysWaiting()).some((w) => w.for_day > row.day_text)) return { status: 409, body: { error: 'Close the later day first', code: 'later_day_waiting' } };
     await prepare(
       `INSERT INTO day_close_history (day_close_id, day, closed_by, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence,
          paid_outs_pence, expected_pence, counted_pence, reason, float_pence, banked_pence, carried_pence, takings_pence, card_pence, other_pence,
@@ -415,47 +422,33 @@ export async function reopenClose(shopId, ctx, id, rawReason) {
 
 // A reopened day closed again (design decision 1): the same row, worked out from the sales it already counted
 // (they stay marked with it; a sale saved after the first close is left for the next close, Jack's answer 1)
-// with the new count and banking, the reopening cleared and the first close kept in the history. A day that was
-// counted by a later morning's float check takes that count, as a late close does.
+// with the new count and banking, the reopening cleared and the first close kept in the history.
 async function closeAgain(res, ctx, shopId, day, { counted, reason, shown }) {
   const reply = await lockedOnShop(shopId, async () => {
-    const row = await prepare('SELECT id FROM day_closes WHERE day = ? AND reopened_at IS NOT NULL').get(day);
+    const row = await prepare('SELECT id, reopened_at::text AS reopened_exact FROM day_closes WHERE day = ? AND reopened_at IS NOT NULL').get(day);
     if (!row) return { status: 409, body: { error: 'That day isn’t reopened', code: 'not_reopened' } };
     if (await prepare('SELECT 1 FROM day_closes WHERE day > ?::date').get(day)) return { status: 409, body: { error: 'Only the latest closed day can be closed again', code: 'not_latest' } };
     const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
     if (floatPence === null) return { status: 409, body: { error: 'The shop has no float set', code: 'no_float' } };
-    const count = await countFor(day);
+    const start = await floatStartOn(day);
+    if (!start) return { status: 409, body: { error: 'Check the float before closing the day', code: 'float_not_checked' } };
+    if (!isPence(counted)) return { status: 400, body: { error: 'The count must be pounds and pence' } };
     const counts = closedBy(row.id);
     const t = await takingsIn(counts);
-    let start;
-    let d;
-    let carried = 0;
-    let banked;
-    if (count) {
-      const late = await lateDay(day, count);
-      start = late.start;
-      counted = count.by.pence;
-      carried = late.carriedPence;
-      banked = Math.min(counted, bankedFrom(late.base, floatPence));
-      d = await drawer(day, start, counts, count.checkedAt, { missed: true });
-    } else {
-      start = await floatStartOn(day);
-      if (!start) return { status: 409, body: { error: 'Check the float before closing the day', code: 'float_not_checked' } };
-      if (!isPence(counted)) return { status: 400, body: { error: 'The count must be pounds and pence' } };
-      banked = bankedFrom(counted, floatPence);
-      d = await drawer(day, start, counts);
-      if (shown !== undefined && shown !== d.expectedPence) {
-        return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: d.expectedPence } };
-      }
+    // Cash taken out up to the moment it was reopened, and today's own after it: a later day's is not this day's.
+    const d = await drawer(day, start, counts, row.reopened_exact);
+    if (shown !== undefined && shown !== d.expectedPence) {
+      return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: d.expectedPence } };
     }
+    // closed_at stays the first close's time: the next days' carry-over is ordered by it, and a close made
+    // after a later morning's float check would be taken for cash banked since that check.
     await prepare(
-      `UPDATE day_closes SET login_id = ?, closed_at = now(), float_check_id = ?, float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?,
-         paid_outs_pence = ?, expected_pence = ?, counted_pence = ?, reason = ?, float_pence = ?, banked_pence = ?, carried_pence = ?,
+      `UPDATE day_closes SET login_id = ?, float_check_id = ?, float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?,
+         paid_outs_pence = ?, expected_pence = ?, counted_pence = ?, reason = ?, float_pence = ?, banked_pence = ?,
          takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ?, reopened_at = NULL, reopened_by = NULL, reopen_reason = NULL
        WHERE id = ?`
-    ).run(ctx.login.id, start.id, d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, counted, reason, floatPence, banked, carried,
+    ).run(ctx.login.id, start.id, d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, counted, reason, floatPence, bankedFrom(counted, floatPence),
       t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, row.id);
-    if (count) await refreshCount(count, d.expectedPence);
     return { ok: true };
   });
   if (!reply.ok) return sendJson(res, reply.status, reply.body);
@@ -475,11 +468,11 @@ export function register(route) {
       const count = asked < day ? await countFor(asked) : null;
       const close = count ? await closeOn(asked) : null;
       // A reopened day with no later morning count: counted again by the Owner, from the sales it already counted.
-      const reopened = asked < day && !count ? await reopenedOn(asked) : null;
+      const reopened = asked < day ? await reopenedOn(asked) : null;
       if (reopened) {
         const start = await floatStartOn(asked);
         if (!start) return sendJson(res, 409, { error: 'Check the float before closing the day', code: 'float_not_checked' });
-        const d = await drawer(asked, start, closedBy(reopened.id));
+        const d = await drawer(asked, start, closedBy(reopened.id), reopened.reopenedExact);
         return sendJson(res, 200, {
           day: asked, floatPence, floatStart: { ...start.start, pence: d.startPence }, cashPence: d.cashPence, paidOutsPence: d.paidOutsPence,
           expectedPence: d.expectedPence, earlierBankedPence: d.earlierBankedPence, paidOuts: d.paidOuts, countFirst, reopened, close: null,
@@ -496,7 +489,9 @@ export function register(route) {
       });
     }
     const start = await floatStartOn(day);
-    const d = start ? await drawer(day, start, await openSales(day)) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null, earlierBankedPence: 0 };
+    // A reopened today works from the sales its own close already counted, which stay marked with it.
+    const reopenedToday = await reopenedOn(day);
+    const d = start ? await drawer(day, start, reopenedToday ? closedBy(reopenedToday.id) : await openSales(day), reopenedToday?.reopenedExact ?? null) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null, earlierBankedPence: 0 };
     const [waiting] = await daysWaiting();
     sendJson(res, 200, {
       day, floatPence, floatStart: start ? { ...start.start, pence: d.startPence } : null, cashPence: d.cashPence,
@@ -553,9 +548,11 @@ export function register(route) {
     // A reopened day is closed again (the same close, from a new count), today's or an earlier one's.
     const again = await reopenedOn(body.day ?? todayNow);
     if (again && body.day !== undefined && body.day !== todayNow) {
-      const rawReason = body.reason;
-      if (rawReason !== undefined && typeof rawReason !== 'string') return badRequest(res, 'The reason must be text');
-      return closeAgain(res, ctx, shopId, body.day, { counted: body.countedPence, reason: (rawReason ?? '').trim().slice(0, 500), shown: body.expectedPence });
+      if (body.reason !== undefined && typeof body.reason !== 'string') return badRequest(res, 'The reason must be text');
+      const pastReason = (body.reason ?? '').trim();
+      if (pastReason.length > 500) return badRequest(res, 'The reason can be up to 500 characters');
+      if (body.expectedPence !== undefined && !Number.isSafeInteger(body.expectedPence)) return badRequest(res, 'The expected figure must be whole pence');
+      return closeAgain(res, ctx, shopId, body.day, { counted: body.countedPence, reason: pastReason, shown: body.expectedPence });
     }
     if (body.day !== undefined && body.day !== todayNow) return closeLate(res, ctx, shopId, body.day, todayNow);
     const counted = body.countedPence;

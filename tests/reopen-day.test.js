@@ -243,11 +243,68 @@ test('with an earlier day reopened, today can\'t be closed until it is closed ag
   assert.equal((await post(owner, '/api/close-the-day', { countedPence: FLOAT })).status, 201);
 });
 
-test('a reopened day that a later morning counted is closed again from that count', async () => {
+test('a day closed from a later morning\'s count is not reopened', async () => {
   const owner = await shop();
   const yesterday = await closedYesterday(owner);
   // A later morning's float check counted 31 Aug (a day nobody closed then): its count is the day's count.
   await sql(owner, "UPDATE float_checks SET for_day = ?, counted_pence = ?, expected_pence = ? WHERE day = ? RETURNING id", YESTERDAY, FLOAT, FLOAT, TODAY);
   const res = await reopen(owner, yesterday.id);
-  assert.deepEqual([res.status, res.body.code], [409, 'closed_late'], 'a day closed from a later morning\'s count is not reopened');
+  assert.deepEqual([res.status, res.body.code], [409, 'closed_late']);
+});
+
+test('closing it again leaves the close at the time it was first made, so later days\' carry-over is unchanged', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74 });
+  const first = await closeToday(owner, FLOAT + 7400);
+  const at = (await dayRow(owner, TODAY)).closed_at.toISOString();
+  await reopen(owner, first.id);
+  await closeToday(owner, FLOAT + 7000);
+  const row = await dayRow(owner, TODAY);
+  assert.equal(row.closed_at.toISOString(), at, 'closed_at is the first close\'s');
+  assert.equal(row.counted_pence, FLOAT + 7000);
+  assert.equal(row.login_id, owner.loginId, 'who closed it again');
+});
+
+test('a reopened today shows what it should hold with the day\'s own sales, and closes again with the figure the screen sent', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74 });
+  const first = await closeToday(owner, FLOAT + 7400);
+  await oldSale(owner, '2026-09-01T11:00:00Z', { cash: 30 });
+  await reopen(owner, first.id);
+  const state = (await call(owner, '/api/close-the-day')).body;
+  assert.equal(state.cashPence, 7400, 'the sales its close counted, not the later one');
+  assert.equal(state.expectedPence, FLOAT + 7400);
+  const again = await post(owner, '/api/close-the-day', { countedPence: FLOAT + 7400, expectedPence: state.expectedPence });
+  assert.equal(again.status, 201, JSON.stringify(again.body));
+  assert.equal(again.body.close.differencePence, 0);
+});
+
+test('a day can\'t be reopened while a later day waits to be closed, and a late close is refused while an earlier day is reopened', async () => {
+  const owner = await shop();
+  // 30 Aug closed, 31 Aug opened and not closed, this morning's count made for 31 Aug.
+  const check30 = await sql(owner, 'INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, checked_at) VALUES (?, ?, ?, ?, ?) RETURNING id', '2026-08-30', owner.loginId, FLOAT, FLOAT, '2026-08-30T06:00:00Z');
+  const close30 = await sql(owner,
+    `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
+       float_pence, banked_pence, takings_pence, card_pence, other_pence)
+     VALUES (?, ?, ?, ?, 15000, 0, 0, 15000, 15000, 15000, 0, 0, 0, 0) RETURNING id`, '2026-08-30', owner.loginId, '2026-08-30T17:00:00Z', check30.id);
+  // Reopened first, then a morning count makes 31 Aug a day waiting: closing it late would leave the reopened day stuck.
+  assert.equal((await reopen(owner, close30.id)).status, 200);
+  await sql(owner, 'UPDATE float_checks SET for_day = ?, counted_pence = ?, expected_pence = ? WHERE day = ? RETURNING id', YESTERDAY, FLOAT, FLOAT, TODAY);
+  const late = await post(owner, '/api/close-the-day', { day: YESTERDAY });
+  assert.deepEqual([late.status, late.body.code, late.body.day], [409, 'earlier_day_open', '2026-08-30']);
+  assert.equal(await sql(owner, 'SELECT id FROM day_closes WHERE day = ?', YESTERDAY), undefined);
+  // The other order: close it again, and the later day waiting then stops it being reopened.
+  assert.equal((await post(owner, '/api/close-the-day', { day: '2026-08-30', countedPence: FLOAT })).status, 201);
+  const refused = await reopen(owner, close30.id);
+  assert.deepEqual([refused.status, refused.body.code], [409, 'later_day_waiting']);
+});
+
+test('closing a past day again checks its reason and expected figure like today\'s close', async () => {
+  const owner = await shop();
+  const yesterday = await closedYesterday(owner);
+  await reopen(owner, yesterday.id);
+  assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY, countedPence: FLOAT, reason: 'x'.repeat(501) })).status, 400);
+  assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY, countedPence: FLOAT, expectedPence: 1.5 })).status, 400);
+  assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY, countedPence: FLOAT, expectedPence: FLOAT + 5 })).status, 409);
+  assert.equal((await post(owner, '/api/close-the-day', { day: YESTERDAY })).status, 400, 'a count is needed');
 });
