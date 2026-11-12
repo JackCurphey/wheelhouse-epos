@@ -31,6 +31,7 @@ import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { VAT_QUARTER_MONTHS } from '@/screens/reports/reports-format.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -43,8 +44,8 @@ type DayHours = { weekday: number; open: string; close: string };
 type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; confirmBookingsAutomatically?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
   nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null;
   depositOn?: boolean; depositKind?: 'percent' | 'fixed'; depositPercent?: number | null; depositFixedPence?: number | null; depositUnknownPence?: number | null; depositCancelHours?: number; paymentsConnected?: boolean };
-type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
-type DetailKey = keyof ShopDetails;
+type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null; vatQuarterStartMonth?: 1 | 2 | 3 | null };
+type DetailKey = Exclude<keyof ShopDetails, 'vatQuarterStartMonth'>;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
   ['name', 'Shop name', 'organization'], ['address', 'Address', 'street-address'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email'], ['vatNumber', 'VAT number', 'off'],
 ];
@@ -77,8 +78,28 @@ function useShopDetails() {
     }
   }
 
-  return { details, valueOf, setTyped, save, note };
+  // The VAT quarter's months, saved when picked (reports-ready-made design 4).
+  // One save at a time, so a second quick pick can't land before the first.
+  const savingQuarter = useRef(false);
+  async function saveQuarter(month: 1 | 2 | 3) {
+    if (savingQuarter.current || details.data?.vatQuarterStartMonth === month) return;
+    savingQuarter.current = true;
+    setNote(null);
+    try {
+      const saved = await apiMutate<ShopDetails>('/api/shop-details', { vatQuarterStartMonth: month }, { method: 'PUT' });
+      queryClient.setQueryData<ShopDetails>(['shop-details'], (old) => (old ? { ...old, vatQuarterStartMonth: saved.vatQuarterStartMonth } : saved));
+      void queryClient.invalidateQueries({ queryKey: ['reports-vat'] });
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    } finally {
+      savingQuarter.current = false;
+    }
+  }
+
+  return { details, valueOf, setTyped, save, saveQuarter, note };
 }
+
 
 /**
  * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
@@ -86,7 +107,8 @@ function useShopDetails() {
  * box saves when it's left, if it changed, as the settings pages save as you go.
  */
 function ShopDetailsBox() {
-  const { details, valueOf, setTyped, save, note } = useShopDetails();
+  const { details, valueOf, setTyped, save, saveQuarter, note } = useShopDetails();
+  const quarter = details.data?.vatQuarterStartMonth ?? null;
   return (
     <div className="flex flex-col">
       {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
@@ -104,6 +126,15 @@ function ShopDetailsBox() {
           />
         </div>
       ))}
+      <div className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3">
+        <span id="shop-vat-quarter" className="shrink-0 text-size-15 font-semibold md:w-40">VAT quarter starts</span>
+        <RadioPillGroup pickOnMove={false} aria-labelledby="shop-vat-quarter" className="flex flex-wrap gap-2">
+          {VAT_QUARTER_MONTHS.map(([month, words]) => (
+            <button key={month} type="button" role="radio" aria-checked={quarter === month} disabled={!details.data} onClick={() => void saveQuarter(month)}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${quarter === month ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{words}</button>
+          ))}
+        </RadioPillGroup>
+      </div>
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
       <PrivacyNoticeSetting />

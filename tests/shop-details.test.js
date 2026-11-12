@@ -33,16 +33,16 @@ const as = (who) => (path, options) => staffRequest(server.baseUrl, who.cookie, 
 test('a new shop has its name and no details yet', async () => {
   const res = await as(a)('/api/shop-details');
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.deepEqual(res.body, { name: aName, address: null, phone: null, email: null, vatNumber: null, receiptFooter: null });
+  assert.deepEqual(res.body, { name: aName, address: null, phone: null, email: null, vatNumber: null, receiptFooter: null, vatQuarterStartMonth: null });
 });
 
 test('details save trimmed, a field left out keeps its value, and blank clears one', async () => {
   const put = (body) => as(a)('/api/shop-details', { method: 'PUT', body });
   const first = await put({ address: '  [Shop address]  ', phone: '[shop phone]', vatNumber: '[VAT number]' });
   assert.equal(first.status, 200, JSON.stringify(first.body));
-  assert.deepEqual(first.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]', receiptFooter: null });
+  assert.deepEqual(first.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]', receiptFooter: null, vatQuarterStartMonth: null });
   const second = await put({ email: '[email address]', vatNumber: '   ' });
-  assert.deepEqual(second.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: '[email address]', vatNumber: null, receiptFooter: null });
+  assert.deepEqual(second.body, { name: aName, address: '[Shop address]', phone: '[shop phone]', email: '[email address]', vatNumber: null, receiptFooter: null, vatQuarterStartMonth: null });
   assert.deepEqual((await as(a)('/api/shop-details')).body, second.body);
 });
 
@@ -85,4 +85,26 @@ test('the words at the bottom save with their line breaks, clear when blank, and
   assert.equal(long.status, 400);
   assert.equal(long.body.error, 'Words at the bottom can be up to 500 characters');
   assert.equal((await put({ receiptFooter: '   ' })).body.receiptFooter, null);
+});
+
+// When the VAT quarter starts (openspec/changes/reports-ready-made, design 4):
+// 1, 2 or 3, or null for not said; anything else is refused in plain words.
+test('the VAT quarter start saves as 1, 2 or 3, clears with null, and refuses anything else', async () => {
+  const put = (body) => as(a)('/api/shop-details', { method: 'PUT', body });
+  for (const month of [2, 3, 1]) {
+    const res = await put({ vatQuarterStartMonth: month });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.vatQuarterStartMonth, month);
+  }
+  assert.equal((await as(a)('/api/shop-details')).body.vatQuarterStartMonth, 1);
+  // Another field saved alone leaves it as it was.
+  assert.equal((await put({ phone: '[shop phone]' })).body.vatQuarterStartMonth, 1);
+  for (const bad of [0, 4, '1', 1.5, true]) {
+    const res = await put({ vatQuarterStartMonth: bad });
+    assert.equal(res.status, 400, JSON.stringify(bad));
+    assert.equal(res.body.error, 'Choose the months your VAT quarters start in');
+  }
+  assert.equal((await as(a)('/api/shop-details')).body.vatQuarterStartMonth, 1);
+  assert.equal((await as(b)('/api/shop-details')).body.vatQuarterStartMonth, null);
+  assert.equal((await put({ vatQuarterStartMonth: null })).body.vatQuarterStartMonth, null);
 });
