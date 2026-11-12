@@ -7,7 +7,7 @@ export type ChoicesAnswer = { base: string; selection: Selection; choices: Choic
 
 export type ChangedRow = { key: string; label: string; value: number | null; takingsPence: number | null; beforeValue: number | null; notReached?: boolean };
 export type ChangedReport = {
-  base: 'sales' | 'takings'; baseLabel: string; measure: string; split: string; only: string[]; supplier: string;
+  base: 'sales' | 'takings' | 'workshop'; baseLabel: string; measure: string; split: string; only: string[]; supplier: string;
   title: string; line: string; what: string;
   period: { period: string; from: string; to: string; through: string; soFar: boolean; unit: 'day' | 'month' | 'hour'; label: string; against: string };
   columns: string[]; rows: ChangedRow[];
@@ -18,8 +18,9 @@ export type ChangedReport = {
 };
 
 /** The report's own address for a base ("sales" or "takings"). */
-export const BASE_PATH = { sales: '/workshop/reports/sales', takings: '/workshop/reports/takings' } as const;
-export const BASE_LABEL = { sales: 'Sales', takings: 'Takings and cash-ups' } as const;
+export const BASE_PATH = { sales: '/workshop/reports/sales', takings: '/workshop/reports/takings', workshop: '/workshop/reports/workshop' } as const;
+export const BASE_LABEL = { sales: 'Sales', takings: 'Takings and cash-ups', workshop: 'Workshop' } as const;
+export type Base = keyof typeof BASE_PATH;
 
 /** The period's words under the panel's title, as the drawing has them: "this week so far". */
 export const PERIOD_WORDS: Record<string, string> = {
@@ -38,7 +39,7 @@ export function selectionParams(sel: Partial<Selection>): URLSearchParams {
 
 /** A saved report (server/lib/saved-reports.js): its choices and the kind of period, never dates. */
 export type SavedReport = {
-  id: number; name: string; base: 'sales' | 'takings'; measure: string; split: string; only: string[]; supplier: string;
+  id: number; name: string; base: 'sales' | 'takings' | 'workshop'; measure: string; split: string; only: string[]; supplier: string;
   period: string; opensOn: string; shared: boolean; what: string;
 };
 
