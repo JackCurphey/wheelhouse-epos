@@ -20,7 +20,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   const [later, setLater] = useState(false);
   const [step, setStep] = useState(1);
   // Back and Next move focus to the new step's title, so a screen reader hears where it is.
-  const moved = useRef(false);
+  const [moved, setMoved] = useState(false);
   const [kind, setKind] = useState<'wheelhouse' | 'shopify'>('wheelhouse');
   const [colour, setColour] = useState<string | null>(null);
   const [startWith, setStartWith] = useState<'every' | 'nothing'>('every');
@@ -56,11 +56,11 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
       setBusy(false);
     }
   }
-  const go = (n: number) => { moved.current = true; setProblem(null); setStep(n); };
+  const go = (n: number) => { setMoved(true); setProblem(null); setStep(n); };
 
   if (step === 1) {
     return (
-      <Steps moved={moved.current} n={1} title="Wheelhouse’s website, or your Shopify shop?" sub="You can change this later." problem={problem}
+      <Steps moved={moved} n={1} title="Wheelhouse’s website, or your Shopify shop?" sub="You can change this later." problem={problem}
         back={<span className="flex flex-wrap items-center gap-2.5"><Button variant="ghost" onClick={() => setLater(true)}>Not now</Button><span className="text-size-13 text-[var(--wh-muted)]">The Website page will say “Not set up yet”</span></span>}
         next={<Button variant="accent" onClick={() => go(2)}>Next</Button>}>
         <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
@@ -73,7 +73,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   }
   if (kind === 'shopify') {
     return (
-      <Steps moved={moved.current} n={2} title="Connect your Shopify shop" sub="Connecting Shopify isn’t built yet." problem={null}
+      <Steps moved={moved} n={2} title="Connect your Shopify shop" sub="Connecting Shopify isn’t built yet." problem={null}
         back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>} next={null}>
         <p className="m-0 text-size-15">Choose Wheelhouse’s website for now, or come back to connect Shopify later.</p>
       </Steps>
@@ -81,7 +81,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   }
   if (step === 2) {
     return (
-      <Steps moved={moved.current} n={2} title="Your logo and colour" sub="Wheelhouse suggests colours from your logo." problem={problem}
+      <Steps moved={moved} n={2} title="Your logo and colour" sub="Wheelhouse suggests colours from your logo." problem={problem}
         back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>}
         next={<Button variant="accent" onClick={() => go(3)}>Next</Button>}>
         <LookStep state={state} onState={onState} fromLogo={fromLogo} chosen={chosen} onChoose={(hex) => { setColour(hex); setProblem(null); }} onProblem={setProblem} />
@@ -89,7 +89,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
     );
   }
   return (
-    <Steps moved={moved.current} n={3} title="Start with every product online, or nothing?" sub="Either way, every category and product has its own “Show on website” switch afterwards." problem={problem}
+    <Steps moved={moved} n={3} title="Start with every product online, or nothing?" sub="Either way, every category and product has its own “Show on website” switch afterwards." problem={problem}
       back={<Button variant="ghost" onClick={() => go(2)}>Back</Button>}
       next={<Button variant="accent" disabled={busy} onClick={() => void makeIt()}>Make my website</Button>}>
       <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
