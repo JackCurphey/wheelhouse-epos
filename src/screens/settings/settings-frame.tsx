@@ -22,7 +22,8 @@ const roomHref = (key: string) => `${ROUTES.settings}?room=${key}`;
 // The phone list's line under each room: what's in it.
 const roomLine = (room: SettingsRoom) => {
   const titles = room.areas.length > 1 ? room.areas.map((a) => a.title) : room.areas[0]?.folds.map((f) => f.title) ?? [];
-  return titles.map((t, i) => (i === 0 ? t : t.charAt(0).toLowerCase() + t.slice(1))).join(', ');
+  // A name with capitals of its own ("Cycle to Work") keeps them.
+  return titles.map((t, i) => (i === 0 || /[A-Z]/.test(t.slice(1)) ? t : t.charAt(0).toLowerCase() + t.slice(1))).join(', ');
 };
 
 function Chevron({ open }: { open: boolean }) {

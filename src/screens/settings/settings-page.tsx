@@ -17,6 +17,7 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
@@ -1032,6 +1033,7 @@ function OwnerSettings() {
   const waysToPay = useWaysToPaySummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
+  const c2w = useC2wSummaries();
   const tills = useTillsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
@@ -1062,6 +1064,15 @@ function OwnerSettings() {
         // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+        ] },
+        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
+          { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
+          { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },
+          { key: 'c2w-apply', title: 'How to apply', summary: c2w.apply, body: <ApplySettings /> },
+          { key: 'c2w-deposits', title: 'Deposits', summary: c2w.deposits, body: <DepositSettings /> },
+          { key: 'c2w-providers', title: 'Scheme providers', summary: c2w.providers, body: <ProvidersSettings /> },
+          { key: 'c2w-today', title: 'On Today', summary: c2w.today, body: <TodaySettings /> },
         ] },
       ],
     },
