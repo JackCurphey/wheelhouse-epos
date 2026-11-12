@@ -20,7 +20,9 @@ type Template = {
   /** A second wording shown in another message's box, not as a row (Date change answered's "If the shop can't"). */
   partOf?: string | null;
 };
-type Preview = { text: string; email: { subject: string; body: string } };
+type Preview = { text: string; email: { subject: string; body: string; from?: string; to?: string } };
+/** The online order messages: emailed to the order's address, not the customer's way (website-buy-online design 18). */
+const ONLINE = 'online_orders';
 
 const KEY = ['message-templates'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
@@ -79,7 +81,9 @@ export function AutomaticMessages() {
   const live = templates.data?.filter((t) => t.live && !t.partOf) ?? [];
   // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
   const reminder = live.find((t) => t.key === 'quote_reminder');
-  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.group !== 'c2w' && t.key !== 'quote_reminder');
+  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.group !== 'c2w' && t.group !== ONLINE && t.key !== 'quote_reminder');
+  // The online order messages, after Bike still waiting and before Cycle to Work (setup.mjs msgListOpen).
+  const onlineMessages = live.filter((t) => t.group === ONLINE);
   // The Cycle to Work messages, before the booking messages (setup.mjs msgListOpen).
   const c2wMessages = live.filter((t) => t.group === 'c2w');
   const bookingMessages = live.filter((t) => t.group === 'booking');
@@ -92,7 +96,8 @@ export function AutomaticMessages() {
         <span className="text-size-13 text-[var(--wh-muted)]">{withDays(t).when}</span>
       </span>
       <button type="button" aria-label={`Edit the wording of ${t.name}`} onClick={() => setEditing(t)} className="min-h-11 px-3 text-sm font-semibold underline">Edit</button>
-      <span className="text-size-13 whitespace-nowrap text-[var(--wh-muted)]">Customer’s choice</span>
+      {/* An online order message goes by email (design 18: Text is left off while the list has no channel choice). */}
+      <span className="text-size-13 whitespace-nowrap text-[var(--wh-muted)]">{t.group === ONLINE ? 'Email' : 'Customer’s choice'}</span>
       <OnOff name={t.name} on={t.enabled} disabled={busy.has(t.key)} onChange={(on) => void change(t.key, { enabled: on })} />
     </div>
   );
@@ -103,6 +108,8 @@ export function AutomaticMessages() {
         {jobMessages.map((t) => (t.key === 'quote_to_approve' && reminder
           ? <div key={t.key} className="flex flex-col gap-2">{row(t)}<ReminderRow onEdit={() => setEditing(reminder)} /></div>
           : row(t)))}
+        {onlineMessages.length ? <h5 className="m-0 mt-2 text-sm font-bold">Online order messages</h5> : null}
+        {onlineMessages.map(row)}
         {c2wMessages.length ? (
           <>
             <h5 className="m-0 mt-2 text-sm font-bold">Cycle to Work messages</h5>
@@ -277,6 +284,7 @@ function EditMessage({ template, second, error, onSave, onClose }: { template: T
     </div>
   );
   const area = 'resize-none rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] p-2.5 text-size-15 leading-normal';
+  const online = template.group === ONLINE;
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby="msg-title" className="md:max-w-[620px]">
@@ -288,7 +296,7 @@ function EditMessage({ template, second, error, onSave, onClose }: { template: T
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3.5">
-        <p className="m-0 text-size-15">Sent the way each customer chose: text, WhatsApp or email.</p>
+        <p className="m-0 text-size-15">{online ? 'Emailed to the address on the order.' : 'Sent the way each customer chose: text, WhatsApp or email.'}</p>
         <div className="flex flex-col gap-2">
           <label htmlFor="msg-words" className="text-size-15 font-semibold">{second ? 'If the shop accepts' : 'Wording'}</label>
           <textarea id="msg-words" ref={box} rows={4} maxLength={2000} value={words} onChange={(e) => setWords(e.target.value)} className={area} />
@@ -307,17 +315,22 @@ function EditMessage({ template, second, error, onSave, onClose }: { template: T
           {/* UX walk-through 7 M6, drawn under the wording (set-msg-edit). */}
           <p className="m-0 text-sm text-[var(--wh-muted)]">With more than one shop, [Shop name] fills in as the business and the shop, like “North Street Cycles, Bolton”.</p>
         </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
-          {previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
-          <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview?.text ?? ''}</div>
-        </div>
+        {online ? null : (
+          <div className="flex flex-col gap-2">
+            <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · TEXT TO MAYA PATEL</span>
+            {previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
+            <div className="max-w-full self-start rounded-[14px_14px_14px_4px] bg-[var(--wh-surface-muted)] px-3.5 py-3 text-sm leading-normal whitespace-pre-wrap">{preview?.text ?? ''}</div>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <span className="text-size-13 font-bold text-[var(--wh-muted)]">PREVIEW · EMAIL TO MAYA PATEL</span>
-          <div className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3 text-sm leading-normal">
-            <span className="font-bold">{preview?.email.subject ?? ''}</span>
-            <span className="whitespace-pre-wrap">{preview?.email.body ?? ''}</span>
-          </div>
+          {online && previewFailed ? <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">Wheelhouse couldn’t show the preview. Try again in a moment.</p> : null}
+          {online ? (preview ? <EmailFrame email={preview.email} /> : null) : (
+            <div className="flex flex-col gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-3 text-sm leading-normal">
+              <span className="font-bold">{preview?.email.subject ?? ''}</span>
+              <span className="whitespace-pre-wrap">{preview?.email.body ?? ''}</span>
+            </div>
+          )}
         </div>
         {error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{error}</p> : null}
       </DialogBody>
@@ -326,6 +339,43 @@ function EditMessage({ template, second, error, onSave, onClose }: { template: T
         <Button variant="primary" disabled={busy} onClick={() => void done()}>Done</Button>
       </DialogFooter>
     </Dialog>
+  );
+}
+
+/**
+ * Block 46, the Email frame, as drawn for the ready email (online.mjs
+ * on-email-ready): From, To and the subject over a line, then each paragraph.
+ * A paragraph of several lines is the shop's lines, its name in bold; "See
+ * your order: <link>" is the See your order button; what follows it is the
+ * muted small print. Only a preview, so the button goes nowhere.
+ */
+const SEE_ORDER = /^See your order: \S+$/;
+export function EmailFrame({ email }: { email: Preview['email'] }) {
+  const paragraphs = email.body.split('\n\n');
+  const button = paragraphs.findIndex((p) => SEE_ORDER.test(p));
+  return (
+    <article aria-label="Email" className="flex flex-col gap-3.5 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-[18px] text-size-15 leading-[1.55] md:p-7">
+      <div className="flex flex-col gap-0.5 border-b border-[var(--wh-border)] pb-3 text-size-13 text-[var(--wh-muted)]">
+        {email.from ? <span>{`From: ${email.from}`}</span> : null}
+        {email.to ? <span>{`To: ${email.to}`}</span> : null}
+        <span className="text-base font-bold text-[var(--wh-ink)]">{email.subject}</span>
+      </div>
+      {paragraphs.map((p, i) => {
+        if (i === button) {
+          return <span key={i} className="inline-flex min-h-11 items-center self-start rounded-md bg-[var(--wh-ink)] px-4 text-sm font-semibold text-[var(--wh-panel)]">See your order</span>;
+        }
+        if (p.includes('\n')) {
+          const [name, ...rest] = p.split('\n');
+          return (
+            <div key={i} className="flex flex-col gap-[3px] text-sm leading-normal">
+              <strong>{name}</strong>
+              {rest.map((line, j) => <span key={j}>{line}</span>)}
+            </div>
+          );
+        }
+        return <p key={i} className={`m-0 ${button >= 0 && i > button ? 'text-size-13 text-[var(--wh-muted)]' : ''}`}>{p}</p>;
+      })}
+    </article>
   );
 }
 

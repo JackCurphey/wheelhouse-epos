@@ -8,6 +8,7 @@
 import { prepare } from '../db.js';
 
 const BOOKING = ['Customer’s first name', 'Bike', 'Service', 'Booked day and time', 'Shop name', 'Link to the booking', 'Job number'];
+const ORDER = ['Customer’s first name', 'Order number', 'Shop name', 'Link to your order', 'Shop phone'];
 const C2W = ['Customer’s first name', 'Bike', 'Hold until', 'Quote number', 'Link to your Cycle to Work bike', 'Shop name'];
 
 export const TEMPLATES = {
@@ -216,6 +217,67 @@ export const TEMPLATES = {
     subject: 'Your Cycle to Work hold ends soon — [Shop name]',
     tapIns: C2W,
   },
+  // The six online order messages (openspec/changes/website-buy-online design 9;
+  // decision 9 M5; names and when they go as drawn on on-messages, setup.mjs
+  // ONLINE_MSGS). Emailed to the order's address (design, decided while
+  // planning 18). Order ready to collect is the drawn on-email-ready email, as
+  // plain text in its paragraphs; the other five are Claude's draft wording
+  // (Q9 of docs/decisions/2026-10-03-build-plan-questions.md), marked `draft`
+  // until Jack approves it. Queued by server/online-orders/messages.js.
+  order_confirmation: {
+    group: 'online_orders',
+    draft: true,
+    name: 'Order confirmation',
+    when: 'When an online order is paid',
+    wording: 'Hi [Customer’s first name],\n\nThanks for your order [Order number]. It’s paid, and we’ll email you when it’s ready to collect from [Shop name].\n\nSee your order: [Link to your order]',
+    subject: 'Your order [Order number] — [Shop name]',
+    tapIns: ORDER,
+  },
+  order_ready: {
+    group: 'online_orders',
+    name: 'Order ready to collect',
+    when: 'When an online order is ready',
+    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is ready at [Shop name]. It’s paid — just give your name or order number at the counter.\n\n[Shop name]\nOpen [Opening hours]\n[Shop address] · [Shop phone]\n\nSee your order: [Link to your order]\n\nWe’ll keep it for you until [Keep until]. Can’t make it? Call us on [Shop phone].',
+    subject: 'Your order is ready to collect',
+    tapIns: [...ORDER, 'Keep until', 'Opening hours', 'Shop address'],
+  },
+  order_still_waiting: {
+    group: 'online_orders',
+    draft: true,
+    name: 'Order still waiting',
+    when: 'When an order isn’t collected after [n] days',
+    wording: 'Hi [Customer’s first name],\n\nJust a reminder that your order [Order number] is ready to collect from [Shop name]. We’ll keep it for you until [Keep until].\n\nSee your order: [Link to your order]\n\nCan’t make it? Call us on [Shop phone].',
+    subject: 'Your order is still waiting — [Shop name]',
+    tapIns: [...ORDER, 'Keep until'],
+  },
+  order_item_not_supplied: {
+    group: 'online_orders',
+    draft: true,
+    name: 'Item we couldn’t supply',
+    when: 'When staff refund an item, with their reason',
+    wording: 'Hi [Customer’s first name],\n\nSorry — we couldn’t supply [Item] from your order [Order number]: [Reason]. We’ve refunded [Amount refunded] the way you paid.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    subject: 'An item from your order [Order number] — [Shop name]',
+    tapIns: [...ORDER, 'Item', 'Reason', 'Amount refunded'],
+  },
+  order_cancelled: {
+    group: 'online_orders',
+    draft: true,
+    name: 'Order cancelled',
+    when: 'When an order is cancelled, by the customer or the shop',
+    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is cancelled. [Reason] We’ve refunded [Amount refunded] the way you paid.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    subject: 'Your order [Order number] is cancelled — [Shop name]',
+    tapIns: [...ORDER, 'Reason', 'Amount refunded'],
+  },
+  // UX walk-through 2 M9: the sorry email from "Not ready after all".
+  order_not_ready: {
+    group: 'online_orders',
+    draft: true,
+    name: 'Order not ready after all',
+    when: 'When an order marked ready is moved back',
+    wording: 'Hi [Customer’s first name],\n\nSorry — we told you your order [Order number] was ready, but it isn’t yet. Please don’t come in for it yet: we’ll email you again when it is.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    subject: 'Sorry — your order isn’t ready yet — [Shop name]',
+    tapIns: ORDER,
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
@@ -226,7 +288,9 @@ export const TEMPLATES = {
 // message joined 26 Oct (openspec/changes/ask-the-shop-server).
 export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request',
   // Cycle to Work's four (openspec/changes/cycle-to-work design 9).
-  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending'];
+  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending',
+  // The six online order messages (openspec/changes/website-buy-online design 9).
+  'order_confirmation', 'order_ready', 'order_still_waiting', 'order_item_not_supplied', 'order_cancelled', 'order_not_ready'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

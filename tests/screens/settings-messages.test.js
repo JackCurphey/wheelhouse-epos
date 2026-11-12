@@ -66,6 +66,7 @@ async function openSettings({ slowSettings = false, extra = [] } = {}) {
       return reply(200, templates.find((t) => t.key === put[1]));
     }
     const preview = u.pathname.match(/^\/api\/message-templates\/(\w+)\/preview$/);
+    if (preview && preview[1].startsWith('order_')) return reply(200, { text: READY_EMAIL, email: { from: 'North Street Cycles <[email address]>', to: 'maya@example.test', subject: 'Your order is ready to collect', body: READY_EMAIL } });
     if (preview) {
       const words = body.wording ?? templates.find((t) => t.key === preview[1]).wording;
       return reply(200, { text: fill(words), email: { subject: 'Your bike is ready — North Street Cycles', body: fill(words) } });
@@ -364,4 +365,76 @@ test('the Cycle to Work messages sit under their own heading and note, before th
   // The for-less wording is inside Certificate received's box, not a row.
   assert.equal(list.textContent.includes('Certificate for less'), false);
   await ui.findByText('2 days before a hold ends');
+});
+
+// website-buy-online task 3.4 (setup.mjs ONLINE_MSGS and msgListOpen; online.mjs
+// on-email-ready): the six online order messages under their own heading,
+// after Bike still waiting and before Cycle to Work, each emailed to the
+// order's address (design 18: Text is left off while the list has no channel
+// choice), with Edit and On; the "on" count counts them; Order ready to
+// collect's box shows the email as drawn (block 46).
+const READY_EMAIL = [
+  'Hi Maya,',
+  'Your order [order number] is ready at North Street Cycles. It’s paid — just give your name or order number at the counter.',
+  'North Street Cycles\nOpen [opening hours]\n[Shop address] · [shop phone]',
+  'See your order: [link]',
+  'We’ll keep it for you until [date]. Can’t make it? Call us on [shop phone].',
+].join('\n\n');
+const ONLINE_NAMES = [
+  ['order_confirmation', 'Order confirmation', 'When an online order is paid'],
+  ['order_ready', 'Order ready to collect', 'When an online order is ready'],
+  ['order_still_waiting', 'Order still waiting', 'When an order isn’t collected after [n] days'],
+  ['order_item_not_supplied', 'Item we couldn’t supply', 'When staff refund an item, with their reason'],
+  ['order_cancelled', 'Order cancelled', 'When an order is cancelled, by the customer or the shop'],
+  ['order_not_ready', 'Order not ready after all', 'When an order marked ready is moved back'],
+];
+const ONLINE = (off = []) => ONLINE_NAMES.map(([key, name, when]) => template({
+  key, name, when, group: 'online_orders', enabled: !off.includes(key), wording: READY_EMAIL, subject: 'Your order is ready to collect',
+  tapIns: ['Customer’s first name', 'Order number', 'Shop name', 'Link to your order', 'Shop phone'],
+}));
+
+test('3.4 the six online order messages sit under their own heading, after the job messages and before Cycle to Work, each by email with Edit and On', async () => {
+  const { ui } = await openSettings({ extra: [...ONLINE(), ...C2W] });
+  const list = await ui.findByText((_, el) => el?.getAttribute('data-msg-list') === 'true');
+  await ui.findByText('Order ready to collect');
+  assert.deepEqual([...list.querySelectorAll('h5')].map((h) => h.textContent), ['Online order messages', 'Cycle to Work messages', 'Booking messages']);
+  const [onlineHeading, c2wHeading] = list.querySelectorAll('h5');
+  const inList = (t) => [...list.querySelectorAll('span')].filter((el) => el.textContent === t);
+  assert.ok(inList('Bike ready')[0].compareDocumentPosition(onlineHeading) & 4, 'after the job messages');
+  for (const [, name, when] of ONLINE_NAMES) {
+    const [title, ...more] = inList(name);
+    assert.deepEqual(more, [], `${name} is listed once`);
+    assert.ok(onlineHeading.compareDocumentPosition(title) & 4, `${name} is under its heading`);
+    assert.ok(title.compareDocumentPosition(c2wHeading) & 4, `${name} is before Cycle to Work`);
+    const row = title.closest('div');
+    assert.ok(row.textContent.includes(when), `${name} says when it goes`);
+    assert.ok(row.textContent.includes('Email') && !row.textContent.includes('Customer’s choice'), `${name} goes by email`);
+    assert.ok(has(ui.queryByRole('button', { name: `Edit the wording of ${name}` })));
+    assert.ok(has(ui.queryByRole('button', { name: `${name}: On` })));
+  }
+});
+
+test('3.4 the “on” count counts the online order messages that are on', async () => {
+  const { ui } = await openSettings({ extra: ONLINE(['order_not_ready']) });
+  await ui.findByText('Order ready to collect');
+  // Quote to approve, Bike ready and Booking confirmed, and five of the six.
+  assert.ok(has(await ui.findByRole('button', { name: /^Automatic messages.*8 on/ })));
+});
+
+test('3.4 Order ready to collect’s Edit box shows the email as drawn (block 46), emailed to the order’s address', async () => {
+  const { ui, fireEvent } = await openSettings({ extra: ONLINE() });
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit the wording of Order ready to collect' }));
+  const dialog = await ui.findByRole('dialog');
+  assert.ok(dialog.textContent.includes('Emailed to the address on the order.'));
+  assert.equal(dialog.textContent.includes('Sent the way each customer chose'), false);
+  assert.equal(dialog.textContent.includes('PREVIEW · TEXT TO MAYA PATEL'), false, 'no text preview: it isn’t sent by text');
+  const email = await ui.findByRole('article', { name: 'Email' });
+  await ui.findByText('From: North Street Cycles <[email address]>');
+  const lines = [...email.querySelectorAll('p, span, strong')].map((el) => el.textContent);
+  for (const line of ['To: maya@example.test', 'Your order is ready to collect', 'Hi Maya,', 'Open [opening hours]', '[Shop address] · [shop phone]', 'See your order',
+    'We’ll keep it for you until [date]. Can’t make it? Call us on [shop phone].']) {
+    assert.ok(lines.includes(line), `the email shows “${line}”: ${JSON.stringify(lines)}`);
+  }
+  assert.equal(email.textContent.includes('See your order: [link]'), false, 'the link is the See your order button, as drawn');
+  assert.ok(email.querySelector('strong')?.textContent === 'North Street Cycles', 'the shop’s name in bold');
 });

@@ -46,11 +46,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 3. The six order messages (pull request 3, about 400 lines, risky: messaging core)
 
-- [ ] 3.1 Test: six keys in `server/messaging/templates.js` — Order confirmation, Order ready to collect (the drawn `on-email-ready` wording), Order still waiting, Item we couldn’t supply, Order cancelled, Order not ready after all — five marked as draft wording; each carries the order number and "See your order"
-- [ ] 3.2 Test: `server/online-orders/messages.js` queues each through `queueMessage` (pretend), skips a switched-off message, and gives Order ready to collect a wait of a few seconds with Undo (decision 9, H4; `[n]` seconds, chosen at build time); Order confirmation goes with no wait
-- [ ] 3.3 Test: a message that couldn't reach the customer is visible on the order, for "Email didn’t arrive · [phone]"
-- [ ] 3.4 Screen test: `on-messages` — "Online order messages" with the six rows, Edit and On; the "on" count counts the real list; block 46 (the Email and text frame) shows the ready email as drawn
-- [ ] 3.5 Build to pass 3.1–3.4
+- [x] 3.1 Test: six keys in `server/messaging/templates.js` — Order confirmation, Order ready to collect (the drawn `on-email-ready` wording), Order still waiting, Item we couldn’t supply, Order cancelled, Order not ready after all — five marked as draft wording; each carries the order number and "See your order"
+- [x] 3.2 Test: `server/online-orders/messages.js` queues each through `queueMessage` (pretend), skips a switched-off message, and gives Order ready to collect a wait of a few seconds with Undo (decision 9, H4; `[n]` seconds, chosen at build time); Order confirmation goes with no wait
+- [x] 3.3 Test: a message that couldn't reach the customer is visible on the order, for "Email didn’t arrive · [phone]"
+- [x] 3.4 Screen test: `on-messages` — "Online order messages" with the six rows, Edit and On; the "on" count counts the real list; block 46 (the Email and text frame) shows the ready email as drawn
+- [x] 3.5 Build to pass 3.1–3.4
 - [ ] 3.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 4. Basket and checkout — server (pull request 4, about 550 lines, risky: public routes, money and stock)
