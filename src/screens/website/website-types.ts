@@ -11,7 +11,7 @@ export type Part = {
 };
 
 export type WebsiteState = {
-  kind: 'wheelhouse' | 'shopify';
+  kind: 'wheelhouse' | 'shopify' | null;
   setUp: boolean;
   isOn: boolean;
   neverPublished: boolean;
@@ -30,6 +30,8 @@ export type WebsiteState = {
   mainColour: string | null;
   tracking: { name: string }[];
   productCounts: { goOnline: number; noPhoto: number; noPrice: number };
+  /** Before set-up: what "Every product online" would give. */
+  startCounts?: { goOnline: number; noPhoto: number; noPrice: number };
   address: string;
 };
 

@@ -26,7 +26,8 @@ test('off and never published: the free address, Turn it on with its drawn lines
   assert.ok(ui.getByText('212 products go online'));
   assert.ok(ui.getByText('14 have no photo (shown with their name)'));
   assert.ok(ui.getByText('3 have no price (stay off until priced)'));
-  assert.equal(ui.getAllByRole('link', { name: 'See them' }).length, 2);
+  assert.ok(ui.getByRole('link', { name: 'See the products with no photo, in Stock' }));
+  assert.ok(ui.getByRole('link', { name: 'See the products with no price, in Stock' }));
   assert.ok(ui.getByText('Not published yet'));
   // History is dimmed until there is something to go back to.
   const historyButton = ui.getByRole('button', { name: 'History' });
