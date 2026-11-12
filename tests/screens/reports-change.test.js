@@ -177,7 +177,6 @@ test('the changed report says it has been changed, and goes back to Sales for th
   assert.equal(ui.getByRole('link', { name: 'Back to Sales' }).getAttribute('href'), '/workshop/reports/sales?period=last-month');
   assert.equal(ui.getByRole('link', { name: 'All reports' }).getAttribute('href'), '/workshop/reports');
   assert.equal(reportCalls()[0].query.get('period'), 'last-month');
-  assert.ok(ui.queryByRole('button', { name: 'Save as my report' }) === null, 'saving comes in the next pull request');
 });
 
 test('a changed Takings and cash-ups report goes back to Takings and cash-ups', async () => {
