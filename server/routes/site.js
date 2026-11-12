@@ -184,7 +184,8 @@ async function openingAnswer() {
       if (hours) nextOpening = { date, open: hours.open };
     }
   }
-  return { hours: openingHoursFor(settings), today: todays, nextOpening, closures };
+  // todayDate: the shop's own today, so its page can mark today's row (wb-shop-page).
+  return { hours: openingHoursFor(settings), todayDate: today, today: todays, nextOpening, closures };
 }
 
 // Every category, with how many products a customer can see in it and beneath

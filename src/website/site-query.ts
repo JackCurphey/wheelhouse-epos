@@ -17,6 +17,8 @@ export type FirstShop = {
   phone: string | null;
   email: string | null;
   hours: ({ weekday: number } & Hours)[];
+  /** The shop's own today, YYYY-MM-DD in its time zone: its page marks today's row. */
+  todayDate: string;
   today: Hours | null;
   nextOpening: { date: string; open: string } | null;
   closures: { from: string; to: string }[];
@@ -104,10 +106,20 @@ export function useHome(address: SiteAddress, shopId: number | null) {
 
 /**
  * The site as every page needs it, provided by the shell once /api/site has
- * answered: the address, the published site, and the chosen shop (one of the
- * business's shops, or null; with one shop it is always that shop).
+ * answered: the address, the published site, the chosen shop (one of the
+ * business's shops, or null; with one shop it is always that shop), and the
+ * ways to choose another.
  */
-export type SiteContextValue = { address: SiteAddress; site: Site; chosen: ShopEntry | null; several: boolean };
+export type SiteContextValue = {
+  address: SiteAddress;
+  site: Site;
+  chosen: ShopEntry | null;
+  several: boolean;
+  /** Choose the shop to collect from: sets the wh_shop cookie (design 4) and every page follows. */
+  choose: (id: number) => void;
+  /** Open "Which shop will you collect from?" (wb-choose-shop); focus goes back to `opener` when it closes. */
+  openChooser: (opener: HTMLElement) => void;
+};
 export const SiteContext = createContext<SiteContextValue | null>(null);
 
 export function useSiteContext(): SiteContextValue {

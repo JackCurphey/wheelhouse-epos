@@ -266,6 +266,7 @@ export function FilterGroups({ filters, selection, onChange, onCategory, brand =
   brand?: boolean;
 }) {
   const hint = useId();
+  const { openChooser } = useSiteContext();
   return (
     <aside aria-label="Filters" className="flex min-w-0 flex-col gap-3">
       <Group title="Availability">
@@ -277,7 +278,7 @@ export function FilterGroups({ filters, selection, onChange, onCategory, brand =
             onChange={() => onChange({ ...selection, ready: !selection.ready })}
           />
         ) : (
-          <Link to="/shops" className="inline-flex min-h-11 items-center text-size-15 font-semibold text-[var(--wh-ink)] underline">Choose a shop to collect from</Link>
+          <button type="button" onClick={(e) => openChooser(e.currentTarget)} className="inline-flex min-h-11 items-center border-0 bg-transparent p-0 text-left text-size-15 font-semibold text-[var(--wh-ink)] underline">Choose a shop to collect from</button>
         )}
       </Group>
       {onCategory && (filters.categories ?? []).length > 0 && (

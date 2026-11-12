@@ -43,8 +43,9 @@ export function bookPath(address: SiteAddress, siteId: number | null): string {
 
 /**
  * The shop the visitor collects from: the `wh_shop` cookie (design 4), a
- * site id, or null when there is none. Choosing a shop, which sets it, comes
- * with the chip's "Which shop will you collect from?" (pull request 7).
+ * site id, or null when there is none. The caller ignores an id the business
+ * has no shop for. The chip's "Which shop will you collect from?" and a
+ * shop's Collect from here set it (rememberChosenShop).
  */
 export function chosenShopCookie(cookie: string = document.cookie): number | null {
   for (const part of cookie.split(';')) {
@@ -54,4 +55,21 @@ export function chosenShopCookie(cookie: string = document.cookie): number | nul
     return Number.isSafeInteger(id) && id > 0 ? id : null;
   }
   return null;
+}
+
+/** A year, in seconds: how long the chosen shop is remembered (design 4). */
+const YEAR = 365 * 24 * 60 * 60;
+
+/**
+ * The wh_shop cookie as written: the site id for a year, SameSite=Lax, for
+ * this shop's address only (its /store/<slug> path, or the whole of its own
+ * address), Secure over https. Not HttpOnly: the page reads it itself. It is
+ * needed to show stock, so it asks no consent (design 4).
+ */
+export function chosenShopCookieText(id: number, address: SiteAddress, secure: boolean): string {
+  return `wh_shop=${id}; Max-Age=${YEAR}; Path=${address.base || '/'}; SameSite=Lax${secure ? '; Secure' : ''}`;
+}
+
+export function rememberChosenShop(id: number, address: SiteAddress): void {
+  document.cookie = chosenShopCookieText(id, address, window.location.protocol === 'https:');
 }

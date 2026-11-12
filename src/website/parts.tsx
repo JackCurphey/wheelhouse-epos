@@ -123,6 +123,13 @@ export function CategoryCard({ category, categories }: { category: Category; cat
 
 const weekdayName = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
 
+/** TodayLine's words as plain text, for the Which-shop box's shop line; null when no hours are set. */
+export function todayText(shop: FirstShop): string | null {
+  if (shop.today) return `Open today ${shop.today.open}–${shop.today.close}`;
+  if (!shop.nextOpening) return null;
+  return `Closed today · opens ${weekdayName(shop.nextOpening.date)} ${shop.nextOpening.open}`;
+}
+
 /** Today's hours, or when the shop next opens (design 9); nothing when no hours are set. */
 export function TodayLine({ shop }: { shop: FirstShop }) {
   if (shop.today) {

@@ -5,9 +5,11 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Menu, Search, ShoppingBasket, Store, User, X } from 'lucide-react';
 import { ApiError } from '@/lib/api/client.ts';
 import { cn } from '@/lib/utils';
-import { bookPath, chosenShopCookie, siteAddress } from './address.ts';
-import { SiteContext, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
-import { H1 } from './parts.tsx';
+import { Dialog } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { bookPath, chosenShopCookie, rememberChosenShop, siteAddress } from './address.ts';
+import { SiteContext, hasDetails, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
+import { H1, todayText } from './parts.tsx';
 import { SearchCombo } from './search.tsx';
 
 /**
@@ -74,43 +76,117 @@ export function SiteFailed({ onRetry }: { onRetry: () => void }) {
 export function SiteLayout() {
   const address = useMemo(() => siteAddress(), []);
   const site = useSite(address);
+  // The wh_shop cookie as read once, then as the visitor chooses (design 4).
+  const [cookieId, setCookieId] = useState(() => chosenShopCookie());
+  // "Which shop will you collect from?": the control that opened it while open.
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
+  const choose = useCallback((id: number) => {
+    rememberChosenShop(id, address);
+    setCookieId(id);
+  }, [address]);
+  const openChooser = useCallback((el: HTMLElement) => setOpener(el), []);
+  // Closing, with or without a choice: focus goes back to what opened the box.
+  const closeChooser = useCallback((id?: number) => {
+    const back = opener;
+    flushSync(() => {
+      if (id !== undefined) choose(id);
+      setOpener(null);
+    });
+    if (back?.isConnected) back.focus();
+    else document.getElementById('main-content')?.focus();
+  }, [opener, choose]);
   if (site.error) {
     if (site.error instanceof ApiError && site.error.status === 404) return <SiteOff />;
     return <SiteFailed onRetry={() => { void site.refetch(); }} />;
   }
   if (!site.data) return null;
   const several = site.data.shops.length > 1;
-  const cookieId = chosenShopCookie();
+  // A remembered shop the business doesn't have is ignored: Choose a shop again.
   const chosen = several ? (site.data.shops.find((s) => s.id === cookieId) ?? null) : (site.data.shops[0] ?? null);
-  const value: SiteContextValue = { address, site: site.data, chosen, several };
+  const value: SiteContextValue = { address, site: site.data, chosen, several, choose, openChooser };
   return (
     <SiteContext.Provider value={value}>
       <Frame />
+      {several && opener && <ChooseShop shops={site.data.shops} onClose={closeChooser} />}
     </SiteContext.Provider>
+  );
+}
+
+/**
+ * wb-choose-shop, "Choosing the shop: one tap" (browse.mjs `chooseShop`, the
+ * popup pattern): a button per shop, tapping one chooses it and closes the
+ * box; Cancel, Close and Esc leave the choice as it was. The shared address
+ * and today's hours are on the first shop only (Jack's answer 1). Full screen
+ * on a phone, 520px wide above.
+ */
+function ChooseShop({ shops, onClose }: { shops: ShopEntry[]; onClose: (id?: number) => void }) {
+  const titleId = React.useId();
+  const subId = React.useId();
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      aria-labelledby={titleId}
+      aria-describedby={subId}
+      aria-modal="true"
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); onClose(); } }}
+      className="m-0 flex h-dvh max-h-none w-screen max-w-none flex-col rounded-none bg-[var(--wh-bg)] md:m-auto md:h-auto md:max-h-[90vh] md:w-[520px] md:max-w-[90vw] md:rounded-xl md:border md:border-[var(--wh-border)]"
+    >
+      <div className="flex items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pl-4 pr-2 md:py-3.5 md:pl-[22px] md:pr-3.5">
+        <div className="flex grow flex-col gap-0.5">
+          <h2 id={titleId} className="m-0 text-[18px] font-bold md:text-[20px]">Which shop will you collect from?</h2>
+          <span id={subId} className="text-size-13 text-[var(--wh-muted)]">We’ll remember it, and show when things are ready there</span>
+        </div>
+        <button type="button" aria-label="Close" onClick={() => onClose()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-[var(--wh-ink)]">
+          <X aria-hidden className="size-5" />
+        </button>
+      </div>
+      <div className="min-h-0 grow overflow-y-auto p-4 md:px-[22px] md:py-5">
+        <div role="group" aria-labelledby={titleId} className="flex flex-col gap-2.5">
+          {shops.map((shop) => {
+            const line = hasDetails(shop) ? [shop.address, todayText(shop)].filter(Boolean).join(' · ') : '';
+            return (
+              <button
+                key={shop.id}
+                type="button"
+                onClick={() => onClose(shop.id)}
+                className="flex min-h-16 w-full flex-col items-start gap-[3px] rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-3.5 text-left text-[var(--wh-ink)]"
+              >
+                <span className="text-[16px] font-bold">{shop.name}</span>
+                {line && <span className="text-[14px] text-[var(--wh-muted)]">{line}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex justify-between gap-2.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 pb-4 pt-3 md:px-[22px] md:py-3.5">
+        <Button variant="ghost" className="min-h-11 text-size-15" onClick={() => onClose()}>Cancel</Button>
+      </div>
+    </Dialog>
   );
 }
 
 const iconLink = 'inline-flex size-11 items-center justify-center rounded-lg';
 
-/** The collect-from chip (browse.mjs): leads to Our shops until choosing a shop comes (pull request 7). */
+/** The collect-from chip (browse.mjs): opens "Which shop will you collect from?" (wb-choose-shop). */
 function Chip({ line }: { line: boolean }) {
-  const { site, chosen } = useSiteContext();
+  const { site, chosen, openChooser } = useSiteContext();
   const label = chosen ? `Collecting from ${site.name}, ${chosen.name} — change the shop` : 'Choose a shop to collect from';
   if (line) {
     // The narrow line (browse.mjs chipLine) names itself with its own words.
     return (
-      <Link to="/shops" className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 text-size-15 text-[var(--wh-ink)] no-underline">
+      <button type="button" onClick={(e) => openChooser(e.currentTarget)} className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3 text-left text-size-15 text-[var(--wh-ink)]">
         <Store aria-hidden className="size-4" />
         <span className="grow">{chosen ? <>Collecting from <strong>{chosen.name}</strong></> : <strong>Choose a shop to collect from</strong>}</span>
         {chosen && <span className="font-semibold underline">Change</span>}
-      </Link>
+      </button>
     );
   }
   return (
-    <Link to="/shops" aria-label={label} className="inline-flex min-h-11 max-w-[230px] shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-lg border border-[var(--wh-border)] px-2.5 text-[14px] no-underline" style={{ color: 'inherit' }}>
+    <button type="button" aria-label={label} onClick={(e) => openChooser(e.currentTarget)} className="inline-flex min-h-11 max-w-[230px] shrink-0 items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-lg border border-[var(--wh-border)] bg-transparent px-2.5 text-[14px]" style={{ color: 'inherit' }}>
       <Store aria-hidden className="size-4 shrink-0" />
       <span className="truncate">{chosen ? <>Collecting from <strong>{chosen.name}</strong> · Change</> : <strong>Choose a shop</strong>}</span>
-    </Link>
+    </button>
   );
 }
 
