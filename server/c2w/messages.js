@@ -81,9 +81,18 @@ async function toldTheEnd(orderId, until) {
  * Checked as each message comes due (the sender's DUE_CHECKS): Put aside and
  * Your hold ends go only while the customer still has a bike held for an order
  * before its certificate, so a release in the message's minute stops it. By
- * customer, as the message isn't tied to an order.
+ * customer, as the message isn't tied to an order. No longer put aside goes
+ * only while a released bike is still let go.
  */
 export async function c2wStillNeeded(m) {
+  // No longer put aside: not once the bike is held again (the certificate or the
+  // bike's arrival in the same minute), as the next message says so.
+  if (m.template_key === 'c2w_released') {
+    return Boolean(await prepare(
+      `SELECT 1 FROM c2w_orders o WHERE o.customer_id = ? AND o.stage IN ('quote', 'waiting')
+         AND o.released_at IS NOT NULL AND o.held_at IS NULL LIMIT 1`,
+    ).get(m.customer_id));
+  }
   const held = m.template_key === 'c2w_hold_ending' ? 'o.hold_until IS NOT NULL' : 'o.held_at IS NOT NULL';
   return Boolean(await prepare(
     `SELECT 1 FROM c2w_orders o WHERE o.customer_id = ? AND o.stage IN ('quote', 'waiting') AND ${held} LIMIT 1`,

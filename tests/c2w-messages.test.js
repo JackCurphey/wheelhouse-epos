@@ -298,6 +298,18 @@ test('9.1 Your bike is no longer put aside: still sent once its minute has passe
   assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone'], ['c2w_released', 'delivered']]);
 });
 
+test('9.1 Your bike is no longer put aside: not sent once the bike is held again within its minute', async () => {
+  // Released, then the certificate comes in the same minute and the bike is held again (cw-certificate-released).
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
+  assert.equal((await certify(made.id, { amountPence: 100000 })).status, 200);
+  await dueNow(maya);
+  await sendDueForShop(owner.shop.id);
+  const released = (await messagesTo(maya)).find((m) => m.template_key === 'c2w_released');
+  assert.equal(released.intent_state, 'undone');
+});
+
 // Cancelling is pull request 8's (tasks 8.5, 8.6), and the deposit section 11's:
 // until then the three drawn wordings are checked as Wheelhouse fills them in.
 test('9.1 Your order is cancelled: the three drawn wordings, with no link (cw-texts-cancelled)', async () => {
