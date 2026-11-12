@@ -357,3 +357,35 @@ test('Today lists an over float with Seen', async () => {
   await t.waitFor(() => assert.ok(calls.some((c) => c.method === 'POST' && c.url === '/api/float-check/8/seen')));
   await t.waitFor(() => assert.ok(t.ui.queryByText('The float was £3.00 over this morning') === null));
 });
+
+// Count first off (Settings › End of day › Counting the cash; eod-count-shown;
+// owner-setup-till-payments-eod design 3): the expected amount while counting,
+// the difference as the count changes, and "Done counting".
+test('with Count first off: the till expects £224.00 before counting, and the difference changes as the count is typed', async () => {
+  const t = await openClose({ day: { ...DAY, countFirst: false } });
+  const region = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
+  assert.ok(region.getByText('Count the drawer and fill in how many of each.'));
+  assert.ok(text(region.getByText('The till expects').closest('[data-row]')).includes('£224.00'));
+  assert.ok(region.queryByText('Difference') === null, 'no difference before anything is counted');
+  assert.ok(region.queryByRole('button', { name: 'Done counting — show the difference' }) === null);
+  const done = region.getByRole('button', { name: 'Done counting' });
+  assert.equal(done.disabled, true);
+  t.fireEvent.change(region.getByLabelText('Cash counted, total'), { target: { value: '221.90' } });
+  assert.ok(text(region.getByText('Difference').closest('[data-row]')).includes('£2.10 short'));
+  t.fireEvent.change(region.getByLabelText('Cash counted, total'), { target: { value: '225.00' } });
+  assert.ok(text(region.getByText('Difference').closest('[data-row]')).includes('£1.00 over'));
+  // Done counting goes on to the same result as a blind count.
+  t.fireEvent.click(done);
+  const after = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
+  assert.ok(await after.findByRole('group', { name: 'How the till worked out what it expected' }));
+  assert.ok(text(after.getByText('Counted').closest('[data-row]')).includes('£225.00'));
+});
+
+test('with Count first on: blind, as before', async () => {
+  const t = await openClose({ day: { ...DAY, countFirst: true } });
+  const region = t.within(await t.ui.findByRole('region', { name: 'Count the cash' }));
+  assert.ok(region.getByText('Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.'));
+  assert.ok(region.getByRole('button', { name: 'Done counting — show the difference' }));
+  assert.ok(t.ui.queryByText(/£224\.00/) === null);
+  assert.ok(region.queryByText('The till expects') === null);
+});
