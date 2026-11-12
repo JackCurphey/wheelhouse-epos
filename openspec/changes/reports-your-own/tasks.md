@@ -30,11 +30,11 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 
 ## 4. PR 4: Workshop's Change what's shown, and Margin if it's ready (not risky)
 
-- [ ] 4.1 Tests first: from Workshop, Jobs (finished, as part 2 counts them) and Hours (as part 2's "How full each mechanic was") by Day, Week, Staff member (the mechanic) and Service; Only lists service categories and there is no Supplier; Items sold and Margin greyed with their reason; a saved Workshop report opens on the latest period. If part 2's PR 5 has merged: Margin by Category and Product from kept costs only, lines without a cost left out and counted, for the Owner only. Verify: each fails first.
-- [ ] 4.2 Add the Workshop measures and the Service split to `server/lib/report-changed.js`; the button on `workshop-report.tsx`.
-- [ ] 4.3 If part 2's PR 5 has merged, light up Margin; if not, leave it greyed and note in STATUS that Margin's measure waits for it.
-- [ ] 4.4 Log Service as a split in `decided-while-building`.
-- [ ] 4.5 `reviewer` self-review; lint and the related tests.
+- [x] 4.1 Tests first: from Workshop, Jobs (finished, as part 2 counts them) and Hours (as part 2's "How full each mechanic was") by Day, Week, Staff member (the mechanic) and Service; Only lists service categories and there is no Supplier; Items sold and Margin greyed with their reason; a saved Workshop report opens on the latest period. If part 2's PR 5 has merged: Margin by Category and Product from kept costs only, lines without a cost left out and counted, for the Owner only. Verify: each fails first.
+- [x] 4.2 Add the Workshop measures and the Service split to `server/lib/report-changed.js`; the button on `workshop-report.tsx`.
+- [x] 4.3 If part 2's PR 5 has merged, light up Margin; if not, leave it greyed and note in STATUS that Margin's measure waits for it.
+- [x] 4.4 Log Service as a split in `decided-while-building`.
+- [x] 4.5 `reviewer` self-review; lint and the related tests.
 
 ## 5. Finish
 

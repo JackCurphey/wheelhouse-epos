@@ -12,7 +12,7 @@ import { ChangeWhatsShown } from './change-panel.tsx';
 import { SaveReportDialog } from './save-report-dialog.tsx';
 import { Button } from '@/components/ui/button';
 import { PERIODS } from './sales-report.tsx';
-import { BASE_LABEL, BASE_PATH, type ChangedReport } from './changed-format.ts';
+import { BASE_LABEL, BASE_PATH, type Base, type ChangedReport } from './changed-format.ts';
 
 /**
  * A changed report (rp-changed in generator/reports.mjs; openspec/changes/reports-your-own,
@@ -31,16 +31,18 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 // The graph and table are named by what they show, as the drawing has it ("Items sold by product"), without the report's name.
 const shortTitle = (report: ChangedReport) => report.title.replace(/^[^:]+: /, '').replace(/^./, (c) => c.toUpperCase());
 
+const money_ = (r: ChangedReport) => r.measure === 'takings' || r.measure === 'margin';
+
 const spokenFor = (report: ChangedReport): string => {
   const reached = report.rows.filter((r) => !r.notReached && r.value !== null);
   const top = reached.reduce<(typeof reached)[number] | null>((best, r) => (best === null || (r.value ?? 0) > (best.value ?? 0) ? r : best), null);
   const parts: string[] = [];
   if (top && (top.value ?? 0) > 0) {
-    parts.push(report.measure === 'items' ? `most sold ${top.label}` : report.split === 'day' || report.split === 'week' ? `busiest ${report.split} ${top.label}` : `biggest ${top.label}`);
+    parts.push(report.measure === 'items' ? `most sold ${top.label}` : report.measure === 'hours' ? `most hours ${top.label}` : report.measure === 'jobs' ? `most jobs ${top.label}` : report.split === 'day' || report.split === 'week' ? `busiest ${report.split} ${top.label}` : `biggest ${top.label}`);
   }
   const diff = report.figures.diffValue;
   if (diff !== null) {
-    const size = report.measure === 'items' ? String(Math.abs(diff)) : money(Math.abs(diff));
+    const size = money_(report) ? money(Math.abs(diff)) : String(Math.abs(diff));
     parts.push(diff === 0 ? `no change on ${report.period.against}` : `${diff > 0 ? 'up' : 'down'} ${size} on ${report.period.against}`);
   }
   return `${shortTitle(report)}: ${parts.join('; ') || 'nothing sold'}. The figures are in the table below.`;
@@ -49,9 +51,8 @@ const spokenFor = (report: ChangedReport): string => {
 function ChangedTable({ report }: { report: ChangedReport }) {
   const cell = 'border-b border-[var(--wh-border)] px-2 py-2.5 max-md:px-1 max-md:text-size-13';
   const head = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
-  const money_ = report.measure === 'takings' || report.measure === 'margin';
-  const show = (v: number | null) => (v === null ? '—' : money_ ? money(v) : count(v));
-  const items = report.measure !== 'takings'; // Takings sits beside any other measure
+  const show = (v: number | null) => (v === null ? '—' : money_(report) ? money(v) : count(v));
+  const items = report.measure === 'items' || report.measure === 'margin'; // Takings sits beside what is counted by item
   return (
     <div className="overflow-x-auto">
       <table aria-label={shortTitle(report)} className="w-full border-collapse text-sm max-md:text-size-13">
@@ -82,7 +83,8 @@ export function ChangedReportPage() {
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ name: string; query: string } | null>(null);
-  const base = params.get('base') === 'takings' ? 'takings' : 'sales';
+  const raw = params.get('base');
+  const base: Base = raw === 'takings' || raw === 'workshop' ? raw : 'sales';
   const period = params.get('period') ?? 'this-week';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
@@ -141,7 +143,7 @@ export function ChangedReportPage() {
           <Box>
             {showGraphs ? (
               <ReportGraph
-                title={shortTitle(report)} kind="bars" scale={report.measure === 'items' ? 'count' : 'money'} spoken={spokenFor(report)} showBefore={report.showBefore}
+                title={shortTitle(report)} kind="bars" scale={money_(report) ? 'money' : 'count'} spoken={spokenFor(report)} showBefore={report.showBefore}
                 keyNow={KEY_NOW[period] ?? 'This period'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(report.period.against.replace(/^the /, ''))}
                 rows={report.rows.map((r) => ({ key: r.key, label: r.label, notReached: Boolean(r.notReached), takingsPence: r.value, beforeTakingsPence: r.beforeValue ?? 0 }))}
               />
