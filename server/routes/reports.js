@@ -13,7 +13,7 @@ import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
-import { listSaved, createSaved } from '../lib/saved-reports.js';
+import { listSaved, createSaved, renameSaved, deleteSaved, undoSaved, SavedNotFound } from '../lib/saved-reports.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
@@ -231,4 +231,33 @@ export function register(route) {
       throw err;
     }
   });
+  // Rename, delete (kept, so it can be undone) and undo one of the person's own saved reports. A report
+  // that isn't theirs, or isn't there, is a 404 for each.
+  const savedAction = (act) => async (req, res, params) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
+    try {
+      if (id === null) throw new SavedNotFound();
+      sendJson(res, 200, await act(ctx.login.id, id, req));
+    } catch (err) {
+      if (err instanceof SavedNotFound) return sendJson(res, 404, { error: err.message });
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'Send the report as JSON' });
+      throw err;
+    }
+  };
+  // screens: rp-report-menu, rp-save
+  route('PATCH', '/api/reports/saved/:id', savedAction(async (loginId, id, req) => {
+    const body = await readJsonBody(req);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new ValidationError('Send the new name as an object');
+    return renameSaved(loginId, id, body.name, body);
+  }));
+  // screens: rp-report-menu, rp-report-deleted
+  route('DELETE', '/api/reports/saved/:id', savedAction((loginId, id) => deleteSaved(loginId, id)));
+  // screens: rp-report-deleted
+  route('POST', '/api/reports/saved/:id/undo', savedAction(async (loginId, id, req) => {
+    const body = await readJsonBody(req);
+    return undoSaved(loginId, id, body && typeof body === 'object' && !Array.isArray(body) ? body : {});
+  }));
 }

@@ -375,6 +375,9 @@ GET /api/reports/changed/choices
 GET /api/reports/changed.csv
 GET /api/reports/saved
 POST /api/reports/saved
+PATCH /api/reports/saved/:id
+DELETE /api/reports/saved/:id
+POST /api/reports/saved/:id/undo
 GET /api/quick-buttons
 POST /api/quick-button-groups
 PUT /api/quick-button-groups/:id
@@ -413,6 +416,8 @@ GET /api/c2w/orders/:id/quote
 POST /api/c2w/orders/:id/email-quote
 POST /api/c2w/orders/:id/hold-longer
 POST /api/c2w/orders/:id/release
+POST /api/c2w/orders/:id/order
+POST /api/c2w/orders/:id/order/undo
 GET /api/c2w/stock
 POST /api/c2w/orders/:id/certificate
 POST /api/c2w/orders/:id/ready

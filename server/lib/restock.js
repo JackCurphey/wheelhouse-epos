@@ -19,7 +19,7 @@ export const NO_SUPPLIER = 'No supplier';
 
 // A supplier's name as typed, compared ignoring capitals and spaces at either end (Jack's
 // 4 Nov answer 10: matched by name).
-const nameKey = (s) => String(s ?? '').trim().toLocaleLowerCase('en-GB');
+export const nameKey = (s) => String(s ?? '').trim().toLocaleLowerCase('en-GB');
 
 // Sales at the till and online: stock lines of type sale and till_sale (every sale moves stock
 // through moveStock, so this is the one place they all are).
@@ -38,14 +38,18 @@ async function salesByProduct() {
 
 // Still to come on draft, ordered and partly delivered orders: per product, those for a job
 // (by job) and the rest. Damaged and wrong items set aside count as come, as an order's page
-// says (purchase-orders.js loadPurchaseOrderItems).
+// says (purchase-orders.js loadPurchaseOrderItems). A Cycle to Work order's bike, while the
+// order still waits for it, is the customer's, not stock coming (cycle-to-work, task 6.3).
 async function onOrder() {
   const rows = await prepare(
     `SELECT poi.product_id, poi.workshop_job_id,
             SUM(GREATEST(poi.qty_ordered - poi.qty_received
               - COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
                           WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
-                            AND dp.kind IN ('damaged', 'wrong_item')), 0), 0))::int AS qty
+                            AND dp.kind IN ('damaged', 'wrong_item')), 0)
+              - (CASE WHEN EXISTS (SELECT 1 FROM c2w_orders o WHERE o.id = poi.c2w_order_id
+                                   AND o.stage IN ('quote', 'waiting', 'certificate') AND o.held_at IS NULL AND o.frame_id IS NULL)
+                      THEN 1 ELSE 0 END), 0))::int AS qty
      FROM purchase_order_items poi JOIN purchase_orders po ON po.id = poi.purchase_order_id
      WHERE po.status IN ('draft', 'ordered', 'partially_received') AND poi.product_id IS NOT NULL
      GROUP BY poi.product_id, poi.workshop_job_id`
