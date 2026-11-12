@@ -12,7 +12,9 @@ import { poundsText } from '@/lib/money.ts';
  * has nothing still to come; `notComing` is what had been to come
  * (openspec/changes/close-part-delivered).
  */
-export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; notComing: number; unitCost?: number; forJob?: { id: number; ref: string | null } };
+export type OrderItem = { id: number; productId: number; name: string; sku: string | null; qtyOrdered: number; qtyReceived: number; outstanding: number; notComing: number; unitCost?: number; forJob?: { id: number; ref: string | null }; forC2w?: { id: number; customerName: string | null } };
+// Whose a bike ordered for a Cycle to Work order is (rs-receive-c2w, rs-frame-c2w; UX walk-through 5 M2).
+export const c2wFor = (customerName: string | null) => `for ${customerName ?? '[Customer]'} · Cycle to Work — put it aside`;
 export type Order = {
   id: number; supplierId: number; supplierName: string; status: 'draft' | 'ordered' | 'partially_received' | 'received' | 'closed' | 'cancelled';
   orderedAt: string | null; items: OrderItem[]; totalCost?: number;
