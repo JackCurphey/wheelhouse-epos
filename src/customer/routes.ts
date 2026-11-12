@@ -72,3 +72,11 @@ export const REMINDER_BOOK_ROUTE = '/book/:shopSlug/from-reminder/:code';
  * booking steps, as the account is.
  */
 export const PRIVACY_ROUTE = '/book/:shopSlug/privacy';
+
+/**
+ * The customer's Cycle to Work page (openspec/changes/cycle-to-work design 8;
+ * cw-customer-view): the order's private link from the messages, with no
+ * sign-in. The server's c2wLinkPath (server/c2w/customer-view.js) gives the
+ * same address.
+ */
+export const C2W_ROUTE = '/book/:shopSlug/cycle-to-work/:code';
