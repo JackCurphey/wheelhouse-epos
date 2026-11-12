@@ -3,8 +3,9 @@
 // set-till-quick, set-till-quick-add, set-till-quick-saved, set-till-empty).
 // A new shop sees "No quick buttons yet"; the Owner adds the Workshop group's
 // buttons, hovers a row for Edit and Remove, moves one with the arrow keys,
-// adds the brake pads, removes a button and puts it back with Undo. On a
-// phone the rows and pills wrap. Example data from the drawings.
+// adds the brake pads, removes a button and puts it back with Undo, and moves
+// a group from its "…" menu. On a phone the rows and pills wrap, and press and
+// hold opens a row. Example data from the drawings.
 import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
@@ -90,6 +91,14 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await page.keyboard.press('Escape');
       await expect(page.getByRole('menu')).toBeHidden();
       await page.setViewportSize(viewport);
+      // Press and hold on a touch screen opens Edit and Remove, as an iPhone
+      // sends no contextmenu (Jack, 12 Nov evening, Q4 option 2).
+      const name = row('Replace gear cable').locator('[data-part="name"]');
+      const at = (await name.boundingBox())!;
+      const touch = { pointerType: 'touch', button: 0, isPrimary: true, clientX: at.x + 4, clientY: at.y + 4 };
+      await name.dispatchEvent('pointerdown', touch);
+      await expect(page.getByRole('button', { name: 'Remove Replace gear cable' })).toBeVisible();
+      await name.dispatchEvent('pointerup', touch);
     }
 
     // The up arrow on a handle moves and saves, with Undo.
@@ -122,5 +131,25 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(rows).toHaveText(['Standard service', 'Fit & adjust brakes', 'Replace gear cable', 'Shimano brake pads']);
     const saved = (await api('/api/quick-buttons')).body as { groups: { name: string; buttons: { name: string }[] }[] };
     expect(saved.groups[0].buttons.map((b) => b.name)).toEqual(['Standard service', 'Fit & adjust brakes', 'Replace gear cable', 'Shimano brake pads']);
+
+    // A group's "…" menu moves it one place, saved at once, and the note's
+    // Undo puts it back (Jack, 12 Nov evening, Q2 option 2).
+    const groupPills = page.getByRole('group', { name: 'Quick button groups' }).getByRole('button');
+    const order = async () => ((await api('/api/quick-buttons')).body as { groups: { name: string }[] }).groups.map((g) => g.name);
+    await page.getByRole('button', { name: 'More for Workshop' }).click();
+    await expect(page.getByRole('menu', { name: 'Workshop' }).getByRole('menuitem')).toHaveText(['Rename…', 'Move right', 'Remove']);
+    await page.getByRole('menuitem', { name: 'Move right' }).click();
+    await expect(groupPills).toHaveText(['Parts', 'Workshop', '+ Add a group']);
+    await expect(page.getByRole('button', { name: 'More for Workshop' })).toBeFocused();
+    await expect.poll(order).toEqual(['Parts', 'Workshop']);
+    await note.getByRole('button', { name: 'Undo' }).click();
+    await expect(groupPills).toHaveText(['Workshop', 'Parts', '+ Add a group']);
+    await expect.poll(order).toEqual(['Workshop', 'Parts']);
+    await groupPills.filter({ hasText: 'Parts' }).click();
+    await page.getByRole('button', { name: 'More for Parts' }).click();
+    await expect(page.getByRole('menu', { name: 'Parts' }).getByRole('menuitem')).toHaveText(['Rename…', 'Move left', 'Remove']);
+    await page.getByRole('menuitem', { name: 'Move left' }).click();
+    await expect(groupPills).toHaveText(['Parts', 'Workshop', '+ Add a group']);
+    await expect.poll(order).toEqual(['Parts', 'Workshop']);
   });
 }
