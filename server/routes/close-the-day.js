@@ -292,7 +292,8 @@ export async function closeOn(day, { reopened = false } = {}) {
     takingsPence: r.takings_pence, cardPence: r.card_pence, otherPence: r.other_pence, onlinePence: r.online_pence,
     // A day closed late: the morning count that counted it (op-close-yesterday).
     countedBy: count?.by ?? null,
-    reopened: r.reopened_at ? { reason: r.reopen_reason, byName: r.reopened_by_name, at: iso(r.reopened_at) } : null,
+    // Only Reports asks (the shape Close the day returns is unchanged).
+    ...(reopened ? { reopened: r.reopened_at ? { reason: r.reopen_reason, byName: r.reopened_by_name, at: iso(r.reopened_at) } : null } : {}),
   };
 }
 
