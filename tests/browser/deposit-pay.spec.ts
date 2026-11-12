@@ -8,6 +8,7 @@ import { startLiveServer } from '../helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from '../helpers/staff.js';
 import { futureDate } from '../helpers/workshopFixtures.js';
 import { deleteTestShop } from '../helpers/testShop.js';
+import { connectPayments } from '../helpers/payments.js';
 
 let server: { baseUrl: string; stop: () => Promise<void> } | undefined;
 let owner: { cookie: string; shop: { id: number; slug: string } };
@@ -20,6 +21,7 @@ const staff = (path: string, options?: object) => staffRequest(server!.baseUrl, 
 test.beforeAll(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  await connectPayments(owner.shop.id);
   alex = await seedMechanic(owner.shop.id, { name: 'Alex Morgan' });
   service = await runWithShop(owner.shop.id, async () => (await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Standard service', 65, ROUND(65 * 100)::int, 60, 1, 1, now()) RETURNING id").get()).id);
   expect((await staff('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'timed', depositOn: true, depositPercent: 20 } })).status).toBe(200);

@@ -65,11 +65,12 @@ test('a room with more than one area has Jump to, and each area its own heading 
   const t = await openSettings('/workshop/settings?room=front-desk');
   const { ui, within } = t;
   const jump = within(ui.getByRole('navigation', { name: 'Jump to' }));
-  assert.deepEqual(jump.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')]), [['Till', '#set-till'], ['Payments', '#set-payments'], ['Messages', '#set-messages'], ['End of day', '#set-end-of-day'], ['Cycle to Work', '#set-c2w']]);
+  assert.deepEqual(jump.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')]), [['Till', '#set-till'], ['Payments', '#set-payments'], ['Messages', '#set-messages'], ['End of day', '#set-end-of-day'], ['Online orders', '#set-online'], ['Cycle to Work', '#set-c2w']]);
   assert.ok(ui.getByRole('heading', { level: 3, name: 'Till' }));
-  assert.ok(ui.getByRole('heading', { level: 4, name: /^Receipts/ }));
-  // The first fold is open, the next closed, each with its summary.
-  assert.equal(fold(ui, 'Receipts').getAttribute('aria-expanded'), 'true');
+  assert.ok(ui.getByRole('heading', { level: 4, name: /^Quick buttons/ }));
+  // The first fold (Quick buttons, as drawn) is open, the next closed, each with its summary.
+  assert.equal(fold(ui, 'Quick buttons').getAttribute('aria-expanded'), 'true');
+  assert.equal(fold(ui, 'Receipts').getAttribute('aria-expanded'), 'false');
   assert.equal(fold(ui, 'Automatic messages').getAttribute('aria-expanded'), 'false');
   await summary(t, 'Automatic messages', '2 on');
   await summary(t, 'Receipts', 'Nothing at the bottom yet');
@@ -79,10 +80,10 @@ test('a fold opens and closes on its own', async () => {
   const { ui, fireEvent } = await openSettings('/workshop/settings?room=front-desk');
   fireEvent.click(fold(ui, 'Automatic messages'));
   assert.equal(fold(ui, 'Automatic messages').getAttribute('aria-expanded'), 'true');
-  assert.equal(fold(ui, 'Receipts').getAttribute('aria-expanded'), 'true', 'the other stays open');
+  assert.equal(fold(ui, 'Quick buttons').getAttribute('aria-expanded'), 'true', 'the other stays open');
   assert.ok(await ui.findByText('Quote to approve'));
-  fireEvent.click(fold(ui, 'Receipts'));
-  assert.equal(fold(ui, 'Receipts').getAttribute('aria-expanded'), 'false');
+  fireEvent.click(fold(ui, 'Quick buttons'));
+  assert.equal(fold(ui, 'Quick buttons').getAttribute('aria-expanded'), 'false');
 });
 
 test('a room with one area shows that area’s words, no Jump to, and its folds as h3', async () => {
@@ -110,7 +111,7 @@ test('Workshop: Online booking and Mechanics, each summed up', async () => {
 test('on a phone, Settings opens on the rooms, each with what’s in it; a room has ‹ Settings back', async () => {
   const first = await openSettings();
   const list = first.within(first.ui.getByRole('navigation', { name: 'Settings rooms' }));
-  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day, Cycle to Work', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories, bike warranties', 'OfficeShop and sites, your data']);
+  assert.deepEqual(list.getAllByRole('link').map((a) => a.textContent), ['Front deskTill, payments, messages, end of day, online orders, Cycle to Work', 'WorkshopServices, checklists, online booking, mechanics, diary blocks, storage slots, collection', 'StockroomStock adjustments, categories, bike warranties', 'OfficeShop and sites, your data']);
   first.cleanup();
   shell?.queryClient.clear();
   uninstall?.();

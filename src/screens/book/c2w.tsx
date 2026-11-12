@@ -97,7 +97,7 @@ function Stages({ labels, at }: { labels: string[]; at: number }) {
         const now = i === at;
         return (
           <li key={s} aria-current={now ? 'step' : undefined}
-            className={cn('flex flex-col gap-1 rounded-lg px-2.5 py-2 text-[13px]', now ? 'border-2 border-[var(--wh-ink)]' : 'border border-[var(--wh-border)]', done ? 'bg-[var(--wh-surface-muted)]' : 'bg-[var(--wh-panel)]')}>
+            className={cn('flex flex-col gap-1 rounded-lg px-2.5 py-2 text-size-13', now ? 'border-2 border-[var(--wh-ink)]' : 'border border-[var(--wh-border)]', done ? 'bg-[var(--wh-surface-muted)]' : 'bg-[var(--wh-panel)]')}>
             <span className={cn('inline-flex items-center gap-1.5 font-bold', done || now ? 'text-[var(--wh-ink)]' : 'text-[var(--wh-muted)]')}>
               {done ? <Check size={14} aria-hidden="true" /> : <span className="w-3.5 text-center">{i + 1}</span>}
               {s}

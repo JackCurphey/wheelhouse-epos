@@ -54,13 +54,14 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 4. List, New order, quote and order page — screens (pull request 4, about 600 lines)
 
-- [ ] 4.1 Screen test: `cw-list` and `cw-list-owner` — groups, row buttons, top line; `cw-first-use` with its two buttons
-- [ ] 4.2 Screen test: `cw-new` and `cw-new-not-in-stock` — fields, the Bike lines, the two ticks, Cancel and Make the quote; + New customer (edge 6c)
-- [ ] 4.3 Screen test: `cw-quote` and `cw-quote-revised` — every drawn line, "LOGO" placeholder, Print and Email
-- [ ] 4.4 Screen test: `cw-order-held` and `cw-more` — heading, Who pays what, next-step buttons, "What's happened"
-- [ ] 4.5 Build `src/screens/c2w/` to pass 4.1–4.4, with the sidebar count
-- [ ] 4.6 Log decided-while-building 1, 3 and 4 (design) in your own month file
+- [x] 4.1 Screen test: `cw-list` and `cw-list-owner` — groups, row buttons, top line; `cw-first-use` with its two buttons
+- [x] 4.2 Screen test: `cw-new` and `cw-new-not-in-stock` — fields, the Bike lines, the two ticks, Cancel and Make the quote; + New customer (edge 6c)
+- [x] 4.3 Screen test: `cw-quote` and `cw-quote-revised` — every drawn line, "LOGO" placeholder, Print and Email
+- [x] 4.4 Screen test: `cw-order-held` — heading, stages, the next step's message, Who pays what, Email the quote again and Print the quote, "What's happened", Customer; the owner's provider line with its commission (from `cw-more`). The next-step buttons come with the pull requests that build their steps (5–8); the More… menu is 4.8
+- [x] 4.5 Build `src/screens/c2w/` to pass 4.1–4.4, with the sidebar count
+- [x] 4.6 Log decided-while-building 1, 3 and 4 (design) in your own month file
 - [ ] 4.7 Self-review with `reviewer`; full check
+- [ ] 4.8 More… menu and the Change steps (`cw-more`, and `cw-quote-revised`'s message): change the bike or size, the accessories or the provider, each making a revised quote that is sent only on Email. Left open for whoever builds the revised quote; the drawn menu also lists "Release the bike" (5.3, also a button on the order page) and "Cancel the order…" (8.5)
 
 ## 5. Holding bikes and stock (pull request 5, about 450 lines, risky: stock)
 
@@ -125,6 +126,8 @@ four messages (9.1 and the message parts of 9.4).
 - [ ] 10.4 Screen test: `cw-today`, `cw-today-held`, `op-today-c2w`, `cs-search-c2w`, `cs-page-c2w`, `-collected`, `rp-c2w`; the Takings report counts Cycle to Work money in
 - [ ] 10.5 Build to pass 10.1–10.4
 - [ ] 10.6 Self-review with `reviewer`; full check
+- Pull request 10a (`claude/c2w-10a-today-search`) built part of 10.1, 10.2 and 10.4: Today's "hold ended — choose" line with Hold longer and Release the bike (`op-today-c2w`, `cw-today-held`), the header search (`cs-search-c2w`) and the orders on the customer's page (`cs-page-c2w`, `-collected`), logged in `docs/decisions/decided-while-building/2026-11-jack.md`. Still to do: the no-certificate line (`cw-today`, after pull request 6), the late-payment line, 10.3 `rp-c2w` and Takings (pull requests 7 and 8), on `cs-page-c2w-collected` the sale number and the bike in her Bikes (after the hand over, pull request 8), and on `cw-today-held` the note's Undo and “She’s sent ‘Your bike is put aside’” (they wait for a step that undoes Hold longer and for pull request 9). At archive, the header search's spec gains “certificate number” among what it finds. So the boxes stay unticked.
+- Pull request 10b (`claude/c2w-10b-today-no-certificate`) built more of 10.1 and 10.4: Today's "no certificate yet" line (`cw-today`) with Hold longer while a bike is held and Open the order, by the list's "No certificate after" rule, logged in `docs/decisions/decided-while-building/2026-11-jack.md` under "Today's 'no certificate yet' line". The late-payment line, `rp-c2w` and Takings still wait for pull requests 7 and 8, so the boxes stay unticked.
 
 ## 11. Deposits (pull request 11, about 450 lines, risky: money — waits for Mark's till deposit for orders)
 

@@ -108,7 +108,12 @@ function useMatch(phone: string, email: string) {
   return worth ? found.data?.[0] ?? null : null;
 }
 
-function AddCustomer({ onClose }: { onClose: () => void }) {
+/**
+ * Add a customer. From another screen (`onAdded`, + New customer on New Cycle
+ * to Work order, edge 6c) the customer added, or the one who already has the
+ * number, goes back to that screen instead of opening their page.
+ */
+export function AddCustomer({ onClose, onAdded }: { onClose: () => void; onAdded?: (c: Recent) => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const groups = useQuery({ queryKey: ['customer-groups'], queryFn: () => apiGet<Group[]>('/api/customer-groups') });
@@ -135,7 +140,8 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
         ...(company ? { isCompany: true, contactName: form.contactName.trim(), vatNumber: form.vatNumber.trim(), invoiceEmail: form.invoiceEmail.trim() } : {}),
       });
       void queryClient.invalidateQueries({ queryKey: ['recent-customers'] });
-      navigate(customerHref(made.id));
+      if (onAdded) onAdded({ id: made.id, name: form.name.trim(), phone: form.phone.trim() || null, email: form.email.trim() || null, bikeLabel: null });
+      else navigate(customerHref(made.id));
     } catch (err) {
       setProblem(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t add them. Try again in a moment.');
     } finally {
@@ -168,7 +174,9 @@ function AddCustomer({ onClose }: { onClose: () => void }) {
               <span className="text-size-15 font-bold">{`${match.name} already has this ${matchedBy}`}</span>
               <span className="text-size-13 text-[var(--wh-muted)]">{[match.phone, match.bikeLabel].filter(Boolean).join(' · ')}</span>
             </span>
-            <Link to={customerHref(match.id)} onClick={onClose} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-sm font-semibold text-[var(--wh-ink)] no-underline">{`Use ${match.name}`}</Link>
+            {onAdded
+              ? <Button variant="default" onClick={() => onAdded(match)}>{`Use ${match.name}`}</Button>
+              : <Link to={customerHref(match.id)} onClick={onClose} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-sm font-semibold text-[var(--wh-ink)] no-underline">{`Use ${match.name}`}</Link>}
           </div>
         ) : null}
         <div className={two}>

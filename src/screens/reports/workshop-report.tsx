@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { PillGroup } from '@/components/ui/pill-group.tsx';
 import { useShowGraphs } from '@/lib/your-settings.ts';
+import { ChangeWhatsShown } from './change-panel.tsx';
 import { Box, BackToReports, BoxHeading, DownloadButton, Note, Page, Refusal } from './reports-bits.tsx';
 import { compareWords, count, money } from './reports-format.ts';
 import { ReportGraph } from './report-graph.tsx';
@@ -74,7 +75,10 @@ export function WorkshopReportPage() {
           <h2 className="m-0 text-xl font-bold">Workshop</h2>
           {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
         </div>
-        <DownloadButton path={`/api/reports/workshop.csv?${query}`} />
+        <div className="flex flex-wrap items-start gap-2">
+          <ChangeWhatsShown base="workshop" period={new URLSearchParams(query)} />
+          <DownloadButton path={`/api/reports/workshop.csv?${query}`} />
+        </div>
       </div>
       <PillGroup legend="Period" name="period" value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
       {workshop.isError ? <Refusal error={workshop.error} /> : null}

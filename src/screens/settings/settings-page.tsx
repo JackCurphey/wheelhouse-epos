@@ -15,10 +15,13 @@ import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-setti
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
+import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
-import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
+import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
+import { QuickButtonsSettings, useQuickButtonsSummary } from './quick-buttons-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
 import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
@@ -28,6 +31,7 @@ import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
 import { RadioPillGroup } from '@/staff/radio-pill-group.tsx';
+import { VAT_QUARTER_MONTHS } from '@/screens/reports/reports-format.ts';
 
 /**
  * Settings, first piece (Jack, 18 Oct, docs/decisions/2026-10-16-mechanic-sign-off.md
@@ -40,8 +44,8 @@ type DayHours = { weekday: number; open: string; close: string };
 type WorkshopSettings = { showSignOffToCustomers?: boolean; showPricesOnline?: boolean; confirmBookingsAutomatically?: boolean; openingHours?: DayHours[]; openingTime?: string; closingTime?: string; fullDayThresholdMinutes?: number; timedLeadMinutes?: number; bookingMode?: string; minNoticeMinutes?: number; minNoticeDays?: number | null;
   nextBookingMode?: string | null; nextBookingModeFrom?: string | null; dropoffWindowStart?: string; dropoffWindowEnd?: string; confirmationNote?: string; bookingTerms?: string | null;
   depositOn?: boolean; depositKind?: 'percent' | 'fixed'; depositPercent?: number | null; depositFixedPence?: number | null; depositUnknownPence?: number | null; depositCancelHours?: number; paymentsConnected?: boolean };
-type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null };
-type DetailKey = keyof ShopDetails;
+type ShopDetails = { name: string; address: string | null; phone: string | null; email: string | null; vatNumber: string | null; receiptFooter: string | null; vatQuarterStartMonth?: 1 | 2 | 3 | null };
+type DetailKey = Exclude<keyof ShopDetails, 'vatQuarterStartMonth'>;
 const DETAIL_ROWS: [Exclude<DetailKey, 'receiptFooter'>, string, string][] = [
   ['name', 'Shop name', 'organization'], ['address', 'Address', 'street-address'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email'], ['vatNumber', 'VAT number', 'off'],
 ];
@@ -74,8 +78,28 @@ function useShopDetails() {
     }
   }
 
-  return { details, valueOf, setTyped, save, note };
+  // The VAT quarter's months, saved when picked (reports-ready-made design 4).
+  // One save at a time, so a second quick pick can't land before the first.
+  const savingQuarter = useRef(false);
+  async function saveQuarter(month: 1 | 2 | 3) {
+    if (savingQuarter.current || details.data?.vatQuarterStartMonth === month) return;
+    savingQuarter.current = true;
+    setNote(null);
+    try {
+      const saved = await apiMutate<ShopDetails>('/api/shop-details', { vatQuarterStartMonth: month }, { method: 'PUT' });
+      queryClient.setQueryData<ShopDetails>(['shop-details'], (old) => (old ? { ...old, vatQuarterStartMonth: saved.vatQuarterStartMonth } : saved));
+      void queryClient.invalidateQueries({ queryKey: ['reports-vat'] });
+      setNote({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setNote({ ok: false, text: err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.' });
+    } finally {
+      savingQuarter.current = false;
+    }
+  }
+
+  return { details, valueOf, setTyped, save, saveQuarter, note };
 }
+
 
 /**
  * Settings › Shop and sites › Shop details (Jack, 18 Oct, docs/decisions/2026-10-18-shop-details.md;
@@ -83,7 +107,8 @@ function useShopDetails() {
  * box saves when it's left, if it changed, as the settings pages save as you go.
  */
 function ShopDetailsBox() {
-  const { details, valueOf, setTyped, save, note } = useShopDetails();
+  const { details, valueOf, setTyped, save, saveQuarter, note } = useShopDetails();
+  const quarter = details.data?.vatQuarterStartMonth ?? null;
   return (
     <div className="flex flex-col">
       {details.isError ? <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the shop’s details. Try again in a moment.</p> : null}
@@ -101,6 +126,15 @@ function ShopDetailsBox() {
           />
         </div>
       ))}
+      <div className="flex min-h-[52px] flex-col gap-1.5 border-t border-[var(--wh-border)] py-2 md:flex-row md:items-center md:gap-3">
+        <span id="shop-vat-quarter" className="shrink-0 text-size-15 font-semibold md:w-40">VAT quarter starts</span>
+        <RadioPillGroup pickOnMove={false} aria-labelledby="shop-vat-quarter" className="flex flex-wrap gap-2">
+          {VAT_QUARTER_MONTHS.map(([month, words]) => (
+            <button key={month} type="button" role="radio" aria-checked={quarter === month} disabled={!details.data} onClick={() => void saveQuarter(month)}
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${quarter === month ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-border)] bg-[var(--wh-panel)]'}`}>{words}</button>
+          ))}
+        </RadioPillGroup>
+      </div>
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">These show on receipts, emails and the website.</p>
       {note ? <p role={note.ok ? 'status' : 'alert'} className={`m-0 mt-1 text-sm font-semibold ${note.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{note.text}</p> : null}
       <PrivacyNoticeSetting />
@@ -1031,14 +1065,19 @@ function OwnerSettings() {
   const storageSlots = useStorageSlotsSummary();
   const customerGroups = useCustomerGroupsSummary();
   const waysToPay = useWaysToPaySummary();
+  const otherWays = useOtherWaysSummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
+  const closeEntry = useCloseEntrySummary();
+  const countFirst = useCountFirstSummary();
   const c2w = useC2wSummaries();
   const tills = useTillsSummary();
+  const quickButtons = useQuickButtonsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
   const bikeWarranties = useBikeWarrantiesSummary();
+  const payingOnline = usePayingOnlineSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1047,25 +1086,38 @@ function OwnerSettings() {
       key: 'front-desk', name: 'Front desk', intro: 'The till, payments, messages to customers and closing the day.',
       areas: [
         { key: 'till', title: 'Till', intro: 'What staff see and use at the till.', folds: [
+          // First in Till, as drawn (setup.mjs tillFolds; set-till-quick).
+          { key: 'quick-buttons', title: 'Quick buttons', summary: quickButtons, body: <QuickButtonsSettings /> },
           { key: 'receipts', title: 'Receipts', summary: details.data ? (details.data.receiptFooter ? 'Words at the bottom' : 'Nothing at the bottom yet') : '', body: <ReceiptsBox /> },
           // Last in Till, as drawn (setup.mjs tillFolds; till-setup).
           { key: 'tills', title: 'Tills', summary: tills, body: <TillsSettings /> },
           // Beside Tills, its own fold (stage-1 gaps 9; trust-pin-workshop).
           { key: 'signing-in', title: 'Signing in', summary: signingIn, body: <SigningInSettings /> },
         ] },
-        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers) and Customer groups (cs-groups).
+        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers), Other ways to pay
+        // (set-pay-other; owner-setup-till-payments-eod) and Customer groups (cs-groups).
         { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
           { key: 'ways-to-pay', title: 'Ways to pay', summary: waysToPay, body: <WaysToPaySettings /> },
+          { key: 'other-ways-to-pay', title: 'Other ways to pay', summary: otherWays, body: <OtherWaysToPay /> },
           { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
         ] },
-        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
+        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS, eodFolds): Float (set-eod),
+        // Close the day (set-eod-close) and Counting the cash (owner-setup-till-payments-eod design 3).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+          { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
+          { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
         ] },
-        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        // After End of day, before Cycle to Work, as drawn (settings-frame.mjs roomOf; website.mjs
+        // ONLINE_INTRO, ws-pay-*): Buying online above
+        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
+        { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
+          { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
+        ] },
+        // After Online orders, as drawn (settings-frame.mjs roomOf and c2wFolds; c2w.mjs cw-settings).
         { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
           { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
           { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },

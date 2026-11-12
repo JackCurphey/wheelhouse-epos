@@ -107,7 +107,8 @@ export function register(route) {
     const groups = Object.fromEntries(Object.entries(GROUPS).map(([g, stages]) => [g, rows.filter((r) => stages.includes(r.stage))
       .map((r) => ({ ...serializeOrder(r), next: nextFor(r, settings.order_rule, today) }))]));
     const providers = (await db.prepare('SELECT count(*)::int AS n FROM c2w_providers WHERE retired_at IS NULL').get()).n;
-    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, tz, costs), providers });
+    // The shop's day, for the screens' dates (pull request 4), as the reports send it.
+    sendJson(res, 200, { groups, ...countsFor(rows, settings, today, tz, costs), providers, today });
   });
 
   route('GET', '/api/c2w/count', async (req, res) => {
@@ -182,7 +183,10 @@ export function register(route) {
   route('GET', '/api/c2w/orders/:id', async (req, res, params) => {
     const row = await loadOrder(Number(params.id));
     if (!row) return notFound(res);
-    sendJson(res, 200, { order: { ...serializeOrder(row), events: await eventsOf(row.id) } });
+    const today = shopToday(await shopTimeZone());
+    // The same next step as the list's row (cw-order-applied's Order from [supplier]).
+    const next = nextFor(row, (await settingsRow()).order_rule, today);
+    sendJson(res, 200, { order: { ...serializeOrder(row), next, events: await eventsOf(row.id) }, today });
   });
 
   // What the printed quote shows (cw-quote).
@@ -440,7 +444,10 @@ export function register(route) {
         return fields;
       }, { detail });
       await queueCertificateMessage(id, { req, loginId: who.loginId });
-      return { order: serializeOrder(await loadOrder(id)), ...(notReady ? { notReady } : {}) };
+      // The next step rides along, so the bike-was-released popup offers ordering only when the shop's rule allows it.
+      const row = await loadOrder(id);
+      const next = nextFor(row, (await settingsRow()).order_rule, today);
+      return { order: { ...serializeOrder(row), next }, ...(notReady ? { notReady } : {}) };
     });
   });
 

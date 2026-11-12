@@ -3,13 +3,14 @@ import { apiGet } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { NavIcon } from '@/staff/nav-icon.tsx';
-import { mono } from './deliveries-bits.tsx';
+import { c2wFor, mono, type OrderItem } from './deliveries-bits.tsx';
 
 /**
  * Frame number (drawn as rs-frame and rs-frame-dup in receiving.mjs; receiving decision 5 and its
  * audit; openspec/changes/frame-numbers, design 5): a bike in a delivery asks for its frame number
  * before it counts. A scanner presses Enter, so Enter counts it as Count this bike does. A frame
- * already in stock, or already in this delivery, is said and not counted.
+ * already in stock, or already in this delivery, is said and not counted. A bike ordered for a
+ * Cycle to Work order says whose it is, and that its frame becomes the order's (rs-frame-c2w).
  */
 // What's compared, as the server compares it: capitals, no spaces (server/lib/bikes.js frameKey).
 export const frameKey = (f: string) => f.replace(/\s+/g, '').toUpperCase();
@@ -17,7 +18,8 @@ export const frameKey = (f: string) => f.replace(/\s+/g, '').toUpperCase();
 const part = (iso: string, o: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleDateString('en-GB', { timeZone: 'Europe/London', ...o });
 export const dateText = (iso: string) => `${part(iso, { day: 'numeric' })} ${part(iso, { month: 'short' }).slice(0, 3)} ${part(iso, { year: 'numeric' })}`;
 
-export function FrameNumber({ bike, n, taken, onCancel, onCount }: { bike: string; n: number; taken: string[]; onCancel: () => void; onCount: (frame: string) => void }) {
+export function FrameNumber({ bike, n, taken, c2w, onCancel, onCount }: { bike: string; n: number; taken: string[]; c2w?: OrderItem['forC2w']; onCancel: () => void; onCount: (frame: string) => void }) {
+  const customer = c2w ? c2w.customerName ?? '[Customer]' : null;
   const [text, setText] = useState('');
   // What's wrong with the frame typed: in stock (with when), or in this delivery.
   const [said, setSaid] = useState<{ strong: string; rest: string } | null>(null);
@@ -42,7 +44,7 @@ export function FrameNumber({ bike, n, taken, onCancel, onCount }: { bike: strin
       <DialogHeader>
         <div className="flex min-w-0 flex-col gap-0.5">
           <DialogTitle id="frame-title">Frame number</DialogTitle>
-          <span className="text-size-13 text-[var(--wh-muted)]">{`${bike} · bike ${n} in this delivery`}</span>
+          <span className="text-size-13 text-[var(--wh-muted)]">{customer !== null ? `${bike} · ${c2wFor(c2w!.customerName)}` : `${bike} · bike ${n} in this delivery`}</span>
         </div>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
@@ -56,7 +58,9 @@ export function FrameNumber({ bike, n, taken, onCancel, onCount }: { bike: strin
         {said ? (
           <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3 py-2.5 text-size-15 text-[var(--wh-warn-ink)]">{<><strong>{said.strong}</strong>{said.rest}</>}</p>
         ) : <p className="m-0 text-sm text-[var(--wh-muted)]">Scanning the sticker counts the bike straight away. A typed number needs “Count this bike”.</p>}
-        <p className="m-0 text-sm text-[var(--wh-muted)]">Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.</p>
+        <p className="m-0 text-sm text-[var(--wh-muted)]">{customer !== null
+          ? `This frame becomes the frame on ${customer}’s Cycle to Work order. It’s held for them — not for sale — and the till picks it when they collect.`
+          : 'Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.'}</p>
       </DialogBody>
       <DialogFooter>
         <Button variant="default" onClick={onCancel}>Cancel</Button>

@@ -2,15 +2,18 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
-import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
+import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
+import { longDate, orderHref, possessive } from '@/screens/c2w/c2w-bits.tsx';
 import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
 import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { HOW, dayText } from '@/screens/customers/privacy-requests.tsx';
+import { PAYING_ONLINE, providerText } from '@/screens/settings/online-orders-settings.tsx';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
@@ -35,6 +38,10 @@ type Attention =
   | { kind: 'below_zero'; count: number; takeId: number | null }
   | { kind: 'delete_request'; requestId: number; reference: string; customerName: string | null; source: 'account' | 'shop'; how: keyof typeof HOW | null; askedOn: string; dueBy: string }
   | { kind: 'restock_new'; count: number; forJobs: number }
+  // Cycle to Work (openspec/changes/cycle-to-work, task 10.1; server/c2w/today.js).
+  | { kind: 'c2w_hold_ended'; orderId: number; customerName: string; bike: string; holdUntil: string }
+  | { kind: 'c2w_no_certificate'; orderId: number; customerName: string; bike: string; quotedDays: number; holdUntil: string | null }
+  | { kind: 'payments_need_details'; providerName: string | null; needsDetailsBy: string | null; needsWhat: string | null }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
 type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
@@ -215,7 +222,74 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       setStarting(false);
     }
   }
+  // Hold longer and Release the bike on a Cycle to Work hold that ended
+  // (op-today-c2w, cw-today-held), and Hold longer on a quote with no
+  // certificate yet (cw-today): one press, the line goes and the note says
+  // what happened; the server's words when it refuses.
+  const note = useSavedNote();
+  const [holding, setHolding] = useState<ReadonlySet<number>>(new Set());
+  const busyHold = useRef(new Set<number>());
+  async function choose(line: Extract<Attention, { kind: 'c2w_hold_ended' | 'c2w_no_certificate' }>, step: 'hold-longer' | 'release') {
+    if (busyHold.current.has(line.orderId)) return;
+    busyHold.current.add(line.orderId);
+    setHolding((c) => new Set(c).add(line.orderId));
+    setRefused(null);
+    let said: string | null = null;
+    try {
+      const { order } = await apiMutate<{ order: { holdUntil: string | null } }>(`/api/c2w/orders/${line.orderId}/${step}`, {}, { method: 'POST' });
+      said = step === 'hold-longer' && order.holdUntil
+        ? `${possessive(line.customerName)} bike is held until ${longDate(order.holdUntil)}.`
+        : `${possessive(line.customerName)} bike is back on sale. The order stays open.`;
+    } catch (err) {
+      setRefused(serverSaid(err) ? err.message : 'Wheelhouse couldn’t record that. Try again in a moment.');
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-orders'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-count'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-order', line.orderId] });
+      busyHold.current.delete(line.orderId);
+      setHolding((c) => { const next = new Set(c); next.delete(line.orderId); return next; });
+    }
+    if (said) {
+      note.show({ text: said });
+      document.getElementById('today-attention')?.focus();
+    }
+  }
   const lines = items.map((i) => {
+    // op-today-c2w (cw-today-choose): a hold that reached its date with nobody
+    // choosing stays held and asks someone to choose (UX walk-through 5 M3).
+    if (i.kind === 'c2w_hold_ended') {
+      const off = holding.has(i.orderId);
+      const size = touch ? 'default' : 'sm';
+      return (
+        <Line key={`c${i.orderId}`} lead={warn}
+          title={`${i.customerName} · Cycle to Work hold ended ${longDate(i.holdUntil)} — choose`}
+          sub={`${i.bike} · still held · no certificate yet`}
+          right={(
+            <span className="inline-flex flex-col gap-1.5 whitespace-nowrap">
+              <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Hold ${possessive(i.customerName)} bike longer`} onClick={() => void choose(i, 'hold-longer')}>Hold longer</Button>
+              <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Release ${possessive(i.customerName)} bike`} onClick={() => void choose(i, 'release')}>Release the bike</Button>
+            </span>
+          )} />
+      );
+    }
+    // cw-today: a quote given Settings' "No certificate after" days ago or more.
+    // Hold longer only while a bike is held; Open the order always.
+    if (i.kind === 'c2w_no_certificate') {
+      const off = holding.has(i.orderId);
+      const size = touch ? 'default' : 'sm';
+      return (
+        <Line key={`n${i.orderId}`} lead={warn}
+          title={`${i.customerName} · Cycle to Work quote, no certificate yet`}
+          sub={`${i.bike} · quoted ${i.quotedDays} ${i.quotedDays === 1 ? 'day' : 'days'} ago${i.holdUntil ? ` · held until ${longDate(i.holdUntil)}` : ''}`}
+          right={(
+            <span className="inline-flex flex-col gap-1.5 whitespace-nowrap">
+              {i.holdUntil && <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Hold ${possessive(i.customerName)} bike longer`} onClick={() => void choose(i, 'hold-longer')}>Hold longer</Button>}
+              <Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.customerName)} order`} className={`${buttonVariants({ size })}${touch ? ' min-h-11' : ''}`}>Open the order</Link>
+            </span>
+          )} />
+      );
+    }
     // st-today-below: on a phone See them and Count them sit under the words.
     if (i.kind === 'below_zero') {
       const sub = 'Sold more than Wheelhouse thought were here · Count them starts a count straight away';
@@ -296,6 +370,17 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${who} asked us to delete their account`}
           sub={`${from}${from === 'Asked' ? '' : ','} ${dayText(i.askedOn)} · answer by ${dayText(i.dueBy)}`}
           right={<Link to={ROUTES['cs-privacy']} aria-label={`Open ${who}’s request`} className={linkButton(touch)}>Open</Link>} />
+      );
+    }
+    // ws-today-pay-more (opening.mjs line 150; website-management design 6):
+    // the payment provider wants more details by a date. Add the details opens Paying online.
+    if (i.kind === 'payments_need_details') {
+      const provider = providerText(i.providerName);
+      return (
+        <Line key="payments-need-details" lead={warn}
+          title={`${provider} needs more details by ${i.needsDetailsBy ? dayText(i.needsDetailsBy) : '[date]'}`}
+          sub={`Or online payments and “Pay now” for repairs stop · usually ${i.needsWhat ?? '[what they need]'}`}
+          right={<Link to={PAYING_ONLINE} className={linkButton(touch)}>Add the details</Link>} />
       );
     }
     if (i.kind === 'quote_no_answer') {
@@ -388,18 +473,21 @@ export function TodayPage() {
   // The Owner: Needs attention, Tills, Who's in; Staff: Who's in (decision 4, op-today-staff).
   const left = <>{owner ? <><NeedsAttention today={today} touch={touch} phone={isPhone} /><Tills /></> : null}<WhosIn now={now} /></>;
   const work = <WorkshopToday today={today} now={now} touch={touch} />;
+  // The note after a step on a line (cw-today-held), as the Cycle to Work pages show theirs.
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
-      <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{dateLine}</p>
-      {/* Two columns on a computer or tablet, the left one first on a phone. */}
-      {isPhone ? (
-        <div className="flex flex-col gap-3.5">{left}{work}</div>
-      ) : (
-        <div className="grid grid-cols-2 items-start gap-3.5">
-          <div className="flex flex-col gap-3.5">{left}</div>
-          <div className="flex flex-col gap-3.5">{work}</div>
-        </div>
-      )}
-    </div>
+    <SavedNoteArea room="today" className="flex w-full flex-col">
+      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-3.5 p-5 max-md:p-4">
+        <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{dateLine}</p>
+        {/* Two columns on a computer or tablet, the left one first on a phone. */}
+        {isPhone ? (
+          <div className="flex flex-col gap-3.5">{left}{work}</div>
+        ) : (
+          <div className="grid grid-cols-2 items-start gap-3.5">
+            <div className="flex flex-col gap-3.5">{left}</div>
+            <div className="flex flex-col gap-3.5">{work}</div>
+          </div>
+        )}
+      </div>
+    </SavedNoteArea>
   );
 }

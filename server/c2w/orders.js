@@ -106,14 +106,21 @@ const DAY = (col) => `to_char(o.${col}, 'YYYY-MM-DD') AS ${col}_day`;
 const ON_ORDER = `FROM purchase_order_items i JOIN purchase_orders po ON po.id = i.purchase_order_id
     WHERE i.c2w_order_id = o.id AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered`;
 export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certificate_received_on', 'expected_by', 'paid_on'].map(DAY).join(', ')},
-  c.name AS customer_name, c.email AS customer_email, p.name AS provider_name, pr.name AS bike_name,
+  c.name AS customer_name, c.email AS customer_email, c.phone AS customer_phone, p.name AS provider_name, pr.name AS bike_name, st.name AS site_name,
   EXISTS (SELECT 1 ${ON_ORDER}) AS on_order,
   (SELECT i.purchase_order_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1) AS on_order_po,
-  (SELECT s.name FROM suppliers s WHERE s.id = (SELECT po.supplier_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1)) AS on_order_from
+  (SELECT s.name FROM suppliers s WHERE s.id = (SELECT po.supplier_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1)) AS on_order_from,
+  -- The supplier ordering uses: the product's supplier matched to Settings' by name (restock's nameKey).
+  (SELECT s.name FROM suppliers s WHERE btrim(pr.supplier) <> '' AND lower(btrim(s.name)) = lower(btrim(pr.supplier)) ORDER BY s.id LIMIT 1) AS bike_supplier,
+  -- cw-certificate-released "and has since been sold": the frame the order last released has gone.
+  (SELECT sf.state = 'sold' FROM (SELECT e.detail->>'frameId' AS fid FROM c2w_order_events e
+    WHERE e.order_id = o.id AND e.kind = 'released' ORDER BY e.id DESC LIMIT 1) last
+    JOIN stock_frames sf ON sf.id::text = last.fid) AS released_sold
   FROM c2w_orders o
   JOIN customers c ON c.id = o.customer_id
   JOIN c2w_providers p ON p.id = o.provider_id
-  JOIN products pr ON pr.id = o.product_id`;
+  JOIN products pr ON pr.id = o.product_id
+  LEFT JOIN sites st ON st.id = o.site_id`;
 
 const iso = (t) => (t ? new Date(t).toISOString() : null);
 
@@ -155,7 +162,10 @@ export function serializeOrder(r) {
   return {
     id: r.id, stage: r.stage, quoteNumber: r.quote_number, quoteRef: quoteRef(r.quote_number),
     customerId: r.customer_id, customerName: r.customer_name, providerId: r.provider_id, providerName: r.provider_name,
-    productId: r.product_id, bike: r.bike_name, siteId: r.site_id, frameId: r.frame_id,
+    // The customer's number and email, and the site's name, for the order page (cw-order-held; PR 4).
+    customerPhone: r.customer_phone ?? null, customerEmail: r.customer_email ?? null,
+    productId: r.product_id, bike: r.bike_name, siteId: r.site_id, siteName: r.site_name ?? null, frameId: r.frame_id,
+    onOrder: Boolean(r.on_order),
     quoteGivenAt: iso(r.quote_given_at), quoteRevisedAt: iso(r.quote_revised_at),
     validUntil: r.valid_until_day, holdUntil: r.hold_until_day, holdWanted: r.hold_wanted,
     accessories: r.accessories, totalPence: r.total_pence,
@@ -166,7 +176,7 @@ export function serializeOrder(r) {
     certificateLate: r.certificate_received_on_day !== null && r.certificate_received_on_day > r.valid_until_day,
     saleId: r.sale_id, collectedAt: iso(r.collected_at), paidOn: r.paid_on_day, closeReason: r.close_reason,
     inStock: !notInStock(r), held: Boolean(r.held_at),
-    onOrder: Boolean(r.on_order), purchaseOrderId: r.on_order_po ?? null, orderedFrom: r.on_order_from ?? null, releasedAt: iso(r.released_at), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
+    onOrder: Boolean(r.on_order), purchaseOrderId: r.on_order_po ?? null, orderedFrom: r.on_order_from ?? null, supplier: r.bike_supplier ?? null, releasedAt: iso(r.released_at), releasedSold: Boolean(r.released_sold), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
   };
 }
 
@@ -206,9 +216,10 @@ export async function takeStep(orderId, stepName, who, change, { detail = {}, re
  * A bike ordered for the order has been booked in (rs-frame-c2w, rs-booked-c2w), in the
  * delivery's transaction: its frame (or, with no frame numbers, a count) is held for the
  * order, and an order with its certificate in moves to Ready to collect. An order that
- * has moved on, or already has its bike, leaves the bike on sale like any other.
+ * has moved on, or already has its bike, leaves the bike on sale like any other. The event
+ * names the delivery, so Delivery booked in can list what it put aside.
  */
-export async function bookedInForOrder(orderId, frameId, siteId, who) {
+export async function bookedInForOrder(orderId, frameId, siteId, who, deliveryId = null) {
   const row = await prepare('SELECT * FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
   if (!row || !['quote', 'waiting', 'certificate'].includes(row.stage) || row.held_at || row.frame_id) return;
   // Booked in at another shop from the order's: it goes on sale there.
@@ -222,7 +233,7 @@ export async function bookedInForOrder(orderId, frameId, siteId, who) {
   if (!held) return;
   const ready = row.stage === 'certificate';
   await prepare(`UPDATE c2w_orders SET frame_id = ?, held_at = now()${ready ? ", stage = 'ready'" : ''} WHERE id = ?`).run(held.frameId, orderId);
-  await addEvent(orderId, 'booked_in', who, { detail: { ...(held.frameId ? { frameId: held.frameId } : {}), ...(ready ? { ready: true } : {}) } });
+  await addEvent(orderId, 'booked_in', who, { detail: { ...(held.frameId ? { frameId: held.frameId } : {}), ...(ready ? { ready: true } : {}), ...(deliveryId ? { deliveryId } : {}) } });
   // Ready with the bike's arrival: the customer is told (design 9).
   if (ready) await (await import('./messages.js')).queueC2wMessage(orderId, 'c2w_ready', { loginId: who.loginId ?? null });
 }

@@ -75,9 +75,9 @@ const SHOP_DETAIL_FIELDS = [
   ['receiptFooter', 'receipt_footer', 'Words at the bottom', 500],
 ];
 function serializeShopDetails(row) {
-  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null, receiptFooter: row.receipt_footer ?? null };
+  return { name: row.name, address: row.address ?? null, phone: row.phone ?? null, email: row.email ?? null, vatNumber: row.vat_number ?? null, receiptFooter: row.receipt_footer ?? null, vatQuarterStartMonth: row.vat_quarter_start_month ?? null };
 }
-const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number, receipt_footer FROM shops WHERE id = ?';
+const SHOP_DETAILS_SELECT = 'SELECT name, address, phone, email, vat_number, receipt_footer, vat_quarter_start_month FROM shops WHERE id = ?';
 
 export function register(route) {
   route('GET', '/api/shop-details', async (req, res, params, query, afterRelease, shopId) => {
@@ -98,6 +98,13 @@ export function register(route) {
       if (text.length > max) return badRequest(res, `${label} can be up to ${max} characters`);
       sets.push(`${column} = ?`);
       values.push(text === '' ? null : text);
+    }
+    // When the VAT quarter starts (openspec/changes/reports-ready-made, design 4):
+    // 1 January, 2 February, 3 March, and the quarters every three months on; null not said.
+    if (body.vatQuarterStartMonth !== undefined) {
+      if (body.vatQuarterStartMonth !== null && ![1, 2, 3].includes(body.vatQuarterStartMonth)) return badRequest(res, 'Choose the months your VAT quarters start in');
+      sets.push('vat_quarter_start_month = ?');
+      values.push(body.vatQuarterStartMonth);
     }
     // The column names come from SHOP_DETAIL_FIELDS above, never from the request.
     if (sets.length) {
@@ -224,19 +231,43 @@ export function register(route) {
 
   // Settings › Front desk › End of day › Float (set-eod; cash-up decision 4;
   // openspec/changes/opening-float-check): what's left in the drawer each
-  // night, in whole pence, null until set. On the shop's row like the
-  // receipt words; one column in one statement, so no lock is needed.
+  // night, in whole pence, null until set. Close the day (set-eod-close):
+  // shown at closing time, 30 or 60 minutes before. Count first: the cash
+  // counted before the till's figure shows (owner-setup-till-payments-eod
+  // design 3). On the shop's row; anyone signed in reads them, the Owner
+  // sets them, any one or more at a time, as Signing in saves.
+  const END_OF_DAY = 'float_pence, close_entry_minutes, count_first';
+  const endOfDay = (row) => ({ floatPence: row.float_pence, closeEntryMinutes: row.close_entry_minutes, countFirst: row.count_first });
   route('GET', '/api/end-of-day-settings', async (req, res, params, query, afterRelease, shopId) => {
-    const row = await db.prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
-    sendJson(res, 200, { floatPence: row.float_pence });
+    sendJson(res, 200, endOfDay(await db.prepare(`SELECT ${END_OF_DAY} FROM shops WHERE id = ?`).get(shopId)));
   });
 
+  // Each checked; the shop's row is read FOR UPDATE in a transaction before
+  // it's written, so two saves at once both stay, and the reply comes after COMMIT.
   route('PUT', '/api/end-of-day-settings', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res)) return;
     const body = await readJsonBody(req);
-    if (!isPence(body?.floatPence)) return badRequest(res, 'The float must be pounds and pence, up to £100,000');
-    const row = await db.prepare('UPDATE shops SET float_pence = ? WHERE id = ? RETURNING float_pence').get(body.floatPence, shopId);
-    sendJson(res, 200, { floatPence: row.float_pence });
+    const has = (key) => !!body && typeof body === 'object' && key in body;
+    if (!has('floatPence') && !has('closeEntryMinutes') && !has('countFirst')) return badRequest(res, 'Nothing to change');
+    if (has('floatPence') && !isPence(body.floatPence)) return badRequest(res, 'The float must be pounds and pence, up to £100,000');
+    if (has('closeEntryMinutes') && ![0, 30, 60].includes(body.closeEntryMinutes)) return badRequest(res, 'Choose at closing time, 30 minutes before or 1 hour before');
+    if (has('countFirst') && typeof body.countFirst !== 'boolean') return badRequest(res, 'Count first is on or off');
+    let row;
+    await db.exec('BEGIN');
+    try {
+      const now = await db.prepare(`SELECT ${END_OF_DAY} FROM shops WHERE id = ? FOR UPDATE`).get(shopId);
+      row = await db.prepare(`UPDATE shops SET float_pence = ?, close_entry_minutes = ?, count_first = ? WHERE id = ? RETURNING ${END_OF_DAY}`).get(
+        has('floatPence') ? body.floatPence : now.float_pence,
+        has('closeEntryMinutes') ? body.closeEntryMinutes : now.close_entry_minutes,
+        has('countFirst') ? body.countFirst : now.count_first,
+        shopId,
+      );
+      await db.exec('COMMIT');
+    } catch (err) {
+      await db.exec('ROLLBACK').catch(() => {});
+      throw err;
+    }
+    sendJson(res, 200, endOfDay(row));
   });
 
   // Settings › Stockroom › Stock adjustments (st-setting-adjust; stock control

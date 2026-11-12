@@ -375,7 +375,8 @@ export function register(route) {
   route('GET', '/api/close-the-day', async (req, res, params, query, afterRelease, shopId) => {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
     const { day, entry } = await closeEntryNow();
-    const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
+    // Count first (Settings › End of day): off shows what the till expects while counting.
+    const { float_pence: floatPence, count_first: countFirst } = await prepare('SELECT float_pence, count_first FROM shops WHERE id = ?').get(shopId);
     // An earlier day nobody closed, by "Close it" (op-close-yesterday).
     const asked = query.get('day');
     if (asked !== null && asked !== day) {
@@ -398,7 +399,7 @@ export function register(route) {
     sendJson(res, 200, {
       day, floatPence, floatStart: start ? { ...start.start, pence: d.startPence } : null, cashPence: d.cashPence,
       paidOutsPence: d.paidOuts.reduce((n, p) => n + p.amountPence, 0), expectedPence: d.expectedPence, earlierBankedPence: d.earlierBankedPence,
-      paidOuts: d.paidOuts, entry, close: await closeOn(day),
+      paidOuts: d.paidOuts, entry, countFirst, close: await closeOn(day),
       // A day nobody closed with a count waiting, shown first (unclosed-day design 7).
       earlierDay: waiting?.for_day ?? null,
     });
