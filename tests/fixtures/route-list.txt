@@ -366,3 +366,10 @@ GET /api/c2w/providers
 POST /api/c2w/providers
 PUT /api/c2w/providers/:id
 POST /api/c2w/providers/:id/retire
+GET /api/c2w/orders
+GET /api/c2w/count
+POST /api/c2w/orders
+GET /api/c2w/orders/:id
+GET /api/c2w/orders/:id/quote
+POST /api/c2w/orders/:id/email-quote
+POST /api/c2w/orders/:id/applied

@@ -42,14 +42,14 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 3. Orders and quotes — server (pull request 3, about 550 lines)
 
-- [ ] 3.1 Test: making a quote creates the order at "Quote given" with the next quote number; two quotes at once get different numbers
-- [ ] 3.2 Test: valid-until and hold-until come from Settings; the total includes accessories; "Don't hold this one" sets no hold
-- [ ] 3.3 Test: each step adds a "What's happened" line with who and when; nothing edits or removes one
-- [ ] 3.4 Test: a step not allowed from the order's stage is refused and changes nothing
-- [ ] 3.5 Test: the list groups orders by stage, gives the top-line counts and the sidebar count; the owed total only for someone who can see costs
-- [ ] 3.6 Test: the quote document's fields and closing paragraph follow the order; email queues the quote
-- [ ] 3.7 Test: a retired provider can't be picked for a new order; merging two customers moves their Cycle to Work orders to the kept one, and Undo moves them back (add `c2w_orders` to `MOVED` in `server/routes/customer-merge.js`)
-- [ ] 3.8 Write `server/c2w/orders.js` and `server/routes/c2w.js` to pass 3.1–3.6
+- [x] 3.1 Test: making a quote creates the order at "Quote given" with the next quote number; two quotes at once get different numbers
+- [x] 3.2 Test: valid-until and hold-until come from Settings; the total includes accessories; "Don't hold this one" sets no hold
+- [x] 3.3 Test: each step adds a "What's happened" line with who and when; nothing edits or removes one
+- [x] 3.4 Test: a step not allowed from the order's stage is refused and changes nothing
+- [x] 3.5 Test: the list groups orders by stage, gives the top-line counts and the sidebar count; the owed total only for someone who can see costs
+- [x] 3.6 Test: the quote document's fields and closing paragraph follow the order; email queues the quote
+- [x] 3.7 Test: a retired provider can't be picked for a new order; merging two customers moves their Cycle to Work orders to the kept one, and Undo moves them back (add `c2w_orders` to `MOVED` in `server/routes/customer-merge.js`)
+- [x] 3.8 Write `server/c2w/orders.js` and `server/routes/c2w.js` to pass 3.1–3.6
 - [ ] 3.9 Self-review with `reviewer`; full check
 
 ## 4. List, New order, quote and order page — screens (pull request 4, about 600 lines)
