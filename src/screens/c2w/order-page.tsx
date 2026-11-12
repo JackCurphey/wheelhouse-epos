@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, ApiError } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
 import { NavIcon } from '@/staff/nav-icon.tsx';
@@ -14,6 +14,7 @@ import {
 } from './c2w-bits.tsx';
 import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
+import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
@@ -48,36 +49,67 @@ function Stages({ o }: { o: Full }) {
   );
 }
 
-function NextStep({ o, rule, remindDays, now }: { o: Full; rule: string | undefined; remindDays: number | null; now: string }) {
-  if (o.stage !== 'quote' && o.stage !== 'waiting') return null;
+type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; busy: boolean };
+const row = (children: ReactNode) => <div className="flex flex-wrap gap-2.5">{children}</div>;
+
+function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | undefined; remindDays: number | null; now: string; act: Act }) {
   const name = firstName(o.customerName);
-  if (o.holdUntil) {
-    const left = daysBetween(now, o.holdUntil);
+  const head = (text: string) => <h3 id="cw-next" className="m-0 text-size-17 font-bold">{text}</h3>;
+  const addCertificate = (variant: 'primary' | 'default') => <Button variant={variant} onClick={act.onCertificate}>Add the certificate</Button>;
+  if (o.stage === 'ready') {
+    // Hand over comes with pull request 7 (logged).
     return (
       <Box label="cw-next">
-        <h3 id="cw-next" className="m-0 text-size-17 font-bold">Next: the certificate</h3>
+        {head('Next: hand over')}
+        <Msg tone="ok"><strong>Ready to collect.</strong>{` Certificate ${o.certificateNumber ?? ''}${o.held ? ` · ${o.bike} put aside` : ''}.`}</Msg>
+      </Box>
+    );
+  }
+  if (o.stage === 'certificate') {
+    // A bike on order or let go is pull request 6c's second part (logged).
+    if (!o.held) return null;
+    return (
+      <Box label="cw-next">
+        {head('Next: get the bike ready')}
+        <Msg tone="ok"><strong>Certificate received.</strong>{` ${o.bike} is put aside for ${name}. ${name} has been sent “Certificate received”.`}</Msg>
+        {row(<Button variant="primary" disabled={act.busy} aria-label={`Mark ${o.customerName}’s bike ready to collect`} onClick={act.onReady}>Mark ready to collect</Button>)}
+        <p className={note}>{`One press, with Undo. ${name} is sent “Ready to collect”.`}</p>
+      </Box>
+    );
+  }
+  if (o.stage !== 'quote' && o.stage !== 'waiting') return null;
+  if (o.holdUntil) {
+    const left = daysBetween(now, o.holdUntil);
+    // Hold longer and Release the bike come with pull request 5b (logged).
+    return (
+      <Box label="cw-next">
+        {head('Next: the certificate')}
         <Msg><strong>{`${o.bike} is held until ${longDate(o.holdUntil)}.`}</strong>{left >= 0 ? ` Hold ends in ${plural(left, 'day', 'days')} — we’ll remind the shop ${remindDays === null ? '[n] days' : plural(remindDays, 'day', 'days')} before.` : ''}</Msg>
+        {row(addCertificate('primary'))}
       </Box>
     );
   }
   if (!o.inStock) {
     const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
     if (o.stage === 'waiting' && rule === 'applied') {
+      // Order from [supplier] comes with pull request 6c's second part (logged).
       return (
         <Box label="cw-next">
-          <h3 id="cw-next" className="m-0 text-size-17 font-bold">Next: order the bike</h3>
+          {head('Next: order the bike')}
           <Msg tone="ok"><strong>{`${name} has applied`}</strong>{o.applicationReference ? ` (reference ${o.applicationReference})` : ''}{`. Your rule: order ${trigger}.`}</Msg>
+          {row(addCertificate('default'))}
         </Box>
       );
     }
     return (
       <Box label="cw-next">
-        <h3 id="cw-next" className="m-0 text-size-17 font-bold">{o.stage === 'quote' ? `Next: ${name} applies` : 'Next: the certificate'}</h3>
+        {head(o.stage === 'quote' ? `Next: ${name} applies` : 'Next: the certificate')}
         <Msg><strong>Not in stock.</strong>{` Your rule: order ${trigger}.`}</Msg>
+        {row(<>{o.stage === 'quote' ? <Button variant="primary" onClick={act.onApplied}>Mark as applied</Button> : null}{addCertificate(o.stage === 'quote' ? 'default' : 'primary')}</>)}
       </Box>
     );
   }
-  return <Box label="cw-next"><h3 id="cw-next" className="m-0 text-size-17 font-bold">Next: the certificate</h3></Box>;
+  return <Box label="cw-next">{head('Next: the certificate')}{row(addCertificate('primary'))}</Box>;
 }
 
 /** Each line of "What's happened" in the drawn words (c2w.mjs EV); a quote and its email together are one line,
@@ -98,6 +130,10 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
       text = `gave quote ${e.detail.quoteRef}${held ? ` · it says the bike is put aside until ${held[1]}` : e.detail.closing ? ` · it says “${e.detail.closing}”` : ''}`;
     } else if (e.kind === 'held') text = e.detail.until ? `held ${o.bike} until ${longDate(e.detail.until)}` : null;
     else if (e.kind === 'quote_emailed') text = `emailed the quote to ${e.detail.to}`;
+    else if (e.kind === 'certificate') text = `added certificate ${e.detail.number} · certificate ${pounds(Number(e.detail.certificatePence))} · quote ${pounds(Number(e.detail.quotePence))}${e.detail.ready ? ' · and marked the bike ready to collect' : ''}`;
+    else if (e.kind === 'ready') text = 'marked the bike ready to collect';
+    // Not drawn (logged): Undo of Mark ready says what it did.
+    else if (e.kind === 'ready_undone') text = 'undid ready to collect';
     else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
     if (!text) return;
     const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
@@ -194,6 +230,13 @@ function OrderBody() {
   const settings = useC2wSettings().data?.settings;
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState<'applied' | 'certificate' | null>(null);
+  const [stepping, setStepping] = useState(false);
+  const productId = order.data?.order.productId;
+  const needsSupplier = !!order.data && !order.data.order.inStock && order.data.order.stage === 'quote';
+  // The applied popup names the supplier the bike is ordered from (cw-applied).
+  const bike = useQuery({ queryKey: ['c2w-bike', productId], queryFn: () => apiGet<{ supplier: string | null }>(`/api/products/${productId}`), enabled: needsSupplier && productId !== undefined });
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
   // of it, so a reload or Back doesn't show it again. An email that didn't go
@@ -212,7 +255,31 @@ function OrderBody() {
   const o = order.data?.order;
   if (!o) return <Page><Back to={ROUTES.c2w}>Cycle to Work</Back><p className={note}>Loading…</p></Page>;
   const provider = providers?.find((p) => p.id === o.providerId);
-  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={order.data?.today ?? ''} /><History o={o} /></>;
+  const today = order.data?.today ?? '';
+  const name = firstName(o.customerName);
+  const reload = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['c2w-order', id] }),
+    queryClient.invalidateQueries({ queryKey: ['c2w-orders'] }),
+    queryClient.invalidateQueries({ queryKey: ['c2w-count'] }),
+  ]);
+  // Mark ready to collect, with Undo in the note (cw-marked-ready).
+  async function step(path: 'ready' | 'ready/undo') {
+    setStepping(true);
+    try {
+      await apiMutate(`/api/c2w/orders/${id}/${path}`, {});
+      await reload();
+      show(path === 'ready'
+        ? { text: `Marked ready to collect. ${name} is sent “Ready to collect”.`, action: { label: 'Undo', run: () => { saved.busy(); void step('ready/undo'); } } }
+        : { text: 'Undone' });
+    } catch (err) {
+      void reload();
+      show({ text: serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.', failed: true });
+    } finally {
+      setStepping(false);
+    }
+  }
+  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), busy: stepping };
+  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} /><History o={o} /></>;
   const right = <><Details o={o} provider={provider} onEmail={() => void send()} busy={busy} /><Customer o={o} /></>;
   return (
     <Page>
@@ -226,6 +293,8 @@ function OrderBody() {
         <div className="flex flex-col gap-3.5">{left}</div>
         <div className="flex flex-col gap-3.5">{right}</div>
       </div>
+      {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={bike.data?.supplier ?? null} onClose={() => setOpen(null)} /> : null}
+      {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
     </Page>
   );
 }

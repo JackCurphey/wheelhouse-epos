@@ -20,6 +20,8 @@ export type C2wOrder = {
   appliedAt: string | null; applicationReference: string | null; certificateNumber: string | null; certificatePence: number | null;
   certificateReceivedOn: string | null; collectedAt: string | null; paidOn: string | null; inStock: boolean;
   expectedPence: number | null; expectedBy: string | null; paidPence: number | null; next?: Next;
+  // Whether a bike is put aside for the order now, and what's been said about any difference.
+  held?: boolean; certificateLate?: boolean; differenceChoice?: 'keep' | 'match' | null;
 };
 export type C2wEvent = { kind: string; by: string | null; at: string; reason: string | null; detail: Record<string, string> };
 export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string };
@@ -83,9 +85,10 @@ export function Kv({ k, children, strong = false }: { k: ReactNode; children: Re
   );
 }
 
-/** A grey or green message with its lead in bold (c2w.mjs `msg`). */
-export function Msg({ tone = 'grey', children }: { tone?: 'grey' | 'ok'; children: ReactNode }) {
-  return <p className={`m-0 rounded-lg px-3 py-2.5 text-size-15 leading-normal ${tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]'}`}>{children}</p>;
+/** A grey, green or amber message with its lead in bold (c2w.mjs `msg`). */
+const TONES = { grey: 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]', ok: 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]', warn: 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' };
+export function Msg({ tone = 'grey', children }: { tone?: keyof typeof TONES; children: ReactNode }) {
+  return <p className={`m-0 rounded-lg px-3 py-2.5 text-size-15 leading-normal ${TONES[tone]}`}>{children}</p>;
 }
 
 export const note = 'm-0 text-size-13 text-[var(--wh-muted)]';
