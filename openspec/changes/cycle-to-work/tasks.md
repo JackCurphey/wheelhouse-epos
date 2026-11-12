@@ -31,7 +31,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 1.3 Test: "Straight away, with a deposit" is refused while till deposits don't exist
 - [x] 1.4 Test: providers — add, edit, retire; a retired provider drops off the list to pick from; the commission left out of replies for someone who can't see costs (days to pay and hand-over checks are still sent: `docs/decisions/decided-while-building/2026-11-jack.md`, 12 Nov, item 4)
 - [x] 1.5 Write the migration (next free number) and `server/routes/c2w-settings.js` to pass 1.1–1.4
-- [ ] 1.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 1.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 2. The settings screen (pull request 2, about 400 lines)
 
