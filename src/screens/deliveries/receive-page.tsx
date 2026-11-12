@@ -11,7 +11,7 @@ import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ProductBox } from '@/screens/stock/product-box.tsx';
-import { Back, Card, mono, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
+import { Back, Card, c2wFor, mono, Page, Row, Tag, type Order, type OrderItem } from './deliveries-bits.tsx';
 import { Count, useSearch } from './new-order.tsx';
 import { FrameNumber } from './frame-number.tsx';
 
@@ -122,6 +122,9 @@ export function ReceivePage() {
   }
   const scannedOf = (key: string) => scanned.find((s) => s.key === key);
   const lineOf = (itemId: number | undefined) => (itemId === undefined ? undefined : orderLines.find((it) => it.id === itemId));
+  // A bike ordered for a Cycle to Work order: whose it is, after what a scan says (rs-receive-c2w).
+  const c2wOf = (itemId: number | undefined) => lineOf(itemId)?.forC2w;
+  const forWhom = (itemId: number | undefined) => { const c = c2wOf(itemId); return c ? ` — ${c2wFor(c.customerName)}` : ''; };
   // A refresh that finds a scanned line's order all in, or the line with
   // nothing left to come (booked in elsewhere), turns it into a line not on
   // an order, keeping its count and problems, so Book in isn't refused
@@ -149,7 +152,7 @@ export function ReceivePage() {
   }
   // A bike counts once its frame number is given (rs-frame).
   function count(key: string, line: Framing['line'], name: string, isBike = false) {
-    if (!isBike) { add(key, line); setSaid(`Added ${name} · 1`); return; }
+    if (!isBike) { add(key, line); setSaid(`Added ${name} · 1${forWhom(line.itemId)}`); return; }
     const n = scanned.filter((s) => s.productId === line.productId).reduce((t, s) => t + s.qty, 0) + 1;
     setFraming({ key, line, n });
   }
@@ -276,7 +279,7 @@ export function ReceivePage() {
                     const it = lineOf(s.itemId);
                     return (
                       <Row key={s.key} title={s.name}
-                        sub={<>{`${s.sku ? `${s.sku} · ` : ''}${it ? `on your order: ${it.outstanding}` : 'not on an order'}`}{s.frames ? <span className={mono}>{` · ${frameText(s)}`}</span> : null}{s.problems.map((p) => <strong key={p.kind} className="text-[var(--wh-warn-ink)]">{` · ${problemText(p)}`}</strong>)}{s.frames ? <span className="block">Scan each bike for its frame number</span> : null}</>}>
+                        sub={<>{`${s.sku ? `${s.sku} · ` : ''}${it?.forC2w ? '' : it ? `on your order: ${it.outstanding}` : 'not on an order'}`}{it?.forC2w ? <strong className="text-[var(--wh-warn-ink)]">{c2wFor(it.forC2w.customerName)}</strong> : null}{s.frames ? <span className={mono}>{` · ${frameText(s)}`}</span> : null}{s.problems.map((p) => <strong key={p.kind} className="text-[var(--wh-warn-ink)]">{` · ${problemText(p)}`}</strong>)}{s.frames ? <span className="block">Scan each bike for its frame number</span> : null}</>}>
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <Count name={s.name} value={s.qty} max={s.frames ? s.qty : it ? it.outstanding - missing(s) : undefined} onChange={(n) => setQty(s.key, n)} onBelowOne={() => remove(s.key)} />
                           <button type="button" aria-label={`Problem with ${s.name}`} onClick={() => setMarking(s.key)}
@@ -298,7 +301,8 @@ export function ReceivePage() {
       </Card>
       {framing ? (
         <FrameNumber bike={framing.line.name} n={framing.n} taken={scanned.flatMap((s) => s.frames ?? [])} onCancel={() => setFraming(null)}
-          onCount={(frame) => { add(framing.key, framing.line, frame); setSaid(`Added ${framing.line.name} · frame ${frame}`); setFraming(null); }} />
+          c2w={c2wOf(framing.line.itemId)}
+          onCount={(frame) => { add(framing.key, framing.line, frame); setSaid(`Added ${framing.line.name} · frame ${frame}${forWhom(framing.line.itemId)}`); setFraming(null); }} />
       ) : null}
       {marked ? (
         <SomethingWrong key={marked.key} line={lineOf(marked.itemId)} scanned={marked}

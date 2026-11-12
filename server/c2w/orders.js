@@ -212,9 +212,10 @@ export async function takeStep(orderId, stepName, who, change, { detail = {}, re
  * A bike ordered for the order has been booked in (rs-frame-c2w, rs-booked-c2w), in the
  * delivery's transaction: its frame (or, with no frame numbers, a count) is held for the
  * order, and an order with its certificate in moves to Ready to collect. An order that
- * has moved on, or already has its bike, leaves the bike on sale like any other.
+ * has moved on, or already has its bike, leaves the bike on sale like any other. The event
+ * names the delivery, so Delivery booked in can list what it put aside.
  */
-export async function bookedInForOrder(orderId, frameId, siteId, who) {
+export async function bookedInForOrder(orderId, frameId, siteId, who, deliveryId = null) {
   const row = await prepare('SELECT * FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
   if (!row || !['quote', 'waiting', 'certificate'].includes(row.stage) || row.held_at || row.frame_id) return;
   // Booked in at another shop from the order's: it goes on sale there.
@@ -228,7 +229,7 @@ export async function bookedInForOrder(orderId, frameId, siteId, who) {
   if (!held) return;
   const ready = row.stage === 'certificate';
   await prepare(`UPDATE c2w_orders SET frame_id = ?, held_at = now()${ready ? ", stage = 'ready'" : ''} WHERE id = ?`).run(held.frameId, orderId);
-  await addEvent(orderId, 'booked_in', who, { detail: { ...(held.frameId ? { frameId: held.frameId } : {}), ...(ready ? { ready: true } : {}) } });
+  await addEvent(orderId, 'booked_in', who, { detail: { ...(held.frameId ? { frameId: held.frameId } : {}), ...(ready ? { ready: true } : {}), ...(deliveryId ? { deliveryId } : {}) } });
   // Ready with the bike's arrival: the customer is told (design 9).
   if (ready) await (await import('./messages.js')).queueC2wMessage(orderId, 'c2w_ready', { loginId: who.loginId ?? null });
 }
