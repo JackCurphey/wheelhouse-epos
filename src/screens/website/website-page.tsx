@@ -8,6 +8,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { Button } from '@/components/ui/button';
 import { Box, Page, Refusal } from '@/screens/reports/reports-bits.tsx';
 import { DiscardBox, HistoryBox, PartBox } from './website-boxes.tsx';
+import { WebsiteStart } from './website-start.tsx';
 import { changeWords, customerSite, plural, when, type Part, type WebsiteState } from './website-types.ts';
 
 /**
@@ -36,6 +37,7 @@ export function WebsitePage() {
   if (site.error) return <Page><Refusal error={site.error} /></Page>;
   const s = site.data;
   if (!s) return <Page><p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
+  if (!s.setUp) return <WebsiteStart state={s} onState={(next) => queryClient.setQueryData(['website'], next)} />;
 
   /** Sends a change; the server answers with the whole Website page's state. */
   async function send(path: string, after?: (next: WebsiteState) => void) {
@@ -183,12 +185,13 @@ export function WebsitePage() {
   );
 }
 
-function ProductCounts({ counts }: { counts: WebsiteState['productCounts'] }) {
+/** website.mjs `productCounts`: what goes online, with See them opening Stock. */
+export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'] }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+    <ul aria-label="Your products online" className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
       <li>{`${plural(counts.goOnline, 'product')} ${counts.goOnline === 1 ? 'goes' : 'go'} online`}</li>
-      <li className="flex flex-wrap gap-2"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo`} className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
-      <li className="flex flex-wrap gap-2"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price`} className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
+      <li className="flex flex-wrap gap-2"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo`} aria-label="See the products with no photo, in Stock" className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
+      <li className="flex flex-wrap gap-2"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price`} aria-label="See the products with no price, in Stock" className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
     </ul>
   );
 }

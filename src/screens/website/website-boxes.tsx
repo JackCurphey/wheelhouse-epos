@@ -8,10 +8,10 @@ import { Dialog, DialogBody, DialogClose, DialogDescription, DialogFooter, Dialo
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { changeWords, plural, when, type History, type Part, type Version, type VersionDetail, type WebsiteState } from './website-types.ts';
 
-const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const failed = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t do that. Try again.');
 
-function readAsBase64(file: File): Promise<string> {
+export function readAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new window.FileReader();
     reader.onload = () => resolve(String(reader.result).replace(/^[^,]*,/, ''));

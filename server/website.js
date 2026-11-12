@@ -178,6 +178,18 @@ async function loginNames(ids) {
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
+// Step 3's counts (ws-start-products): what "Every product online" would
+// give, whatever each product's switch says now.
+async function startCounts() {
+  const row = await prepare(
+    `SELECT count(*) FILTER (WHERE price > 0) AS go_online,
+            count(*) FILTER (WHERE price > 0 AND (photo_url IS NULL OR photo_url = '')) AS no_photo,
+            count(*) FILTER (WHERE price = 0) AS no_price
+     FROM products WHERE active = 1`
+  ).get();
+  return { goOnline: Number(row.go_online), noPhoto: Number(row.no_photo), noPrice: Number(row.no_price) };
+}
+
 async function productCounts() {
   const row = await prepare(
     // ws-page counts: an unpriced product "stays off until priced", so it is
@@ -220,6 +232,7 @@ export async function websiteState(row = null) {
     mainColour: draft.main_colour || SOFT_SAND_CHARCOAL,
     tracking: draft.tracking || [],
     productCounts: await productCounts(),
+    ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
   };
 }
@@ -426,4 +439,56 @@ export async function ownerNames(shopId) {
 // refused: they could neither turn the site off nor change what customers see.
 export async function websiteInUse() {
   return !!(await prepare('SELECT 1 AS yes FROM website').get());
+}
+
+// ---------- Set-up and the main colour (design 4) ----------
+
+const HEX = /^#[0-9a-f]{6}$/i;
+const channel = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+
+/** The standard contrast of white text on a colour, from 1 to 21. */
+export function contrastWithWhite(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => channel(parseInt(hex.slice(i, i + 2), 16)));
+  return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
+}
+
+/** Why a main colour can't be used, or null when white text on it is easy to read (at least 4.5 to 1). */
+export function colourProblem(colour) {
+  if (typeof colour !== 'string' || !HEX.test(colour)) return 'Choose a colour';
+  return contrastWithWhite(colour) >= 4.5 ? null : 'That colour would make text hard to read. Choose a darker one.';
+}
+
+function checkColour(colour) {
+  const problem = colourProblem(colour);
+  if (problem) throw new WebsiteError(400, problem);
+  return colour.toUpperCase();
+}
+
+// The three steps' answers, once only (ws-start-which, -look, -products).
+// Shopify is set up by connecting it (pull request 6b).
+export async function setUp(body, loginId) {
+  if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
+  if (!['every', 'nothing'].includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
+  const colour = checkColour(body.mainColour);
+  await getOrCreateWebsite();
+  return inTransaction(async () => {
+    const website = await prepare('SELECT * FROM website FOR UPDATE').get();
+    if (website.kind) throw new WebsiteError(409, 'The website is already set up');
+    // Every product online: those with a price; one with no price stays off until priced.
+    await prepare('UPDATE products SET show_online = ? AND price > 0 WHERE active = 1').run(body.startWith === 'every');
+    await prepare(
+      `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
+              draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`
+    ).run(colour, loginId);
+    return websiteState(await prepare('SELECT * FROM website').get());
+  });
+}
+
+export async function saveColour(colour, loginId) {
+  const checked = checkColour(colour);
+  await getOrCreateWebsite();
+  await prepare(
+    "UPDATE website SET draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)), draft_saved_by = ?, draft_saved_at = now(), updated_at = now()"
+  ).run(checked, loginId);
+  return websiteState();
 }

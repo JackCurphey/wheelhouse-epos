@@ -52,3 +52,10 @@ export const HISTORY = {
     { id: 1, kind: 'published', changed: [], by: 'Jack Lewis', at: '2026-09-10T10:00:00Z', current: false, firstPublished: true },
   ],
 };
+
+// Not set up yet: the three-step start (ws-start-which, ws-start-look,
+// ws-start-products). startCounts are what "Every product online" would give.
+export const NOT_SET_UP = {
+  ...OFF_NEVER, kind: null, setUp: false, mainColour: null, savedBy: null, savedAt: null,
+  startCounts: { goOnline: 212, noPhoto: 14, noPrice: 3 },
+};

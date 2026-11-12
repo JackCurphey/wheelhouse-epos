@@ -36,18 +36,18 @@ the code. While building, run only the related test files
 - [x] 2.4 Screen test: the Published toasts (on and off), the Discard box with Keep editing, and History over the page with Go back to this
 - [x] 2.5 Screen test: `ws-no-access` for Staff, naming the Owners, with Back to Today; Website not in a Staff sidebar
 - [x] 2.6 Build `src/screens/website/` on the Settings page frame and the form box to pass 2.1–2.5; add Website to Office in the sidebar
-- [ ] 2.7 (moved to pull request 3, decision 26) Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
+- [ ] 2.7 (kept for now, decision 36) Remove the old app's Website panel (`public/app.js`, rule 5) now its replacement is here
 - [x] 2.8 Log decided-while-building 1, 3, 4 and 5 (design) in your own month file
 - [ ] 2.9 Self-review with `reviewer`; full check
 
 ## 3. The three-step start, logo and colour (pull request 3, about 450 lines)
 
-- [ ] 3.1 Test: `POST /api/website/set-up` with "every" switches `show_online` on for priced products only, "nothing" leaves all off; a second set-up is refused
-- [ ] 3.2 Test: the colour check accepts #1A3F66, #2F6B4F and #2A2822 and refuses a colour white text can't be read on, on the server as well as the screen
-- [ ] 3.3 Screen test: `ws-start-which` (both choices, Not now, Next), `ws-start-look` (logo, Change logo, skip line, suggestions, Soft sand charcoal, Choose another colour), `ws-start-products` (both choices, the three counts with See them, Make my website); Back keeps choices
-- [ ] 3.4 Test: colours suggested from a logo — a test image made of two known colours gives those two
-- [ ] 3.5 Build the start screens and the set-up and colour routes to pass 3.1–3.4
-- [ ] 3.6 Log decided-while-building 2 (the step line) in your own month file
+- [x] 3.1 Test: `POST /api/website/set-up` with "every" switches `show_online` on for priced products only, "nothing" leaves all off; a second set-up is refused
+- [x] 3.2 Test: the colour check accepts #1A3F66, #2F6B4F and #2A2822 and refuses a colour white text can't be read on, on the server as well as the screen
+- [x] 3.3 Screen test: `ws-start-which` (both choices, Not now, Next), `ws-start-look` (logo, Change logo, skip line, suggestions, Soft sand charcoal, Choose another colour), `ws-start-products` (both choices, the three counts with See them, Make my website); Back keeps choices
+- [x] 3.4 Test: colours suggested from a logo — a test image made of two known colours gives those two
+- [x] 3.5 Build the start screens and the set-up and colour routes to pass 3.1–3.4
+- [x] 3.6 Log decided-while-building 2 (the step line) in your own month file
 - [ ] 3.7 Self-review with `reviewer`; full check
 
 ## 4. Tracking tools (pull request 4, about 300 lines)
