@@ -199,3 +199,122 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await noSideScroll(page);
   });
 }
+
+// Returning customers (openspec/changes/reports-ready-made, group 2; rp-returning): the
+// Owner opens it from its card, sees who came back, and widens "Not seen for", at a
+// computer and a phone width; at a phone width the figures sit two by two.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Returning customers and changes how long not seen`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      // Ann came in last year and again in February; Ben came in for the first time in June.
+      const ann = await prepare('INSERT INTO customers (name, marketing_permission) VALUES (?, true) RETURNING id').get('Ann Lee');
+      const ben = await prepare('INSERT INTO customers (name) VALUES (?) RETURNING id').get('Ben Shaw');
+      for (const [day, who] of [['2025-03-10', ann.id], ['2026-02-05', ann.id], ['2026-06-10', ben.id]] as const) {
+        await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount, customer_id) VALUES (?, 20, 20, 'Cash', 20, ?)").run(`${day}T12:00:00Z`, who);
+      }
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Returning customers/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/returning`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Returning customers' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Customers' }).getByText('Up 1 on the 12 months before')).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Came back within 12 months' }).getByText('100%')).toBeVisible();
+    await expect(page.getByRole('img', { name: 'New and returning customers by month: most returning in Feb, most new in Jun. The figures are in the table below.' })).toBeVisible();
+    const lapsed = page.getByRole('table', { name: 'Not seen lately' });
+    await expect(lapsed.getByRole('link')).toHaveText(['Ann Lee']);
+    // On a phone the three figures sit two by two, as drawn.
+    const tops = (await Promise.all(['Customers', 'New', 'Came back within 12 months']
+      .map((n) => page.getByRole('group', { name: n, exact: true }).boundingBox()))).map((b) => Math.round(b!.y));
+    if (size === 'phone') expect([tops[0] === tops[1], tops[2] > tops[0]]).toEqual([true, true]);
+    else expect(new Set(tops).size).toBe(1);
+    await page.getByRole('textbox', { name: /^Not seen for/ }).fill('2');
+    await expect(page).toHaveURL(/months=2/);
+    await expect(lapsed.getByRole('link')).toHaveText(['Ben Shaw', 'Ann Lee']);
+    await noSideScroll(page);
+  });
+}
+
+// VAT (openspec/changes/reports-ready-made, group 3; rp-vat, rp-vat-first): the Owner opens
+// it from its card and is asked when the VAT quarter starts. At a computer they save March
+// (so September to November); at a phone they choose Not now and see calendar quarters.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens VAT and is asked when the VAT quarter starts`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      const site = await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get();
+      const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id').get(site.id, 'V1', 'Till 1', randomUUID());
+      const sale = await prepare(`INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, received_at, total_pence, vat_pence)
+        VALUES (?, ?, ?, 1, false, ?, ?, 1200, 200) RETURNING id`).get(randomUUID(), till.id, site.id, '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z');
+      await prepare(`INSERT INTO till_sale_lines (till_sale_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence)
+        VALUES (?, 'Item', 1, 1200, 1200, 2000, 200)`).run(sale.id);
+      await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES (?, 30, 30, 'Cash', 30)").run('2026-09-05T12:00:00Z');
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /^VAT/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/vat`);
+    const dialog = page.getByRole('dialog', { name: 'When does your VAT quarter start?' });
+    await expect(dialog).toBeVisible();
+    if (size === 'computer') {
+      await dialog.getByRole('radio', { name: 'March, June, September, December' }).click();
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByText(/· this VAT quarter, 1 September – 30 November, against the quarter before$/)).toBeVisible();
+      await page.reload();
+      await expect(page.getByRole('table', { name: 'VAT on sales by rate' })).toBeVisible();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    } else {
+      await dialog.getByRole('button', { name: 'Not now' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByText(/^Showing calendar quarters/)).toBeVisible();
+      await expect(page.getByText(/· this VAT quarter, 1 July – 30 September, against the quarter before$/)).toBeVisible();
+    }
+    const sales = page.getByRole('table', { name: 'VAT on sales by rate' });
+    await expect(sales.getByRole('row', { name: /^Standard 20%/ }).getByRole('cell')).toHaveText(['£10.00', '£2.00', '£0.00']);
+    await expect(page.getByRole('table', { name: 'Sales without their VAT' }).getByRole('row', { name: /^VAT not recorded/ }).getByRole('cell')).toHaveText(['£30.00', '£0.00']);
+    await expect(page.getByRole('region', { name: 'Stock purchases' }).getByRole('note')).toBeVisible();
+    await expect(page.getByRole('img')).toHaveCount(0);
+    await noSideScroll(page);
+  });
+}
+
+// Margin and stock value, its stock half (openspec/changes/reports-ready-made, group 4;
+// rp-margin): the Owner opens it from its card, sees the stock value on the shelves and
+// a damaged adjustment written off, and follows "See the counts" to Stock take.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens Margin and stock value from its card`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      const chain = await prepare("INSERT INTO products (name, category, price, cost, stock_qty) VALUES ('Chain', 'Drivetrain › Chains', 0, 10, 3) RETURNING id").get() as { id: number };
+      await prepare("INSERT INTO stock_movements (product_id, change_qty, type, reason, value_pence, created_at) VALUES (?, -2, 'adjustment', 'damaged', 2000, '2026-09-16T09:00:00Z')").run(chain.id);
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /Margin and stock value/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/margin`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Margin and stock value' })).toBeVisible();
+    await expect(page.getByText('Stock value, at what it cost you: £30.00')).toBeVisible();
+    const off = page.getByRole('table', { name: 'Stock written off' });
+    await expect(off.getByRole('row', { name: /Adjusted · Damaged/ })).toContainText('−£20.00');
+    await noSideScroll(page);
+    await off.getByRole('link', { name: 'See the stock takes counted under' }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/stocktake`);
+  });
+}
