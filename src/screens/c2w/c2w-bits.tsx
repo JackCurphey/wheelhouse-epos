@@ -55,6 +55,15 @@ export const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-CA', 
 /** The bike as a row and The order say it: on order, or not in stock (c2w.mjs listPage, details). */
 export const bikeLine = (o: C2wOrder) => (o.onOrder ? `${o.bike} · on order` : o.inStock ? o.bike : `${o.bike} · not in stock`);
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/**
+ * An order's stage in a word, as the list's groups and the order's stages name
+ * them (cs-search-c2w "Waiting for the certificate", cs-page-c2w-collected
+ * "Collected"). Cancelled and closed aren't drawn there (logged).
+ */
+export const STAGE_WORD: Record<Stage, string> = {
+  quote: 'Waiting for the certificate', waiting: 'Waiting for the certificate', certificate: 'Certificate received', ready: 'Ready to collect',
+  collected: 'Collected', paid: 'Paid by the provider', cancelled: 'Cancelled', closed: 'Closed',
+};
 
 /** The quote's closing paragraph, as the server words it (server/c2w/orders.js quoteClosing). */
 export function closingFor({ bike, holdUntil, inStock, validUntil, rule }: { bike: string; holdUntil: string | null; inStock: boolean; validUntil: string; rule: Settings['orderRule'] }) {

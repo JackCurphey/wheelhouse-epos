@@ -113,6 +113,8 @@ export function testServerEnv(port, env = {}) {
     // Test servers share a database: one mustn't pick up another test's waiting
     // Citrus Lime file. A test that wants the timer sets its own.
     WH_MOVE_TICK_MS: '3600000', WH_MOVE_SCAN_AT_START: 'off',
+    // The pretend Shopify, and its sending timer left to the tests (shopify-link.test.js runs sendRound itself).
+    SHOPIFY_PROVIDER: 'pretend', WH_SHOPIFY_TICK_MS: '3600000', WH_SHOPIFY_SCAN_AT_START: 'off',
     // The same for the messages timer: each round goes through every shop in
     // the shared database (hundreds), and dozens of test servers ran one every
     // 5 s for nothing (tests/live-server-port.test.js). A test that sends sets its own.
