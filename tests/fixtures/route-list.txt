@@ -377,6 +377,8 @@ GET /api/reports/returning
 GET /api/reports/returning.csv
 GET /api/reports/vat
 GET /api/reports/vat.csv
+GET /api/reports/margin
+GET /api/reports/margin.csv
 GET /api/reports/changed
 GET /api/reports/changed/choices
 GET /api/reports/changed.csv
