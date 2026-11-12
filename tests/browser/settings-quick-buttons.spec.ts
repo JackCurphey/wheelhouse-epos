@@ -96,8 +96,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       const name = row('Replace gear cable').locator('[data-part="name"]');
       const at = (await name.boundingBox())!;
       const touch = { pointerType: 'touch', button: 0, isPrimary: true, clientX: at.x + 4, clientY: at.y + 4 };
+      const remove = page.getByRole('button', { name: 'Remove Replace gear cable' });
+      await expect(remove).toBeHidden();
       await name.dispatchEvent('pointerdown', touch);
-      await expect(page.getByRole('button', { name: 'Remove Replace gear cable' })).toBeVisible();
+      await page.waitForTimeout(250);
+      await expect(remove, 'not before the half second').toBeHidden({ timeout: 0 });
+      await expect(remove).toBeVisible({ timeout: 2000 });
       await name.dispatchEvent('pointerup', touch);
     }
 

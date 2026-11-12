@@ -642,15 +642,16 @@ test('Move left moves the group one place to the left', async () => {
   assert.deepEqual(t.state.groups.map((g) => g.id), [1, 3, 2]);
 });
 
-test('a group move the server refuses says the server’s words with no Try again, and the list is fetched again', async () => {
+test('a group move the server refuses (a group someone else removed) says the server’s words with no Try again, and the list is fetched again', async () => {
   const t = await open();
   await ready(t);
-  t.state.refuse = [409, { error: 'The group was just moved; try again', code: 'moved' }];
+  // The refusal the group route can really give (server/routes/quick-buttons.js: Refused(404, { error: 'Not found' })).
+  t.state.refuse = [404, { error: 'Not found' }];
   const gets = () => t.calls.filter((c) => c.method === 'GET' && c.path === '/api/quick-buttons').length;
   const before = gets();
   press(t, groupMenuItem(t, 'Move right'));
   const area = noteArea(t);
-  await t.waitFor(() => assert.match(area.textContent, /^The group was just moved; try again/));
+  await t.waitFor(() => assert.match(area.textContent, /^Not found/));
   assert.ok(t.within(area).queryByRole('button', { name: 'Try again' }) === null);
   await t.waitFor(() => assert.ok(gets() > before, 'fetched again'));
   await t.waitFor(() => assert.deepEqual(groupPills(t), ['Workshop (chosen)', 'Parts', 'Accessories', '+ Add a group']));
@@ -720,7 +721,7 @@ test('a hold is cancelled by lifting early or moving more than a few pixels, so 
   assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }));
 });
 
-test('holding the handle drags, not opens the menu; a mouse press is not a hold', async () => {
+test('holding the handle doesn’t open Edit and Remove; a mouse press is not a hold', async () => {
   const t = await open();
   await ready(t);
   touchDown(t, t.ui.getByRole('button', { name: 'Move Fit & adjust brakes — drag, or use the arrow keys' }));
