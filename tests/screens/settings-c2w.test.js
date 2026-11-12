@@ -158,9 +158,31 @@ test('the deposit amount: £ or %, saved with its unit', async () => {
   fireEvent.change(box, { target: { value: '50' } });
   fireEvent.blur(box);
   await waitFor(() => assert.deepEqual(writes(), ['PUT /api/c2w/settings {"depositKind":"pounds","depositValue":5000}']));
-  fireEvent.change(box, { target: { value: '10' } });
+  // Switching unit with nothing typed sends nothing: the box empties and asks
+  // for the amount in the new unit, so £50 is never read as 50%.
   fireEvent.click(within(unit).getByRole('button', { name: '%' }));
-  await waitFor(() => assert.equal(writes()[1], 'PUT /api/c2w/settings {"depositKind":"percent","depositValue":1000}'));
+  assert.equal(within(unit).getByRole('button', { name: '%' }).getAttribute('aria-pressed'), 'true');
+  assert.equal(box.value, '');
+  assert.equal(ui.getByText('Type the deposit as a percentage').getAttribute('role'), 'status');
+  assert.equal(writes().length, 1);
+  fireEvent.change(box, { target: { value: '10' } });
+  fireEvent.blur(box);
+  await waitFor(() => assert.deepEqual(writes().slice(1), ['PUT /api/c2w/settings {"depositKind":"percent","depositValue":1000}']));
+  assert.equal(box.value, '10');
+});
+
+test('the deposit: typing an amount then picking its unit sends it once, in that unit', async () => {
+  const { ui, fireEvent, waitFor, within } = await openC2w({ settings: { depositValue: 5000 }, open: 'Bikes not in stock' });
+  const unit = await ui.findByRole('group', { name: 'Deposit in' });
+  const box = ui.getByLabelText('Deposit');
+  await waitFor(() => assert.equal(box.value, '50.00'));
+  const pct = within(unit).getByRole('button', { name: '%' });
+  fireEvent.change(box, { target: { value: '10' } });
+  fireEvent.blur(box, { relatedTarget: pct });
+  fireEvent.click(pct);
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/c2w/settings {"depositKind":"percent","depositValue":1000}']));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(writes().length, 1);
 });
 
 test('How to apply: the drawn placeholder and hint; the words save when the box is left', async () => {
@@ -246,6 +268,18 @@ test('Edit: the box is titled “Edit provider” and filled in; £ commission i
   assert.ok(await ui.findByText('Commission £25.00 · pays in about 30 days · 2 checks at hand-over'));
 });
 
+test('Edit from a till that isn’t sent the commission: no Commission box, and none is sent', async () => {
+  const { commissionKind, commissionValue, ...noCosts } = PROVIDER;
+  const { ui, fireEvent, waitFor, within } = await openC2w({ providers: [noCosts], open: 'Scheme providers' });
+  fireEvent.click(await ui.findByRole('button', { name: 'Edit Ride Scheme' }));
+  const box = within(await ui.findByRole('dialog', { name: 'Edit provider' }));
+  assert.ok(box.queryByLabelText('Commission') === null);
+  assert.ok(box.queryByRole('group', { name: 'Commission in' }) === null);
+  fireEvent.change(box.getByLabelText('Pays in about'), { target: { value: '45' } });
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.deepEqual(writes(), ['PUT /api/c2w/providers/4 {"name":"Ride Scheme","paysInDays":45,"accessoriesInside":true,"handoverNote":"ID seen\\nForm signed"}']));
+});
+
 test('a commission that isn’t a number is refused in the box, sending nothing; Cancel closes it', async () => {
   const { ui, fireEvent, waitFor, within } = await openC2w({ providers: [], open: 'Scheme providers' });
   fireEvent.click(await ui.findByRole('button', { name: '+ Add a provider' }));
@@ -263,6 +297,8 @@ test('Retire asks first, then takes the provider off the list', async () => {
   const { ui, fireEvent, waitFor, within } = await openC2w({ open: 'Scheme providers' });
   fireEvent.click(await ui.findByRole('button', { name: 'Retire Ride Scheme' }));
   const box = within(await ui.findByRole('dialog', { name: 'Retire Ride Scheme?' }));
+  assert.ok(box.getByText('It comes off the list staff pick from for new orders. Orders that already use it keep it. A retired provider can’t be brought back.'));
+  assert.ok(box.getByRole('button', { name: 'Keep Ride Scheme' }));
   assert.deepEqual(writes(), []);
   fireEvent.click(box.getByRole('button', { name: 'Retire Ride Scheme' }));
   await waitFor(() => assert.deepEqual(writes(), ['POST /api/c2w/providers/4/retire {}']));

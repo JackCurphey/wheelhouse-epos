@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
 import { penceInput, penceText } from '@/lib/money.ts';
@@ -114,14 +114,14 @@ function DaysRow({ label, name, min, unit = 'days' }: { label: string; name: 'ho
 }
 
 // c2w.mjs unitSwitch: £ and %, the one in use pressed.
-function UnitSwitch({ label, kind, disabled, onPick }: { label: string; kind: Kind; disabled?: boolean; onPick: (k: Kind) => void }) {
+function UnitSwitch({ ref, label, kind, disabled, onPick }: { ref?: Ref<HTMLSpanElement>; label: string; kind: Kind; disabled?: boolean; onPick: (k: Kind) => void }) {
   const pill = (to: Kind, text: string) => (
     <button type="button" aria-pressed={kind === to} disabled={disabled} onClick={() => onPick(to)}
       className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-semibold ${kind === to ? 'border-[var(--wh-ink)] bg-[var(--wh-ink)] text-[var(--wh-panel)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}>
       {text}
     </button>
   );
-  return <span role="group" aria-label={`${label} in`} className="inline-flex gap-1.5">{pill('pounds', '£')}{pill('percent', '%')}</span>;
+  return <span ref={ref} role="group" aria-label={`${label} in`} className="inline-flex gap-1.5">{pill('pounds', '£')}{pill('percent', '%')}</span>;
 }
 
 function Choice<T extends string>({ legend, name, value, options, disabled, onPick }: {
@@ -170,33 +170,49 @@ export function HoldSettings() {
   );
 }
 
-// The deposit amount with its unit; switching unit sends the amount in the new one.
+// The deposit amount with its unit. Picking the other unit with nothing typed
+// sends nothing: the box empties and asks for the amount in that unit, so an
+// old number is never read in the new one. An amount typed and not yet saved
+// is sent once, in the unit picked.
 function DepositAmount() {
   const id = useId();
   const s = useC2w().data?.settings;
   const save = useSave();
+  const units = useRef<HTMLSpanElement>(null);
   const [typed, setTyped] = useState<string | null>(null);
+  const [pending, setPending] = useState<Kind | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
-  const kind = s?.depositKind ?? 'pounds';
-  const shown = typed ?? amountBox(s?.depositValue, kind);
+  const saved = s?.depositKind ?? 'pounds';
+  const kind = pending ?? saved;
+  const shown = typed ?? (pending ? '' : amountBox(s?.depositValue, saved));
   async function send(to: Kind, text: string) {
     const v = amountOf(text, to);
     if (v === undefined) { setNote({ ok: false, text: to === 'percent' ? 'Type the deposit as a percentage from 0 to 100' : 'Type the deposit in pounds, like 50.00' }); return; }
-    if (to === kind && v === (s?.depositValue ?? null)) { setTyped(null); setNote(null); return; }
+    if (to !== saved && v === null) return;
+    if (to === saved && v === (s?.depositValue ?? null)) { setTyped(null); setPending(null); setNote(null); return; }
     try {
       await save({ depositKind: to, depositValue: v });
       setTyped((now) => (now === text ? null : now));
+      setPending(null);
       setNote({ ok: true, text: 'Saved.' });
     } catch (err) { setNote({ ok: false, text: words(err) }); }
+  }
+  function pick(to: Kind) {
+    if (typed !== null && typed.trim() !== '') { void send(to, typed); return; }
+    setTyped(null);
+    if (to === saved) { setPending(null); setNote(null); return; }
+    setPending(to);
+    setNote({ ok: true, text: to === 'percent' ? 'Type the deposit as a percentage' : 'Type the deposit in pounds' });
   }
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex min-h-[52px] flex-wrap items-center gap-2.5">
         <label htmlFor={id} className="grow text-size-15 font-semibold">Deposit</label>
         <input id={id} inputMode="decimal" value={shown} disabled={!s} aria-invalid={note && !note.ok ? true : undefined}
-          onChange={(e) => setTyped(e.target.value)} onBlur={() => { if (typed !== null) void send(kind, typed); }}
+          onChange={(e) => setTyped(e.target.value)}
+          onBlur={(e) => { if (units.current?.contains(e.relatedTarget as Node | null)) return; if (typed !== null) void send(kind, typed); }}
           className={`${field} w-[90px] text-right font-mono`} />
-        <UnitSwitch label="Deposit" kind={kind} disabled={!s} onPick={(to) => { if (to !== kind) void send(to, shown); }} />
+        <UnitSwitch ref={units} label="Deposit" kind={kind} disabled={!s} onPick={pick} />
       </div>
       <Note note={note} />
     </div>
@@ -338,6 +354,9 @@ function Labelled({ label, children, after }: { label: string; children: ReactNo
 
 // c2w.mjs providerEdit; Add uses the same box (decided while building, PR 2).
 function ProviderBox({ start, onDone, onClose }: { start: Provider | null; onDone: () => Promise<void>; onClose: () => void }) {
+  // A provider read without its commission (someone who can't see costs) is
+  // saved without one, so the stored commission is left as it is.
+  const costs = !start || start.commissionKind !== undefined;
   const [name, setName] = useState(start?.name ?? '');
   const [kind, setKind] = useState<Kind>(start?.commissionKind ?? 'percent');
   const [commission, setCommission] = useState(amountBox(start?.commissionValue, start?.commissionKind ?? 'percent'));
@@ -350,9 +369,9 @@ function ProviderBox({ start, onDone, onClose }: { start: Provider | null; onDon
     const value = amountOf(commission, kind);
     const days = pays.trim() === '' ? null : Number(pays.trim());
     if (!name.trim()) { setError('Give the provider a name'); return; }
-    if (value === undefined) { setError(kind === 'percent' ? 'Type the commission as a percentage from 0 to 100' : 'Type the commission in pounds, like 25.00'); return; }
+    if (costs && value === undefined) { setError(kind === 'percent' ? 'Type the commission as a percentage from 0 to 100' : 'Type the commission in pounds, like 25.00'); return; }
     if (days !== null && (!Number.isInteger(days) || days < 0 || days > 365)) { setError('Pays in about is a whole number of days, 0 to 365'); return; }
-    const body = { name: name.trim(), commissionKind: kind, commissionValue: value, paysInDays: days, accessoriesInside: inside, handoverNote: checks };
+    const body = { name: name.trim(), ...(costs ? { commissionKind: kind, commissionValue: value } : {}), paysInDays: days, accessoriesInside: inside, handoverNote: checks };
     setBusy(true);
     setError(null);
     try {
@@ -366,10 +385,12 @@ function ProviderBox({ start, onDone, onClose }: { start: Provider | null; onDon
       <BoxHeader id="c2w-provider-title" title={start ? 'Edit provider' : 'Add a provider'} sub={start?.name} onClose={onClose} />
       <DialogBody className="flex flex-col gap-4">
         <Labelled label="Name"><input className={field} value={name} onChange={(e) => setName(e.target.value)} /></Labelled>
-        <div className="flex flex-wrap items-end gap-2.5">
-          <Labelled label="Commission"><input className={`${field} w-32 font-mono`} inputMode="decimal" value={commission} onChange={(e) => setCommission(e.target.value)} /></Labelled>
-          <UnitSwitch label="Commission" kind={kind} onPick={setKind} />
-        </div>
+        {costs ? (
+          <div className="flex flex-wrap items-end gap-2.5">
+            <Labelled label="Commission"><input className={`${field} w-32 font-mono`} inputMode="decimal" value={commission} onChange={(e) => setCommission(e.target.value)} /></Labelled>
+            <UnitSwitch label="Commission" kind={kind} onPick={(to) => { if (to !== kind) { setKind(to); setCommission(''); } }} />
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="c2w-pays" className="text-sm font-semibold">Pays in about</label>
           <span className="flex items-center gap-2.5"><input id="c2w-pays" className={`${field} w-[70px] text-right font-mono`} inputMode="numeric" value={pays} onChange={(e) => setPays(e.target.value)} /><span className="text-[var(--wh-muted)]">days</span></span>
