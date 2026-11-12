@@ -13,6 +13,7 @@ import { toCapacitySettings } from '../workshop/jobs.js';
 import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames } from '../website.js';
+import { JOIN } from '../lib/categories.js';
 import { NotFound, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
 
 export const SITE_OFF = 'This website isn’t available';
@@ -56,6 +57,9 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
   const found = readFor(path);
   if (!found) return false;
   const { handler, params } = found;
+  // Staff and customers ask at the same address, and a preview can carry the
+  // draft: nothing in between may keep an answer, a 404 or 503 included.
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const website = await prepare('SELECT kind, is_on, published, draft FROM website').get();
     // A shop whose website is its Shopify shop has no Wheelhouse website (design 2).
@@ -66,9 +70,6 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
     const preview = staff?.shop.id === shop.id && !(await isOn(website));
     const query = new URL(req.url, 'http://site').searchParams;
     const answer = await handler({ req, shop, website, preview, query, params });
-    // Staff and customers ask at the same address, and a preview can carry
-    // the draft: nothing in between may keep an answer.
-    res.setHeader('Cache-Control', 'no-store');
     sendJson(res, 200, answer);
   } catch (err) {
     if (err instanceof NotFound) return sendJson(res, 404, { error: SITE_NOT_FOUND }), true;
@@ -190,10 +191,11 @@ async function openingAnswer() {
 async function categoriesAnswer() {
   const rows = await prepare('SELECT id, name, parent_id, path FROM product_categories ORDER BY path').all();
   const counts = await prepare(
-    'SELECT category, count(*)::int AS n FROM products WHERE show_online AND active = 1 AND price > 0 AND category IS NOT NULL GROUP BY category'
+    // A product with sizes and colours counts once, as the category page shows it.
+    "SELECT category, count(DISTINCT COALESCE('g' || group_id, 'p' || id))::int AS n FROM products WHERE show_online AND active = 1 AND price > 0 AND category IS NOT NULL GROUP BY category"
   ).all();
   return rows.map((r) => ({
     id: r.id, name: r.name, parentId: r.parent_id, path: r.path,
-    products: counts.filter((c) => c.category === r.path || c.category.startsWith(`${r.path} › `)).reduce((sum, c) => sum + c.n, 0),
+    products: counts.filter((c) => c.category === r.path || c.category.startsWith(`${r.path}${JOIN}`)).reduce((sum, c) => sum + c.n, 0),
   }));
 }

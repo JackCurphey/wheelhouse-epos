@@ -6,6 +6,7 @@
 import { prepare } from './db.js';
 import { MEASURE, keyOf } from './routes/stock-list.js';
 import { OPEN } from './c2w/orders.js';
+import { JOIN, NONE, partsOf } from './lib/categories.js';
 
 /** Thrown for a page that can't be found; routes/site.js answers 404. */
 export class NotFound extends Error {}
@@ -13,7 +14,7 @@ export class NotFound extends Error {}
 const PAGE = 6;
 const lower = (text) => String(text ?? '').toLocaleLowerCase('en-GB');
 const byName = (a, b) => a.name.localeCompare(b.name, 'en-GB') || a.id - b.id;
-const within = (category, path) => category === path || category.startsWith(`${path} › `);
+const within = (category, path) => category === path || category.startsWith(`${path}${JOIN}`);
 const idOf = (value) => (/^\d{1,9}$/.test(String(value ?? '')) ? Number(value) : null);
 
 // The fixed pages (design: Collection and returns, Privacy, Cookies, Contact us, Our shops).
@@ -27,18 +28,22 @@ const PAGES = [
 
 // Everything a customer can see, read once per answer: a shop's catalogue is a
 // few thousand rows at most, as Stock reads it (routes/stock-list.js).
-async function catalogue(query) {
+// Suggestions need no details or descriptions (`light`).
+async function catalogue(query, { light = false } = {}) {
   const products = await prepare(
-    'SELECT id, sku, name, brand, category, price_pence, photo_url, description, group_id, size, colour, created_at FROM products WHERE show_online AND active = 1 AND price > 0 ORDER BY id'
+    `SELECT id, sku, name, brand, category, price_pence, photo_url, ${light ? "'' AS description" : 'description'}, group_id, size, colour, created_at
+       FROM products WHERE show_online AND active = 1 AND price > 0 ORDER BY id`
   ).all();
   const ids = products.map((p) => p.id);
-  const groups = new Map((await prepare('SELECT id, name, category, description, photo_url FROM product_groups').all()).map((g) => [g.id, g]));
-  const details = new Map((await prepare('SELECT id, category_id, name, kind, unit, choices, position FROM category_details ORDER BY position, id').all()).map((x) => [x.id, x]));
+  const groups = new Map((await prepare(`SELECT id, name, category, ${light ? "'' AS description" : 'description'}, photo_url FROM product_groups`).all()).map((g) => [g.id, g]));
+  const details = light ? new Map() : new Map((await prepare('SELECT id, category_id, name, kind, unit, choices, position FROM category_details ORDER BY position, id').all()).map((x) => [x.id, x]));
   const answers = new Map(ids.map((id) => [id, new Map()]));
-  for (const a of await prepare('SELECT product_id, detail_id, value_number, value_text FROM product_details WHERE product_id = ANY(?::int[])').all(ids)) {
-    if (!details.has(a.detail_id)) continue;
-    const value = a.value_number === null ? a.value_text : Number(a.value_number);
-    answers.get(a.product_id).set(a.detail_id, { value, key: tickKey(details.get(a.detail_id), value) });
+  if (!light) {
+    for (const a of await prepare('SELECT product_id, detail_id, value_number, value_text FROM product_details WHERE product_id = ANY(?::int[])').all(ids)) {
+      if (!details.has(a.detail_id)) continue;
+      const value = a.value_number === null ? a.value_text : Number(a.value_number);
+      answers.get(a.product_id).set(a.detail_id, { value, key: tickKey(details.get(a.detail_id), value) });
+    }
   }
   const sites = await prepare('SELECT id, name FROM sites ORDER BY id').all();
   // With one shop, that shop is always the chosen one; a shop that isn't this business's is ignored.
@@ -84,6 +89,9 @@ function unitsOf(products, groups, answers) {
     u.low = Math.min(...prices);
     u.high = Math.max(...prices);
     u.added = Math.min(...u.items.map((i) => new Date(i.created_at).getTime()));
+    // What a search looks in, lowered once (searchAnswer, suggestAnswer).
+    u.lowName = lower(u.name);
+    u.fields = [u.name, u.brand, u.category, ...u.items.flatMap((i) => [i.sku, i.size, i.colour])].map(lower);
   }
   return units;
 }
@@ -116,27 +124,33 @@ function filtersFrom(query, details, own) {
   return { ticks, brands: brands.length ? new Set(brands.map(lower)) : null, from: pence('from'), to: pence('to'), ready: query.get('ready') === '1' };
 }
 
+// A product passes when one of its sizes meets every filter at once: a red
+// size that is ready and a blue one at the price asked for aren't one that is
+// both (decided while building, Jack's November file). Brand is the product's.
 function passes(u, f, ctx, skip = null) {
-  for (const [id, keys] of f.ticks) {
-    if (skip === `d${id}`) continue;
-    if (!u.items.some((i) => keys.has(i.answers.get(id)?.key))) return false;
-  }
   if (skip !== 'brand' && f.brands && !f.brands.has(lower(u.brand))) return false;
-  if (skip !== 'price' && f.from !== null && u.high < f.from) return false;
-  if (skip !== 'price' && f.to !== null && u.low > f.to) return false;
-  if (skip !== 'ready' && f.ready && ctx.shop && !ready(u, ctx)) return false;
+  return u.items.some((i) => fits(i, f, ctx, skip));
+}
+function fits(i, f, ctx, skip) {
+  for (const [id, keys] of f.ticks) if (skip !== `d${id}` && !keys.has(i.answers.get(id)?.key)) return false;
+  const price = Number(i.price_pence);
+  if (skip !== 'price' && f.from !== null && price < f.from) return false;
+  if (skip !== 'price' && f.to !== null && price > f.to) return false;
+  if (skip !== 'ready' && f.ready && ctx.shop && !(ctx.free(i.id, ctx.shop.id) > 0)) return false;
   return true;
 }
 const ready = (u, { shop, free }) => u.items.some((i) => free(i.id, shop.id) > 0);
 
-// Each filter's counts leave its own ticks out, so another value can still be added.
+// Each filter's counts leave its own ticks out, so another value can still be
+// added, and count a product's sizes only where they meet the other filters.
 function facets(units, f, ctx, ownDetails) {
   const count = (skip) => units.filter((u) => passes(u, f, ctx, skip));
   const details = ownDetails.map((detail) => {
     const seen = new Map();
-    for (const u of count(`d${detail.id}`)) {
+    const skip = `d${detail.id}`;
+    for (const u of count(skip)) {
       const mine = new Map();
-      for (const i of u.items) { const a = i.answers.get(detail.id); if (a?.key) mine.set(a.key, a.value); }
+      for (const i of u.items) { const a = i.answers.get(detail.id); if (a?.key && fits(i, f, ctx, skip)) mine.set(a.key, a.value); }
       for (const [key, value] of mine) seen.set(key, { value, count: (seen.get(key)?.count ?? 0) + 1 });
     }
     const values = [...seen.values()];
@@ -147,34 +161,48 @@ function facets(units, f, ctx, ownDetails) {
   });
   const brands = new Map();
   for (const u of count('brand')) if (u.brand) brands.set(u.brand, (brands.get(u.brand) ?? 0) + 1);
-  const priced = count('price');
+  const prices = count('price').flatMap((u) => u.items.filter((i) => fits(i, f, ctx, 'price')).map((i) => Number(i.price_pence)));
   return {
     details,
     brands: [...brands].map(([value, n]) => ({ value, count: n })).sort((a, b) => a.value.localeCompare(b.value, 'en-GB')),
-    price: priced.length ? { lowPence: Math.min(...priced.map((u) => u.low)), highPence: Math.max(...priced.map((u) => u.high)) } : null,
+    price: prices.length ? { lowPence: Math.min(...prices), highPence: Math.max(...prices) } : null,
     // No shop chosen: the filter asks for one (wb-category).
-    ready: ctx.shop ? { shop: ctx.shop.name, count: count('ready').filter((u) => ready(u, ctx)).length } : null,
+    ready: ctx.shop ? { shop: ctx.shop.name, count: units.filter((u) => passes(u, { ...f, ready: true }, ctx)).length } : null,
   };
 }
 
 const SORTS = {
   az: byName,
   'price-asc': (a, b) => a.low - b.low || byName(a, b),
-  'price-desc': (a, b) => b.low - a.low || byName(a, b),
+  'price-desc': (a, b) => b.high - a.high || byName(a, b),
   newest: (a, b) => b.added - a.added || b.id - a.id,
 };
 
 function page(units, query, best) {
-  const sort = SORTS[query.get('sort')] ?? best ?? byName;
+  const asked = query.get('sort');
+  const sort = (asked !== null && Object.hasOwn(SORTS, asked) ? SORTS[asked] : null) ?? best ?? byName;
   const after = Math.max(0, Number.parseInt(query.get('after') ?? '0', 10) || 0);
   const sorted = [...units].sort(sort);
   return { sorted, after, next: after + PAGE < sorted.length ? after + PAGE : null, shown: sorted.slice(after, after + PAGE) };
 }
 
-// The details every size of it shares, in its category's order.
-function sharedDetails(u, details) {
+// A category and those above it, top first, as Stock reads them (lib/product-details.js chainOf).
+function chainIn(ctx, path) {
+  if (!path || path === NONE) return [];
+  const parts = partsOf(path);
+  return parts.map((_, i) => ctx.categories.find((c) => c.path === parts.slice(0, i + 1).join(JOIN))).filter(Boolean);
+}
+// A category's details and those it has from the categories above it, top first (Stock's spec).
+const chainDetails = (ctx, path) => chainIn(ctx, path).flatMap((c) => [...ctx.details.values()].filter((x) => x.category_id === c.id));
+// A category's filters: none for one with types, whose types each have their own (wb-category-parent).
+const filterDetails = (ctx, category) => (ctx.categories.some((c) => c.parent_id === category.id) ? [] : chainDetails(ctx, category.path));
+
+// The details of its category every size of it shares, top of the tree first.
+// An answer kept from a category it was in before is no detail of it now.
+function sharedDetails(u, ctx) {
   const out = [];
-  for (const [id, detail] of details) {
+  for (const detail of chainDetails(ctx, u.category)) {
+    const id = detail.id;
     const first = u.items[0].answers.get(id);
     if (!first || !u.items.every((i) => i.answers.get(id)?.key === first.key)) continue;
     out.push({ name: detail.name, value: first.value, unit: detail.kind === 'number' ? detail.unit : null });
@@ -197,7 +225,7 @@ function card(u, ctx) {
   return {
     id: u.id, name: u.name, brand: u.brand ?? null, photo: u.photo ?? u.items.find((i) => i.photo_url)?.photo_url ?? null,
     pricePence: u.low, priceHighPence: u.high > u.low ? u.high : null,
-    details: sharedDetails(u, ctx.details), stock: cardStock(u, ctx),
+    details: sharedDetails(u, ctx), stock: cardStock(u, ctx),
   };
 }
 
@@ -207,14 +235,15 @@ function listAnswer(units, f, ctx, ownDetails, query, best) {
   return { products: shown.map((u) => card(u, ctx)), total: sorted.length, after: next, filters: facets(units, f, ctx, ownDetails), shop: ctx.shop && { id: ctx.shop.id, name: ctx.shop.name } };
 }
 
-const ownDetailsOf = (ctx, categoryId) => [...ctx.details.values()].filter((x) => x.category_id === categoryId);
-
 /** GET /api/site/products?category=&d<id>=&brand=&from=&to=&ready=&sort=&shop=&after= */
 export async function productsAnswer({ query }) {
+  const id = idOf(query.get('category'));
+  // A category that isn't there costs no catalogue.
+  if (id === null || !(await prepare('SELECT 1 FROM product_categories WHERE id = ?').get(id))) throw new NotFound();
   const ctx = await catalogue(query);
-  const category = ctx.categories.find((c) => c.id === idOf(query.get('category')));
+  const category = ctx.categories.find((c) => c.id === id);
   if (!category) throw new NotFound();
-  const own = ownDetailsOf(ctx, category.id);
+  const own = filterDetails(ctx, category);
   const units = ctx.units.filter((u) => within(u.category, category.path));
   const f = filtersFrom(query, ctx.details, new Set(own.map((x) => x.id)));
   const types = ctx.categories.filter((c) => c.parent_id === category.id).map((c) => ({ id: c.id, name: c.name, products: units.filter((u) => within(u.category, c.path)).length }));
@@ -240,7 +269,7 @@ export async function productAnswer({ query, params }) {
     pricePence: u.low, priceHighPence: u.high > u.low ? u.high : null,
     category: category ? { id: category.id, name: category.name, path: category.path } : null,
     photos,
-    specifications: sharedDetails(u, ctx.details),
+    specifications: sharedDetails(u, ctx),
     sizes: u.group ? distinct('size') : [],
     colours: u.group ? distinct('colour') : [],
     items: u.group ? u.items.map((i) => ({ id: i.id, size: i.size, colour: i.colour, pricePence: Number(i.price_pence), stock: pageStock(i.id, ctx) })) : [],
@@ -250,11 +279,14 @@ export async function productAnswer({ query, params }) {
 }
 
 // Searching: every word found in a name, brand, part code, category, size or
-// colour; never a supplier or barcode. Best match puts a name match first.
-const wordsOf = (q) => lower(q).split(/\s+/).filter(Boolean);
-const fieldsOf = (u) => [u.name, u.brand, u.category, ...u.items.flatMap((i) => [i.sku, i.size, i.colour])].map(lower);
-const found = (u, words) => { const fields = fieldsOf(u); return words.every((w) => fields.some((x) => x.includes(w))); };
-const inName = (u, words) => words.every((w) => lower(u.name).includes(w));
+// colour; never a supplier or barcode. Best match puts a name match first. A
+// search reads its first 100 letters and first eight words, so a long one
+// costs no more than a short one (decided while building, Jack's November file).
+const QUERY_LETTERS = 100;
+const QUERY_WORDS = 8;
+const wordsOf = (q) => lower(String(q ?? '').slice(0, QUERY_LETTERS)).split(/\s+/).filter(Boolean).slice(0, QUERY_WORDS);
+const found = (u, words) => words.every((w) => u.fields.some((x) => x.includes(w)));
+const inName = (u, words) => words.every((w) => u.lowName.includes(w));
 const bestFor = (words) => (a, b) => Number(!inName(a, words)) - Number(!inName(b, words)) || byName(a, b);
 const named = (name, words) => words.length > 0 && words.every((w) => lower(name).includes(w));
 
@@ -280,7 +312,7 @@ function measureOf(words, ctx) {
     const key = `n${keyOf(m[1])}`;
     for (const category of ctx.categories.filter((c) => named(c.name, rest))) {
       const units = ctx.units.filter((u) => within(u.category, category.path));
-      const detail = ownDetailsOf(ctx, category.id).find((x) => x.kind === 'number' && lower(x.unit) === lower(unitWord)
+      const detail = chainDetails(ctx, category.path).find((x) => x.kind === 'number' && lower(x.unit) === lower(unitWord)
         && units.some((u) => u.items.some((it) => it.answers.get(x.id)?.key === key)));
       if (detail) return { category, detail, value: Number(m[1]), key };
     }
@@ -294,7 +326,7 @@ export async function searchAnswer({ query }) {
   const ctx = await catalogue(query);
   const measure = measureOf(words, ctx);
   const chosen = measure?.category ?? ctx.categories.find((c) => c.id === idOf(query.get('category'))) ?? null;
-  const own = chosen ? ownDetailsOf(ctx, chosen.id) : [];
+  const own = chosen ? filterDetails(ctx, chosen) : [];
   const f = filtersFrom(query, ctx.details, new Set(own.map((x) => x.id)));
   let matched;
   if (measure) {
@@ -303,9 +335,11 @@ export async function searchAnswer({ query }) {
   } else {
     matched = words.length ? ctx.units.filter((u) => found(u, words)) : [];
   }
-  // The categories to narrow to count everything found, whatever category is picked.
+  // The categories to narrow to count everything found, whatever category is
+  // picked and whatever its details ticked; the measure asked for still counts.
+  const counting = { ...f, ticks: measure ? new Map([[measure.detail.id, f.ticks.get(measure.detail.id)]]) : new Map() };
   const counted = new Map();
-  for (const u of matched.filter((x) => passes(x, f, ctx))) {
+  for (const u of matched.filter((x) => passes(x, counting, ctx))) {
     const c = ctx.categories.find((x) => x.path === u.category);
     if (c) counted.set(c.id, { id: c.id, name: c.name, count: (counted.get(c.id)?.count ?? 0) + 1, path: c.path });
   }
@@ -331,7 +365,7 @@ export async function suggestAnswer({ query }) {
   const q = String(query.get('q') ?? '').trim();
   if (q.length < 2) return { products: [], repairs: [], categories: [], pages: [] };
   const words = wordsOf(q);
-  const ctx = await catalogue(query);
+  const ctx = await catalogue(query, { light: true });
   const products = ctx.units.filter((u) => found(u, words)).sort(bestFor(words)).slice(0, SUGGESTED);
   return {
     products: products.map((u) => ({ id: u.id, name: u.name, code: u.group ? null : u.items[0].sku ?? null, pricePence: u.low, stock: cardStock(u, ctx) })),

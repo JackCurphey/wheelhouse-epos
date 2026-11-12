@@ -80,30 +80,43 @@ before(async () => {
     ids.drivetrain = await category('Drivetrain', 'Drivetrain');
     ids.derailleurs = await category('Derailleurs', 'Drivetrain › Derailleurs', ids.drivetrain);
     ids.gears = await detail(ids.derailleurs, 'Number of gears', 'number', null, 0);
+    // Drivetrain passes its own detail down to Derailleurs (Stock: "A category SHALL pass its details down").
+    ids.driveKind = await detail(ids.drivetrain, '[Drive kind]', 'text', null, 0);
     ids.chain = await product({ name: '[Chain]', brand: '[Brand 3]', category: 'Drivetrain', price: 12 });
     ids.mech = await product({ name: '[Rear mech]', brand: '[Brand 3]', category: 'Drivetrain › Derailleurs', price: 28 });
     await answer(ids.gears, ids.mech, 11);
+    await answer(ids.driveKind, ids.chain, '[Kind 1]');
+    await answer(ids.driveKind, ids.mech, '[Kind 1]');
 
     // Brakes: the product the drawings show, with a choice detail, cost and supplier (wb-product).
     ids.brakes = await category('Brakes', 'Brakes');
     ids.compound = await detail(ids.brakes, '[Compound]', 'choice', null, 0, ['[Resin]', '[Metal]']);
     ids.pads = await product({ sku: 'B05S-RX', name: 'Shimano brake pads B05S-RX', brand: 'Shimano', category: 'Brakes', price: 28, description: '[About it]', photo: '/uploads/[pads].jpg' });
     await answer(ids.compound, ids.pads, '[Resin]');
+    // An answer kept from when the pads sat in Bearings: moving a product doesn't take its old answers off.
+    await answer(ids.inner, ids.pads, 30);
     await stock(ids.bolton, ids.pads, 4);
     ids.rotor = await product({ name: '[Disc rotor]', brand: 'Shimano', category: 'Brakes', price: 30 });
 
     // A jersey in sizes and colours (wb-product-sizes, wb-product-size-other).
     ids.jerseyGroup = (await one("INSERT INTO product_groups (name, category, description, photo_url) VALUES ('[Jersey]', '[Clothing]', '[Jersey words]', '/uploads/[jersey].jpg') RETURNING id")).id;
-    await category('[Clothing]', '[Clothing]');
+    ids.clothing = await category('[Clothing]', '[Clothing]');
+    ids.fit = await detail(ids.clothing, '[Fit]', 'text', null, 0);
     const size = (s, colour, price, photo, extra = {}) => product({ name: '[Jersey]', brand: '[Brand 4]', category: '[Clothing]', price, group: ids.jerseyGroup, size: s, colour, photo, ...extra });
     ids.sRed = await size('S', '[Colour 1]', 30, '/uploads/[jersey 1].jpg');
     ids.mRed = await size('M', '[Colour 1]', 32, '/uploads/[jersey].jpg');
     ids.sBlue = await size('S', '[Colour 2]', 30, '/uploads/[jersey 2].jpg');
     ids.mBlueOff = await size('M', '[Colour 2]', 32, '/uploads/[jersey off].jpg', { online: false });
+    await answer(ids.fit, ids.sRed, '[Fit 1]');
+    await answer(ids.fit, ids.mRed, '[Fit 2]');
+    await answer(ids.fit, ids.sBlue, '[Fit 1]');
     await stock(ids.bolton, ids.sRed, 1);
     await stock(ids.bolton, ids.mRed, 0);
     await stock(ids.bury, ids.mRed, 2);
     await stock(ids.bolton, ids.mBlueOff, 9);
+    // A cap priced between the jersey's sizes, for Price, high to low.
+    await category('[Hats]', '[Hats]');
+    ids.cap = await product({ name: '[Cap]', brand: '[Brand 4]', category: '[Hats]', price: 31 });
 
     // Bikes: the last one at Bolton held for a Cycle to Work order, by frame and by count (wb-product-held).
     await category('[Bikes]', '[Bikes]');
@@ -116,6 +129,13 @@ before(async () => {
     const customer = (await one("INSERT INTO customers (name) VALUES ('[Customer]') RETURNING id")).id;
     await prepare("INSERT INTO c2w_orders (customer_id, provider_id, product_id, site_id, held_at, stage, quote_number, total_pence, customer_code) VALUES (?, ?, ?, ?, now(), 'waiting', 1, 90000, '[code 1]')")
       .run(customer, provider, ids.counted, ids.bolton);
+    // One left at Bolton: an order that has been collected, and an open one holding nothing, leave it free.
+    ids.notHeld = await product({ name: '[Bike not held]', category: '[Bikes]', price: 800 });
+    await stock(ids.bolton, ids.notHeld, 1);
+    await prepare("INSERT INTO c2w_orders (customer_id, provider_id, product_id, site_id, held_at, stage, quote_number, total_pence, customer_code) VALUES (?, ?, ?, ?, now(), 'collected', 2, 80000, '[code 2]')")
+      .run(customer, provider, ids.notHeld, ids.bolton);
+    await prepare("INSERT INTO c2w_orders (customer_id, provider_id, product_id, site_id, held_at, stage, quote_number, total_pence, customer_code) VALUES (?, ?, ?, ?, NULL, 'quote', 3, 80000, '[code 3]')")
+      .run(customer, provider, ids.notHeld, ids.bolton);
 
     // Repairs: one bookable online, one not, one switched off.
     await prepare("INSERT INTO workshop_services (name, price, price_pence, minutes, bookable_online, active, updated_at) VALUES ('Brake service', 35, 3500, 60, 1, 1, now())").run();
@@ -150,7 +170,7 @@ function ask(path, { from = nextVisitor() } = {}) {
       res.on('end', () => {
         let body = null;
         try { body = JSON.parse(text); } catch { body = text; }
-        resolve({ status: res.statusCode, body });
+        resolve({ status: res.statusCode, body, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -254,14 +274,17 @@ test('cards carry the stock line for the chosen shop, and none when no shop is c
 test('a parent category lists its subcategories and offers only Availability, Brand and Price; a subcategory its own details', async () => {
   const parent = await list({ category: ids.drivetrain });
   assert.deepEqual(parent.types, [{ id: ids.derailleurs, name: 'Derailleurs', products: 1 }]);
-  assert.deepEqual(parent.filters.details, []);
+  assert.deepEqual(parent.filters.details, [], 'not even its own details, which its types have too');
   assert.deepEqual(names(parent), ['[Chain]', '[Rear mech]']);
   assert.deepEqual(parent.filters.brands, [{ value: '[Brand 3]', count: 2 }]);
   const child = await list({ category: ids.derailleurs });
   assert.deepEqual(child.category, { id: ids.derailleurs, name: 'Derailleurs', path: 'Drivetrain › Derailleurs', parentId: ids.drivetrain });
   assert.deepEqual(child.types, []);
-  assert.deepEqual(child.filters.details.map((x) => x.name), ['Number of gears']);
+  // Its own details and those passed down from above, top of the tree first.
+  assert.deepEqual(child.filters.details.map((x) => x.name), ['[Drive kind]', 'Number of gears']);
   assert.deepEqual(names(child), ['[Rear mech]']);
+  assert.equal((await list({ category: ids.derailleurs, [d(ids.driveKind)]: '[Kind 1]' })).total, 1, 'a detail from above filters');
+  assert.deepEqual(child.products[0].details.map((x) => x.name), ['[Drive kind]', 'Number of gears']);
   // An unknown category, or another shop's, is a page that can't be found.
   assert.equal((await site(north, '/products', { category: 999999 })).status, 404);
   assert.deepEqual((await site(south, '/products', { category: ids.bearings })).body, { error: 'We can’t find that page' });
@@ -270,6 +293,13 @@ test('a parent category lists its subcategories and offers only Availability, Br
 test('the sorts: A to Z, price low to high and high to low, and newest', async () => {
   assert.deepEqual(letters(await list({ category: ids.bearings, sort: 'az' })), ['A', 'B', 'C', 'D', 'E', 'F']);
   assert.deepEqual(letters(await list({ category: ids.bearings, sort: 'price-asc' })), ['A', 'B', 'C', 'D', 'E', 'F']);
+  // Where price and name disagree: the £30 jersey before the £31 cap, though Cap comes first A to Z.
+  assert.deepEqual(names(ok(await site(north, '/search', { q: '[brand 4]', sort: 'price-asc' }))), ['[Jersey]', '[Cap]']);
+  assert.deepEqual(names(ok(await site(north, '/search', { q: '[brand 4]', sort: 'az' }))), ['[Cap]', '[Jersey]']);
+  // A sort that isn't one is A to Z, never a failure.
+  for (const sort of ['__proto__', 'constructor', 'toString', '[nothing]']) {
+    assert.deepEqual(letters(await list({ category: ids.bearings, sort })), ['A', 'B', 'C', 'D', 'E', 'F'], sort);
+  }
   assert.deepEqual(letters(await list({ category: ids.bearings, sort: 'price-desc' })), ['H', 'G', 'F', 'E', 'D', 'C']);
   assert.deepEqual(letters(await list({ category: ids.bearings, sort: 'newest' })), ['C', 'G', 'E', 'H', 'A', 'D']);
   // Paging keeps the sort.
@@ -284,6 +314,7 @@ test('a product page answers the product with its stock at the chosen shop, neve
   assert.equal(pads.description, '[About it]');
   assert.deepEqual(pads.category, { id: ids.brakes, name: 'Brakes', path: 'Brakes' });
   assert.deepEqual(pads.photos, ['/uploads/[pads].jpg']);
+  // Only its category's details: never an answer left from a category it has moved out of.
   assert.deepEqual(pads.specifications, [{ name: '[Compound]', value: '[Resin]', unit: null }]);
   assert.deepEqual(pads.stock, { line: 'ready', shop: 'Bolton', qty: 4 });
   assert.deepEqual(pads.items, []);
@@ -318,6 +349,21 @@ test('a product with sizes and colours: each with its stock line, photos with no
   const clothing = await list({ category: (await ok(await site(north, '/categories'))).find((c) => c.name === '[Clothing]').id, shop: ids.bolton });
   assert.deepEqual(clothing.products.map((p) => [p.id, p.name, p.pricePence, p.priceHighPence]), [[ids.sRed, '[Jersey]', 3000, 3200]]);
   assert.equal(clothing.total, 1);
+  // Ready at Bolton, only its small red one counts: its fit and its price, not the medium's.
+  const readyClothing = await list({ category: ids.clothing, shop: ids.bolton, ready: 1 });
+  assert.deepEqual(readyClothing.filters.details.find((x) => x.name === '[Fit]').values, [{ value: '[Fit 1]', count: 1 }]);
+  assert.deepEqual(readyClothing.filters.price, { lowPence: 3000, highPence: 3000 });
+  assert.deepEqual(clothing.filters.details.find((x) => x.name === '[Fit]').values, [{ value: '[Fit 1]', count: 1 }, { value: '[Fit 2]', count: 1 }]);
+  // The menu counts it once too, so its count agrees with the category page.
+  assert.equal((await ok(await site(north, '/categories'))).find((c) => c.name === '[Clothing]').products, 1);
+  // Price, high to low goes by its dearest size: £32 before the £31 cap.
+  assert.deepEqual(names(ok(await site(north, '/search', { q: '[brand 4]', sort: 'price-desc' }))), ['[Jersey]', '[Cap]']);
+  // A product with sizes is found by one size that meets every filter, not by two sizes meeting one each:
+  // the £32 size is sold out at Bolton and the ready one is £30.
+  const clothingId = (await ok(await site(north, '/categories'))).find((c) => c.name === '[Clothing]').id;
+  assert.equal((await list({ category: clothingId, shop: ids.bolton, ready: 1, from: 32, to: 32 })).total, 0);
+  assert.equal((await list({ category: clothingId, shop: ids.bolton, ready: 1, from: 30, to: 30 })).total, 1);
+  assert.equal((await list({ category: clothingId, from: 31, to: 31.5 })).total, 0, 'no size costs between £31 and £31.50');
   // The size that is off the website isn't a page of its own.
   assert.equal((await site(north, `/products/${ids.mBlueOff}`)).status, 404);
 });
@@ -327,7 +373,8 @@ test('the last bike held for a Cycle to Work order counts as sold out, by frame 
     assert.deepEqual(ok(await site(north, `/products/${id}`, { shop: ids.bolton })).stock, { line: 'sold-out', shop: 'Bolton' });
   }
   const bikes = await list({ category: (await ok(await site(north, '/categories'))).find((c) => c.name === '[Bikes]').id, shop: ids.bolton, ready: 1 });
-  assert.equal(bikes.total, 0);
+  assert.deepEqual(names(bikes), ['[Bike not held]']);
+  assert.deepEqual(ok(await site(north, `/products/${ids.notHeld}`, { shop: ids.bolton })).stock, { line: 'ready', shop: 'Bolton', qty: 1 });
 });
 
 test('a product that is off the website, or another shop’s, is a page that can’t be found', async () => {
@@ -337,6 +384,8 @@ test('a product that is off the website, or another shop’s, is a page that can
     const res = await site(north, `/products/${id}`);
     assert.equal(res.status, 404);
     assert.deepEqual(res.body, { error: 'We can’t find that page' });
+    // Nothing in between may keep it: the product can be back on the website a moment later.
+    assert.equal(res.headers['cache-control'], 'no-store');
   }
   assert.equal((await site(south, `/products/${ids.pads}`)).status, 404);
   assert.equal((await site(north, `/products/${ids.southBearing}`)).status, 404);
@@ -384,6 +433,10 @@ test('search answers repairs and pages that match and products by best match, wi
   assert.equal(brake.measure, null);
   assert.deepEqual(names(ok(await site(north, '/search', { q: 'brake', sort: 'price-desc' }))), ['[Disc rotor]', 'Shimano brake pads B05S-RX']);
   assert.deepEqual(names(ok(await site(north, '/search', { q: 'brake', category: ids.brakes, ready: 1, shop: ids.bolton }))), ['Shimano brake pads B05S-RX']);
+  // The categories to narrow to keep counting what was found elsewhere when a detail is ticked.
+  const ticked = ok(await site(north, '/search', { q: '[brand 3]', category: ids.derailleurs, [d(ids.gears)]: 11 }));
+  assert.deepEqual(names(ticked), ['[Rear mech]']);
+  assert.deepEqual(ticked.filters.categories, [{ id: ids.drivetrain, name: 'Drivetrain', count: 1 }, { id: ids.derailleurs, name: 'Derailleurs', count: 1 }]);
   // The part code, a size or a colour finds it too; the supplier and barcode never do.
   assert.deepEqual(names(ok(await site(north, '/search', { q: 'B05S-RX' }))), ['Shimano brake pads B05S-RX']);
   assert.deepEqual(names(ok(await site(north, '/search', { q: '[Colour 2]' }))), ['[Jersey]']);
@@ -401,7 +454,23 @@ test('"bearing 30 mm" answers Bearings with inner diameter 30 mm ticked', async 
   assert.deepEqual(letters(found), ['A', 'B', 'F']);
   assert.equal(found.total, 3);
   assert.deepEqual(found.filters.details.map((x) => x.name), ['Inner diameter', 'Outer diameter', '[Material]']);
+  // Narrowing by category counts only the bearings that measure 30 mm.
+  assert.deepEqual(found.filters.categories, [{ id: ids.bearings, name: 'Bearings', count: 3 }]);
   assert.deepEqual(letters(ok(await site(north, '/search', { q: 'bearing 30mm' }))), ['A', 'B', 'F']);
+});
+
+test('a long search reads only its first eight words, so it costs no more than a short one', async () => {
+  const q = `brake pads ${'shimano '.repeat(6)}[nothing like it]`;
+  assert.deepEqual(names(ok(await site(north, '/search', { q }))), ['Shimano brake pads B05S-RX']);
+  assert.deepEqual(ok(await site(north, '/suggest', { q })).products.map((p) => p.name), ['Shimano brake pads B05S-RX']);
+  // And a word is no longer than a hundred letters in all.
+  const long = ok(await site(north, '/search', { q: `brake${'e'.repeat(200)}` }));
+  assert.equal(long.total, 0);
+  const many = 'a '.repeat(5000);
+  const started = Date.now();
+  assert.equal((await site(north, '/suggest', { q: many })).status, 200);
+  assert.equal((await site(north, '/search', { q: many })).status, 200);
+  assert.ok(Date.now() - started < 2000, `${Date.now() - started} ms`);
 });
 
 test('a search that finds nothing answers empty', async () => {
