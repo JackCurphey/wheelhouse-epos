@@ -343,6 +343,9 @@ POST /api/stock/prices/:id/undo
 GET /api/stock-frames/check
 GET /api/payment-settings
 PUT /api/payment-settings
+GET /api/payment-ways-other
+POST /api/payment-ways-other
+DELETE /api/payment-ways-other/:id
 GET /api/customers/:id/store-credit
 POST /api/customers/:id/store-credit
 POST /api/store-credit-entries/:id/undo
