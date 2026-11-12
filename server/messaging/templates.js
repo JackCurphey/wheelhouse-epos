@@ -8,6 +8,7 @@
 import { prepare } from '../db.js';
 
 const BOOKING = ['Customer’s first name', 'Bike', 'Service', 'Booked day and time', 'Shop name', 'Link to the booking', 'Job number'];
+const C2W = ['Customer’s first name', 'Bike', 'Hold until', 'Quote number', 'Link to your Cycle to Work bike', 'Shop name'];
 
 export const TEMPLATES = {
   quote_to_approve: {
@@ -166,6 +167,55 @@ export const TEMPLATES = {
     subject: 'Thanks for coming to [Shop name]',
     tapIns: ['Customer’s first name', 'Shop name', 'Link to review'],
   },
+  // The four Cycle to Work messages (decision 2026-10-02-cycle-to-work-review
+  // point 6; openspec/changes/cycle-to-work design 9), each switchable off. Names
+  // and when they go as drawn (cw-messages); wording as drawn on cw-texts-hold and
+  // cw-texts-certificate. Subjects aren't drawn. "Your hold ends on [date]"'s
+  // wording isn't drawn either: the default taken, Jack can overrule (spec-c2w.md
+  // question 6). Queued by server/c2w/messages.js.
+  c2w_put_aside: {
+    group: 'c2w',
+    name: 'Your bike is put aside',
+    when: 'When a Cycle to Work bike is held for the customer, and again when the hold is made longer',
+    wording: 'Hi [Customer’s first name], we’re now holding [Bike] for you until [Hold until]. Quote [Quote number]. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work bike is put aside — [Shop name]',
+    tapIns: C2W,
+  },
+  c2w_certificate: {
+    group: 'c2w',
+    name: 'Certificate received',
+    when: 'When the scheme certificate arrives',
+    wording: 'Hi [Customer’s first name], your Cycle to Work certificate has reached us. We’re getting [Bike] ready and we’ll text you when you can collect it. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work certificate has reached us — [Shop name]',
+    tapIns: C2W,
+  },
+  // Certificate received's second wording, for a certificate for less with the
+  // order kept (cw-texts-certificate's third text): its on/off and subject follow the row's.
+  c2w_certificate_less: {
+    partOf: 'c2w_certificate',
+    group: 'c2w',
+    name: 'Certificate received',
+    when: 'When the certificate is for less than the order, and the order is kept',
+    wording: 'Hi [Customer’s first name], your certificate for [Certificate amount] has reached us. You pay [Amount to pay] when you collect. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work certificate has reached us — [Shop name]',
+    tapIns: [...C2W, 'Certificate amount', 'Amount to pay'],
+  },
+  c2w_ready: {
+    group: 'c2w',
+    name: 'Ready to collect',
+    when: 'When the Cycle to Work bike is ready',
+    wording: 'Hi [Customer’s first name], your Cycle to Work certificate has reached us and [Bike] is ready to collect. Quote [Quote number]. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work bike is ready to collect — [Shop name]',
+    tapIns: C2W,
+  },
+  c2w_hold_ending: {
+    group: 'c2w',
+    name: 'Your hold ends on [date]',
+    when: '[n] days before a hold ends',
+    wording: 'Hi [Customer’s first name], your hold on [Bike] ends on [Hold until]. Quote [Quote number]. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work hold ends soon — [Shop name]',
+    tapIns: C2W,
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
@@ -174,7 +224,9 @@ export const TEMPLATES = {
 // The service reminder joined 25 Oct (openspec/changes/service-reminder-send),
 // and the review request (openspec/changes/review-requests). Reply to a
 // message joined 26 Oct (openspec/changes/ask-the-shop-server).
-export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request'];
+export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request',
+  // Cycle to Work's four (openspec/changes/cycle-to-work design 9).
+  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

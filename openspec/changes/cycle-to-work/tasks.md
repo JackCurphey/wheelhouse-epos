@@ -106,6 +106,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 9. Messages and the customer's view (pull request 9, about 500 lines, risky: messaging and public route)
 
+Split in three while building (decided-while-building, 12 Nov): 9a the
+customer's link and the account's orders on the server (9.2, 9.3); 9b their
+screens (the `cw-customer-view` and `ac-account-c2w` parts of 9.4); 9c the
+four messages (9.1 and the message parts of 9.4).
+
 - [ ] 9.1 Test: the four message keys the decision names, with the drawn wording; each sent at its step only when on (**waiting for Jack:** "Your bike is no longer put aside" and "Your order is cancelled")
 - [ ] 9.2 Test: `GET /api/portal/c2w-links/:code` gives the allowed fields only; a wrong code gives nothing; rate limited
 - [ ] 9.3 Test: the signed-in account lists only the customer's own orders, with "What you pay at collection"

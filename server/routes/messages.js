@@ -47,8 +47,16 @@ const EXAMPLE = {
 };
 // Where a message's drawing fills a tap-in differently (bk-msg-change: the
 // new day's drop-off time is open).
+// The Cycle to Work texts' drawings (c2w.mjs cw-texts-*) keep their bike, date,
+// quote number and amounts as placeholders.
+const C2W_EXAMPLE = {
+  Bike: '[Bike] · [Size]', 'Hold until': '[date]', 'Quote number': '[quote number]',
+  'Certificate amount': '£[£]', 'Amount to pay': '£[£]', 'Link to your Cycle to Work bike': '[link]',
+};
 const EXAMPLE_FOR = {
   date_change_answered: { 'When to drop off': 'Drop your Trek Domane AL 3 off by [time], half an hour before your booking.' },
+  c2w_put_aside: C2W_EXAMPLE, c2w_certificate: C2W_EXAMPLE, c2w_certificate_less: C2W_EXAMPLE,
+  c2w_ready: C2W_EXAMPLE, c2w_hold_ending: C2W_EXAMPLE,
 };
 
 const asSetting = (t) => ({

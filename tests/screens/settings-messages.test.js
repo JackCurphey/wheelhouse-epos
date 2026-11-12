@@ -55,6 +55,7 @@ async function openSettings({ slowSettings = false, extra = [] } = {}) {
     if (u.pathname === '/api/workshop-settings') return slowSettings ? new Promise(() => {}) : reply(200, SETTINGS);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/message-templates') return reply(200, templates);
+    if (u.pathname === '/api/c2w/settings') return reply(200, { settings: { holdDays: 7, remindDays: 2, quoteValidDays: 30, orderRule: 'certificate', depositKind: 'percent', depositValue: null, depositOnCertificate: 'refund', depositOnPullOut: 'refund', howToApply: '', todayLines: false, noCertificateDays: null, paymentLateDays: null } });
     const put = u.pathname.match(/^\/api\/message-templates\/(\w+)$/);
     if (put && method === 'PUT') {
       if (failPut) return reply(500, { error: 'Internal error' });
@@ -333,4 +334,34 @@ test('Go back to Wheelhouse’s wording resets both wordings', async () => {
     '/api/message-templates/date_change_answered {"wording":null}',
     '/api/message-templates/date_change_declined {"wording":null}',
   ]));
+});
+
+// Cycle to Work decision 6 (setup.mjs C2W_MSGS, msgListOpen): the four messages
+// that send today, under their own heading with its note, before the booking
+// messages; "Your hold ends on [date]" says the shop's reminder days.
+const C2W = [
+  template({ key: 'c2w_put_aside', name: 'Your bike is put aside', when: 'When a Cycle to Work bike is held for the customer, and again when the hold is made longer', group: 'c2w' }),
+  template({ key: 'c2w_certificate', name: 'Certificate received', when: 'When the scheme certificate arrives', group: 'c2w' }),
+  template({ key: 'c2w_certificate_less', name: 'Certificate for less', when: 'When the certificate is for less than the order, and the order is kept', group: 'c2w', partOf: 'c2w_certificate' }),
+  template({ key: 'c2w_ready', name: 'Ready to collect', when: 'When the Cycle to Work bike is ready', group: 'c2w' }),
+  template({ key: 'c2w_hold_ending', name: 'Your hold ends on [date]', when: '[n] days before a hold ends', group: 'c2w' }),
+];
+test('the Cycle to Work messages sit under their own heading and note, before the booking messages', async () => {
+  const { ui } = await openSettings({ extra: C2W });
+  const list = await ui.findByText((_, el) => el?.getAttribute('data-msg-list') === 'true');
+  await ui.findByText('Your bike is put aside');
+  const headings = [...list.querySelectorAll('h5')].map((h) => h.textContent);
+  assert.deepEqual(headings, ['Cycle to Work messages', 'Booking messages']);
+  assert.ok(list.textContent.includes('Sent the way each customer chose: text, WhatsApp or email. The quote itself is always emailed, because it’s a document.'));
+  const c2wHeading = list.querySelectorAll('h5')[0];
+  const bookingHeading = list.querySelectorAll('h5')[1];
+  for (const name of ['Your bike is put aside', 'Certificate received', 'Ready to collect', 'Your hold ends on [date]']) {
+    const rows = [...list.querySelectorAll('span')].filter((el) => el.textContent === name);
+    assert.equal(rows.length, 1, `${name} is listed once`);
+    assert.ok(c2wHeading.compareDocumentPosition(rows[0]) & 4, `${name} is under its heading`);
+    assert.ok(rows[0].compareDocumentPosition(bookingHeading) & 4, `${name} is before the booking messages`);
+  }
+  // The for-less wording is inside Certificate received's box, not a row.
+  assert.equal(list.textContent.includes('Certificate for less'), false);
+  await ui.findByText('2 days before a hold ends');
 });
