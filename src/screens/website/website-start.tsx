@@ -19,6 +19,8 @@ const failed = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse co
 export function WebsiteStart({ state, onState }: { state: WebsiteState; onState: (next: WebsiteState) => void }) {
   const [later, setLater] = useState(false);
   const [step, setStep] = useState(1);
+  // Back and Next move focus to the new step's title, so a screen reader hears where it is.
+  const moved = useRef(false);
   const [kind, setKind] = useState<'wheelhouse' | 'shopify'>('wheelhouse');
   const [colour, setColour] = useState<string | null>(null);
   const [startWith, setStartWith] = useState<'every' | 'nothing'>('every');
@@ -54,11 +56,11 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
       setBusy(false);
     }
   }
-  const go = (n: number) => { setProblem(null); setStep(n); };
+  const go = (n: number) => { moved.current = true; setProblem(null); setStep(n); };
 
   if (step === 1) {
     return (
-      <Steps n={1} title="Wheelhouse’s website, or your Shopify shop?" sub="You can change this later." problem={problem}
+      <Steps moved={moved.current} n={1} title="Wheelhouse’s website, or your Shopify shop?" sub="You can change this later." problem={problem}
         back={<span className="flex flex-wrap items-center gap-2.5"><Button variant="ghost" onClick={() => setLater(true)}>Not now</Button><span className="text-size-13 text-[var(--wh-muted)]">The Website page will say “Not set up yet”</span></span>}
         next={<Button variant="accent" onClick={() => go(2)}>Next</Button>}>
         <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
@@ -71,7 +73,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   }
   if (kind === 'shopify') {
     return (
-      <Steps n={2} title="Connect your Shopify shop" sub="Connecting Shopify isn’t built yet." problem={null}
+      <Steps moved={moved.current} n={2} title="Connect your Shopify shop" sub="Connecting Shopify isn’t built yet." problem={null}
         back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>} next={null}>
         <p className="m-0 text-size-15">Choose Wheelhouse’s website for now, or come back to connect Shopify later.</p>
       </Steps>
@@ -79,7 +81,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
   }
   if (step === 2) {
     return (
-      <Steps n={2} title="Your logo and colour" sub="Wheelhouse suggests colours from your logo." problem={problem}
+      <Steps moved={moved.current} n={2} title="Your logo and colour" sub="Wheelhouse suggests colours from your logo." problem={problem}
         back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>}
         next={<Button variant="accent" onClick={() => go(3)}>Next</Button>}>
         <LookStep state={state} onState={onState} fromLogo={fromLogo} chosen={chosen} onChoose={(hex) => { setColour(hex); setProblem(null); }} onProblem={setProblem} />
@@ -87,7 +89,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
     );
   }
   return (
-    <Steps n={3} title="Start with every product online, or nothing?" sub="Either way, every category and product has its own “Show on website” switch afterwards." problem={problem}
+    <Steps moved={moved.current} n={3} title="Start with every product online, or nothing?" sub="Either way, every category and product has its own “Show on website” switch afterwards." problem={problem}
       back={<Button variant="ghost" onClick={() => go(2)}>Back</Button>}
       next={<Button variant="accent" disabled={busy} onClick={() => void makeIt()}>Make my website</Button>}>
       <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
@@ -107,9 +109,11 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
 }
 
 /** website.mjs `steps`: the step line, the bars, the title, the body and Back / Next. */
-function Steps({ n, title, sub, problem, back, next, children }: {
-  n: number; title: string; sub: string; problem: string | null; back: ReactNode; next: ReactNode; children: ReactNode;
+function Steps({ moved, n, title, sub, problem, back, next, children }: {
+  moved: boolean; n: number; title: string; sub: string; problem: string | null; back: ReactNode; next: ReactNode; children: ReactNode;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (moved) heading.current?.focus(); }, [moved, title]);
   return (
     <Page>
       <div className="flex w-full max-w-[720px] flex-col gap-[18px] self-center pt-2">
@@ -120,7 +124,7 @@ function Steps({ n, title, sub, problem, back, next, children }: {
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <h2 className="m-0 text-size-26 font-bold">{title}</h2>
+          <h2 ref={heading} tabIndex={-1} className="m-0 text-size-26 font-bold outline-none">{title}</h2>
           <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">{sub}</p>
         </div>
         {children}
@@ -181,7 +185,7 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
           {state.logo ? <img src={state.logo} alt="Your logo, uploaded" className="max-h-[120px] max-w-[90%] object-contain" /> : 'No logo yet'}
         </div>
         <LinkButton onClick={() => file.current?.click()}>{state.logo ? 'Change logo' : 'Add a logo'}</LinkButton>
-        <input ref={file} type="file" aria-label="Logo file" accept={PHOTO_TYPES.join(',')} hidden onChange={(e) => void upload(e.target.files?.[0])} />
+        <input ref={file} type="file" aria-label="Logo file" accept={PHOTO_TYPES.join(',')} hidden onChange={(e) => { const picked = e.target.files?.[0]; e.target.value = ''; void upload(picked); }} />
         <span className="text-size-13 leading-[1.4] text-[var(--wh-muted)]">No logo yet? Skip it — your shop’s name is shown instead, and you can add one later.</span>
       </div>
       <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
@@ -208,7 +212,7 @@ function LookStep({ state, onState, fromLogo, chosen, onChoose, onProblem }: {
         {another ? (
           <span className="flex items-center gap-2.5">
             <label htmlFor={anotherId} className="text-sm font-semibold">Another colour</label>
-            <input id={anotherId} type="color" value={chosen.toLowerCase()} onChange={(e) => pickAnother(e.target.value)} className="h-11 w-16 cursor-pointer rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)]" />
+            <input id={anotherId} type="color" autoFocus value={chosen.toLowerCase()} onChange={(e) => pickAnother(e.target.value)} className="h-11 w-16 cursor-pointer rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)]" />
           </span>
         ) : null}
         <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Every colour is checked so text on it stays easy to read.</p>
