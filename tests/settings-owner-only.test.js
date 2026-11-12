@@ -37,6 +37,10 @@ test('a staff member can read the settings but not change them', async () => {
   const sd = await as(jo)('/api/shop-details', { method: 'PUT', body: { vatNumber: '[VAT number]' } });
   assert.equal(sd.status, 403, JSON.stringify(sd.body));
   assert.deepEqual(sd.body, REFUSED);
+  // When the VAT quarter starts is the Owner's too (reports-ready-made, design 4).
+  const vq = await as(jo)('/api/shop-details', { method: 'PUT', body: { vatQuarterStartMonth: 2 } });
+  assert.equal(vq.status, 403, JSON.stringify(vq.body));
+  assert.equal((await as(owner)('/api/shop-details')).body.vatQuarterStartMonth, null);
   assert.equal((await as(owner)('/api/workshop-settings')).body.showSignOffToCustomers, before.showSignOffToCustomers);
   assert.equal((await as(owner)('/api/shop-details')).body.vatNumber, null);
 });

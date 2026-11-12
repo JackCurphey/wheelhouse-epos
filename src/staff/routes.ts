@@ -42,6 +42,12 @@ export const ROUTES = {
   'rp-takings': '/workshop/reports/takings',
   // Workshop (rp-workshop): jobs, workshop takings, quotes and how full each mechanic was.
   'rp-workshop': '/workshop/reports/workshop',
+  // Margin and stock value (rp-margin): its stock half first, margin with part 2's PR 5.
+  'rp-margin': '/workshop/reports/margin',
+  // Returning customers (rp-returning): new and returning customers by month, and who hasn't been in lately.
+  'rp-returning': '/workshop/reports/returning',
+  // VAT (rp-vat): sales by VAT rate for the shop's VAT quarter; asks for the quarter the first time (rp-vat-first).
+  'rp-vat': '/workshop/reports/vat',
   // A changed report (rp-changed), from "Change what's shown" on Sales or Takings and cash-ups
   // (openspec/changes/reports-your-own); its choices and period are in the address.
   'rp-changed': '/workshop/reports/changed',
