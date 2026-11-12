@@ -149,9 +149,9 @@ test('9.2 released: no longer put aside, with no hold day; waiting moves the sta
 
 test('9.2 cancelled: no stage, no hold day and no "How to apply"', async () => {
   const { order, code } = await quoteFor(maya);
-  await setOrder(order.id, "stage = 'cancelled'");
+  await setOrder(order.id, "stage = 'cancelled', certificate_pence = 100000, certificate_number = '[n]', certificate_received_on = '2026-09-01'");
   const v = (await portal(`/c2w-links/${code}`)).body;
-  assert.deepEqual([v.state, v.stageIndex, v.holdUntil, v.howToApply], ['cancelled', null, null, null]);
+  assert.deepEqual([v.state, v.stageIndex, v.holdUntil, v.howToApply, v.customerPaysPence], ['cancelled', null, null, null, null]);
 });
 
 test('9.2 after the certificate: what the customer pays at collection is the total less what the provider pays', async () => {

@@ -52,7 +52,7 @@ export async function customerView(r, shopName) {
     bike: r.bike_name,
     accessories: r.accessories.map((a) => a.name),
     totalPence: r.total_pence,
-    customerPaysPence: r.certificate_pence === null ? null : r.total_pence - providerPays(r),
+    customerPaysPence: cancelled || r.certificate_pence === null ? null : r.total_pence - providerPays(r),
     collectedAt: r.collected_at ? new Date(r.collected_at).toISOString() : null,
     howToApply: cancelled ? null : (settings?.how_to_apply || null),
   };
