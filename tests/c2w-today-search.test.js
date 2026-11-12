@@ -119,6 +119,34 @@ test('10.1 Today: the lines are the Owner’s; another shop sees none of them', 
   assert.deepEqual(await c2wLines(other), []);
 });
 
+test('10.1 Today: a quote given the “No certificate after” days ago or more is a “no certificate yet” line, oldest first; a newer one, one whose hold ended and one past the certificate are not', async () => {
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 5 } })).status, 200);
+  const given = (n) => `${day(-n)}T12:00:00.000Z`;
+  const oldest = await quote();
+  const waiting = await quote(sam);
+  const onTheDay = await quote();
+  const newer = await quote();
+  const ended = await quote();
+  const certified = await quote();
+  await set(oldest.id, { quote_given_at: given(9) });
+  await set(waiting.id, { quote_given_at: given(6), stage: 'waiting' });
+  await set(onTheDay.id, { quote_given_at: given(5) });
+  assert.equal((await own(`/api/c2w/orders/${onTheDay.id}/release`, { method: 'POST', body: {} })).status, 200);
+  await set(newer.id, { quote_given_at: given(4) });
+  await set(ended.id, { quote_given_at: given(9), hold_until: day(-1) });
+  await set(certified.id, { quote_given_at: given(9), stage: 'certificate' });
+  const ids = [oldest.id, waiting.id, onTheDay.id, newer.id, ended.id, certified.id];
+  const ours = (await c2wLines()).filter((l) => ids.includes(l.orderId));
+  assert.deepEqual(ours, [
+    { kind: 'c2w_no_certificate', orderId: oldest.id, customerName: 'Maya Patel', bike: '[Bike] · [Size]', quotedDays: 9, holdUntil: day(7) },
+    { kind: 'c2w_no_certificate', orderId: waiting.id, customerName: '[Customer]', bike: '[Bike] · [Size]', quotedDays: 6, holdUntil: day(7) },
+    { kind: 'c2w_no_certificate', orderId: onTheDay.id, customerName: 'Maya Patel', bike: '[Bike] · [Size]', quotedDays: 5, holdUntil: null },
+    { kind: 'c2w_hold_ended', orderId: ended.id, customerName: 'Maya Patel', bike: '[Bike] · [Size]', holdUntil: day(-1) },
+  ], 'as drawn, no certificate first; one line an order: a hold that ended asks to choose instead; a released bike has no hold date');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: null } })).status, 200);
+  assert.ok(!(await c2wLines()).some((l) => l.kind === 'c2w_no_certificate'), 'no days set in Settings, no line');
+});
+
 // ---------- 10.2 Search ----------
 
 test('10.2 search finds an order by the customer’s name, its quote number and its certificate number, for anyone signed in', async () => {

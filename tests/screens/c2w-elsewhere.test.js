@@ -18,6 +18,7 @@ const day = (n) => { const d = new Date(`${TODAY}T12:00:00Z`); d.setUTCDate(d.ge
 const long = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const LABEL = 'Search jobs, customers, bikes and orders';
 const HOLD = { kind: 'c2w_hold_ended', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', holdUntil: day(-6) };
+const NO_CERT = { kind: 'c2w_no_certificate', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', quotedDays: 9, holdUntil: day(7) };
 const FOUND = { id: 31, customerName: 'Maya Patel', customerId: 5, bike: '[Bike] · [Size]', stage: 'waiting', quoteRef: 'CW-[n]', holdUntil: day(1), holdEnded: false, certificateNumber: null };
 const OPEN = { kind: 'c2w_order', id: 31, stage: 'waiting', open: true, quoteRef: 'CW-[n]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: day(1), holdEnded: false, certificateNumber: null, collectedAt: null, at: `${day(-13)}T10:00:00.000Z` };
 const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, holdEnded: false, certificateNumber: '[certificate number]', collectedAt: `${day(-10)}T10:00:00.000Z`, at: `${day(-10)}T10:00:00.000Z` };
@@ -114,6 +115,34 @@ test('a refused Hold longer shows the server’s words and keeps the line', asyn
   assert.equal((await box.findByRole('alert')).textContent, words);
   assert.ok(box.getByText(`Maya Patel · Cycle to Work hold ended ${long(day(-6))} — choose`) !== null);
   assert.equal(noteText(), '');
+});
+
+test('cw-today: a quote with no certificate yet says how long ago it was given and until when it is held, with Hold longer and Open the order', async () => {
+  const { ui, within } = await open('/workshop/today', { items: [NO_CERT] });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  assert.ok(box.getByText('Maya Patel · Cycle to Work quote, no certificate yet') !== null);
+  assert.ok(box.getByText(`[Bike] · [Size] · quoted 9 days ago · held until ${long(day(7))}`) !== null);
+  assert.ok(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }).textContent === 'Hold longer');
+  const openIt = box.getByRole('link', { name: 'Open Maya Patel’s order' });
+  assert.equal(openIt.textContent, 'Open the order');
+  assert.equal(openIt.getAttribute('href'), '/workshop/c2w/31');
+});
+
+test('cw-today: a quote with no bike held has no hold to lengthen, only Open the order; one day reads “1 day”', async () => {
+  const { ui, within } = await open('/workshop/today', { items: [{ ...NO_CERT, quotedDays: 1, holdUntil: null }] });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  assert.ok(box.getByText('[Bike] · [Size] · quoted 1 day ago') !== null);
+  assert.ok(box.queryByRole('button', { name: 'Hold Maya Patel’s bike longer' }) === null);
+  assert.ok(box.getByRole('link', { name: 'Open Maya Patel’s order' }) !== null);
+});
+
+test('cw-today-held: Hold longer on a quote with no certificate holds it in one press; the line goes and the note says until when', async () => {
+  const { ui, within, fireEvent, waitFor } = await open('/workshop/today', { items: [NO_CERT] });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  fireEvent.click(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }));
+  await waitFor(() => assert.ok(ui.queryByText(/no certificate yet/) === null));
+  assert.equal(posts('/api/c2w/orders/31/hold-longer').length, 1);
+  await waitFor(() => assert.equal(noteText(), `Maya Patel’s bike is held until ${long(day(7))}.`));
 });
 
 // ---------- Search ----------

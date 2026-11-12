@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
 import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
-import { longDate, possessive } from '@/screens/c2w/c2w-bits.tsx';
+import { longDate, orderHref, possessive } from '@/screens/c2w/c2w-bits.tsx';
 import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
 import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
@@ -40,6 +40,7 @@ type Attention =
   | { kind: 'restock_new'; count: number; forJobs: number }
   // Cycle to Work (openspec/changes/cycle-to-work, task 10.1; server/c2w/today.js).
   | { kind: 'c2w_hold_ended'; orderId: number; customerName: string; bike: string; holdUntil: string }
+  | { kind: 'c2w_no_certificate'; orderId: number; customerName: string; bike: string; quotedDays: number; holdUntil: string | null }
   | { kind: 'payments_need_details'; providerName: string | null; needsDetailsBy: string | null; needsWhat: string | null }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
@@ -222,12 +223,13 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
     }
   }
   // Hold longer and Release the bike on a Cycle to Work hold that ended
-  // (op-today-c2w, cw-today-held): one press, the line goes and the note
-  // says what happened; the server's words when it refuses.
+  // (op-today-c2w, cw-today-held), and Hold longer on a quote with no
+  // certificate yet (cw-today): one press, the line goes and the note says
+  // what happened; the server's words when it refuses.
   const note = useSavedNote();
   const [holding, setHolding] = useState<ReadonlySet<number>>(new Set());
   const busyHold = useRef(new Set<number>());
-  async function choose(line: Extract<Attention, { kind: 'c2w_hold_ended' }>, step: 'hold-longer' | 'release') {
+  async function choose(line: Extract<Attention, { kind: 'c2w_hold_ended' | 'c2w_no_certificate' }>, step: 'hold-longer' | 'release') {
     if (busyHold.current.has(line.orderId)) return;
     busyHold.current.add(line.orderId);
     setHolding((c) => new Set(c).add(line.orderId));
@@ -267,6 +269,23 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
             <span className="inline-flex flex-col gap-1.5 whitespace-nowrap">
               <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Hold ${possessive(i.customerName)} bike longer`} onClick={() => void choose(i, 'hold-longer')}>Hold longer</Button>
               <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Release ${possessive(i.customerName)} bike`} onClick={() => void choose(i, 'release')}>Release the bike</Button>
+            </span>
+          )} />
+      );
+    }
+    // cw-today: a quote given Settings' "No certificate after" days ago or more.
+    // Hold longer only while a bike is held; Open the order always.
+    if (i.kind === 'c2w_no_certificate') {
+      const off = holding.has(i.orderId);
+      const size = touch ? 'default' : 'sm';
+      return (
+        <Line key={`n${i.orderId}`} lead={warn}
+          title={`${i.customerName} · Cycle to Work quote, no certificate yet`}
+          sub={`${i.bike} · quoted ${i.quotedDays} ${i.quotedDays === 1 ? 'day' : 'days'} ago${i.holdUntil ? ` · held until ${longDate(i.holdUntil)}` : ''}`}
+          right={(
+            <span className="inline-flex flex-col gap-1.5 whitespace-nowrap">
+              {i.holdUntil && <Button size={size} className={touch ? 'min-h-11' : undefined} disabled={off} aria-label={`Hold ${possessive(i.customerName)} bike longer`} onClick={() => void choose(i, 'hold-longer')}>Hold longer</Button>}
+              <Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.customerName)} order`} className={linkButton(touch)}>Open the order</Link>
             </span>
           )} />
       );
