@@ -59,6 +59,7 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
   const addCertificate = (variant: 'primary' | 'default') => <Button variant={variant} onClick={act.onCertificate}>Add the certificate</Button>;
   const orderButton = (variant: 'primary' | 'default') => <Button variant={variant} disabled={act.busy} onClick={act.onOrder}>{orderLabel(o)}</Button>;
   const ordering = <p className={note}>Ordering creates the supplier order in Deliveries and orders.</p>;
+  const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
   if (o.stage === 'ready') {
     // Hand over comes with pull request 7 (logged).
     return (
@@ -85,7 +86,7 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
       return (
         <Box label="cw-next">
           {head('Next: order the bike')}
-          <Msg tone="ok"><strong>Certificate received.</strong> Your rule: order once the certificate arrives.</Msg>
+          <Msg tone="ok"><strong>Certificate received.</strong>{` Your rule: order ${trigger}.`}</Msg>
           {row(orderButton('primary'))}
           {ordering}
         </Box>
@@ -125,7 +126,6 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
     );
   }
   if (!o.inStock) {
-    const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
     if (o.next === 'order' || (o.stage === 'waiting' && rule === 'applied')) {
       return (
         <Box label="cw-next">

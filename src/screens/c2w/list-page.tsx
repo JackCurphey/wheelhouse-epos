@@ -42,8 +42,13 @@ function Status({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null
       : <>{`Expected ${pounds(o.expectedPence)} by ${longDate(o.expectedBy)}`}</>;
   }
   if (o.stage === 'paid' && o.paidOn && o.paidPence !== null) return <>{`Paid ${pounds(o.paidPence)} on ${longDate(o.paidOn)}`}</>;
-  // "Due from [supplier] [date]" for a bike on order waits for pull request 6, which orders it (logged).
   if (o.stage === 'ready' && o.certificateNumber) return <>{`Certificate ${o.certificateNumber} · put aside`}</>;
+  if (o.stage === 'certificate') {
+    // "Due from [supplier] [date]" without the date: a supplier order has none to give (logged).
+    if (o.onOrder) return <>{o.orderedFrom ? `Due from ${o.orderedFrom}` : 'On order'}</>;
+    // Not drawn (logged): the certificate rule's turn to order, as a waiting row's "Ready to order".
+    return o.next === 'order' ? <Badge tone="blue">Ready to order</Badge> : null;
+  }
   if (o.stage !== 'quote' && o.stage !== 'waiting') return null;
   if (o.holdUntil) {
     // The server says when a hold has ended (its "choose"); the days left come from the reminder days.
@@ -73,7 +78,7 @@ function Row({ o, remindDays, now, onOrder, busy }: { o: C2wOrder; remindDays: n
         <Status o={o} remindDays={remindDays} now={now} />
       </span>
       <span className="justify-self-start md:justify-self-end">
-        {o.next === 'order' && (o.stage === 'quote' || o.stage === 'waiting')
+        {o.next === 'order' && (o.stage === 'quote' || o.stage === 'waiting' || o.stage === 'certificate')
           ? <Button disabled={busy} aria-label={`Order ${possessive(o.customerName)} bike${o.supplier ? ` from ${o.supplier}` : ''}`} onClick={() => onOrder(o)}>{orderLabel(o)}</Button>
           : null}
         {open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}

@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 /** `on` answers a POST to /api/c2w/orders/9<end> with [status, body]; it may change `state.order`, which the page then reloads. */
-async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
+async function open({ theOrder = order(), events = [QUOTE_EV], on = {}, settings = SETTINGS } = {}) {
   calls = [];
   state = { order: theOrder, events };
   globalThis.fetch = async (url, init = {}) => {
@@ -56,7 +56,7 @@ async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
     const p = new URL(url, 'http://localhost').pathname;
     if (p === '/api/auth/me') return reply(200, JO);
     if (p === '/api/c2w/count') return reply(200, { count: 1 });
-    if (p === '/api/c2w/settings') return reply(200, { settings: SETTINGS });
+    if (p === '/api/c2w/settings') return reply(200, { settings });
     if (p === '/api/c2w/providers') return reply(200, { providers: [PROVIDER] });
     if (p === '/api/products/21') return reply(200, BIKE);
     if (method === 'POST' && p.startsWith('/api/c2w/orders/9/')) {
@@ -145,10 +145,19 @@ test('cw-order-on-order: the certificate in and the bike on order, with the supp
 test('the certificate rule: the certificate in and the bike not in stock, Order from the supplier comes first', async () => {
   const got = order({ ...AWAY, stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 104000, certificateReceivedOn: day(0), next: 'order' });
   const on = { '/order': () => { state.order = { ...got, ...onOrder(), next: 'ready' }; return [200, { order: state.order, purchaseOrderId: 77, supplier: '[Supplier]' }]; } };
-  const { ui, within, fireEvent } = await open({ theOrder: got, on });
+  const { ui, within, fireEvent } = await open({ theOrder: got, on, settings: { ...SETTINGS, orderRule: 'certificate' } });
   const next = await nextBox(ui, within, 'Next: order the bike');
   assert.ok(next.getByText(para('Certificate received. Your rule: order once the certificate arrives.')));
   fireEvent.click(next.getByRole('button', { name: 'Order from [Supplier]' }));
   await nextBox(ui, within, 'Next: the bike arrives');
   assert.equal(posts('/order').length, 1);
+});
+
+// The applied rule with the certificate in before anyone ordered: the box names the shop's own rule.
+test('the applied rule: the certificate in before ordering names the applied rule', async () => {
+  const got = order({ ...AWAY, stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 104000, certificateReceivedOn: day(0), next: 'order' });
+  const { ui, within } = await open({ theOrder: got });
+  const next = await nextBox(ui, within, 'Next: order the bike');
+  assert.ok(next.getByText(para('Certificate received. Your rule: order once the customer has applied.')));
+  assert.ok(next.getByRole('button', { name: 'Order from [Supplier]' }));
 });

@@ -184,6 +184,21 @@ test('cw-list: a bike on order says so, ahead of not in stock', async () => {
   assert.ok(row.textContent.includes('[Bike] · [Size] · on order') && !row.textContent.includes('not in stock'), row.textContent);
 });
 
+test('cw-list: a bike on order is due from its supplier (no date: a supplier order has none)', async () => {
+  const onOrder = order({ id: 12, stage: 'certificate', holdUntil: null, inStock: false, onOrder: true, orderedFrom: '[Supplier]', next: 'ready' });
+  const { ui } = await open('/workshop/c2w', { list: { ...LIST, groups: { ...LIST.groups, waiting: [], certificate: [onOrder] } } });
+  const row = (await ui.findByRole('list', { name: 'Certificate received · 1' })).querySelector('li');
+  assert.ok(row.textContent.includes('Due from [Supplier]'), row.textContent);
+});
+
+test('cw-list: a certificate in for a bike still to order is ready to order, with Order from the supplier', async () => {
+  const toOrder = order({ id: 10, stage: 'certificate', holdUntil: null, inStock: false, supplier: '[Supplier]', next: 'order' });
+  const { ui, within } = await open('/workshop/c2w', { list: { ...LIST, groups: { ...LIST.groups, waiting: [], certificate: [toOrder] } } });
+  const row = within((await ui.findByRole('list', { name: 'Certificate received · 1' })).querySelector('li'));
+  assert.ok(row.getByText('Ready to order'));
+  assert.ok(row.getByRole('button', { name: 'Order Maya Patel’s bike from [Supplier]' }));
+});
+
 // ---- 6.4 Order from the list (cw-ordered) ----
 
 const READY_TO_ORDER = { ...LIST, groups: { ...LIST.groups, waiting: [order(), { ...NOT_IN_STOCK, supplier: '[Supplier]' }] } };
