@@ -35,10 +35,10 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 2. The settings screen (pull request 2, about 400 lines)
 
-- [ ] 2.1 Screen test: `cw-settings` — the intro line, the six folds, the hold, reminder and quote fields, the ordering rule with its drawn hints, How to apply with its hint
-- [ ] 2.2 Screen test: `cw-settings-provider` — Name, Commission (% or £), Pays in about, accessories choice, Checks at hand-over with its hint; "+ Add a provider", Edit, Retire
-- [ ] 2.3 Build Settings › Front desk › Cycle to Work to pass 2.1–2.2
-- [ ] 2.4 Self-review with `reviewer`; full check
+- [x] 2.1 Screen test: `cw-settings` — the intro line, the six folds, the hold, reminder and quote fields, the ordering rule with its drawn hints, How to apply with its hint
+- [x] 2.2 Screen test: `cw-settings-provider` — Name, Commission (% or £), Pays in about, accessories choice, Checks at hand-over with its hint; "+ Add a provider", Edit, Retire
+- [x] 2.3 Build Settings › Front desk › Cycle to Work to pass 2.1–2.2
+- [x] 2.4 Self-review with `reviewer`; full check
 
 ## 3. Orders and quotes — server (pull request 3, about 550 lines)
 

@@ -15,8 +15,10 @@ import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-setti
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
+import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
-import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
+import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
@@ -1030,8 +1032,12 @@ function OwnerSettings() {
   const storageSlots = useStorageSlotsSummary();
   const customerGroups = useCustomerGroupsSummary();
   const waysToPay = useWaysToPaySummary();
+  const otherWays = useOtherWaysSummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
+  const closeEntry = useCloseEntrySummary();
+  const countFirst = useCountFirstSummary();
+  const c2w = useC2wSummaries();
   const tills = useTillsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
@@ -1051,17 +1057,31 @@ function OwnerSettings() {
           // Beside Tills, its own fold (stage-1 gaps 9; trust-pin-workshop).
           { key: 'signing-in', title: 'Signing in', summary: signingIn, body: <SigningInSettings /> },
         ] },
-        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers) and Customer groups (cs-groups).
+        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers), Other ways to pay
+        // (set-pay-other; owner-setup-till-payments-eod) and Customer groups (cs-groups).
         { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
           { key: 'ways-to-pay', title: 'Ways to pay', summary: waysToPay, body: <WaysToPaySettings /> },
+          { key: 'other-ways-to-pay', title: 'Other ways to pay', summary: otherWays, body: <OtherWaysToPay /> },
           { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
         ] },
-        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
+        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS, eodFolds): Float (set-eod),
+        // Close the day (set-eod-close) and Counting the cash (owner-setup-till-payments-eod design 3).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+          { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
+          { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
+        ] },
+        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
+          { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
+          { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },
+          { key: 'c2w-apply', title: 'How to apply', summary: c2w.apply, body: <ApplySettings /> },
+          { key: 'c2w-deposits', title: 'Deposits', summary: c2w.deposits, body: <DepositSettings /> },
+          { key: 'c2w-providers', title: 'Scheme providers', summary: c2w.providers, body: <ProvidersSettings /> },
+          { key: 'c2w-today', title: 'On Today', summary: c2w.today, body: <TodaySettings /> },
         ] },
       ],
     },
