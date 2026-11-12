@@ -688,6 +688,15 @@ test('holding a row on a touch screen for half a second shows Edit and Remove', 
   assert.ok(t.ui.getByRole('button', { name: 'Remove Fit & adjust brakes' }), 'still open after lifting');
 });
 
+test("a row can't be text-selected, so an iPhone's hold opens the menu instead of selecting the name", async () => {
+  const t = await open();
+  await ready(t);
+  const row = nameOf(t, 'Fit & adjust brakes').closest('[data-quick-button]');
+  assert.ok(row, 'the row');
+  assert.ok(row.className.includes('select-none'), row.className);
+  assert.ok(row.className.includes('[-webkit-touch-callout:none]'), row.className);
+});
+
 test('a hold is cancelled by lifting early or moving more than a few pixels, so a tap or a scroll opens nothing', async () => {
   const t = await open();
   await ready(t);

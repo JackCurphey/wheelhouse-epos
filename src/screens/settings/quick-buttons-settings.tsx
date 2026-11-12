@@ -275,7 +275,7 @@ function Row({ b, pinned, onPin, onKey, onDrag, onDrop, onEdit, onRemove }: {
     <div data-quick-button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       onFocus={() => { if (!pinned) onPin(); }}
       onPointerDown={hold.down} onContextMenu={(e) => { e.preventDefault(); hold.cancel(); onPin(); }} onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
-      className={`flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-[var(--wh-panel)] py-1 pr-2 pl-3 md:flex-nowrap ${open ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-border)]'}`}>
+      className={`flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-[var(--wh-panel)] py-1 pr-2 pl-3 select-none [-webkit-touch-callout:none] md:flex-nowrap ${open ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-border)]'}`}>
       <button type="button" data-move={b.id} draggable aria-label={`Move ${b.name} — drag, or use the arrow keys`} onKeyDown={onKey}
         onDragStart={(e) => { onDrag(); e.dataTransfer.setData('text/plain', b.name); }}
         className="inline-flex size-11 shrink-0 cursor-grab items-center justify-center text-base text-[var(--wh-muted)]">⋮⋮</button>
