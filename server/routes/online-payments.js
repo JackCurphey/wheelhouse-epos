@@ -128,7 +128,8 @@ export function register(route) {
       answer.payoutLast4, answer.payoutTiming, same, same, same, same, same);
     // Connecting switches Buying online on (ws-pay-connected); adding details later leaves the Owner's choice.
     if (!same) await setBuyingOnline(true);
-    redirect(res, `${SETTINGS_PAGE}&payments=connected`);
+    // Only a new connection says "connected just now" (ws-pay-connected).
+    redirect(res, `${SETTINGS_PAGE}&payments=${same ? 'details' : 'connected'}`);
   });
 
   // Make a £1 test payment (ws-pay-connected): one payment, taken and refunded,

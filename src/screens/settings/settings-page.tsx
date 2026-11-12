@@ -1072,7 +1072,13 @@ function OwnerSettings() {
           { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
           { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
         ] },
-        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        // After End of day, before Cycle to Work, as drawn (settings-frame.mjs roomOf; website.mjs
+        // ONLINE_INTRO, ws-pay-*): Buying online above
+        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
+        { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
+          { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
+        ] },
+        // After Online orders, as drawn (settings-frame.mjs roomOf and c2wFolds; c2w.mjs cw-settings).
         { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
           { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
           { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },
@@ -1080,11 +1086,6 @@ function OwnerSettings() {
           { key: 'c2w-deposits', title: 'Deposits', summary: c2w.deposits, body: <DepositSettings /> },
           { key: 'c2w-providers', title: 'Scheme providers', summary: c2w.providers, body: <ProvidersSettings /> },
           { key: 'c2w-today', title: 'On Today', summary: c2w.today, body: <TodaySettings /> },
-        ] },
-        // After End of day, as drawn (website.mjs ONLINE_INTRO, ws-pay-*): Buying online above
-        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
-        { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
-          { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
         ] },
       ],
     },
