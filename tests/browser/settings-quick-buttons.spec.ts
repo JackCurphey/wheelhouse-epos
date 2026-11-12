@@ -79,6 +79,18 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expect((await page.getByRole('button', { name: 'Edit Fit & adjust brakes' }).boundingBox())!.y).toBeGreaterThanOrEqual(price.y + price.height);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    if (viewport.width < 768) {
+      // A group's "…" menu fits a 375px phone.
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.getByRole('button', { name: 'More for Workshop' }).click();
+      const menu = (await page.getByRole('menu', { name: 'Workshop' }).boundingBox())!;
+      expect(menu.x).toBeGreaterThanOrEqual(0);
+      expect(menu.x + menu.width).toBeLessThanOrEqual(375);
+      await expect(page.getByRole('menuitem', { name: 'Rename…' })).toBeFocused();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toBeHidden();
+      await page.setViewportSize(viewport);
+    }
 
     // The up arrow on a handle moves and saves, with Undo.
     await page.getByRole('button', { name: 'Move Replace gear cable — drag, or use the arrow keys' }).press('ArrowUp');

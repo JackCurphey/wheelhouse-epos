@@ -445,12 +445,13 @@ test('a group’s … menu renames it, by keyboard or tap', async () => {
   assert.equal(more.getAttribute('aria-haspopup'), 'menu');
   t.fireEvent.click(more);
   const menu = t.within(t.ui.getByRole('menu', { name: 'Workshop' }));
-  await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Rename'));
-  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Rename', 'Remove']);
+  await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Rename…'));
+  // A drawn menu item that opens a box ends in "…" (ms-tills).
+  assert.deepEqual(menu.getAllByRole('menuitem').map((m) => m.textContent), ['Rename…', 'Remove']);
   t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
   await t.waitFor(() => assert.ok(document.activeElement === more));
   t.fireEvent.click(more);
-  t.fireEvent.click(t.within(t.ui.getByRole('menu', { name: 'Workshop' })).getByRole('menuitem', { name: 'Rename' }));
+  t.fireEvent.click(t.within(t.ui.getByRole('menu', { name: 'Workshop' })).getByRole('menuitem', { name: 'Rename…' }));
   const box = t.within(await t.ui.findByRole('dialog'));
   assert.ok(box.getByRole('heading', { name: 'Edit Workshop' }));
   t.fireEvent.change(box.getByRole('textbox', { name: 'Name' }), { target: { value: '[Group name]' } });
@@ -486,4 +487,92 @@ test('a group with no buttons shows the empty line; with no buttons at all the s
   t.state.buttons = [];
   await current.shell.queryClient.invalidateQueries();
   await t.waitFor(() => assert.match(fold.textContent, /None yet/));
+});
+
+// Second review.
+const press = (t, el) => { el.focus(); t.fireEvent.click(el); };
+const more = (t) => t.ui.getByRole('button', { name: /^More for / });
+async function rename(t) {
+  t.fireEvent.click(more(t));
+  press(t, t.within(t.ui.getByRole('menu')).getByRole('menuitem', { name: 'Rename…' }));
+  return t.within(await t.ui.findByRole('dialog'));
+}
+const focusOnMore = (t) => t.waitFor(() => assert.ok(document.activeElement === more(t), `focus on ${document.activeElement?.tagName} ${document.activeElement?.textContent}`));
+
+test('after renaming a group, by Save, Cancel or Escape, the focus is back on its …', async () => {
+  const t = await open();
+  await ready(t);
+  let box = await rename(t);
+  t.fireEvent.change(box.getByRole('textbox', { name: 'Name' }), { target: { value: '[Group name]' } });
+  press(t, box.getByRole('button', { name: 'Save' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  await focusOnMore(t);
+  box = await rename(t);
+  press(t, box.getByRole('button', { name: 'Cancel' }));
+  await focusOnMore(t);
+  await rename(t);
+  // Escape: the browser closes the <dialog> itself, sending its close event.
+  t.ui.getByRole('dialog').close();
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  await focusOnMore(t);
+});
+
+test('after removing a group the focus stays on the fold: on … (now the next group’s)', async () => {
+  const t = await open();
+  await ready(t);
+  // An empty group goes straight from the menu.
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Accessories' }));
+  t.fireEvent.click(more(t));
+  press(t, t.within(t.ui.getByRole('menu')).getByRole('menuitem', { name: 'Remove' }));
+  await t.waitFor(() => assert.equal(t.state.groups.length, 2));
+  await focusOnMore(t);
+  // One with buttons: Cancel, then remove.
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Workshop' }));
+  t.fireEvent.click(more(t));
+  press(t, t.within(t.ui.getByRole('menu')).getByRole('menuitem', { name: 'Remove' }));
+  let box = t.within(await t.ui.findByRole('dialog'));
+  press(t, box.getByRole('button', { name: 'Cancel' }));
+  await focusOnMore(t);
+  t.fireEvent.click(more(t));
+  press(t, t.within(t.ui.getByRole('menu')).getByRole('menuitem', { name: 'Remove' }));
+  box = t.within(await t.ui.findByRole('dialog'));
+  press(t, box.getByRole('button', { name: 'Remove the group and its buttons' }));
+  await t.waitFor(() => assert.equal(t.state.groups.length, 1));
+  await focusOnMore(t);
+  assert.equal(more(t).getAttribute('aria-label'), 'More for Parts');
+});
+
+test('a failed move then a move of another button: the first is sent again first, so nothing jumps back', async () => {
+  const t = await open();
+  await ready(t);
+  t.state.offline = true;
+  t.fireEvent.keyDown(t.ui.getByRole('button', { name: 'Move Replace gear cable — drag, or use the arrow keys' }), { key: 'ArrowUp' });
+  const area = noteArea(t);
+  await t.waitFor(() => assert.match(area.textContent, new RegExp(`^${FAILED}`)));
+  t.state.offline = false;
+  t.fireEvent.keyDown(t.ui.getByRole('button', { name: 'Move Standard service — drag, or use the arrow keys' }), { key: 'ArrowDown' });
+  await t.waitFor(() => assert.match(area.textContent, /^Saved/));
+  await t.act(() => new Promise((r) => setTimeout(r, 20)));
+  assert.deepEqual(rows(t).map((r) => r[0]), ['Replace gear cable', 'Standard service', 'Fit & adjust brakes']);
+  assert.deepEqual(t.state.buttons.map((b) => b.id), [3, 1, 2]);
+  assert.deepEqual(sent(t, 'PUT'), [['/api/quick-buttons/3', { position: 1 }], ['/api/quick-buttons/3', { position: 1 }], ['/api/quick-buttons/1', { position: 1 }]]);
+});
+
+test('a slow Edit save, cancelled, doesn’t close the next button’s Edit box', async () => {
+  const t = await open();
+  await ready(t);
+  t.fireEvent.contextMenu(row(t, 'Standard service'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Edit Standard service' }));
+  let box = t.within(await t.ui.findByRole('dialog'));
+  const release = held(t);
+  press(t, box.getByRole('button', { name: 'Save' }));
+  press(t, box.getByRole('button', { name: 'Cancel' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  t.fireEvent.contextMenu(row(t, 'Fit & adjust brakes'));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Edit Fit & adjust brakes' }));
+  box = t.within(await t.ui.findByRole('dialog'));
+  release();
+  await t.waitFor(() => assert.match(noteArea(t).textContent, /^Saved/));
+  await t.act(() => new Promise((r) => setTimeout(r, 20)));
+  assert.ok(t.ui.queryByRole('heading', { name: 'Fit & adjust brakes' }) !== null, 'the newer box is still open');
 });

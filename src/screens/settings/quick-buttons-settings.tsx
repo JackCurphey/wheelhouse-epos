@@ -32,8 +32,8 @@ type RunOptions = {
   inline?: (words: string, err: unknown) => boolean | void;
   /** True while a later move waits, so its list isn't overwritten by this one's. */
   quiet?: () => boolean;
-  /** `kept` is already on screen (a queued move); Try again puts it back. */
-  shown?: boolean;
+  /** What Try again does, in place of sending this one again (the moves still to send). */
+  retry?: () => void;
 };
 
 const KEY = ['quick-buttons'];
@@ -67,7 +67,7 @@ function useQuickSave() {
   const queryClient = useQueryClient();
   const note = useSavedNote();
   async function run(req: Req, o: RunOptions = {}): Promise<boolean> {
-    if (o.kept && !o.shown) queryClient.setQueryData<List>(KEY, (l) => l && o.kept!(l));
+    if (o.kept) queryClient.setQueryData<List>(KEY, (l) => l && o.kept!(l));
     if (!o.inline) note.busy(o.back);
     try {
       const res = await apiMutate<List & { id?: number }>(req.path, req.body ?? {}, { method: req.method });
@@ -82,7 +82,7 @@ function useQuickSave() {
       const words = serverSaid(err) ? err.message : err instanceof ApiError ? SAVE_FAILED : NO_INTERNET;
       if (!retry) void queryClient.invalidateQueries({ queryKey: KEY });
       if (o.inline && o.inline(words, err) !== false) return false;
-      note.show({ text: words, failed: true, back: o.back, action: retry ? { label: 'Try again', run: () => void run(req, { ...o, shown: false }) } : undefined });
+      note.show({ text: words, failed: true, back: o.back, action: retry ? { label: 'Try again', run: o.retry ?? (() => void run(req, o)) } : undefined });
       return false;
     }
   }
@@ -103,8 +103,14 @@ export function QuickButtonsSettings() {
   const moreRef = useRef<HTMLButtonElement>(null);
   const dragging = useRef<number | null>(null);
   // Moves save one after another, so the server ends where the screen shows.
+  // A move that fails stays first in line: the next move, or Try again, sends
+  // it before the rest, so nothing on screen jumps back.
   const queue = useRef<Promise<unknown>>(Promise.resolve());
-  const waiting = useRef(0);
+  const toSend = useRef<{ req: Req; undo: Req; back: Back }[]>([]);
+  const addGroupRef = useRef<HTMLButtonElement>(null);
+  // After a group's box or menu: its "…" (the next group's, if it went), or + Add a group.
+  const groupBack = () => moreRef.current ?? addGroupRef.current;
+  const focusGroup = () => later(() => groupBack()?.focus());
   const groups = list.data?.groups ?? [];
   const chosen = groups.find((g) => g.id === chosenId) ?? groups[0];
   const handleAt = (i: number) => () => rowsRef.current?.querySelectorAll<HTMLElement>('[data-move]')[i] ?? find('[data-add-button]')();
@@ -119,12 +125,24 @@ export function QuickButtonsSettings() {
     const b = g.buttons[from];
     const kept = (l: List) => withButtons(l, g.id, (bs) => { const n = bs.filter((x) => x.id !== id); n.splice(to, 0, b); return n; });
     queryClient.setQueryData<List>(KEY, (l) => l && kept(l));
-    waiting.current += 1;
-    queue.current = queue.current.then(() => run({ method: 'PUT', path: `/api/quick-buttons/${id}`, body: { position: to } }, {
-      kept, shown: true, quiet: () => waiting.current > 1, back: find(`[data-move="${id}"]`), undo: { method: 'PUT', path: `/api/quick-buttons/${id}`, body: { position: from } },
-    })).finally(() => { waiting.current -= 1; });
+    toSend.current.push({ req: { method: 'PUT', path: `/api/quick-buttons/${id}`, body: { position: to } }, back: find(`[data-move="${id}"]`), undo: { method: 'PUT', path: `/api/quick-buttons/${id}`, body: { position: from } } });
+    sendMoves();
     // The handle keeps focus as its button moves, for the next arrow press.
     later(() => find(`[data-move="${id}"]`)()?.focus());
+  }
+  function sendMoves() {
+    queue.current = queue.current.then(async () => {
+      while (toSend.current.length) {
+        const m = toSend.current[0];
+        const ok = await run(m.req, {
+          back: m.back, undo: m.undo, quiet: () => toSend.current.length > 1, retry: sendMoves,
+          // Refused: the list is fetched again, so what's waiting goes.
+          inline: (_w, err) => { if (err instanceof ApiError && err.status < 500) toSend.current = []; return false; },
+        });
+        if (!ok) return;
+        toSend.current.shift();
+      }
+    });
   }
   const onKey = (b: QuickButton) => (e: KeyboardEvent) => {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); move(b.id, e.key === 'ArrowUp' ? -1 : 1); }
@@ -147,7 +165,9 @@ export function QuickButtonsSettings() {
   }
   function removeGroup(g: Group) {
     setGroupMenu(false);
+    focusGroup();
     void run({ method: 'DELETE', path: `/api/quick-button-groups/${g.id}` }, {
+      back: groupBack,
       // A group with buttons asks first, saying how many.
       inline: (_w, err) => {
         const body = err instanceof ApiError ? err.body as { code?: string; count?: number } | null : null;
@@ -163,16 +183,16 @@ export function QuickButtonsSettings() {
   if (!list.data) return null;
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start gap-2">
+      <div className="flex items-start gap-2">
         <div role="group" aria-label="Quick button groups" className="flex flex-wrap gap-2">
           {groups.map((g) => (
             <button key={g.id} type="button" aria-pressed={g.id === chosen?.id} className={pill(g.id === chosen?.id)}
               onClick={() => setChosenId(g.id)} onContextMenu={(e) => { e.preventDefault(); setChosenId(g.id); setGroupMenu(true); }}>{g.name}</button>
           ))}
-          <button type="button" aria-pressed="false" className={pill(false)} onClick={() => setGroupBox({ id: null, name: '' })}>+ Add a group</button>
+          <button ref={addGroupRef} type="button" aria-pressed="false" className={pill(false)} onClick={() => setGroupBox({ id: null, name: '' })}>+ Add a group</button>
         </div>
         {chosen ? (
-          <div className="relative">
+          <div className="relative ml-auto shrink-0">
             <button ref={moreRef} type="button" aria-label={`More for ${chosen.name}`} aria-haspopup="menu" aria-expanded={groupMenu} onClick={() => setGroupMenu(!groupMenu)}
               className={`inline-flex size-11 items-center justify-center rounded-lg border text-lg font-bold ${groupMenu ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)]'}`}>…</button>
             {groupMenu ? (
@@ -204,17 +224,18 @@ export function QuickButtonsSettings() {
       )}
       {editing ? (
         <ButtonBox start={editing} groups={groups} run={run} onClose={() => {
+          // Only this box: a slow save finishing after Cancel leaves a newer box open.
+          const mine = editing;
+          setEditing((now) => (now === mine ? null : now));
           // Back to the button's Edit, or + Add a button.
-          const id = editing.id;
-          setEditing(null);
-          later(() => (find(`[data-edit="${id}"]`)() ?? find('[data-add-button]')())?.focus());
+          later(() => (find(`[data-edit="${mine.id}"]`)() ?? find('[data-add-button]')())?.focus());
         }} />
       ) : null}
       {groupBox ? (
-        <GroupBox start={groupBox} run={run} onClose={() => setGroupBox(null)}
+        <GroupBox start={groupBox} run={run} back={groupBack} onClose={() => { const mine = groupBox; setGroupBox((now) => (now === mine ? null : now)); focusGroup(); }}
           onAdded={(id) => { setChosenId(id); if (groupBox.thenButton) setEditing({ id: null, groupId: id, item: null, name: '' }); }} />
       ) : null}
-      {removing ? <RemoveGroupBox {...removing} run={run} onClose={() => setRemoving(null)} /> : null}
+      {removing ? <RemoveGroupBox {...removing} run={run} back={groupBack} onClose={() => { const mine = removing; setRemoving((now) => (now === mine ? null : now)); focusGroup(); }} /> : null}
     </div>
   );
 }
@@ -277,8 +298,8 @@ function GroupMenu({ label, anchor, onClose, onRename, onRemove }: { label: stri
   const item = 'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-size-15 font-semibold hover:bg-[var(--wh-hover)] focus-visible:bg-[var(--wh-hover)]';
   return (
     <div ref={ref} role="menu" aria-label={label} onKeyDown={onKey}
-      className="absolute top-12 left-0 z-40 flex w-[240px] flex-col gap-0.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-[0_12px_32px_var(--wh-backdrop)]">
-      <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onRename}>Rename</button>
+      className="absolute top-12 right-0 z-40 flex w-[240px] max-w-[calc(100vw-32px)] flex-col gap-0.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-[0_12px_32px_var(--wh-backdrop)]">
+      <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onRename}>Rename…</button>
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onRemove}>Remove</button>
     </div>
   );
@@ -384,7 +405,7 @@ function ButtonBox({ start, groups, run, onClose }: { start: Editing; groups: Gr
 }
 
 /** Add a group, or rename one from its menu (design 5 point 3; Customer groups' box, "Edit [name]"). */
-function GroupBox({ start, run, onClose, onAdded }: { start: { id: number | null; name: string }; run: ReturnType<typeof useQuickSave>; onClose: () => void; onAdded: (id: number) => void }) {
+function GroupBox({ start, run, back, onClose, onAdded }: { start: { id: number | null; name: string }; run: ReturnType<typeof useQuickSave>; back: Back; onClose: () => void; onAdded: (id: number) => void }) {
   const [name, setName] = useState(start.name);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -393,9 +414,9 @@ function GroupBox({ start, run, onClose, onAdded }: { start: { id: number | null
     setBusy(true);
     const inline = (w: string) => setError(w);
     if (start.id === null) {
-      await run({ method: 'POST', path: '/api/quick-button-groups', body: { name } }, { inline, done: (id) => { onAdded(id); onClose(); }, undo: (id) => ({ method: 'DELETE', path: `/api/quick-button-groups/${id}` }) });
+      await run({ method: 'POST', path: '/api/quick-button-groups', body: { name } }, { inline, back, done: (id) => { onAdded(id); onClose(); }, undo: (id) => ({ method: 'DELETE', path: `/api/quick-button-groups/${id}` }) });
     } else {
-      await run({ method: 'PUT', path: `/api/quick-button-groups/${start.id}`, body: { name } }, { inline, done: onClose, undo: { method: 'PUT', path: `/api/quick-button-groups/${start.id}`, body: { name: start.name } } });
+      await run({ method: 'PUT', path: `/api/quick-button-groups/${start.id}`, body: { name } }, { inline, back, done: onClose, undo: { method: 'PUT', path: `/api/quick-button-groups/${start.id}`, body: { name: start.name } } });
     }
     setBusy(false);
   }
@@ -418,12 +439,12 @@ function GroupBox({ start, run, onClose, onAdded }: { start: { id: number | null
 }
 
 /** Removing a group that still has buttons asks first, saying how many (design 5 point 3). */
-function RemoveGroupBox({ group, count, run, onClose }: { group: Group; count: number; run: ReturnType<typeof useQuickSave>; onClose: () => void }) {
+function RemoveGroupBox({ group, count, run, back, onClose }: { group: Group; count: number; run: ReturnType<typeof useQuickSave>; back: Back; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   async function remove() {
     setBusy(true);
-    await run({ method: 'DELETE', path: `/api/quick-button-groups/${group.id}?confirm=1` }, { inline: (w) => setError(w), done: onClose });
+    await run({ method: 'DELETE', path: `/api/quick-button-groups/${group.id}?confirm=1` }, { inline: (w) => setError(w), back, done: onClose });
     setBusy(false);
   }
   return (
