@@ -46,7 +46,7 @@ export function AutomaticMessages() {
   const days = settings.data?.collectionReminderDays;
   // "Your hold ends on [date]" says the shop's reminder days (setup.mjs C2W_MSGS: "[n] days before a hold ends").
   const c2w = useQuery({ queryKey: ['c2w-settings'], queryFn: () => apiGet<{ settings: { remindDays: number | null } }>('/api/c2w/settings') });
-  const remind = c2w.data?.settings.remindDays;
+  const remind = c2w.data?.settings?.remindDays;
   const dayWord = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
   const withDays = (t: Template, where = ''): Template => (t.key === 'bike_still_waiting' && days !== undefined
     ? { ...t, when: `When a ready bike isn’t collected after ${dayWord(days)}${where}` }
