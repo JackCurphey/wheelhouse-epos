@@ -68,8 +68,8 @@ test('five at most of each', async () => {
 });
 
 test('fewer than two characters finds nothing, and asks nothing of the database', async () => {
-  assert.deepEqual((await search('m')).body, { jobs: [], customers: [], bikes: [] });
-  assert.deepEqual((await search('  ')).body, { jobs: [], customers: [], bikes: [] });
+  assert.deepEqual((await search('m')).body, { jobs: [], customers: [], bikes: [], c2wOrders: [] });
+  assert.deepEqual((await search('  ')).body, { jobs: [], customers: [], bikes: [], c2wOrders: [] });
 });
 
 test('a removed customer isn’t found; another shop’s jobs and customers never are', async () => {
@@ -78,13 +78,13 @@ test('a removed customer isn’t found; another shop’s jobs and customers neve
   assert.equal((await search('quentin')).body.customers.length, 0);
   const res = await search('maya', other);
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [] });
+  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [], c2wOrders: [] });
 });
 
 test('what’s typed is a plain search, never a pattern', async () => {
   const res = await search('%_%');
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [] }, 'a % or _ matched everything');
+  assert.deepEqual(res.body, { jobs: [], customers: [], bikes: [], c2wOrders: [] }, 'a % or _ matched everything');
 });
 
 test('the numbers in a job number don’t find customers by phone (review)', async () => {

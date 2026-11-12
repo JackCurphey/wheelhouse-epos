@@ -9,6 +9,7 @@ import { pool, prepare, runWithShop } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
 
 const ROUNDS = 30;
 
@@ -19,6 +20,7 @@ let otherShop;
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl);
+  await connectPayments(owner.shop.id);
   otherShop = await staffSignup(server.baseUrl);
 });
 after(async () => {

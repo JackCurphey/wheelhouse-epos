@@ -30,7 +30,7 @@ const db = { prepare, exec: dbExec };
 
 const BLOCK_FIELDS = ['bike', 'jobTitle', 'customer', 'reference'];
 
-function serializeWorkshopSettings(row) {
+function serializeWorkshopSettings(row, connected) {
   return {
     openingTime: row.opening_time,
     closingTime: row.closing_time,
@@ -81,7 +81,7 @@ function serializeWorkshopSettings(row) {
     depositFixedPence: row.deposit_fixed_pence ?? null,
     depositUnknownPence: row.deposit_unknown_pence ?? null,
     depositCancelHours: row.deposit_cancel_hours,
-    paymentsConnected: paymentsConnected(),
+    paymentsConnected: connected,
     // null: this shop has no terms of its own, so the standard Wheelhouse
     // terms (server/standard-terms.js) apply (piece 11).
     bookingTerms: row.booking_terms ?? null,
@@ -326,7 +326,7 @@ export function register(route) {
   // screens: booking-settings, hours
   route('GET', '/api/workshop-settings', async (req, res) => {
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-    sendJson(res, 200, serializeWorkshopSettings(row));
+    sendJson(res, 200, serializeWorkshopSettings(row, await paymentsConnected()));
   });
 
   // A save: checks what was sent against the stored row and writes the row
@@ -505,7 +505,7 @@ export function register(route) {
     const depositCancel = whole('depositCancelHours', 'deposit_cancel_hours', 0, 168, 'Choose from 0 to 168 hours.', false);
     for (const v of [depositPercent, depositFixed, depositUnknown, depositCancel]) if (v.error) return badRequest(res, v.error);
     // Switched on before How much is filled in, no deposit is taken until it is (design 2).
-    if (depositOn === 1 && existing.deposit_on !== 1 && !paymentsConnected()) {
+    if (depositOn === 1 && existing.deposit_on !== 1 && !(await paymentsConnected())) {
       return sendJson(res, 409, { error: 'Connect a payment provider first, then deposits can be switched on.', code: 'payments_not_connected' });
     }
 
@@ -573,7 +573,7 @@ export function register(route) {
     }
     if (!saved) return;
     const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-    sendJson(res, 200, serializeWorkshopSettings(row));
+    sendJson(res, 200, serializeWorkshopSettings(row, await paymentsConnected()));
   });
 
   // screens: hours, diary, week, month
