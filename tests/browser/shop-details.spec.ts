@@ -62,7 +62,7 @@ test('Shop details saves as you go, and the receipt carries them above the barco
   }
   await expect.poll(async () => (await staff('/api/shop-details')).body.vatNumber).toBe('[VAT number]');
   // Words at the bottom (Jack, 19 Oct): Till › Receipts, printed just above the barcode.
-  await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk`);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk&fold=receipts`);
   await page.getByLabel('Words at the bottom').fill('[Returns policy]');
   await page.getByLabel('Words at the bottom').blur();
   await expect.poll(async () => (await staff('/api/shop-details')).body.receiptFooter).toBe('[Returns policy]');
