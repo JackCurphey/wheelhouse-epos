@@ -18,7 +18,7 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 - [x] 2.3 `server/lib/saved-reports.js` and `GET` and `POST /api/reports/saved`, `// screens: rp-save, rp-save-taken, rp-home`.
 - [x] 2.4 Screen tests first: the save popup ("Name (needed)", "Just me" chosen, "Me and the other managers" greyed with its reason, the note, both name messages); Your reports on the Reports page with the badge "Just you", the note when there are none, and opening one on the latest period (one saved on This week opened a week later shows the new week). Verify: each fails first.
 - [x] 2.5 `save-report-dialog.tsx`, `your-reports.tsx` (list only; the menu is PR 3), "Save as my report" on the changed report's bar, to the drawings `rp-save`, `rp-save-taken` and `rp-home`.
-- [ ] 2.6 `/review`, the `risky-area-reviewer` agent, `reviewer`; lint and the related tests; a hand-run CI on the branch (`gh workflow run test.yml --ref <branch>`), merged when green; a line in the weekly digest issue.
+- [x] 2.6 `/review`, the `risky-area-reviewer` agent, `reviewer`; lint and the related tests; a hand-run CI on the branch (`gh workflow run test.yml --ref <branch>`), merged when green; a line in the weekly digest issue. (Done in #727: an Opus general-purpose review stood in for `risky-area-reviewer`, which is not an agent in this setup; no weekly digest issue was open, so the line is in the pull request.)
 
 ## 3. PR 3: Rename, sharing greyed, and delete with Undo (not risky)
 
@@ -38,6 +38,6 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 
 ## 5. Finish
 
-- [ ] 5.1 Walk each drawing (`rp-change`, `rp-changed`, `rp-save`, `rp-save-taken`, `rp-report-menu`, `rp-report-deleted`, and Your reports on `rp-home`) against the built screens, and this change's requirements one by one; say in the last pull request which are met, dropped or changed.
-- [ ] 5.2 `npm run full-check` (lint, `npm test` and `npm run test:browser`) passes on the final commit after merging the latest main.
-- [ ] 5.3 `/opsx:archive` as the last commit in the last pull request, before it merges.
+- [x] 5.1 Walk each drawing (`rp-change`, `rp-changed`, `rp-save`, `rp-save-taken`, `rp-report-menu`, `rp-report-deleted`, and Your reports on `rp-home`) against the built screens, and this change's requirements one by one; say in the last pull request which are met, dropped or changed.
+- [x] 5.2 `npm run full-check` (lint, `npm test` and `npm run test:browser`) passes on the final commit after merging the latest main.
+- [x] 5.3 `/opsx:archive` as the last commit in the last pull request, before it merges.
