@@ -302,8 +302,10 @@ export function register(route) {
         accessoryIds = body.accessoryIds;
         if (!Array.isArray(accessoryIds) || accessoryIds.length > 20) throw new ValidationError('Choose up to 20 accessories');
         accessoryIds.forEach((a) => wholeId(a, 'an accessory'));
+        if (new Set(accessoryIds).size !== accessoryIds.length) throw new ValidationError('Choose each accessory once');
       }
       const detail = { number, certificatePence: amount };
+      let notReady = null;
       await takeStep(id, 'certificate', who, async (row) => {
         const fields = { certificate_number: number, certificate_pence: amount, certificate_received_on: receivedOn, hold_until: null };
         detail.quotePence = row.total_pence;
@@ -333,16 +335,19 @@ export function register(route) {
           if (got) {
             heldAt = currentMoment().toISOString();
             Object.assign(fields, { frame_id: got.frameId, held_at: heldAt });
+            detail.heldFrameId = got.frameId;
           }
         }
-        if (ready) {
-          if (!heldAt) throw new Refused(409, NOT_HELD);
+        // With no bike put aside, the tick is left off and the certificate is
+        // still saved (cw-certificate-released: "certificate … saved").
+        if (ready && !heldAt) notReady = NOT_HELD.code;
+        else if (ready) {
           fields.stage = 'ready';
           detail.ready = true;
         }
         return fields;
       }, { detail });
-      return { order: serializeOrder(await loadOrder(id)) };
+      return { order: serializeOrder(await loadOrder(id)), ...(notReady ? { notReady } : {}) };
     });
   });
 

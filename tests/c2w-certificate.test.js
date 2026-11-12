@@ -129,6 +129,8 @@ test('6.1 the “bike is ready” tick goes on to Ready to collect; Undo goes ba
   assert.equal(undone.status, 200, JSON.stringify(undone.body));
   assert.equal(undone.body.order.stage, 'certificate');
   assert.equal((await order(made.id)).events.at(-1).kind, 'ready_undone');
+  const again = await post(`/api/c2w/orders/${made.id}/ready/undo`, {});
+  assert.deepEqual([again.status, again.body.code], [409, 'wrong_stage'], 'Undo only from Ready to collect');
 });
 
 test('6.1 Mark ready (cw-order-get-ready) moves a certificate order to Ready to collect, only from Certificate in', async () => {
@@ -147,10 +149,11 @@ test('6.1 a bike not put aside can’t be marked ready', async () => {
   const first = await quote(bike);
   const second = await quote(bike);
   assert.equal(second.held, false, 'the only frame went to the first quote');
+  // cw-certificate-released: "certificate [certificate number] saved", then what to do.
   const tick = await certify(second.id, { amountPence: 100000, ready: true });
-  assert.deepEqual([tick.status, tick.body.code], [409, 'not_held']);
-  assert.equal((await order(second.id)).stage, 'quote', 'nothing saved');
-  assert.equal((await certify(second.id, { amountPence: 100000 })).status, 200);
+  assert.equal(tick.status, 200, JSON.stringify(tick.body));
+  assert.deepEqual([tick.body.order.stage, tick.body.notReady], ['certificate', 'not_held'], 'saved, not marked ready');
+  assert.equal((await order(second.id)).events.at(-1).detail.ready, undefined);
   const mark = await post(`/api/c2w/orders/${second.id}/ready`, {});
   assert.deepEqual([mark.status, mark.body.code], [409, 'not_held']);
   assert.ok(first);
@@ -233,6 +236,15 @@ test('6.2 a released order takes a free frame at its site again', async () => {
   assert.equal(held.length, 1);
   assert.deepEqual([held[0].state, held[0].id], ['held', o.frameId]);
   assert.equal(o.inStock, true);
+  // "What's happened" says which frame was put aside again.
+  assert.equal((await order(made.id)).events.at(-1).detail.heldFrameId, o.frameId);
+});
+
+test('6.2 an accessory chosen twice to match is refused, not charged twice', async () => {
+  const made = await quote(await framedBike(1), { accessoryIds: [lock, light] });
+  const res = await certify(made.id, { amountPence: 110000, difference: 'match', accessoryIds: [lock, lock] });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal((await order(made.id)).stage, 'quote', 'nothing saved');
 });
 
 test('6.2 a released order with no frame free is saved, not held, and counts as not in stock', async () => {
