@@ -9,6 +9,8 @@ import { count, money } from './reports-format.ts';
 import { ReportGraph } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
 import { ChangeWhatsShown } from './change-panel.tsx';
+import { SaveReportDialog } from './save-report-dialog.tsx';
+import { Button } from '@/components/ui/button';
 import { PERIODS } from './sales-report.tsx';
 import { BASE_LABEL, BASE_PATH, type ChangedReport } from './changed-format.ts';
 
@@ -78,12 +80,16 @@ function ChangedTable({ report }: { report: ChangedReport }) {
 export function ChangedReportPage() {
   const [params, setParams] = useSearchParams();
   const [picking, setPicking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<{ name: string; query: string } | null>(null);
   const base = params.get('base') === 'takings' ? 'takings' : 'sales';
   const period = params.get('period') ?? 'this-week';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
   const periodParams = new URLSearchParams({ period, ...(period === 'dates' ? { from, to } : {}) });
   const query = params.toString();
+  // The bar says it is saved only while the report on screen is the one that was saved.
+  const savedAs = saved && saved.query === query ? saved.name : null;
   const answer = useQuery({ queryKey: ['reports-changed', query], queryFn: () => apiGet<ChangedReport>(`/api/reports/changed?${query}`), retry: false });
   const report = answer.data;
 
@@ -122,7 +128,8 @@ export function ChangedReportPage() {
       </div>
       <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-surface-muted)] px-3.5 py-2.5 text-size-15 leading-snug">
         <Check size={18} aria-hidden="true" />
-        <span className="min-w-[260px] flex-1">You’ve changed this report. Save it to come back to it.</span>
+        <span className="min-w-[260px] flex-1">{savedAs ? `Saved as “${savedAs}”. It is in Your reports on the Reports page.` : 'You’ve changed this report. Save it to come back to it.'}</span>
+        {savedAs ? null : <Button variant="primary" className="min-h-11" onClick={() => setSaving(true)} disabled={!report}>Save as my report</Button>}
         <Link to={`${BASE_PATH[base]}?${periodParams.toString()}`} className="inline-flex min-h-11 items-center px-1 text-sm font-semibold text-[var(--wh-ink)] underline">Back to {BASE_LABEL[base]}</Link>
       </div>
       <PeriodChips value={picking ? 'dates' : period} onChange={choose} options={PERIODS} />
@@ -143,6 +150,13 @@ export function ChangedReportPage() {
           </Box>
         )
       ) : answer.isError ? null : <Note>Loading…</Note>}
+      {saving && report ? (
+        <SaveReportDialog
+          what={report.what}
+          report={{ base: report.base, measure: report.measure, split: report.split, only: report.only, supplier: report.supplier, period }}
+          onClose={() => setSaving(false)} onSaved={(s) => { setSaving(false); setSaved({ name: s.name, query }); }}
+        />
+      ) : null}
       {picking ? (
         <PickDates subtitle={`${BASE_LABEL[base]} · ${report?.shopLine ?? ''}`} today={report?.today ?? ''} from={from || report?.today || ''} to={to || report?.today || ''}
           onClose={() => setPicking(false)} onShow={(a, b) => { setPicking(false); withPeriod({ period: 'dates', from: a, to: b }); }} />
