@@ -147,7 +147,9 @@ test('ws-shopify-sending: the progress bar and how many are sent, then the conne
 test('ws-shopify-on: the connected page, its rows and note, Open Shopify, and Pause then Resume sending', async () => {
   const { ui, fireEvent, within } = await open(SHOPIFY({ ...SENT }));
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connected to your Shopify shop' }));
-  assert.ok(ui.getByText(`${ADDRESS} · last sent 17 Sept, 10:12 · 212 products · sent when you press Send`));
+  // Changes go as they're made (Jack's answer to Q2, 12 Nov), so the drawn line, and no way back to Send once sent.
+  assert.ok(ui.getByText(`${ADDRESS} · last sent 17 Sept, 10:12 · 212 products · sent as you change them in Wheelhouse`));
+  assert.ok(ui.queryByRole('button', { name: 'See what will change' }) === null, 'not drawn on the connected page');
   const shop = ui.getByRole('link', { name: 'Open Shopify' });
   assert.equal(shop.getAttribute('href'), `https://${ADDRESS}/admin`);
   assert.equal(shop.getAttribute('target'), '_blank');
