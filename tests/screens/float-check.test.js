@@ -195,7 +195,9 @@ test('Settings › End of day › Float: the float, saved in whole pence when th
   t.fireEvent.change(box, { target: { value: '£150' } });
   t.fireEvent.blur(box);
   await t.waitFor(() => assert.deepEqual(calls.filter((c) => c.method === 'PUT').map((c) => c.body), [{ floatPence: 15000 }]));
-  assert.ok(await t.ui.findByText('Saved.'));
+  // Settings' note (set-save-failed draws it on this fold); no Undo for a float that wasn't set.
+  const note = t.ui.container.querySelector('[data-saved-note]');
+  await t.waitFor(() => assert.equal(note.textContent, 'Saved'));
   await t.waitFor(() => assert.match(fold.textContent, /£150\.00/));
 });
 

@@ -16,7 +16,8 @@ import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-se
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
-import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
+import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
 import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
@@ -1033,6 +1034,9 @@ function OwnerSettings() {
   const waysToPay = useWaysToPaySummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
+  const closeEntry = useCloseEntrySummary();
+  const countFirst = useCountFirstSummary();
+  const c2w = useC2wSummaries();
   const tills = useTillsSummary();
   const signingIn = useSigningInSummary();
   const stockAdjustments = useStockAdjustmentsSummary();
@@ -1061,9 +1065,21 @@ function OwnerSettings() {
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
           { key: 'automatic-messages', title: 'Automatic messages', summary: messages, body: <AutomaticMessages /> },
         ] },
-        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
+        // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS, eodFolds): Float (set-eod),
+        // Close the day (set-eod-close) and Counting the cash (owner-setup-till-payments-eod design 3).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+          { key: 'close-the-day', title: 'Close the day', summary: closeEntry, body: <CloseEntrySettings /> },
+          { key: 'counting-the-cash', title: 'Counting the cash', summary: countFirst, body: <CountFirstSettings /> },
+        ] },
+        // After End of day, as drawn (settings-frame.mjs c2wFolds; c2w.mjs cw-settings).
+        { key: 'c2w', title: 'Cycle to Work', intro: 'Holding and ordering bikes, deposits, and the scheme providers you work with.', folds: [
+          { key: 'c2w-hold', title: 'Holding bikes and quotes', summary: c2w.hold, body: <HoldSettings /> },
+          { key: 'c2w-order', title: 'Bikes not in stock', summary: c2w.order, body: <OrderSettings /> },
+          { key: 'c2w-apply', title: 'How to apply', summary: c2w.apply, body: <ApplySettings /> },
+          { key: 'c2w-deposits', title: 'Deposits', summary: c2w.deposits, body: <DepositSettings /> },
+          { key: 'c2w-providers', title: 'Scheme providers', summary: c2w.providers, body: <ProvidersSettings /> },
+          { key: 'c2w-today', title: 'On Today', summary: c2w.today, body: <TodaySettings /> },
         ] },
         // After End of day, as drawn (website.mjs ONLINE_INTRO, ws-pay-*): Buying online above
         // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
