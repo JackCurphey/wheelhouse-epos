@@ -26,11 +26,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 1. Tables and settings — server (pull request 1, about 450 lines, risky: migration)
 
-- [ ] 1.1 Test: migrating from empty makes `c2w_settings`, `c2w_providers`, `c2w_orders`, `c2w_order_events`, `c2w_payments`, `c2w_payment_orders`, and the `c2w_order_id` columns on `stock_frames` and `purchase_order_items`, all with row-level security on `shop_id`; another shop's rows can't be read (scratch database)
-- [ ] 1.2 Test: `GET /api/c2w/settings` makes the shop's row on first read; `PUT` saves hold days, reminder days, quote days, the ordering rule, how to apply; refused for non-Owners
-- [ ] 1.3 Test: "Straight away, with a deposit" is refused while till deposits don't exist
-- [ ] 1.4 Test: providers — add, edit, retire; a retired provider can't be picked; commission and terms left out of replies for someone who can't see costs
-- [ ] 1.5 Write the migration (next free number) and `server/routes/c2w-settings.js` to pass 1.1–1.4
+- [x] 1.1 Test: migrating from empty makes `c2w_settings`, `c2w_providers`, `c2w_orders`, `c2w_order_events`, `c2w_payments`, `c2w_payment_orders`, and the `c2w_order_id` columns on `stock_frames` and `purchase_order_items`, all with row-level security on `shop_id`; another shop's rows can't be read (scratch database)
+- [x] 1.2 Test: `GET /api/c2w/settings` makes the shop's row on first read; `PUT` saves hold days, reminder days, quote days, the ordering rule, how to apply; refused for non-Owners
+- [x] 1.3 Test: "Straight away, with a deposit" is refused while till deposits don't exist
+- [x] 1.4 Test: providers — add, edit, retire; a retired provider can't be picked; commission and terms left out of replies for someone who can't see costs
+- [x] 1.5 Write the migration (next free number) and `server/routes/c2w-settings.js` to pass 1.1–1.4
 - [ ] 1.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 2. The settings screen (pull request 2, about 400 lines)
