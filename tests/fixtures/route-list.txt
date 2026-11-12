@@ -389,3 +389,11 @@ GET /api/c2w/providers
 POST /api/c2w/providers
 PUT /api/c2w/providers/:id
 POST /api/c2w/providers/:id/retire
+POST /api/shopify/connect
+GET /api/shopify/pretend-approve
+GET /api/shopify/return
+GET /api/shopify/preview
+POST /api/shopify/send
+POST /api/shopify/pause
+POST /api/shopify/resume
+POST /api/shopify/switch-to-wheelhouse

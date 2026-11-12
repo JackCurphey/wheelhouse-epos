@@ -3,44 +3,17 @@
 // connects its own account through the payments adapter: Wheelhouse sends the
 // Owner to the provider's page and takes them back. Owner only, until roles
 // are built (server/lib/owner-only.js).
-import { randomBytes } from 'node:crypto';
 import { prepare } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { currentSession } from '../lib/session.js';
+import { endTrip, html, peekTrip, redirect, startTrip } from '../lib/trips.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { isConnected, paymentAccount, paymentsState } from '../payments/provider.js';
 
 const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
 const TEST_PENCE = 100;
-
-// A trip to the provider's page and back: single use, for the shop and Owner
-// who started it, for 30 minutes. Held in memory, so a restart means pressing
-// Connect again (logged in decided-while-building).
-const trips = new Map();
-const TRIP_MS = 30 * 60 * 1000;
-function startTrip(trip) {
-  const now = Date.now();
-  for (const [key, t] of trips) if (t.expires < now) trips.delete(key);
-  const state = randomBytes(24).toString('hex');
-  trips.set(state, { ...trip, expires: now + TRIP_MS });
-  return state;
-}
-function endTrip(state, shopId, kind) {
-  const trip = typeof state === 'string' ? trips.get(state) : null;
-  if (!trip || trip.shopId !== shopId || trip.kind !== kind || trip.expires < Date.now()) return null;
-  trips.delete(state);
-  return trip;
-}
-function redirect(res, location) {
-  res.writeHead(302, { Location: location });
-  res.end();
-}
-function html(res, body) {
-  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(body);
-}
 
 async function settingsBody() {
   const provider = payments();
@@ -176,9 +149,9 @@ export function register(route) {
   route('GET', '/api/online-payments/pretend-card/pay', async (req, res, params, query, afterRelease, shopId) => {
     const provider = payments();
     if (provider?.name !== 'pretend') return notFound(res);
-    const trip = trips.get(query.get('state'));
+    const trip = peekTrip(query.get('state'));
     // Only the shop that started it, within its time; anyone else goes on to the return, which turns them away.
-    if (trip?.kind === 'test' && trip.shopId === shopId && trip.expires >= Date.now()) {
+    if (trip?.kind === 'test' && trip.shopId === shopId) {
       try {
         await provider.card(trip.ref, query.get('card'));
       } catch (err) {

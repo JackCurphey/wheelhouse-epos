@@ -11,6 +11,7 @@ import { payments } from './payments/index.js';
 import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
+import { linkState } from './shopify/link.js';
 import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
 
 // History keeps 90 days (spec question 3, default taken:
@@ -241,7 +242,8 @@ export async function websiteState(row = null) {
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
     // The Taking payments row: the same state as Settings › Online orders (design 6).
-    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },
+    payments: { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null },    // Connected to the shop's own Shopify (design 7), or null.
+    shopify: await linkState(),
   };
 }
 
@@ -337,6 +339,7 @@ export async function publish(loginId) {
 export async function turnOn(loginId) {
   await inTransaction(async () => {
     const website = await lockWebsite();
+    if (website.kind === 'shopify') throw new WebsiteError(409, 'Your website is your Shopify shop');
     if (!website.published) await publishLocked(website, loginId);
     await prepare('UPDATE website SET is_on = true, updated_at = now()').run();
     await getOrCreateStorefrontSettings();
@@ -353,6 +356,19 @@ export async function turnOff() {
     await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
   });
   return websiteState();
+}
+
+// Shopify connected, or Wheelhouse's website instead (design 7): either way
+// Wheelhouse's own website is off until the Owner turns it on. `alongside`
+// saves the Shopify link in the same transaction.
+export async function chooseWebsiteKind(kind, alongside) {
+  await inTransaction(async () => {
+    await lockWebsite();
+    await prepare('UPDATE website SET kind = ?, set_up_at = COALESCE(set_up_at, now()), is_on = false, updated_at = now()').run(kind);
+    await getOrCreateStorefrontSettings();
+    await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
+    await alongside();
+  });
 }
 
 async function keepDraftInHistory(website, loginId) {
