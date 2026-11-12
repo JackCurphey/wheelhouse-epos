@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Search } from 'lucide-react';
 import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -11,9 +11,9 @@ import { useSavedNote } from './saved-note.tsx';
  * Settings › Front desk › Till › Quick buttons (set-till-quick, set-till-quick-add,
  * set-till-quick-saved and set-till-empty in generator/setup.mjs;
  * openspec/changes/owner-setup-till-payments-eod, design 1 and 5): the shop's
- * groups as pills, each with a "…" menu to rename or remove it, and the chosen
- * group's buttons in till order, each with its name, line and price. Hover,
- * focus, right-click or long-press shows Edit and Remove; the handle moves a
+ * groups as pills, each with a "…" menu to rename, move or remove it, and the
+ * chosen group's buttons in till order, each with its name, line and price.
+ * Hover, focus, right-click or press and hold shows Edit and Remove; the handle moves a
  * button by drag or the arrow keys. Every change saves at once and shows
  * Settings' note (saved-note.tsx), with Undo, or a failed save kept here with
  * Try again; while a box is open, a failed save says so in the box. A
@@ -130,6 +130,26 @@ export function QuickButtonsSettings() {
     // The handle keeps focus as its button moves, for the next arrow press.
     later(() => find(`[data-move="${id}"]`)()?.focus());
   }
+  // A group one place left or right, from its menu (Jack, 12 Nov evening, Q2
+  // option 2), in the same line as the button moves. It stays chosen.
+  function moveGroup(id: number, step: -1 | 1) {
+    const gs = queryClient.getQueryData<List>(KEY)?.groups ?? [];
+    const from = gs.findIndex((g) => g.id === id);
+    const to = from + step;
+    setGroupMenu(false);
+    if (from < 0 || to < 0 || to >= gs.length) return;
+    setChosenId(id);
+    queryClient.setQueryData<List>(KEY, (l) => {
+      if (!l) return l;
+      const n = l.groups.filter((g) => g.id !== id);
+      n.splice(to, 0, l.groups.find((g) => g.id === id)!);
+      return { groups: n };
+    });
+    toSend.current.push({ req: { method: 'PUT', path: `/api/quick-button-groups/${id}`, body: { position: to } }, back: groupBack, undo: { method: 'PUT', path: `/api/quick-button-groups/${id}`, body: { position: from } } });
+    sendMoves();
+    // Back on "…", as after Rename and Remove.
+    focusGroup();
+  }
   function sendMoves() {
     queue.current = queue.current.then(async () => {
       while (toSend.current.length) {
@@ -197,7 +217,9 @@ export function QuickButtonsSettings() {
               className={`inline-flex size-11 items-center justify-center rounded-lg border text-lg font-bold ${groupMenu ? 'border-[var(--wh-ink)] bg-[var(--wh-surface-muted)]' : 'border-[var(--wh-border)]'}`}>…</button>
             {groupMenu ? (
               <GroupMenu label={chosen.name} anchor={moreRef} onClose={(refocus) => { setGroupMenu(false); if (refocus) moreRef.current?.focus(); }}
-                onRename={() => { setGroupMenu(false); setGroupBox({ id: chosen.id, name: chosen.name }); }} onRemove={() => removeGroup(chosen)} />
+                onRename={() => { setGroupMenu(false); setGroupBox({ id: chosen.id, name: chosen.name }); }} onRemove={() => removeGroup(chosen)}
+                onMoveLeft={groups[0] !== chosen ? () => moveGroup(chosen.id, -1) : undefined}
+                onMoveRight={groups.at(-1) !== chosen ? () => moveGroup(chosen.id, 1) : undefined} />
             ) : null}
           </div>
         ) : null}
@@ -244,6 +266,7 @@ function Row({ b, pinned, onPin, onKey, onDrag, onDrop, onEdit, onRemove }: {
   b: QuickButton; pinned: boolean; onPin: () => void; onKey: (e: KeyboardEvent) => void; onDrag: () => void; onDrop: (e: DragEvent) => void; onEdit: () => void; onRemove: () => void;
 }) {
   const [hover, setHover] = useState(false);
+  const hold = useHold(onPin);
   // Focus or a right-click keeps the row open until another row opens, so Tab
   // reaches Edit and Remove and the page doesn't shift under a tap elsewhere
   // (on a phone they take a line of their own).
@@ -251,8 +274,8 @@ function Row({ b, pinned, onPin, onKey, onDrag, onDrop, onEdit, onRemove }: {
   return (
     <div data-quick-button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       onFocus={() => { if (!pinned) onPin(); }}
-      onContextMenu={(e) => { e.preventDefault(); onPin(); }} onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
-      className={`flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-[var(--wh-panel)] py-1 pr-2 pl-3 md:flex-nowrap ${open ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-border)]'}`}>
+      onPointerDown={hold.down} onContextMenu={(e) => { e.preventDefault(); hold.cancel(); onPin(); }} onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
+      className={`flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-[var(--wh-panel)] py-1 pr-2 pl-3 select-none [-webkit-touch-callout:none] md:flex-nowrap ${open ? 'border-[var(--wh-ink)]' : 'border-[var(--wh-border)]'}`}>
       <button type="button" data-move={b.id} draggable aria-label={`Move ${b.name} — drag, or use the arrow keys`} onKeyDown={onKey}
         onDragStart={(e) => { onDrag(); e.dataTransfer.setData('text/plain', b.name); }}
         className="inline-flex size-11 shrink-0 cursor-grab items-center justify-center text-base text-[var(--wh-muted)]">⋮⋮</button>
@@ -272,12 +295,48 @@ function Row({ b, pinned, onPin, onKey, onDrag, onDrop, onEdit, onRemove }: {
 }
 
 /**
+ * Press and hold on a touch screen (Jack, 12 Nov evening, Q4 option 2): Safari
+ * on an iPhone never sends contextmenu, so holding a row half a second opens it.
+ * 500 ms and 6 px as the diary's press (use-diary-extras.tsx). Lifting, moving
+ * further or the browser taking the touch (a scroll) cancels it; the handle is
+ * for dragging, so a hold there isn't one. Android's own contextmenu, during
+ * the hold, cancels the timer, so the row opens once.
+ */
+function useHold(onHeld: () => void) {
+  const stop = useRef<(() => void) | null>(null);
+  useEffect(() => () => stop.current?.(), []);
+  function down(e: PointerEvent<HTMLElement>) {
+    if (e.pointerType !== 'touch' || e.button !== 0 || (e.target as HTMLElement).closest('[data-move]')) return;
+    stop.current?.();
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const moved = (ev: globalThis.PointerEvent) => { if (Math.abs(ev.clientX - x0) > 6 || Math.abs(ev.clientY - y0) > 6) end(); };
+    const timer = setTimeout(() => { end(); onHeld(); }, 500);
+    function end() {
+      clearTimeout(timer);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      window.removeEventListener('pointermove', moved);
+      stop.current = null;
+    }
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    window.addEventListener('pointermove', moved);
+    stop.current = end;
+  }
+  return { down, cancel: () => stop.current?.() };
+}
+
+/**
  * A group's menu (design 5 point 3), drawn as the Tills "…" menu (sites.mjs
  * tillMenu, ms-tills) and working as the till's Serving menu (give-pin.tsx):
  * the first item takes the focus, the arrows, Home and End move it, Escape
- * or Tab closes back to "…", a click away closes. Move waits for Jack.
+ * or Tab closes back to "…", a click away closes. Move left and Move right
+ * show only where the group can go, as job-extras.tsx's Change length.
  */
-function GroupMenu({ label, anchor, onClose, onRename, onRemove }: { label: string; anchor: RefObject<HTMLButtonElement | null>; onClose: (refocus: boolean) => void; onRename: () => void; onRemove: () => void }) {
+function GroupMenu({ label, anchor, onClose, onRename, onRemove, onMoveLeft, onMoveRight }: {
+  label: string; anchor: RefObject<HTMLButtonElement | null>; onClose: (refocus: boolean) => void; onRename: () => void; onRemove: () => void; onMoveLeft?: () => void; onMoveRight?: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   useEffect(() => { close.current = onClose; });
@@ -300,6 +359,8 @@ function GroupMenu({ label, anchor, onClose, onRename, onRemove }: { label: stri
     <div ref={ref} role="menu" aria-label={label} onKeyDown={onKey}
       className="absolute top-12 right-0 z-40 flex w-[240px] max-w-[calc(100vw-32px)] flex-col gap-0.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-[0_12px_32px_var(--wh-backdrop)]">
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onRename}>Rename…</button>
+      {onMoveLeft ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onMoveLeft}>Move left</button> : null}
+      {onMoveRight ? <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onMoveRight}>Move right</button> : null}
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onRemove}>Remove</button>
     </div>
   );
