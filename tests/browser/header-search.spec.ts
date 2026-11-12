@@ -44,7 +44,7 @@ test.describe('on a computer', () => {
   // openspec/changes/bike-search: a frame number finds the bike, which opens its page.
   test('a frame number finds the bike under Bikes, and it opens the bike’s page', async ({ page, context }) => {
     await signIn(page, context, '/workshop/today');
-    await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' }).fill('frame number');
+    await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' }).fill('frame number');
     const bikes = page.getByRole('group', { name: 'Bikes' });
     await expect(bikes.getByText('Maya Patel · Green · [frame number]')).toBeVisible();
     await bikes.getByRole('link', { name: 'Trek Domane AL 3' }).click();
@@ -54,7 +54,7 @@ test.describe('on a computer', () => {
 
   test('the results drop down under the box, over the page, and a job opens in the diary', async ({ page, context }) => {
     await signIn(page, context, '/workshop/today');
-    const box = page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' });
+    const box = page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' });
     await box.fill('maya');
     const results = page.getByRole('region', { name: 'Search results' });
     await expect(results.getByRole('link', { name: `${job.reference} · Maya Patel` })).toBeVisible();
@@ -81,7 +81,7 @@ test.describe('on the diary', () => {
     await signIn(page, context, '/workshop/diary?date=2026-09-17');
     const dialog = page.getByRole('dialog', { name: /Standard service/ });
     for (let round = 0; round < 2; round++) {
-      await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers and bikes' }).fill('maya');
+      await page.getByRole('banner').getByRole('searchbox', { name: 'Search jobs, customers, bikes and orders' }).fill('maya');
       await page.getByRole('region', { name: 'Search results' }).getByRole('link', { name: `${job.reference} · Maya Patel` }).click();
       await expect(dialog).toBeVisible();
       await page.keyboard.press('Escape');
@@ -95,7 +95,7 @@ test.describe('on a phone', () => {
 
   test('the search button opens the box across the top; Close search shuts it', async ({ page, context }) => {
     await signIn(page, context, '/workshop/today');
-    await page.getByRole('button', { name: 'Search jobs, customers and bikes' }).click();
+    await page.getByRole('button', { name: 'Search jobs, customers, bikes and orders' }).click();
     const sheet = page.getByRole('dialog', { name: 'Search' });
     await expect(sheet).toBeVisible();
     await sheet.getByRole('searchbox').fill('maya');
