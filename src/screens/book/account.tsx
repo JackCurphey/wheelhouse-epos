@@ -652,7 +652,14 @@ function HistoryCard({ items, orders, shopSlug, shopName, bookLink, onReceipt }:
       ))}
     </div>
   );
-  if (!items.length && !orders.length) {
+  // Cycle to Work, as drawn: an open order under Everything only; a collected
+  // one as a purchase, standing in for the till sale it was collected with.
+  // (With no time it was collected, it goes last.) A cancelled order isn't drawn on the account, so it's left out.
+  const open = orders.filter((o) => o.stage !== 'collected' && o.state !== 'cancelled');
+  const collected: C2wDone[] = orders.filter((o) => o.stage === 'collected').map((o) => ({ kind: 'c2w', order: o, at: o.collectedAt ?? '' }));
+  const sales = new Set(collected.map((c) => c.order.saleId).filter((s) => s !== null));
+  const rows: Row[] = [...items.filter((i) => !(i.kind === 'purchase' && i.source === 'till' && sales.has(i.id))), ...collected];
+  if (!rows.length && !open.length) {
     return (
       <Card id={`${idBase}-history`} title="History" aside={pills}>
         <div className="flex flex-col items-center gap-3 px-3 py-9 text-center">
@@ -663,13 +670,6 @@ function HistoryCard({ items, orders, shopSlug, shopName, bookLink, onReceipt }:
     );
   }
   // The conversation shows under Everything only, as drawn.
-  // Cycle to Work, as drawn: an open order under Everything only; a collected
-  // one as a purchase, standing in for the till sale it was collected with.
-  // A cancelled order isn't drawn on the account, so it's left out.
-  const open = orders.filter((o) => o.stage !== 'collected' && o.state !== 'cancelled');
-  const collected: C2wDone[] = orders.filter((o) => o.stage === 'collected' && o.collectedAt).map((o) => ({ kind: 'c2w', order: o, at: o.collectedAt as string }));
-  const sales = new Set(collected.map((c) => c.order.saleId).filter((s) => s !== null));
-  const rows: Row[] = [...items.filter((i) => !(i.kind === 'purchase' && i.source === 'till' && sales.has(i.id))), ...collected];
   const shown = rows.filter((i) => filter === 'Everything' || (i.kind !== 'messages' && (filter === 'Repairs') === (i.kind === 'repair')));
   const newest = (a: Row, b: Row) => b.at.localeCompare(a.at);
   const row = (i: Row) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} />

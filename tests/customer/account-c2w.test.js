@@ -30,14 +30,16 @@ const COLLECTED = { ...ORDER, id: 6, stage: 'collected', stageIndex: 4, state: n
 const CANCELLED = { ...ORDER, id: 7, stage: 'cancelled', stageIndex: null, state: 'cancelled', holdUntil: null, customerPaysPence: null, collectedAt: null, saleId: null };
 // Her till sale at collection, which the history also lists as a purchase.
 const SALE = { kind: 'purchase', source: 'till', id: 77, receiptNumber: 3, number: 'B1-0003', what: '[Bike]', totalPence: 12000, at: '2026-09-03T15:00:00.000Z', receipt: { source: 'till', id: 77 } };
+// A repair in the workshop now, which also sits under Now.
+const REPAIR = { kind: 'repair', jobId: 42, reference: 'WH-1042', title: 'Standard service', bikeLabel: 'Trek Domane AL 3', bikeId: 7, stage: 'in_workshop', workStarted: false, jobDate: '2026-09-17', totalPence: null, at: '2026-09-17T09:00:00.000Z' };
 const PUMP = { kind: 'purchase', source: 'till', id: 9, receiptNumber: 12, what: 'Pump', totalPence: 2500, at: '2026-08-21T10:00:00.000Z' };
 
-const accountServer = ({ me = ME, history = [PUMP], orders = [OPEN] } = {}) => (url) => {
+const accountServer = ({ me = ME, history = [PUMP], orders = [OPEN], ordersFail = false } = {}) => (url) => {
   const { pathname } = new URL(url, 'http://localhost');
   if (!me) return { status: 401, body: { error: 'Not signed in' } };
   if (pathname.endsWith('/me')) return { status: 200, body: me };
   if (pathname.endsWith('/bikes')) return { status: 200, body: [] };
-  if (pathname.endsWith('/c2w-orders')) return { status: 200, body: orders };
+  if (pathname.endsWith('/c2w-orders')) return ordersFail ? { status: 500, body: { error: 'Something went wrong' } } : { status: 200, body: orders };
   const one = /\/c2w-orders\/(\d+)$/.exec(pathname);
   if (one) {
     const found = orders.find((o) => o.id === Number(one[1]));
@@ -81,6 +83,36 @@ test('an open order is first under Now: the bike and stage, the quote and hold, 
   await h.findByText('[Bike] · [Size] · Waiting for the certificate');
   const [first] = under(h, 'Now');
   assert.equal(first, 'Cycle to Work [Bike] · [Size] · Waiting for the certificate Cycle to Work · Quote [quote number] · put aside until Tue 8 Sep What you pay at collection: £120.00 Put aside ›');
+});
+
+test('the open order comes before a repair in the workshop', async () => {
+  const { ui } = await openAccount({ history: [REPAIR, PUMP] });
+  const h = await history(ui);
+  await h.findByText('[Bike] · [Size] · Waiting for the certificate');
+  const now = under(h, 'Now');
+  assert.equal(now.length, 2);
+  assert.match(now[0], /^Cycle to Work /);
+  assert.match(now[1], /Standard service/);
+});
+
+test('if her Cycle to Work orders fail to load, the rest of the account still shows', async () => {
+  const { ui } = await openAccount({ ordersFail: true });
+  const h = await history(ui);
+  assert.ok(await h.findByText(/Pump/));
+  assert.ok(h.queryByText(/\[Bike\]/) === null);
+});
+
+test('a collected order with no collection time still shows, under Earlier', async () => {
+  const { ui } = await openAccount({ orders: [{ ...COLLECTED, collectedAt: null }], history: [PUMP, SALE] });
+  const h = await history(ui);
+  await h.findByText('[Bike] · [Size] · Collected');
+  assert.equal(under(h, 'Earlier, newest first')[1], 'Cycle to Work [Bike] · [Size] · Collected Cycle to Work · Quote [quote number] · receipt ›');
+});
+
+test('only a cancelled order: the history says nothing is here yet', async () => {
+  const { ui } = await openAccount({ orders: [CANCELLED], history: [] });
+  const h = await history(ui);
+  assert.ok(await h.findByText('Nothing here yet. Your repairs and purchases with North Street Cycles show here.'));
 });
 
 test('the open order opens its page by her sign-in', async () => {
