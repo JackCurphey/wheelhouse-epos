@@ -20,7 +20,7 @@ import { deleteTestShop } from './helpers/testShop.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '135_website.sql';
+const FILE = '141_website.sql';
 
 function adminUrlOrSkip(t) {
   try {
@@ -41,7 +41,7 @@ const asShop = (c, id) => c.query("SELECT set_config('app.current_shop_id', $1, 
 
 // ---------- 1.1 The migration ----------
 
-test('135 runs from empty: website and website_versions, each shop sees only its own', async (t) => {
+test('141 runs from empty: website and website_versions, each shop sees only its own', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
   const name = `epos_web_empty_${process.pid}`;
