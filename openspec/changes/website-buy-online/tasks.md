@@ -65,8 +65,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 5. Paying — server and pretend outcomes (pull request 5, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
-- [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9 (so are `online_order_lines.refunded_at` and `refund_reason`, which migration 154 left out)
+- [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9
 - [ ] 5.0a `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
+- [ ] 5.0b Before any code writes an order payment: `server/payments/refund.js`'s provider-wide sweep (`refundOwed()` with no `jobId`) would refund order payments too, and it can only refund in full
+- [ ] 5.0c Before any code writes an order payment: `server/shop-data-copy.js` (the Refund rows, about lines 125–133) labels every refunded online payment as a deposit for a job ("Online deposit for job …")
+- [ ] 5.0d Before any code writes an order payment: take the order number (`nextOrderNumber()`) last, just before COMMIT, with no provider calls after it, because the counter's row lock holds the shop's settings and other orders' payments until the commit
 
 - [ ] 5.1 Test: a card that works — in one transaction stock is checked and comes off the collecting shop, store credit is spent, one sale is recorded with "Paid online" and "Store credit" lines, the order gets its number and moves to To get ready, the payment is taken, and Order confirmation is queued
 - [ ] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
@@ -91,6 +94,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 7. Refunds — server (pull request 7, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
+- [ ] 7.0 Each history step (`online_order_events`) also saves the person's name in `detail.by`, as `server/c2w/orders.js` does, so "who" survives a deleted employee or a sign-in with no employee
 - [ ] 7.1 Test: Cancel and refund needs a reason; store credit goes back as a refund entry naming the order, the card part through the adapter's refund, the items back in stock caused by the refund, Order cancelled queued with the reason
 - [ ] 7.2 Test: Can't supply refunds one line the way it was paid, marks it "Couldn’t supply · refunded", puts its unit back, queues Item we couldn’t supply with the reason; the rest carries on
 - [ ] 7.3 Test: the customer's cancel (`POST /api/portal/:shopSlug/order-links/:code/cancel`) refunds in full while To get ready; just after Mark ready it changes nothing and answers "just marked ready"

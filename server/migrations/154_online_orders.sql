@@ -4,16 +4,20 @@
 -- the bank's check and "no answer" statuses; the rest of the Online orders
 -- settings; and a Show online switch on each category. Every new table is the
 -- shop's own under row-level security. Money is in pence. Additive; safe to
--- run twice. (150 to 153 are claimed by other pieces in progress.)
+-- run twice. (12 Nov: main is at 149; 150 and 151 are on open branches,
+-- claude/website-shopify-live and claude/reports-reopen; the build's claims
+-- list, kept outside the repo, lists 150 to 153 as claimed.)
 --
 -- The refund tables, store_credit_entries.online_order_id and the
 -- stock_movements refund cause come in pull request 5, as their shape follows
 -- Jack's answer to question 9.
 
 -- The tables an order points at first, before the new tables' links take a
--- lock on shops (as 137 orders its locks).
-LOCK TABLE products, sites, customers, sales, employees, customer_messages, online_payments, pretend_payments,
-  online_order_settings, product_categories IN SHARE ROW EXCLUSIVE MODE;
+-- lock on shops (as 137 orders its locks). The tables this alters are locked
+-- ACCESS EXCLUSIVE now, as ALTER TABLE will need, so the migration never
+-- waits part way for a stronger lock while holding others (a deadlock).
+LOCK TABLE products, sites, customers, sales, employees, customer_messages IN SHARE ROW EXCLUSIVE MODE;
+LOCK TABLE online_payments, pretend_payments, online_order_settings, product_categories IN ACCESS EXCLUSIVE MODE;
 
 -- products (id, shop_id), sites (id, shop_id), customers (id, shop_id) and
 -- sales (id, shop_id) are already unique (137 and before), so links carry the
@@ -34,10 +38,12 @@ CREATE TABLE IF NOT EXISTS online_orders (
     CHECK (stage IN ('awaiting_payment', 'payment_unsure', 'to_get_ready', 'ready', 'collected', 'cancelled', 'not_paid')),
   -- Collect only for now (journey 2, decision 1).
   how TEXT NOT NULL DEFAULT 'collect' CHECK (how IN ('collect')),
-  -- As typed at checkout.
-  name TEXT NOT NULL,
+  -- As typed at checkout. No customer column has a length limit; name and
+  -- phone take Cycle to Work's 60 (c2w_providers.name, c2w_orders'
+  -- references), and email the 254 an email can be (portal.js signinEmail).
+  name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
   email TEXT NOT NULL CHECK (char_length(email) <= 254),
-  phone TEXT,
+  phone TEXT CHECK (char_length(phone) <= 60),
   total_pence INTEGER NOT NULL CHECK (total_pence >= 0),
   credit_pence INTEGER NOT NULL DEFAULT 0 CHECK (credit_pence >= 0),
   card_pence INTEGER NOT NULL DEFAULT 0 CHECK (card_pence >= 0),
@@ -83,6 +89,9 @@ CREATE TABLE IF NOT EXISTS online_order_lines (
   qty INTEGER NOT NULL CHECK (qty > 0),
   -- The price when it was paid for.
   unit_pence INTEGER NOT NULL CHECK (unit_pence >= 0),
+  -- A line refunded on its own (Can't supply), when and why.
+  refunded_at TIMESTAMPTZ,
+  refund_reason TEXT CHECK (char_length(refund_reason) <= 500),
   FOREIGN KEY (order_id, shop_id) REFERENCES online_orders (id, shop_id),
   FOREIGN KEY (product_id, shop_id) REFERENCES products (id, shop_id)
 );
@@ -123,20 +132,34 @@ ALTER TABLE online_payments DROP CONSTRAINT IF EXISTS online_payments_online_ord
 ALTER TABLE online_payments ADD CONSTRAINT online_payments_online_order_fk
   FOREIGN KEY (online_order_id, shop_id) REFERENCES online_orders (id, shop_id) NOT VALID;
 CREATE INDEX IF NOT EXISTS idx_online_payments_online_order ON online_payments (online_order_id) WHERE online_order_id IS NOT NULL;
-ALTER TABLE online_payments DROP CONSTRAINT IF EXISTS online_payments_purpose_check;
-ALTER TABLE online_payments ADD CONSTRAINT online_payments_purpose_check CHECK (purpose IN ('deposit', 'order'));
+-- The purpose and status checks are replaced only while they lack the new
+-- values, so running this again never takes back a value a later migration
+-- added.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'online_payments'::regclass
+      AND conname = 'online_payments_purpose_check' AND pg_get_constraintdef(oid) LIKE '%''order''%') THEN
+    ALTER TABLE online_payments DROP CONSTRAINT IF EXISTS online_payments_purpose_check;
+    ALTER TABLE online_payments ADD CONSTRAINT online_payments_purpose_check CHECK (purpose IN ('deposit', 'order'));
+  END IF;
+END $$;
 -- An order payment names its order; a deposit doesn't.
 ALTER TABLE online_payments DROP CONSTRAINT IF EXISTS online_payments_order_check;
 ALTER TABLE online_payments ADD CONSTRAINT online_payments_order_check CHECK ((purpose = 'order') = (online_order_id IS NOT NULL));
 
 -- The bank's check (checking) and no answer (unknown), on Wheelhouse's record
 -- and on the pretend provider's.
-ALTER TABLE online_payments DROP CONSTRAINT IF EXISTS online_payments_status_check;
-ALTER TABLE online_payments ADD CONSTRAINT online_payments_status_check
-  CHECK (status IN ('waiting', 'held', 'declined', 'taken', 'released', 'refunded', 'checking', 'unknown'));
-ALTER TABLE pretend_payments DROP CONSTRAINT IF EXISTS pretend_payments_status_check;
-ALTER TABLE pretend_payments ADD CONSTRAINT pretend_payments_status_check
-  CHECK (status IN ('waiting', 'held', 'declined', 'taken', 'released', 'refunded', 'checking', 'unknown'));
+DO $$
+DECLARE t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['online_payments', 'pretend_payments'] LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = t::regclass
+        AND conname = t || '_status_check' AND pg_get_constraintdef(oid) LIKE '%''checking''%') THEN
+      EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS %I', t, t || '_status_check');
+      EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I CHECK (status IN (''waiting'', ''held'', ''declined'', ''taken'', ''released'', ''refunded'', ''checking'', ''unknown''))', t, t || '_status_check');
+    END IF;
+  END LOOP;
+END $$;
 
 -- The rest of the Online orders settings (147 left room for them). What the
 -- website sells: only what's on the shelf for now (question 10). Wallets and

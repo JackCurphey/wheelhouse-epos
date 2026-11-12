@@ -8,7 +8,8 @@ import '../server/load-env.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
+import { onlineOrderSettings } from '../server/routes/online-payments.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
@@ -366,6 +367,21 @@ test('Online orders settings start at the shelf, wallets and store credit on, re
   assert.equal(body.buyingOnline, false, 'beside WP-6.1’s');
   assert.equal(body.payments.state, 'none');
   assert.equal('nextOrderNumber' in body, false, 'the counter isn’t a setting');
+});
+
+test('reading the settings writes nothing once the shop’s row is there', async (t) => {
+  const shop = await freshShop(t, '[Read only settings shop]');
+  assert.equal((await settings(shop)).remindDays, 3, 'the first read makes the row');
+  const read = await runWithShop(shop.shop.id, async () => {
+    await dbExec('BEGIN');
+    try {
+      await dbExec('SET TRANSACTION READ ONLY');
+      return await onlineOrderSettings();
+    } finally {
+      await dbExec('ROLLBACK');
+    }
+  });
+  assert.equal(read.remind_days, 3);
 });
 
 test('PUT saves only the fields sent, without needing payments connected', async (t) => {

@@ -44,10 +44,11 @@ const runSql = async (c) => { await c.query('BEGIN'); await c.query(SQL); await 
 async function shopWithThings(c, slug) {
   const id = (await one(c, "INSERT INTO shops (name, slug) VALUES ('[Shop]', $1) RETURNING id", [slug])).id;
   await asShop(c, id);
+  // 'B' stays: a site's code must be one to three capital letters (sites_code_check).
   const site = (await one(c, 'SELECT id FROM sites ORDER BY id LIMIT 1'))?.id
     ?? (await one(c, "INSERT INTO sites (name, code) VALUES ('Bolton', 'B') RETURNING id")).id;
   const customer = (await one(c, "INSERT INTO customers (name, email) VALUES ('Maya Patel', 'maya@example.test') RETURNING id")).id;
-  const product = (await one(c, "INSERT INTO products (sku, name, price, cost, stock_qty) VALUES ('B05S-RX', 'Shimano brake pads B05S-RX', 28, 0, 1) RETURNING id")).id;
+  const product = (await one(c, "INSERT INTO products (sku, name, price, stock_qty) VALUES ('B05S-RX', 'Shimano brake pads B05S-RX', 28, 1) RETURNING id")).id;
   return { id, site, customer, product };
 }
 let codes = 0;
@@ -106,6 +107,16 @@ test('154 makes online orders, lines and history the shop’s own, takes order p
     await assert.rejects(order(c, a, { how: 'post' }), /check/i);
     await assert.rejects(order(c, a, { card_pence: 2000 }), /check/i, 'card and credit add up to the total');
     await assert.rejects(order(c, a, { card_pence: -100, credit_pence: 2900 }), /check/i);
+    await assert.rejects(order(c, a, { name: '' }), /check/i, 'a name');
+    await assert.rejects(order(c, a, { name: 'x'.repeat(61) }), /check/i, 'a name up to 60');
+    await assert.rejects(order(c, a, { phone: 'x'.repeat(61) }), /check/i, 'a phone up to 60');
+    await assert.rejects(order(c, a, { email: 'x'.repeat(255) }), /check/i, 'an email up to 254');
+    await order(c, a, { name: 'x'.repeat(60), phone: null });
+    // A line's refund (design 1): when, and why, up to 500 characters.
+    const refundable = (await line(c, made.id, a.product)).rows[0];
+    assert.deepEqual([refundable.refunded_at, refundable.refund_reason], [null, null]);
+    await c.query("UPDATE online_order_lines SET refunded_at = now(), refund_reason = $2 WHERE id = $1", [refundable.id, 'x'.repeat(500)]);
+    await assert.rejects(c.query('UPDATE online_order_lines SET refund_reason = $2 WHERE id = $1', [refundable.id, 'x'.repeat(501)]), /check/i);
     await assert.rejects(line(c, made.id, a.product, { qty: 0 }), /check/i);
     await assert.rejects(line(c, made.id, a.product, { unit_pence: -1 }), /check/i);
     await assert.rejects(order(c, a, { request_key_hash: made.request_key_hash }), /unique|duplicate/i, 'one order per Pay');
@@ -174,7 +185,21 @@ test('154 makes online orders, lines and history the shop’s own, takes order p
       { purpose: 'deposit', online_order_id: null, status: 'waiting', amount_pence: 2800 });
     assert.equal((await one(c, 'SELECT remind_days FROM online_order_settings')).remind_days, 60);
     assert.equal((await one(c, "SELECT show_online FROM product_categories WHERE path = 'Bearings'")).show_online, false);
-    assert.equal((await c.query('SELECT 1 FROM online_orders')).rows.length, 2);
+    assert.equal((await c.query('SELECT 1 FROM online_orders')).rows.length, 3);
+
+    // ---- Running it again never takes back a value a later migration added ----
+    await c.query('ALTER TABLE online_payments DROP CONSTRAINT online_payments_purpose_check');
+    await c.query("ALTER TABLE online_payments ADD CONSTRAINT online_payments_purpose_check CHECK (purpose IN ('deposit', 'order', '[later purpose]'))");
+    for (const table of ['online_payments', 'pretend_payments']) {
+      await c.query(`ALTER TABLE ${table} DROP CONSTRAINT ${table}_status_check`);
+      await c.query(`ALTER TABLE ${table} ADD CONSTRAINT ${table}_status_check
+        CHECK (status IN ('waiting', 'held', 'declined', 'taken', 'released', 'refunded', 'checking', 'unknown', '[later status]'))`);
+    }
+    await noShop(c);
+    await runSql(c);
+    await asShop(c, a.id);
+    assert.equal((await payment(c, { purpose: '[later purpose]', status: '[later status]' })).rows[0].status, '[later status]');
+    await c.query("INSERT INTO pretend_payments (ref, idempotency_key, amount_pence, status) VALUES ('[later]', '[later]', 1, '[later status]')");
 
     // ---- Rows from before 154 get the starting values ----
     await c.query(`ALTER TABLE online_order_settings DROP COLUMN sells, DROP COLUMN wallets_on, DROP COLUMN store_credit_on,
@@ -190,4 +215,65 @@ test('154 makes online orders, lines and history the shop’s own, takes order p
     for (const [table, n] of Object.entries(before)) assert.equal(await constraintCount(c, table), n, `${table}, after the columns came back`);
   });
   assert.doesNotMatch(migrate(env), new RegExp(`Applied migration: ${FILE}`));
+});
+
+// Locks taken in one order at the start, each at the strength it will need,
+// so the migration never waits for a stronger lock part way through (and
+// deadlocks with a request holding a weaker one): every table it alters is
+// locked ACCESS EXCLUSIVE before anything else runs.
+test('154 locks every table it alters ACCESS EXCLUSIVE before anything else', () => {
+  const code = SQL.replace(/--[^\n]*/g, '');
+  const statements = code.split(';').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean);
+  const locks = [];
+  for (const statement of statements) {
+    const m = statement.match(/^LOCK TABLE (.+) IN (.+) MODE$/i);
+    if (!m) break;
+    for (const table of m[1].split(',')) locks.push({ table: table.trim(), mode: m[2].toUpperCase() });
+  }
+  assert.ok(locks.length > 0, 'it starts with its locks');
+  const created = ['online_orders', 'online_order_lines', 'online_order_events'];
+  // Named straight, or in a DO block's list that it alters one by one.
+  const named = [...code.matchAll(/ALTER TABLE (\w+)/gi)].map((m) => m[1]);
+  const listed = [...code.matchAll(/ARRAY\[([^\]]+)\][^$]*?ALTER TABLE %I/g)].flatMap((m) => m[1].split(',').map((x) => x.trim().replace(/'/g, '')));
+  const altered = [...new Set([...named, ...listed])].filter((t) => !created.includes(t));
+  assert.ok(altered.length >= 4, `the tables it alters: ${altered}`);
+  for (const table of altered) {
+    assert.deepEqual(locks.filter((l) => l.table === table).map((l) => l.mode), ['ACCESS EXCLUSIVE'], table);
+  }
+  for (const l of locks.filter((x) => !altered.includes(x.table))) assert.equal(l.mode, 'SHARE ROW EXCLUSIVE', l.table);
+});
+
+// A database already at 149 (154 not yet run): its deposits stay as they
+// are, and it gains 'order', 'checking' and 'unknown'.
+test('154 on a database at 149 widens the checks and leaves its deposits alone', async (t) => {
+  const admin = adminUrlOrSkip(t);
+  if (!admin) return;
+  const name = `epos_mig154_old_${process.pid}`;
+  const url = new URL(process.env.DATABASE_URL);
+  url.pathname = `/${name}`;
+  await createAppDatabase(admin, name, appRoleFrom(process.env));
+  t.after(() => dropDatabase(admin, name));
+  // Marked as run, so the runner stops at 149; then run by hand below.
+  await withClient(url.href, async (c) => {
+    await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
+    await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [FILE]);
+  });
+  migrate({ ...process.env, DATABASE_URL: url.href });
+  await withClient(url.href, async (c) => {
+    assert.equal((await one(c, "SELECT to_regclass('online_orders') AS t")).t, null, 'at 149');
+    const a = await shopWithThings(c, 's1');
+    const deposit = (await payment(c, { status: 'held' })).rows[0];
+    await assert.rejects(payment(c, { status: 'checking' }), /check/i, 'at 149, no checking yet');
+    await assert.rejects(c.query("INSERT INTO pretend_payments (ref, idempotency_key, amount_pence, status) VALUES ('[u]', '[u]', 1, 'unknown')"), /check/i);
+    await c.query('INSERT INTO online_order_settings (buying_online) VALUES (true)');
+    await noShop(c);
+    await runSql(c);
+    await asShop(c, a.id);
+    assert.deepEqual(await one(c, 'SELECT purpose, online_order_id, status, amount_pence FROM online_payments WHERE id = $1', [deposit.id]),
+      { purpose: 'deposit', online_order_id: null, status: 'held', amount_pence: 2800 });
+    const made = (await order(c, a)).rows[0];
+    assert.equal((await payment(c, { purpose: 'order', online_order_id: made.id, status: 'checking' })).rows[0].status, 'checking');
+    await c.query("INSERT INTO pretend_payments (ref, idempotency_key, amount_pence, status) VALUES ('[u]', '[u]', 1, 'unknown')");
+    assert.deepEqual(await one(c, SETTINGS), { buying_online: true, ...STARTING });
+  });
 });

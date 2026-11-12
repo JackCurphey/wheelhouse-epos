@@ -16,17 +16,23 @@ const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
 const TEST_PENCE = 100;
 
-// The shop's row, made on first read with the starting values (migration 154).
+// The shop's row, made if missing, with the starting values (migration 154);
+// locked for a save.
 async function loadSettings(lock = false) {
   // RETURNING its own key: this table has no id for db.js to return.
   await prepare('INSERT INTO online_order_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
   return prepare(`SELECT * FROM online_order_settings${lock ? ' FOR UPDATE' : ''}`).get();
 }
 
+/** The shop's settings: read, and the row made only when it isn't there yet. */
+export async function onlineOrderSettings() {
+  return (await prepare('SELECT * FROM online_order_settings').get()) ?? loadSettings();
+}
+
 async function settingsBody() {
   const provider = payments();
   const account = await paymentAccount();
-  const stored = await loadSettings();
+  const stored = await onlineOrderSettings();
   const by = account?.connected_by ? await prepare('SELECT name FROM logins WHERE id = ?').get(account.connected_by) : null;
   return {
     buyingOnline: !!stored.buying_online && isConnected(account),
