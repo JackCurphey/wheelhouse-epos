@@ -12,17 +12,20 @@ import { currentShopTimeZone } from '../workshop/jobs.js';
 import { periodFor, addDays } from './report-periods.js';
 import { ValidationError } from './http.js';
 import { csvOf } from './csv.js';
+import { workshopRead, serviceCategoryNames } from './report-changed-workshop.js';
 
 const BASES = {
   sales: { label: 'Sales', split: 'day', file: 'sales' },
   takings: { label: 'Takings and cash-ups', split: 'payment', file: 'takings' },
+  workshop: { label: 'Workshop', split: 'day', file: 'workshop', measure: 'jobs' },
 };
 const MEASURES = [['takings', 'Takings'], ['items', 'Items sold'], ['margin', 'Margin'], ['jobs', 'Jobs'], ['hours', 'Hours']];
-const SPLITS = [['day', 'Day'], ['week', 'Week'], ['category', 'Category'], ['product', 'Product'], ['staff', 'Staff member'], ['shop', 'Shop'], ['payment', 'Payment type']];
+const SPLITS = [['day', 'Day'], ['week', 'Week'], ['category', 'Category'], ['product', 'Product'], ['staff', 'Staff member'], ['service', 'Service'], ['shop', 'Shop'], ['payment', 'Payment type']];
 const WORKSHOP_ONLY = 'workshop only — choose it from the Workshop report';
 const NOT_BY_ITEM = 'payments aren’t split by item';
 const TOO_MANY_DAYS = 'too many days — choose Week';
 const ONE_SHOP = 'one shop until a second one is added';
+const SALES_ONLY = 'sales only — choose it from the Sales report';
 const NO_COSTS = 'costs aren’t kept on sales yet';
 // Part 2's PR 5 keeps each sale line's cost; until it has merged, Margin is greyed.
 const COSTS_KEPT = false;
@@ -31,19 +34,23 @@ const COSTS_KEPT = false;
 // with `why` set on a greyed one. Margin is not offered at all to someone who
 // can't see costs.
 export function fitFor(sel, { canSeeCosts }) {
+  const workshop = sel.base === 'workshop';
   const byItem = sel.measure === 'items' || sel.measure === 'margin';
   const limited = sel.only.length > 0 || Boolean(sel.supplier);
   const tooManyDays = sel.period === 'last-12-months' || (sel.period === 'dates' && sel.days > 62);
   const measure = MEASURES.filter(([value]) => value !== 'margin' || canSeeCosts).map(([value, label]) => {
-    const why = value === 'jobs' ? WORKSHOP_ONLY : value === 'hours' ? 'workshop only' : value === 'margin' && !COSTS_KEPT ? NO_COSTS : undefined;
+    let why;
+    if (workshop) why = ['takings', 'items', 'margin'].includes(value) ? SALES_ONLY : undefined;
+    else why = value === 'jobs' ? WORKSHOP_ONLY : value === 'hours' ? 'workshop only' : value === 'margin' && !COSTS_KEPT ? NO_COSTS : undefined;
     return why ? { value, label, why } : { value, label };
   });
-  const split = SPLITS.map(([value, label]) => {
+  // Service is a Workshop split: it is not one of the chips on Sales, and asking for it there is refused (`changedReport`).
+  const split = SPLITS.filter(([value]) => value !== 'service' || workshop).map(([value, label]) => {
     let why;
     if (value === 'day' && tooManyDays) why = TOO_MANY_DAYS;
     else if (value === 'shop') why = ONE_SHOP;
-    else if (value === 'payment' && (byItem || limited)) why = NOT_BY_ITEM;
-    else if ((value === 'category' || value === 'product') && (sel.measure === 'jobs' || sel.measure === 'hours')) why = 'jobs aren’t split by product';
+    else if (value === 'payment') why = workshop ? SALES_ONLY : byItem || limited ? NOT_BY_ITEM : undefined;
+    else if ((value === 'category' || value === 'product') && (workshop || sel.measure === 'jobs' || sel.measure === 'hours')) why = 'jobs aren’t split by product';
     return why ? { value, label, why } : { value, label };
   });
   return { measure, split };
@@ -52,8 +59,8 @@ export function fitFor(sel, { canSeeCosts }) {
 // The choices in the address, or a 400 saying what to fix.
 function parse(query) {
   const base = query.get('base') || 'sales';
-  if (!BASES[base]) throw new ValidationError('Choose Sales or Takings and cash-ups');
-  const measure = query.get('measure') || 'takings';
+  if (!BASES[base]) throw new ValidationError('Choose Sales, Takings and cash-ups or Workshop');
+  const measure = query.get('measure') || BASES[base].measure || 'takings';
   if (!MEASURES.some(([v]) => v === measure)) throw new ValidationError('Choose Takings or Items sold');
   const split = query.get('split') || BASES[base].split;
   if (!SPLITS.some(([v]) => v === split)) throw new ValidationError('Choose how to split it');
@@ -79,7 +86,7 @@ export function describeChoice(sel) {
 // as a typed address. The period is only its kind (a Pick dates report is not checked for days).
 export function checkSaved(raw) {
   const text = (v) => typeof v === 'string';
-  if (!text(raw.base) || !BASES[raw.base]) throw new ValidationError('Choose Sales or Takings and cash-ups');
+  if (!text(raw.base) || !BASES[raw.base]) throw new ValidationError('Choose Sales, Takings and cash-ups or Workshop');
   if (!text(raw.period) || !PERIOD_KINDS.includes(raw.period)) throw new ValidationError('Choose Today, This week, This month, Last month, Last 12 months or Pick dates');
   if (!text(raw.measure) || !MEASURES.some(([v]) => v === raw.measure)) throw new ValidationError('Choose Takings or Items sold');
   if (!text(raw.split) || !SPLITS.some(([v]) => v === raw.split)) throw new ValidationError('Choose how to split it');
@@ -91,8 +98,11 @@ export function checkSaved(raw) {
   if ((raw.only ?? []).length > 50 || (raw.only ?? []).some(bad) || bad(raw.supplier ?? '')) throw new ValidationError(again);
   const sel = { base: raw.base, measure: raw.measure, split: raw.split, only: [...new Set(raw.only ?? [])], supplier: (raw.supplier ?? '').trim(), period: raw.period };
   const fit = fitFor({ ...sel, days: 1 }, { canSeeCosts: true });
+  if (!fit.measure.some((c) => c.value === sel.measure)) throw new ValidationError('Choose Takings or Items sold');
+  if (!fit.split.some((c) => c.value === sel.split)) throw new ValidationError('workshop only');
   const why = fit.measure.find((c) => c.value === sel.measure)?.why || fit.split.find((c) => c.value === sel.split)?.why;
   if (why) throw new ValidationError(why);
+  if (sel.base === 'workshop') sel.supplier = ''; // a supplier means nothing to the workshop
   return sel;
 }
 
@@ -107,6 +117,9 @@ export async function onlyChoices() {
   const rows = await prepare('SELECT name FROM product_categories WHERE parent_id IS NULL ORDER BY lower(name), name').all();
   return [...rows.map((r) => r.name), 'Labour'];
 }
+
+// What Only lists for a report: the Stockroom categories and Labour for sales, the service categories for the workshop.
+export const onlyChoicesFor = (base) => (base === 'workshop' ? serviceCategoryNames() : onlyChoices());
 
 // The suppliers typed on products that sold between two shop days.
 async function suppliersSold(from, to, tz) {
@@ -225,6 +238,17 @@ async function firstSaleDay(tz) {
   return row?.day ?? null;
 }
 
+// The day the workshop's own history starts: its first finished job or diary block, so Workshop compares with
+// the period before from its own records and not from the first sale.
+async function firstWorkshopDay(tz) {
+  const row = await prepare(
+    `SELECT least(
+       (SELECT to_char(min(signed_off_at) AT TIME ZONE ?, 'YYYY-MM-DD') FROM workshop_jobs),
+       (SELECT min(part_date) FROM workshop_job_parts)) AS day`
+  ).get(tz);
+  return row?.day ?? null;
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weekLabel = (monday) => `Week of ${Number(monday.slice(8))} ${MONTHS[Number(monday.slice(5, 7)) - 1]}`;
 const mondayOf = (iso) => {
@@ -232,9 +256,15 @@ const mondayOf = (iso) => {
   return addDays(iso, -((day + 6) % 7));
 };
 
+// A group's figure for the measure: pence for Takings and Margin, a count for Items sold and Jobs, hours (to a
+// tenth) for Hours.
+const COUNTED = new Set(['items', 'jobs', 'hours']);
+const tenth = (n) => Math.round(n * 10) / 10;
+const measureValue = (measure, g) => (g === undefined ? 0 : measure === 'hours' ? tenth(g.qty) : COUNTED.has(measure) ? g.qty : g.pence);
+
 // The rows of the graph and table for the split chosen, with the period before beside each.
 function rowsFor(sel, period, now, before) {
-  const value = (g) => (g === undefined ? 0 : sel.measure === 'items' ? g.qty : g.pence);
+  const value = (g) => measureValue(sel.measure, g);
   const make = (key, label, g, beforeG, extra = {}) => ({
     key, label, value: value(g), takingsPence: g?.pence ?? 0, beforeValue: beforeG === undefined ? 0 : value(beforeG), ...extra,
   });
@@ -261,21 +291,23 @@ function rowsFor(sel, period, now, before) {
 // Fall back to a split that fits what else is chosen.
 function settle(sel, fit) {
   const greyed = (group, value) => fit[group].find((c) => c.value === value)?.why;
-  const measure = greyed('measure', sel.measure) || !fit.measure.some((c) => c.value === sel.measure) ? 'takings' : sel.measure;
+  const measure = greyed('measure', sel.measure) || !fit.measure.some((c) => c.value === sel.measure) ? BASES[sel.base].measure || 'takings' : sel.measure;
   let split = sel.split;
-  if (greyed('split', split)) split = measure === 'items' ? 'product' : fit.split.find((c) => c.value === 'day' && !c.why) ? 'day' : 'week';
+  if (greyed('split', split) || !fit.split.some((c) => c.value === split)) split = measure === 'items' ? 'product' : fit.split.find((c) => c.value === 'day' && !c.why) ? 'day' : 'week';
   return { measure, split };
 }
 
 async function choicesFor(sel, period, tz, ctx) {
   const fit = fitFor({ ...sel, days: daysIn(period) }, ctx);
-  const only = await onlyChoices();
-  const suppliers = await suppliersSold(period.from, period.to, tz);
+  const workshop = sel.base === 'workshop';
+  const only = await onlyChoicesFor(sel.base);
+  // The workshop has no supplier: no chips, and the panel leaves the group out.
+  const suppliers = workshop ? [] : await suppliersSold(period.from, period.to, tz);
   return {
     ...fit,
     only: only.map((value) => ({ value, label: value })),
     // The supplier already chosen stays a chip even when it sold nothing in this period.
-    suppliers: [{ value: '', label: 'Any supplier' }, ...[...new Set([...suppliers, ...(sel.supplier ? [sel.supplier] : [])])].sort().map((value) => ({ value, label: value }))],
+    suppliers: workshop ? [] : [{ value: '', label: 'Any supplier' }, ...[...new Set([...suppliers, ...(sel.supplier ? [sel.supplier] : [])])].sort().map((value) => ({ value, label: value }))],
   };
 }
 
@@ -283,7 +315,8 @@ async function setUp(query, today, ctx) {
   const sel = parse(query);
   const tz = await currentShopTimeZone();
   const period = periodFor({ period: sel.period, today, from: sel.from, to: sel.to });
-  const everyOnly = await onlyChoices();
+  const everyOnly = await onlyChoicesFor(sel.base);
+  if (sel.base === 'workshop') sel.supplier = '';
   sel.only = everyOnly.filter((o) => sel.only.includes(o)); // what's left, in the panel's order
   return { sel, tz, period, everyOnly, ctx };
 }
@@ -312,19 +345,27 @@ export async function changedReport(query, today, ctx) {
   if (!fit.measure.some((c) => c.value === sel.measure)) throw new ValidationError('Choose Takings or Items sold');
   const measureWhy = refused('measure', sel.measure);
   if (measureWhy) throw new ValidationError(measureWhy);
+  if (!fit.split.some((c) => c.value === sel.split)) throw new ValidationError('workshop only');
   const splitWhy = refused('split', sel.split);
   if (splitWhy) throw new ValidationError(splitWhy);
 
   const limits = { only: sel.only, supplier: sel.supplier };
-  const now = await readGroups(sel.split, period.from, period.through, tz, limits);
-  const before = await readGroups(sel.split, period.before.from, period.before.to, tz, limits);
-  const rows = rowsFor(sel, period, now, before);
+  const read = async (from, to) => (sel.base === 'workshop'
+    ? workshopRead({ measure: sel.measure, split: sel.split, from, to, tz, only: sel.only })
+    : { groups: await readGroups(sel.split, from, to, tz, limits) });
+  const nowRead = await read(period.from, period.through);
+  const beforeRead = await read(period.before.from, period.before.to);
+  const now = nowRead.groups;
+  const rows = rowsFor(sel, period, now, beforeRead.groups);
+  const key = COUNTED.has(sel.measure) ? 'qty' : 'pence';
   const sum = (groups, k) => [...groups.values()].reduce((n, g) => n + g[k], 0);
-  const value = sum(now, sel.measure === 'items' ? 'qty' : 'pence');
+  // A job under several services is one job: the workshop's own total counts it once.
+  const figure = (r) => measureValue(sel.measure, { qty: r.total ?? sum(r.groups, 'qty'), pence: sum(r.groups, 'pence') });
+  const value = key === 'qty' ? figure(nowRead) : sum(now, 'pence');
   const takingsPence = sum(now, 'pence');
-  const beforeValue = sum(before, sel.measure === 'items' ? 'qty' : 'pence');
+  const beforeValue = key === 'qty' ? figure(beforeRead) : sum(beforeRead.groups, 'pence');
 
-  const firstSaleOn = await firstSaleDay(tz);
+  const firstSaleOn = sel.base === 'workshop' ? await firstWorkshopDay(tz) : await firstSaleDay(tz);
   const nothingBefore = !firstSaleOn || firstSaleOn >= period.from;
   const baseLabel = BASES[sel.base].label;
   const measureLabel = MEASURES.find(([v]) => v === sel.measure)[1];
@@ -341,10 +382,10 @@ export async function changedReport(query, today, ctx) {
       period: period.period, from: period.from, to: period.to, through: period.through, soFar: period.soFar,
       unit: period.unit, label: period.label, against: period.against,
     },
-    columns: [splitLabel, measureLabel, ...(sel.measure === 'takings' ? [] : ['Takings'])],
+    columns: [splitLabel, measureLabel, ...(sel.measure === 'items' || sel.measure === 'margin' ? ['Takings'] : [])],
     rows,
     total: { label: limitParts.length ? `Total, ${limitParts.join(', ')}` : 'Total', value, takingsPence },
-    figures: { value, beforeValue, diffValue: nothingBefore ? null : value - beforeValue },
+    figures: { value, beforeValue, diffValue: nothingBefore ? null : tenth(value - beforeValue) },
     showBefore: !nothingBefore && sel.split !== 'week',
     empty: now.size === 0 || (value === 0 && takingsPence === 0),
     nothingBefore, firstSaleOn,
@@ -357,8 +398,9 @@ export async function changedReport(query, today, ctx) {
 const pounds = (pence) => (pence === null || pence === undefined ? '—' : (pence / 100).toFixed(2));
 export function changedCsv(report) {
   const money = report.measure === 'takings' || report.measure === 'margin';
+  const withTakings = report.measure === 'items' || report.measure === 'margin';
   const cell = (value) => (value === null ? '—' : money ? pounds(value) : value);
-  const line = (label, value, takings) => [label, cell(value), ...(report.measure === 'takings' ? [] : [pounds(takings)])];
+  const line = (label, value, takings) => [label, cell(value), ...(withTakings ? [pounds(takings)] : [])];
   return csvOf([
     report.columns,
     ...report.rows.map((r) => line(r.label, r.value, r.takingsPence)),

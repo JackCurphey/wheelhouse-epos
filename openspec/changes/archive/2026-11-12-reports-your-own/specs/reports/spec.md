@@ -53,7 +53,7 @@ Only SHALL list the shop's top-level Stockroom categories and Labour as checkbox
 - **THEN** Only lists the workshop's service categories and there is no Supplier
 
 ### Requirement: The changed report
-The changed report SHALL have its own title from what's chosen, a line under it saying what it was changed from, what it's limited to, and the period; the bar "You've changed this report. Save it to come back to it." with "Save as my report" and "Back to [report]"; the period chips; a graph of what's chosen, following Your settings' "Show graphs"; and a table of the split, the measure, and Takings when the measure isn't Takings, with a total row (`rp-changed`; decisions 7 and 8).
+The changed report SHALL have its own title from what's chosen, a line under it saying what it was changed from, what it's limited to, and the period; the bar "You've changed this report. Save it to come back to it." with "Save as my report" and "Back to [report]"; the period chips; a graph of what's chosen, following Your settings' "Show graphs"; and a table of the split, the measure, and Takings when the measure is Items sold (or Margin), with a total row (`rp-changed`; decisions 7 and 8).
 
 #### Scenario: items sold by product, accessories only
 - **WHEN** Jack chooses Items sold, Product and Accessories, and "Show report"
