@@ -1,6 +1,6 @@
-// screens: cw-list, cw-new, cw-quote, cw-email, cw-order
+// screens: cw-list, cw-new, cw-quote, cw-email, cw-order, cw-order-held, cw-hold-ending
 // Cycle to Work orders and quotes (openspec/changes/cycle-to-work, design 2,
-// 3 and 7; tasks 3.1–3.8). Anyone signed in sees the list, makes quotes and
+// 3, 4 and 7; tasks 3.1–3.8 and 5.1–5.3). Anyone signed in sees the list, makes quotes and
 // marks a customer applied (design 7). Everyone sees what the provider is
 // expected to pay (decision H3); the owed totals go only to someone who can
 // see costs (canSeeCosts; decision M6).
@@ -17,8 +17,8 @@ import { sendEmailTo } from '../messaging/engine.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import {
-  GROUPS, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, nextFor,
-  quoteClosing, quoteItems, quoteRef, readyToOrder, serializeOrder, shopDay, shopTimeZone, takeStep,
+  GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
+  nextFor, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep,
 } from '../c2w/orders.js';
 
 const db = { prepare, exec: dbExec };
@@ -135,26 +135,33 @@ export function register(route) {
         extras.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
       }
 
-      // Only a bike in stock here is held; one that isn't is ordered (cw-new-not-in-stock).
-      const holdNow = hold && (await freeHere(productId, site)) > 0;
-
       // The shop's counter, taken under the row's lock: two quotes never share a number.
       // A refusal after this rolls the counter back with everything else.
       await settingsRow();
       const s = await db.prepare('UPDATE c2w_settings SET next_quote_number = next_quote_number + 1 RETURNING *, next_quote_number - 1 AS taken').get();
-      if (s.quote_valid_days === null || (holdNow && s.hold_days === null)) throw new Refused(409, SETTINGS_NEEDED);
+      if (s.quote_valid_days === null) throw new Refused(409, SETTINGS_NEEDED);
       const today = await shopDay();
+      const givenAt = currentMoment().toISOString();
       const total = bike.price_pence + extras.reduce((sum, a) => sum + a.pricePence, 0);
       const { id } = await db.prepare(`INSERT INTO c2w_orders (customer_id, provider_id, site_id, product_id, quote_number, quote_given_at,
-        valid_until, hold_until, hold_wanted, accessories, total_pence, customer_code)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?) RETURNING id`).get(
-        customerId, providerId, site, productId, s.taken, currentMoment().toISOString(),
-        addDays(today, s.quote_valid_days), holdNow ? addDays(today, s.hold_days) : null, hold, JSON.stringify(extras), total,
-        randomBytes(32).toString('hex'),
+        valid_until, hold_wanted, accessories, total_pence, customer_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?) RETURNING id`).get(
+        customerId, providerId, site, productId, s.taken, givenAt,
+        addDays(today, s.quote_valid_days), hold, JSON.stringify(extras), total, randomBytes(32).toString('hex'),
       );
+      // Only a bike free here is held, under the stock lock; one that isn't is
+      // ordered (cw-new-not-in-stock). A hold never ends by itself (design 4).
+      const held = hold ? await takeHold(id, productId, site) : null;
+      let until = null;
+      if (held) {
+        if (s.hold_days === null) throw new Refused(409, SETTINGS_NEEDED);
+        until = addDays(today, s.hold_days);
+        await db.prepare('UPDATE c2w_orders SET frame_id = ?, held_at = ?, hold_until = ? WHERE id = ? RETURNING id').get(held.frameId, givenAt, until, id);
+      }
       const made = await loadOrder(id);
       // The line keeps the sentence the quote was given with, whatever Settings say later.
       await addEvent(id, 'quote_given', who, { detail: { quoteRef: quoteRef(s.taken), closing: quoteClosing(made, s.order_rule) } });
+      if (held) await addEvent(id, 'held', who, { detail: { until } });
       return { order: serializeOrder(made) };
     });
   });
@@ -210,6 +217,62 @@ export function register(route) {
       await addEvent(row.id, 'quote_emailed', who, { detail: { to } });
       return { sent: true, to };
     });
+  });
+
+  // Hold longer (cw-order-held, cw-hold-ending): another lot of the Settings days,
+  // on from the hold's date, or from today once it has passed.
+  route('POST', '/api/c2w/orders/:id/hold-longer', async (req, res, params) => {
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const s = await settingsRow();
+      if (s.hold_days === null) throw new Refused(409, SETTINGS_NEEDED);
+      const today = await shopDay();
+      const detail = {};
+      await takeStep(id, 'hold_longer', who, (row) => {
+        if (!row.held_at) throw new Refused(409, NOT_HELD);
+        const from = row.hold_until_day;
+        const until = addDays(from && from > today ? from : today, s.hold_days);
+        Object.assign(detail, { from, until });
+        return { hold_until: until };
+      }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Release the bike (cw-order-held, cw-hold-ending): the frame goes back on sale
+  // and the order stays open where it is. Anyone checked in can release, until
+  // the certificate makes the hold firm.
+  route('POST', '/api/c2w/orders/:id/release', async (req, res, params) => {
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      // "What's happened" keeps which frame it was: cw-certificate-released checks it.
+      const detail = {};
+      await takeStep(id, 'released', who, async (row) => {
+        if (!row.held_at) throw new Refused(409, NOT_HELD);
+        await releaseHold(row);
+        if (row.frame_id) detail.frameId = row.frame_id;
+        return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
+      }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // The bike's stock for New order (cw-new: "1 free at Bolton · none held"):
+  // each site, oldest first, with what's free and what's held for orders there.
+  route('GET', '/api/c2w/stock', async (req, res, params, query) => {
+    const productId = Number(query.get('productId'));
+    if (!Number.isInteger(productId) || productId < 1) return badRequest(res, 'Choose the bike');
+    if (!(await db.prepare('SELECT 1 FROM products WHERE id = ?').get(productId))) return notFound(res);
+    const here = (await siteHere(req)) ?? (await oldestSite());
+    const sites = [];
+    for (const s of await db.prepare('SELECT id, name FROM sites ORDER BY id').all()) {
+      sites.push({ siteId: s.id, siteName: s.name, free: await freeHere(productId, s.id), held: await heldHere(productId, s.id) });
+    }
+    sendJson(res, 200, { here, sites });
   });
 
   // Mark applied (cw-applied): the customer has applied through their employer.
