@@ -96,5 +96,55 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await expect(page.getByText('You already have a report with this name. Choose another name.')).toBeVisible();
     const overflow2 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow2).toBeLessThanOrEqual(0);
+
+    // Rename it from its menu, then delete it and bring it back with Undo.
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    const list = page.getByRole('region', { name: 'Your reports' });
+    await list.getByRole('button', { name: 'More for Bottles this week' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Share with managers' })).toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('menuitem', { name: 'Rename' }).click();
+    const rename = page.getByRole('dialog', { name: 'Rename' });
+    await rename.getByLabel('Name (needed)').fill('Bottles weekly');
+    await rename.getByRole('button', { name: 'Save' }).click();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toBeVisible();
+    await list.getByRole('button', { name: 'More for Bottles weekly' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(page.getByText('“Bottles weekly” deleted.')).toBeVisible();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toBeVisible();
+    await expect(page.getByText('“Bottles weekly” deleted.')).toHaveCount(0);
+    const overflow3 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow3).toBeLessThanOrEqual(0);
   });
 }
+
+test('the Owner changes Workshop to jobs by service, limited to a service category', async ({ page, context }) => {
+  const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+  shops.push(owner.shop.id);
+  await runWithShop(owner.shop.id, async () => {
+    const cat = await prepare("INSERT INTO workshop_service_categories (name) VALUES ('Repairs') RETURNING id").get();
+    await prepare("INSERT INTO workshop_service_categories (name) VALUES ('Servicing')").run();
+    const puncture = await prepare("INSERT INTO workshop_services (name, price, price_pence, category_id) VALUES ('Puncture', 10, 1000, ?) RETURNING id").get(cat.id);
+    const job = await prepare("INSERT INTO workshop_jobs (title, job_date, booking_state, signed_off_at) VALUES ('Puncture', '2026-09-15', 'scheduled', '2026-09-15T10:00:00Z') RETURNING id").get();
+    await prepare('INSERT INTO workshop_job_services (workshop_job_id, service_id, position) VALUES (?, ?, 1)').run(job.id, puncture.id);
+  });
+  await context.clearCookies();
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+  await page.goto(`${server!.baseUrl}/workshop/reports/workshop`);
+  await expect(page.getByRole('heading', { level: 2, name: 'Workshop' })).toBeVisible();
+  await page.getByRole('button', { name: 'Change what’s shown' }).click();
+  const panel = page.getByRole('dialog', { name: 'Change what’s shown' });
+  await expect(panel.getByRole('radio', { name: 'Items sold' })).toHaveAttribute('aria-disabled', 'true');
+  await expect(panel.getByText('Supplier')).toHaveCount(0);
+  await panel.getByText('Service', { exact: true }).click();
+  await panel.getByText('Repairs', { exact: true }).click();
+  await panel.getByRole('button', { name: 'Show report' }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Workshop: jobs by service' })).toBeVisible();
+  await expect(page.getByText('Changed from Workshop · Repairs only · So far: Mon 14 – Thu 17 September, against the same days last week')).toBeVisible();
+  const table = page.getByRole('table', { name: 'Jobs by service' });
+  await expect(table.getByRole('row', { name: /Puncture 1/ })).toBeVisible();
+  await expect(table.getByRole('row', { name: /Total, Repairs only 1/ })).toBeVisible();
+});

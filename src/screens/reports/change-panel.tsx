@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ChoiceChip, Reasons } from './choice-chips.tsx';
 import { Refusal } from './reports-bits.tsx';
-import { BASE_LABEL, PERIOD_WORDS, selectionParams, type ChoicesAnswer, type Selection } from './changed-format.ts';
+import { BASE_LABEL, PERIOD_WORDS, selectionParams, type Base, type ChoicesAnswer, type Selection } from './changed-format.ts';
 
 /**
  * "Change what's shown" (rp-change in generator/reports.mjs; openspec/changes/reports-your-own,
@@ -22,7 +22,7 @@ const GROUP = 'flex flex-col gap-2';
 const CHIPS = 'flex flex-wrap gap-1.5';
 
 export function ChangePanel({ base, period, initial, onClose }: {
-  base: 'sales' | 'takings'; period: URLSearchParams; initial?: Partial<Selection>; onClose: () => void;
+  base: Base; period: URLSearchParams; initial?: Partial<Selection>; onClose: () => void;
 }) {
   const navigate = useNavigate();
   const [want, setWant] = useState<Partial<Selection>>(initial ?? {});
@@ -35,10 +35,17 @@ export function ChangePanel({ base, period, initial, onClose }: {
   });
   const data = answer.data;
   const sel = data?.selection;
-  // While the server is still checking the last click, the choices on screen are the old ones: wait for it.
+  // `want` is what has been clicked, newest last, so a quick second click builds on the first; when the
+  // server's answer for it arrives its settled selection (a split moved to one that fits) replaces it.
   const checking = answer.isPlaceholderData;
-  const set = (next: Partial<Selection>) => { if (sel && !checking) setWant({ ...sel, ...next }); };
-  const toggle = (value: string) => set({ only: sel!.only.includes(value) ? sel!.only.filter((o) => o !== value) : [...sel!.only, value] });
+  const [synced, setSynced] = useState<Selection | undefined>(undefined);
+  if (sel && !checking && sel !== synced) { setSynced(sel); setWant(sel); }
+  const set = (next: Partial<Selection>) => setWant((w) => ({ ...(w.measure ? w : sel ?? w), ...next }));
+  const toggle = (value: string) => setWant((w) => {
+    const now = w.measure ? w : sel ?? w;
+    const only = now.only ?? [];
+    return { ...now, only: only.includes(value) ? only.filter((o) => o !== value) : [...only, value] };
+  });
 
   function show() {
     if (!sel || checking) return;
@@ -70,8 +77,12 @@ export function ChangePanel({ base, period, initial, onClose }: {
             <fieldset className={`m-0 min-w-0 border-0 p-0 ${GROUP}`}>
               <legend className="mb-2 text-size-15 font-bold">Only <span className="font-normal text-[var(--wh-muted)]">— pick one or more</span></legend>
               <div className={CHIPS}>{data.choices.only.map((c) => <ChoiceChip key={c.value} role="checkbox" group="only" choice={c} checked={sel.only.includes(c.value)} onChoose={() => toggle(c.value)} />)}</div>
-              <span className="mt-1 text-sm font-semibold">Supplier</span>
-              <div role="radiogroup" aria-label="Supplier" className={CHIPS}>{data.choices.suppliers.map((c) => <ChoiceChip key={c.value || 'any'} role="radio" group="supplier" choice={c} checked={sel.supplier === c.value} onChoose={() => set({ supplier: c.value })} />)}</div>
+              {data.choices.suppliers.length ? (
+                <>
+                  <span className="mt-1 text-sm font-semibold">Supplier</span>
+                  <div role="radiogroup" aria-label="Supplier" className={CHIPS}>{data.choices.suppliers.map((c) => <ChoiceChip key={c.value || 'any'} role="radio" group="supplier" choice={c} checked={sel.supplier === c.value} onChoose={() => set({ supplier: c.value })} />)}</div>
+                </>
+              ) : null}
             </fieldset>
           </>
         ) : answer.isError ? null : <p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p>}
@@ -85,7 +96,7 @@ export function ChangePanel({ base, period, initial, onClose }: {
 }
 
 /** The "Change what's shown" button of a report, and the panel it opens. */
-export function ChangeWhatsShown({ base, period, initial }: { base: 'sales' | 'takings'; period: URLSearchParams; initial?: Partial<Selection> }) {
+export function ChangeWhatsShown({ base, period, initial }: { base: Base; period: URLSearchParams; initial?: Partial<Selection> }) {
   const [open, setOpen] = useState(false);
   return (
     <>

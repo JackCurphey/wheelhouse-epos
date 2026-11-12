@@ -18,26 +18,26 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 - [x] 2.3 `server/lib/saved-reports.js` and `GET` and `POST /api/reports/saved`, `// screens: rp-save, rp-save-taken, rp-home`.
 - [x] 2.4 Screen tests first: the save popup ("Name (needed)", "Just me" chosen, "Me and the other managers" greyed with its reason, the note, both name messages); Your reports on the Reports page with the badge "Just you", the note when there are none, and opening one on the latest period (one saved on This week opened a week later shows the new week). Verify: each fails first.
 - [x] 2.5 `save-report-dialog.tsx`, `your-reports.tsx` (list only; the menu is PR 3), "Save as my report" on the changed report's bar, to the drawings `rp-save`, `rp-save-taken` and `rp-home`.
-- [ ] 2.6 `/review`, the `risky-area-reviewer` agent, `reviewer`; lint and the related tests; a hand-run CI on the branch (`gh workflow run test.yml --ref <branch>`), merged when green; a line in the weekly digest issue.
+- [x] 2.6 `/review`, the `risky-area-reviewer` agent, `reviewer`; lint and the related tests; a hand-run CI on the branch (`gh workflow run test.yml --ref <branch>`), merged when green; a line in the weekly digest issue. (Done in #727: an Opus general-purpose review stood in for `risky-area-reviewer`, which is not an agent in this setup; no weekly digest issue was open, so the line is in the pull request.)
 
 ## 3. PR 3: Rename, sharing greyed, and delete with Undo (not risky)
 
-- [ ] 3.1 Tests first: `PATCH` renames with both name messages; `DELETE` sets `deleted_at` and the report leaves the list; `POST …/undo` puts it back, and refuses with the name message when the name was used again; another person's report answers 404 for each. Verify: each fails first.
-- [ ] 3.2 The three routes in `server/routes/reports.js` and `server/lib/saved-reports.js`.
-- [ ] 3.3 Screen tests first: the "More for [name]" menu (`aria-haspopup="menu"`) with Rename, Share with managers (greyed with its reason) and Delete; Rename's popup; Delete shows "'[Report name]' deleted." with Undo, and Undo brings it back; Undo after a reused name opens Rename. Verify: each fails first.
-- [ ] 3.4 The menu, Rename and the deleted bar, to the drawings `rp-report-menu` and `rp-report-deleted`. Log the Rename popup in `decided-while-building`.
-- [ ] 3.5 `reviewer` self-review; lint and the related tests.
+- [x] 3.1 Tests first: `PATCH` renames with both name messages; `DELETE` sets `deleted_at` and the report leaves the list; `POST …/undo` puts it back, and refuses with the name message when the name was used again; another person's report answers 404 for each. Verify: each fails first.
+- [x] 3.2 The three routes in `server/routes/reports.js` and `server/lib/saved-reports.js`.
+- [x] 3.3 Screen tests first: the "More for [name]" menu (`aria-haspopup="menu"`) with Rename, Share with managers (greyed with its reason) and Delete; Rename's popup; Delete shows "'[Report name]' deleted." with Undo, and Undo brings it back; Undo after a reused name opens Rename. Verify: each fails first.
+- [x] 3.4 The menu, Rename and the deleted bar, to the drawings `rp-report-menu` and `rp-report-deleted`. Log the Rename popup in `decided-while-building`.
+- [x] 3.5 `reviewer` self-review; lint and the related tests.
 
 ## 4. PR 4: Workshop's Change what's shown, and Margin if it's ready (not risky)
 
-- [ ] 4.1 Tests first: from Workshop, Jobs (finished, as part 2 counts them) and Hours (as part 2's "How full each mechanic was") by Day, Week, Staff member (the mechanic) and Service; Only lists service categories and there is no Supplier; Items sold and Margin greyed with their reason; a saved Workshop report opens on the latest period. If part 2's PR 5 has merged: Margin by Category and Product from kept costs only, lines without a cost left out and counted, for the Owner only. Verify: each fails first.
-- [ ] 4.2 Add the Workshop measures and the Service split to `server/lib/report-changed.js`; the button on `workshop-report.tsx`.
-- [ ] 4.3 If part 2's PR 5 has merged, light up Margin; if not, leave it greyed and note in STATUS that Margin's measure waits for it.
-- [ ] 4.4 Log Service as a split in `decided-while-building`.
-- [ ] 4.5 `reviewer` self-review; lint and the related tests.
+- [x] 4.1 Tests first: from Workshop, Jobs (finished, as part 2 counts them) and Hours (as part 2's "How full each mechanic was") by Day, Week, Staff member (the mechanic) and Service; Only lists service categories and there is no Supplier; Items sold and Margin greyed with their reason; a saved Workshop report opens on the latest period. If part 2's PR 5 has merged: Margin by Category and Product from kept costs only, lines without a cost left out and counted, for the Owner only. Verify: each fails first.
+- [x] 4.2 Add the Workshop measures and the Service split to `server/lib/report-changed.js`; the button on `workshop-report.tsx`.
+- [x] 4.3 If part 2's PR 5 has merged, light up Margin; if not, leave it greyed and note in STATUS that Margin's measure waits for it.
+- [x] 4.4 Log Service as a split in `decided-while-building`.
+- [x] 4.5 `reviewer` self-review; lint and the related tests.
 
 ## 5. Finish
 
-- [ ] 5.1 Walk each drawing (`rp-change`, `rp-changed`, `rp-save`, `rp-save-taken`, `rp-report-menu`, `rp-report-deleted`, and Your reports on `rp-home`) against the built screens, and this change's requirements one by one; say in the last pull request which are met, dropped or changed.
-- [ ] 5.2 `npm run full-check` (lint, `npm test` and `npm run test:browser`) passes on the final commit after merging the latest main.
-- [ ] 5.3 `/opsx:archive` as the last commit in the last pull request, before it merges.
+- [x] 5.1 Walk each drawing (`rp-change`, `rp-changed`, `rp-save`, `rp-save-taken`, `rp-report-menu`, `rp-report-deleted`, and Your reports on `rp-home`) against the built screens, and this change's requirements one by one; say in the last pull request which are met, dropped or changed.
+- [x] 5.2 `npm run full-check` (lint, `npm test` and `npm run test:browser`) passes on the final commit after merging the latest main.
+- [x] 5.3 `/opsx:archive` as the last commit in the last pull request, before it merges.

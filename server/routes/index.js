@@ -41,7 +41,9 @@ import * as stockFrames from './stock-frames.js';
 import * as customerMoney from './customer-money.js';
 import * as reports from './reports.js';
 import * as quickButtons from './quick-buttons.js';
+import * as onlinePayments from './online-payments.js';
+import * as shopifyLink from './shopify-link.js';
 import * as c2wSettings from './c2w-settings.js';
 import * as c2w from './c2w.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports, quickButtons, c2wSettings, c2w];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports, quickButtons, onlinePayments, c2wSettings, shopifyLink, c2w];
