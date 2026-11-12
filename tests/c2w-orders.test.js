@@ -42,7 +42,7 @@ before(async () => {
   provider = (await own('/api/c2w/providers', { method: 'POST', body: { name: '[Provider]', commissionKind: 'percent', commissionValue: 500 } })).body.provider;
   bike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 100 });
   lock = await seedProduct(owner.shop.id, { name: '[Lock]', price: '40.00', stock: 5 });
-  maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: `maya-${tag()}@example.test` } })).body;
+  maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', phone: '07700 900 142', email: `maya-${tag()}@example.test` } })).body;
   // The bike is in stock at the shop; "away" is a bike with none here (cw-new-not-in-stock).
   site = await inShop(async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get()).id);
   await inShop(async () => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 100) RETURNING product_id').get(site, bike));
@@ -92,6 +92,21 @@ test('3.1 a quote makes the order at “Quote given” with the next quote numbe
   assert.equal(d.status, 201, JSON.stringify(d.body));
   assert.notEqual(c.body.order.quoteNumber, d.body.order.quoteNumber);
   assert.equal((await raw(a.body.order.id)).customer_code.length, 64, 'a long private code for the customer’s link');
+});
+
+// For the screens (pull request 4): the customer's phone and email, the site's
+// name, whether the bike is on order, and the shop's day, on the order and the list.
+test('the order carries the customer’s phone and email, the site’s name and on order; the list and the order send the shop’s day', async () => {
+  const made = await quote();
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const one = await own(`/api/c2w/orders/${made.body.order.id}`);
+  const o = one.body.order;
+  assert.deepEqual([o.customerPhone, o.customerEmail, o.onOrder], ['07700 900 142', maya.email, false]);
+  const siteName = await inShop(async () => (await prepare('SELECT name FROM sites WHERE id = ?').get(site)).name);
+  assert.equal(o.siteName, siteName);
+  assert.equal(one.body.today, '2026-09-01', 'the shop’s day under the pinned clock');
+  const list = await own('/api/c2w/orders');
+  assert.equal(list.body.today, '2026-09-01');
 });
 
 // ---------- 3.2 ----------
