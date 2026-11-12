@@ -390,3 +390,23 @@ test('6.4 booking the bike in with no frame number holds one for the order as a 
   assert.deepEqual([o.stage, o.held, o.frameId, o.onOrder], ['waiting', true, null, false]);
   assert.equal(o.events.at(-1).kind, 'booked_in');
 });
+
+// The order page's Order button (cw-order-applied: "Order from [supplier]") names the
+// supplier ordering will use, and the page shows the same next step as the list.
+test('6.3 an order names its bike’s supplier as Settings spells it, and says what’s next', async () => {
+  await rule('applied');
+  const made = await quote(await bike());
+  assert.equal((await order(made.id)).supplier, '[Supplier]');
+  assert.equal((await order(made.id)).next, 'certificate');
+  await applied(made.id);
+  assert.equal((await order(made.id)).next, 'order');
+  assert.equal((await orderBike(made.id)).status, 200);
+  const ordered = await order(made.id);
+  assert.equal(ordered.next, 'certificate');
+  assert.equal(ordered.orderedFrom, '[Supplier]');
+
+  const nowhere = await quote(await bike('[Somewhere else]'));
+  assert.equal((await order(nowhere.id)).supplier, null);
+  const list = Object.values((await own('/api/c2w/orders')).body.groups).flat();
+  assert.equal(list.find((o) => o.id === made.id).supplier, '[Supplier]');
+});
