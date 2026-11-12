@@ -250,3 +250,23 @@ test('with no deliveries there’s no Recent deliveries section; a failed load s
   const section = await down.ui.findByRole('region', { name: 'Recent deliveries' }, { timeout: 15000 });
   assert.equal(down.within(section).getByRole('alert').textContent, 'Wheelhouse couldn’t load the recent deliveries. Try again in a moment.');
 });
+
+// UX walk-through 5 M2 (rs-booked-c2w): the bike put aside for Maya, her order moving on.
+const C2W = { orderId: 31, customerName: 'Maya Patel', name: 'Trek Domane AL 3', frameNumber: '[frame number]', ready: true };
+test('a Cycle to Work bike booked in is put aside for Maya, as drawn, with a link to her order', async () => {
+  const r = await open(BOOKED, { me: JO, delivery: { ...FOR_STAFF, c2w: [C2W] } });
+  const title = await r.ui.findByText('Maya Patel · Cycle to Work', {}, OPENED);
+  const row = title.closest('li');
+  assert.equal(row.textContent.includes('Trek Domane AL 3 · frame [frame number] · put it aside for Maya Patel — not for sale · their order moves to Ready to collect'), true, row.textContent);
+  assert.equal(r.within(row).getByText('put it aside for Maya Patel — not for sale').tagName, 'STRONG');
+  const link = r.within(row).getByRole('link', { name: 'Open Maya Patel’s Cycle to Work order' });
+  assert.equal(link.textContent, 'Open the order');
+  assert.equal(link.getAttribute('href'), '/workshop/c2w/31');
+});
+
+test('a Cycle to Work bike booked in before the certificate doesn’t say the order moves on', async () => {
+  const r = await open(BOOKED, { me: JO, delivery: { ...FOR_STAFF, c2w: [{ ...C2W, ready: false }] } });
+  const row = (await r.ui.findByText('Maya Patel · Cycle to Work', {}, OPENED)).closest('li');
+  assert.ok(!row.textContent.includes('Ready to collect'), row.textContent);
+  assert.ok(row.textContent.includes('put it aside for Maya Patel — not for sale'));
+});

@@ -71,6 +71,9 @@ function serializePurchaseOrder(row, items, costs) {
           notComing: closed ? Math.max(0, outstanding(it)) : 0,
           // The job a line is for, from the restock list's Add to an order (restock-list).
           ...(it.workshop_job_id ? { forJob: { id: it.workshop_job_id, ref: it.job_ref ?? null } } : {}),
+          // The Cycle to Work order a bike is ordered for, while it still waits for it (rs-receive-c2w:
+          // "for Maya Patel · Cycle to Work"); one that has its bike or has moved on gets it on sale.
+          ...(it.c2w_waiting_id ? { forC2w: { id: it.c2w_waiting_id, customerName: it.c2w_customer_name ?? null } } : {}),
           ...(costs ? { unitCost: it.unit_cost } : {}),
         }))
       : undefined,
@@ -91,8 +94,11 @@ async function loadPurchaseOrderItems(id) {
             COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
                       WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
                         AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside,
-            w.reference AS job_ref
+            w.reference AS job_ref, co.id AS c2w_waiting_id, cu.name AS c2w_customer_name
      FROM purchase_order_items poi LEFT JOIN workshop_jobs w ON w.id = poi.workshop_job_id
+       LEFT JOIN c2w_orders co ON co.id = poi.c2w_order_id
+         AND co.stage IN ('quote', 'waiting', 'certificate') AND co.held_at IS NULL AND co.frame_id IS NULL
+       LEFT JOIN customers cu ON cu.id = co.customer_id
      WHERE poi.purchase_order_id = ? ORDER BY poi.id`
   ).all(id);
 }
@@ -374,7 +380,7 @@ async function bookIn({ orderId = null, supplier = null, lines, problems, who, r
       }
     }
     // A line ordered for a Cycle to Work order puts its bike aside for it (rs-frame-c2w, rs-booked-c2w).
-    if (orderLine?.c2w_order_id) await bookedInForOrder(orderLine.c2w_order_id, frameIds[0] ?? null, await siteOf(), who);
+    if (orderLine?.c2w_order_id) await bookedInForOrder(orderLine.c2w_order_id, frameIds[0] ?? null, await siteOf(), who, deliveryId);
     shopifyPushes.push(...moved.pushes);
     booked += qty;
   }
@@ -814,6 +820,23 @@ export function register(route) {
       const qty = (await loadPurchaseOrderItems(o.id)).reduce((n, it) => n + Math.max(0, outstanding(it)), 0);
       if (qty > 0) stillToCome.push({ orderId: o.id, supplierName: o.supplier_name, orderedAt: o.ordered_at, qty });
     }
+    // Each bike this delivery put aside for a Cycle to Work order (rs-booked-c2w), from the
+    // order's booked-in event, while the order still holds it: a frame, or a count for a bike
+    // with no frame number. One that went on sale, was released or has been sold isn't
+    // listed. `ready`: booking it in moved the order to Ready to collect.
+    const c2w = await db.prepare(
+      `SELECT e.id, o.id AS order_id, c.name AS customer_name, p.name AS product_name, sf.frame_number,
+              COALESCE(e.detail->>'ready' = 'true', false) AS ready
+         FROM c2w_order_events e
+         JOIN c2w_orders o ON o.id = e.order_id
+         JOIN customers c ON c.id = o.customer_id
+         JOIN products p ON p.id = o.product_id
+         LEFT JOIN stock_frames sf ON sf.id = (e.detail->>'frameId')::int
+        WHERE e.kind = 'booked_in' AND e.detail->>'deliveryId' = ?::text
+          AND o.stage IN ('quote', 'waiting', 'certificate', 'ready') AND o.held_at IS NOT NULL
+          AND o.frame_id IS NOT DISTINCT FROM sf.id AND (sf.id IS NULL OR sf.state = 'held')
+        ORDER BY e.id`
+    ).all(id);
     const costOf = (qty, unit) => Math.round(qty * unit * 100) / 100;
     const body = {
       ...serializeDelivery(row),
@@ -827,6 +850,7 @@ export function register(route) {
         ...(costs ? { cost: costOf(p.qty, p.unit_cost) } : {}),
       })),
       stillToCome,
+      c2w: c2w.map((r) => ({ key: r.id, orderId: r.order_id, customerName: r.customer_name, name: r.product_name, frameNumber: r.frame_number, ready: r.ready })),
     };
     if (costs) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
     sendJson(res, 200, body);
