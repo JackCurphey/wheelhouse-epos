@@ -96,5 +96,25 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await expect(page.getByText('You already have a report with this name. Choose another name.')).toBeVisible();
     const overflow2 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow2).toBeLessThanOrEqual(0);
+
+    // Rename it from its menu, then delete it and bring it back with Undo.
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    const list = page.getByRole('region', { name: 'Your reports' });
+    await list.getByRole('button', { name: 'More for Bottles this week' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Share with managers' })).toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('menuitem', { name: 'Rename' }).click();
+    const rename = page.getByRole('dialog', { name: 'Rename' });
+    await rename.getByLabel('Name (needed)').fill('Bottles weekly');
+    await rename.getByRole('button', { name: 'Save' }).click();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toBeVisible();
+    await list.getByRole('button', { name: 'More for Bottles weekly' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await expect(page.getByText('“Bottles weekly” deleted.')).toBeVisible();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(list.getByRole('link', { name: /Bottles weekly/ })).toBeVisible();
+    await expect(page.getByText('“Bottles weekly” deleted.')).toHaveCount(0);
+    const overflow3 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow3).toBeLessThanOrEqual(0);
   });
 }

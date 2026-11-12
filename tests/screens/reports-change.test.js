@@ -267,3 +267,21 @@ test('Show report waits while the choices are being checked, so it never opens a
   await panel.findByRole('radio', { name: 'Items sold', checked: true });
   assert.equal(panel.getByRole('button', { name: 'Show report' }).disabled, false);
 });
+
+test('a quick second click while the first is being checked still counts', async () => {
+  let release;
+  const slow = new Promise((r) => { release = r; });
+  const answers = served({ '/api/reports/changed/choices': async (query) => { if (query.get('measure') === 'items' && !query.get('split')) await slow; return [200, choices(query)]; } });
+  const { ui, within, fireEvent } = await openReports('/workshop/reports/sales', { answers });
+  await ui.findByRole('table', { name: 'Sales by day' });
+  fireEvent.click(ui.getByRole('button', { name: 'Change what’s shown' }));
+  const panel = within(await ui.findByRole('dialog', { name: 'Change what’s shown' }));
+  await panel.findByRole('radio', { name: 'Takings', checked: true });
+  fireEvent.click(panel.getByRole('radio', { name: 'Items sold' }));
+  fireEvent.click(panel.getByRole('radio', { name: 'Product' }));
+  fireEvent.click(panel.getByRole('checkbox', { name: 'Accessories' }));
+  release();
+  await panel.findByRole('checkbox', { name: 'Accessories', checked: true });
+  assert.ok(panel.getByRole('radio', { name: 'Items sold' }).checked);
+  assert.ok(panel.getByRole('radio', { name: 'Product' }).checked);
+});
