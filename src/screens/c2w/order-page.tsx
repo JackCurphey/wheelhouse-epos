@@ -80,22 +80,29 @@ function NextStep({ o, rule, remindDays, now }: { o: Full; rule: string | undefi
   return <Box label="cw-next"><h3 id="cw-next" className="m-0 text-size-17 font-bold">Next: the certificate</h3></Box>;
 }
 
-/** Each line of "What's happened" in the drawn words (c2w.mjs EV); a quote and its email together are one line. */
+/** Each line of "What's happened" in the drawn words (c2w.mjs EV); a quote and its email together are one line,
+ *  even with the hold the server records between them (quote, held, emailed). */
 function lines(o: Full): { at: string; by: string; text: string }[] {
   const out: { at: string; by: string; text: string }[] = [];
-  o.events.forEach((e, i) => {
-    const prev = o.events[i - 1];
-    if (e.kind === 'quote_emailed' && prev?.kind === 'quote_given' && prev.by === e.by) {
-      out[out.length - 1].text = out[out.length - 1].text.replace(/^gave quote (\S+)/, `gave quote $1 and emailed it to ${e.detail.to}`);
+  let quoteLine: { line: { at: string; by: string; text: string }; by: string | null } | null = null;
+  o.events.forEach((e) => {
+    if (e.kind === 'quote_emailed' && quoteLine && quoteLine.by === e.by) {
+      quoteLine.line.text = quoteLine.line.text.replace(/^gave quote (\S+)/, `gave quote $1 and emailed it to ${e.detail.to}`);
+      quoteLine = null;
       return;
     }
+    if (e.kind !== 'held') quoteLine = null;
     let text: string | null = null;
     if (e.kind === 'quote_given') {
       const held = /^We’re holding your bike until (.+?)\. /.exec(e.detail.closing ?? '');
       text = `gave quote ${e.detail.quoteRef}${held ? ` · it says the bike is put aside until ${held[1]}` : e.detail.closing ? ` · it says “${e.detail.closing}”` : ''}`;
-    } else if (e.kind === 'quote_emailed') text = `emailed the quote to ${e.detail.to}`;
+    } else if (e.kind === 'held') text = e.detail.until ? `held ${o.bike} until ${longDate(e.detail.until)}` : null;
+    else if (e.kind === 'quote_emailed') text = `emailed the quote to ${e.detail.to}`;
     else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
-    if (text) out.push({ at: e.at, by: e.by ?? 'Wheelhouse', text });
+    if (!text) return;
+    const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
+    out.push(line);
+    if (e.kind === 'quote_given') quoteLine = { line, by: e.by };
   });
   return out;
 }

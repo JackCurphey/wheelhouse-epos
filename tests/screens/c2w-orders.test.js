@@ -39,6 +39,8 @@ const OWNER_LIST = { ...LIST, counts: { ...LIST.counts, owedPence: 95000, owedLa
 const EMPTY = { groups: { waiting: [], certificate: [], ready: [], collected: [], paid: [] }, counts: { holdEndingSoon: 0, holdEnded: 0, readyToOrder: 0, noCertificate: 0, paymentLate: 0 }, count: 0, providers: 0, today: TODAY };
 const EVENTS = [
   { kind: 'quote_given', by: 'Jo Taylor', at: `${day(0)}T10:00:00.000Z`, reason: null, detail: { quoteRef: 'CW-1', closing: `We’re holding your bike until ${long(day(1))}. This quote is valid until ${long(day(30))}. Once your certificate reaches us, it’s yours to collect.` } },
+  // As the server writes them (PR 5): the hold comes between the quote and its email.
+  { kind: 'held', by: 'Jo Taylor', at: `${day(0)}T10:00:00.500Z`, reason: null, detail: { until: day(1) } },
   { kind: 'quote_emailed', by: 'Jo Taylor', at: `${day(0)}T10:00:01.000Z`, reason: null, detail: { to: 'maya@example.test' } },
 ];
 const QUOTE = {
@@ -402,8 +404,10 @@ test('cw-order-held: heading, stages, the hold, What’s happened, The order, Wh
   assert.ok(main.getByText((_, el) => el?.tagName === 'P' && el.textContent === `[Bike] · [Size] is held until ${long(day(1))}. Hold ends in 1 day — we’ll remind the shop 2 days before.`));
   const history = within(main.getByRole('heading', { level: 3, name: 'What’s happened' }).closest('section'));
   const lines = history.getAllByRole('listitem').map((l) => l.textContent);
-  assert.equal(lines.length, 1);
+  // cw-order-held draws upTo('held'): the quote with its email, then the hold (c2w.mjs EV.quote, EV.held).
+  assert.equal(lines.length, 2, lines.join(' | '));
   assert.ok(lines[0].endsWith(`Jo Taylor gave quote CW-1 and emailed it to maya@example.test · it says the bike is put aside until ${long(day(1))}`), lines[0]);
+  assert.ok(lines[1].endsWith(`Jo Taylor held [Bike] · [Size] until ${long(day(1))}`), lines[1]);
   const details = within(main.getByRole('heading', { level: 3, name: 'The order' }).closest('section'));
   for (const [k, v] of [['Bike', '[Bike] · [Size]'], ['Accessories', '[Accessory]'], ['Provider', '[Provider]'], ['Expected from the provider', 'After collection'], ['Order total', '£1,040.00'], ['[Provider] pays (the certificate)', '£1,040.00'], ['Maya pays at collection', '£0.00']]) {
     assert.equal(details.getByText(k).nextElementSibling.textContent, v, k);
