@@ -7,6 +7,7 @@ import { toCapacitySettings, addMinutesToTime, timeToMinutes } from './jobs.js';
 import { formatOpeningHours } from '../messaging/templates.js';
 import { isPretend } from '../messaging/senders/index.js';
 import { computeOrderTotals } from '../lib/sales.js';
+import { poundsText } from '../lib/money-text.js';
 
 /**
  * The link a message carries. While sending is pretend nothing reaches the
@@ -18,7 +19,7 @@ export async function messageLink(issue) {
   return isPretend() ? '[link]' : issue();
 }
 
-export const money = (amount) => `£${Number(amount).toFixed(2)}`;
+export const money = (amount) => poundsText(amount);
 
 /** The job's customer, and its tap-ins, given the link issued for it. */
 // Bike still waiting's [What’s left to pay] (drawn on cp-setting's pop-up):
