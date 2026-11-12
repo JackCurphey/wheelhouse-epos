@@ -104,6 +104,10 @@ export async function resolveStorefrontShop(req, url, sessionShopId) {
   if (!shop) return null;
 
   const enabled = await runWithShop(shop.id, async () => {
+    // Once the shop has opened the new Website page its own switch decides
+    // (openspec/changes/website-management, design 1); until then the old one.
+    const website = await prepare('SELECT is_on FROM website').get();
+    if (website) return website.is_on;
     const settings = await prepare('SELECT enabled FROM storefront_settings LIMIT 1').get();
     return settings?.enabled || false;
   });
@@ -123,6 +127,14 @@ export async function getStorefrontInfo(shopRow) {
   // every product's Buy button storefront-wide until some unrelated future
   // operation happens to self-heal the status back to 'connected').
   const shopifyConnected = shopifyConnection && shopifyConnection.status !== 'not_connected';
+  const shopify = {
+    shopifyDomain: shopifyConnected ? shopifyConnection.shop_domain : null,
+    shopifyStorefrontToken: shopifyConnected ? shopifyConnection.storefront_api_token : null,
+  };
+  // Customers see only what is published, never the draft
+  // (openspec/changes/website-management, design 1).
+  const website = await prepare('SELECT is_on, published FROM website').get();
+  if (website?.published) return { shopName: shopRow.name, enabled: website.is_on, themePreset: settings.theme_preset, ...publishedInfo(website.published), ...shopify };
   return {
     shopName: shopRow.name,
     enabled: !!settings.enabled,
@@ -131,8 +143,25 @@ export async function getStorefrontInfo(shopRow) {
     logoUrl: settings.logo_url || null,
     heroImageUrl: settings.hero_image_url || null,
     themePreset: settings.theme_preset,
-    shopifyDomain: shopifyConnected ? shopifyConnection.shop_domain : null,
-    shopifyStorefrontToken: shopifyConnected ? shopifyConnection.storefront_api_token : null,
+    ...shopify,
+  };
+}
+
+function publishedInfo(content) {
+  const part = (key) => content.parts?.[key] || {};
+  const photo = (key) => (part(key).photo ? { url: part(key).photo, description: part(key).decoration ? '' : part(key).description || '' } : null);
+  return {
+    headline: part('headline').text || '',
+    tagline: part('about_line').text || '',
+    description: part('shop_words').text || '',
+    logoUrl: content.logo || null,
+    heroImageUrl: part('big_photo').photo || null,
+    heroImage: photo('big_photo'),
+    shopPhoto: photo('shop_words'),
+    workshopWords: part('workshop_words').text || '',
+    collectionReturns: part('collection_returns').text || '',
+    privacy: part('privacy').text || '',
+    mainColour: content.main_colour || null,
   };
 }
 
