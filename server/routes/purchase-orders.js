@@ -71,6 +71,8 @@ function serializePurchaseOrder(row, items, costs) {
           notComing: closed ? Math.max(0, outstanding(it)) : 0,
           // The job a line is for, from the restock list's Add to an order (restock-list).
           ...(it.workshop_job_id ? { forJob: { id: it.workshop_job_id, ref: it.job_ref ?? null } } : {}),
+          // The Cycle to Work order a bike is ordered for (rs-receive-c2w: "for Maya Patel · Cycle to Work").
+          ...(it.c2w_order_id ? { forC2w: { id: it.c2w_order_id, customerName: it.c2w_customer_name ?? null } } : {}),
           ...(costs ? { unitCost: it.unit_cost } : {}),
         }))
       : undefined,
@@ -91,8 +93,9 @@ async function loadPurchaseOrderItems(id) {
             COALESCE((SELECT SUM(dp.qty) FROM delivery_problems dp
                       WHERE dp.purchase_order_id = poi.purchase_order_id AND dp.purchase_order_item_id = poi.id
                         AND dp.kind IN ('damaged', 'wrong_item')), 0)::int AS qty_set_aside,
-            w.reference AS job_ref
+            w.reference AS job_ref, cu.name AS c2w_customer_name
      FROM purchase_order_items poi LEFT JOIN workshop_jobs w ON w.id = poi.workshop_job_id
+       LEFT JOIN c2w_orders co ON co.id = poi.c2w_order_id LEFT JOIN customers cu ON cu.id = co.customer_id
      WHERE poi.purchase_order_id = ? ORDER BY poi.id`
   ).all(id);
 }
@@ -814,6 +817,20 @@ export function register(route) {
       const qty = (await loadPurchaseOrderItems(o.id)).reduce((n, it) => n + Math.max(0, outstanding(it)), 0);
       if (qty > 0) stillToCome.push({ orderId: o.id, supplierName: o.supplier_name, orderedAt: o.ordered_at, qty });
     }
+    // Each bike put aside for a Cycle to Work order (rs-booked-c2w): its frame held for the
+    // order by this delivery. One that went on sale instead isn't listed. `ready`: booking
+    // it in moved the order to Ready to collect.
+    const c2w = await db.prepare(
+      `SELECT o.id AS order_id, c.name AS customer_name, l.product_name, sf.frame_number,
+              EXISTS (SELECT 1 FROM c2w_order_events e WHERE e.order_id = o.id AND e.kind = 'booked_in'
+                        AND e.detail->>'frameId' = sf.id::text AND e.detail->>'ready' = 'true') AS ready
+         FROM delivery_lines l
+         JOIN purchase_order_items poi ON poi.id = l.purchase_order_item_id
+         JOIN c2w_orders o ON o.id = poi.c2w_order_id
+         JOIN customers c ON c.id = o.customer_id
+         JOIN stock_frames sf ON sf.delivery_line_id = l.id AND sf.c2w_order_id = o.id
+        WHERE l.delivery_id = ? ORDER BY l.id, sf.id`
+    ).all(id);
     const costOf = (qty, unit) => Math.round(qty * unit * 100) / 100;
     const body = {
       ...serializeDelivery(row),
@@ -827,6 +844,7 @@ export function register(route) {
         ...(costs ? { cost: costOf(p.qty, p.unit_cost) } : {}),
       })),
       stillToCome,
+      c2w: c2w.map((r) => ({ orderId: r.order_id, customerName: r.customer_name, name: r.product_name, frameNumber: r.frame_number, ready: r.ready })),
     };
     if (costs) body.bookedCost = Math.round(lines.reduce((sum, l) => sum + l.qty * l.unit_cost * 100, 0)) / 100;
     sendJson(res, 200, body);

@@ -28,6 +28,8 @@ type Delivery = Summary & {
   lines: { id: number; productId: number; name: string; sku: string | null; barcode: string | null; pricePence: number; qty: number; unitCost?: number; lineCost?: number }[];
   setAside: { id: number; name: string; kind: Kind; qty: number; returned: boolean; cost?: number }[];
   stillToCome: { orderId: number; supplierName: string; orderedAt: string | null; qty: number }[];
+  // Bikes put aside for Cycle to Work orders (rs-booked-c2w); `ready`: the order moved to Ready to collect.
+  c2w?: { orderId: number; customerName: string | null; name: string; frameNumber: string | null; ready: boolean }[];
 };
 
 const KIND: Record<Kind, string> = { damaged: 'Damaged', wrong_item: 'Wrong item' };
@@ -127,6 +129,7 @@ export function DeliveryBookedPage() {
     .map((kind) => ({ kind, qty: d.setAside.filter((p) => p.kind === kind).reduce((n, p) => n + p.qty, 0) }))
     .filter((k) => k.qty > 0);
   const toReturn = d.supplierName ? `To return to ${d.supplierName}` : 'To return';
+  const c2w = d.c2w ?? [];
   return (
     <Page>
       <Back />
@@ -135,8 +138,17 @@ export function DeliveryBookedPage() {
           {d.items > 0 ? <><NavIcon name="check" size={18} />{`${count(d.items)} booked in · stock updated`}</> : 'Nothing booked in'}
         </p>
         {owner || !print ? null : <div>{print}</div>}
-        {kinds.length + d.stillToCome.length > 0 ? (
+        {kinds.length + d.stillToCome.length + c2w.length > 0 ? (
           <ul aria-labelledby="t-booked-in" className="m-0 list-none p-0">
+            {c2w.map((b) => {
+              const who = b.customerName ?? '[Customer]';
+              return (
+                <Row key={`c2w${b.orderId}`} title={`${who} · Cycle to Work`}
+                  sub={<>{`${b.name}${b.frameNumber ? ' · frame ' : ''}`}{b.frameNumber ? <span className={mono}>{b.frameNumber}</span> : null}{' · '}<strong className="text-[var(--wh-ink)]">{`put it aside for ${who} — not for sale`}</strong>{b.ready ? ' · their order moves to Ready to collect' : ''}</>}>
+                  <Link to={ROUTES['cw-order-held'].replace(':id', String(b.orderId))} className={linkClass} aria-label={`Open ${who}’s Cycle to Work order`}>Open the order</Link>
+                </Row>
+              );
+            })}
             {kinds.map(({ kind, qty }) => (owner
               ? (
                 <Row key={kind} title={`${qty} set aside as ${SET_ASIDE_AS[kind]}`} sub={`On ${toReturn}`}>

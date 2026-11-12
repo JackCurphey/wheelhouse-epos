@@ -80,6 +80,8 @@ async function giveFrame(r, frame, { press = false } = {}) {
   return dialog;
 }
 const receives = () => calls.filter((c) => c.method === 'POST' && c.url.endsWith('/receive')).map((c) => { const { requestKey, ...body } = c.body; return body; });
+// What the scan said: the status line under the scan box (the header has a status of its own).
+const said = (r) => r.ui.getAllByRole('status').find((e) => e.textContent.startsWith('Added'))?.textContent;
 const bikeLine = (r) => r.within(r.ui.getByRole('list', { name: 'Scanned' })).getByText('Trek Domane AL 3').closest('li');
 
 test('scanning a bike asks for its frame number, as drawn, and the sticker counts it', async () => {
@@ -170,4 +172,31 @@ test('a bike set aside leaves out the last frame scanned', async () => {
   r.fireEvent.click(r.ui.getByRole('button', { name: /^Book in/ }));
   await r.waitFor(() => assert.equal(receives().length, 1));
   assert.deepEqual(receives()[0].items, [{ productId: 21, itemId: 121, qty: 1, frames: ['[frame 1]'] }]);
+});
+
+// UX walk-through 5 M2 (rs-receive-c2w, rs-frame-c2w): a bike ordered for a Cycle to Work
+// order says whose it is, on its line, as it's announced and in its frame popup.
+const C2W_ORDER = { ...ORDER, items: [{ ...ORDER.items[0], qtyOrdered: 1, outstanding: 1, forC2w: { id: 31, customerName: 'Maya Patel' } }] };
+test('a Cycle to Work bike says it’s for Maya Patel, to put aside, as drawn', async () => {
+  const r = await open({ orders: [C2W_ORDER] });
+  scan(r, '[bike barcode]');
+  const dialog = await r.ui.findByRole('dialog', { name: 'Frame number' });
+  const d = r.within(dialog);
+  assert.ok(d.getByText('Trek Domane AL 3 · for Maya Patel · Cycle to Work — put it aside'));
+  assert.ok(d.getByText('This frame becomes the frame on Maya Patel’s Cycle to Work order. It’s held for them — not for sale — and the till picks it when they collect.'));
+  assert.ok(d.queryByText(/its warranty starts from the right bike/) === null, 'the Cycle to Work note replaces the usual one');
+  await giveFrame(r, '[frame 1]');
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('dialog', { name: 'Frame number' }) === null));
+  assert.equal(said(r), 'Added Trek Domane AL 3 · frame [frame 1] — for Maya Patel · Cycle to Work — put it aside');
+  const line = bikeLine(r);
+  assert.equal(r.within(line).getByText('for Maya Patel · Cycle to Work — put it aside').tagName, 'STRONG');
+});
+
+test('a bike not for a Cycle to Work order says nothing about one', async () => {
+  const r = await open({ orders: [ORDER] });
+  scan(r, '[bike barcode]');
+  await giveFrame(r, '[frame 1]');
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('dialog', { name: 'Frame number' }) === null));
+  assert.equal(said(r), 'Added Trek Domane AL 3 · frame [frame 1]');
+  assert.ok(!bikeLine(r).textContent.includes('Cycle to Work'), bikeLine(r).textContent);
 });
