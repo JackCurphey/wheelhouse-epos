@@ -138,7 +138,9 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
   const [problem, setProblem] = useState<string | null>(null);
   const name = firstName(o.customerName);
   const pence = amountOf(amount);
-  const kind = pence === null ? null : pence < o.totalPence ? 'less' : pence > o.totalPence ? 'more' : o.validUntil < today ? 'late' : 'match';
+  // Late is judged on the Received date, as the server judges it (orders.js: received after valid until).
+  const late = !!received && received > o.validUntil;
+  const kind = pence === null ? null : pence < o.totalPence ? 'less' : pence > o.totalPence ? 'more' : late ? 'late' : 'match';
   const gap = pence === null ? 0 : Math.abs(pence - o.totalPence);
   const heading = pence === null ? '' : `Certificate ${pounds(pence)} · quote ${pounds(o.totalPence)}.`;
   // The tick is drawn for a bike put aside whose certificate matches the order.
@@ -204,7 +206,7 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
         </DialogBody>
         <DialogFooter className="flex justify-end gap-2.5">
           <Button variant="ghost" disabled={busy} onClick={() => { setProblem(null); setStep('certificate'); }}>Back</Button>
-          <Button variant="primary" disabled={busy} onClick={() => void save()}>{`Save and email ${name}`}</Button>
+          <Button key="save-lines" variant="primary" disabled={busy || newTotal !== pence} onClick={() => void save()}>{`Save and email ${name}`}</Button>
         </DialogFooter>
       </Dialog>
     );
@@ -226,6 +228,7 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
         <Field id="ce-received" label="Received" type="date" max={today} value={received} onChange={setReceived} />
         {kind === 'match' ? <Msg tone="ok"><strong>{heading}</strong> They match.</Msg> : null}
         {kind === 'late' ? <Msg tone="warn"><strong>{`Quote ran out on ${longDate(o.validUntil)} — check the price.`}</strong>{` ${heading} The amounts match.`}</Msg> : null}
+        {late && (kind === 'less' || kind === 'more') ? <Msg tone="warn"><strong>{`Quote ran out on ${longDate(o.validUntil)} — check the price.`}</strong></Msg> : null}
         {kind === 'less' ? (
           <>
             <Msg tone="warn"><strong>{heading}</strong>{` ${pounds(gap)} less than the quote.`}</Msg>
@@ -256,7 +259,7 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
       <DialogFooter className="flex justify-end gap-2.5">
         <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
         {toLines
-          ? <Button variant="primary" onClick={() => { if (checked() !== null) setStep('lines'); }}>Next: what to take off</Button>
+          ? <Button key="to-lines" variant="primary" onClick={() => { if (checked() !== null) setStep('lines'); }}>Next: what to take off</Button>
           : <Button variant="primary" disabled={busy} onClick={() => void save()}>Save</Button>}
       </DialogFooter>
     </Dialog>

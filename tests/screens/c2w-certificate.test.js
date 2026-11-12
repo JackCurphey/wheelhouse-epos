@@ -294,3 +294,73 @@ test('cw-order-get-ready and cw-marked-ready: Mark ready to collect, the note wi
   await nextBox(ui, within, 'Next: get the bike ready');
   assert.equal(posts('/ready/undo').length, 1);
 });
+
+// ---- From the review: the cases the drawings leave between them ----
+
+test('cw-certificate-late: late is judged on the Received date, as the server does', async () => {
+  const { fireEvent, dialog } = await openCertificate({ theOrder: order({ validUntil: day(-1) }) });
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1040');
+  type(fireEvent, dialog.getByLabelText('Received'), day(-2));
+  assert.ok(dialog.queryByText(/Quote ran out/) === null);
+  assert.ok(dialog.getByText(para('Certificate £1,040.00 · quote £1,040.00. They match.')));
+});
+
+test('cw-certificate-late with a different amount: the late warning and the difference both show', async () => {
+  const { fireEvent, dialog } = await openCertificate({ theOrder: order({ validUntil: day(-1) }) });
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1000');
+  assert.ok(dialog.getByText(para(`Quote ran out on ${long(day(-1))} — check the price.`)));
+  assert.ok(dialog.getByText(para('Certificate £1,000.00 · quote £1,040.00. £40.00 less than the quote.')));
+  assert.ok(dialog.queryByRole('checkbox', { name: /The bike is ready/ }) === null);
+});
+
+test('cw-certificate: with no bike put aside there is no ready tick, and ready is not sent as true', async () => {
+  const { waitFor, fireEvent, dialog } = await openCertificate({ theOrder: order({ held: false, holdUntil: null }) });
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1040');
+  assert.ok(dialog.queryByRole('checkbox', { name: /The bike is ready/ }) === null);
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.equal(posts('/certificate').length, 1));
+  assert.equal(posts('/certificate')[0].body.ready, false);
+});
+
+test('cw-certificate-match: Save and email stays off until the new total is the certificate', async () => {
+  const { ui, within, fireEvent, dialog } = await openCertificate();
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1000');
+  fireEvent.click(dialog.getByRole('button', { name: 'Next: what to take off' }));
+  const lines = within(await ui.findByRole('dialog', { name: 'Change the order to match' }));
+  const save = lines.getByRole('button', { name: 'Save and email Maya' });
+  assert.equal(save.disabled, true);
+  fireEvent.click(save);
+  assert.equal(posts('/certificate').length, 0);
+  fireEvent.click(lines.getByRole('checkbox', { name: /\[Accessory\]/ }));
+  assert.equal(lines.getByRole('button', { name: 'Save and email Maya' }).disabled, false);
+});
+
+test('cw-certificate-more with Change the order to match: the order’s accessories are kept', async () => {
+  const { waitFor, fireEvent, dialog } = await openCertificate();
+  type(fireEvent, dialog.getByLabelText('Certificate number'), '[certificate number]');
+  type(fireEvent, dialog.getByLabelText('Amount on the certificate'), '1100');
+  fireEvent.click(dialog.getByRole('radio', { name: /Change the order to match/ }));
+  fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.equal(posts('/certificate').length, 1));
+  assert.deepEqual(posts('/certificate')[0].body, { number: '[certificate number]', amountPence: 110000, receivedOn: TODAY, ready: false, difference: 'match', accessoryIds: [22] });
+});
+
+test('cw-applied: a bike already on order has no rule line in the popup', async () => {
+  const { ui, within, fireEvent } = await open({ theOrder: order({ ...AWAY, onOrder: true }) });
+  fireEvent.click(await ui.findByRole('button', { name: 'Mark as applied' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Maya has applied' }));
+  assert.ok(dialog.queryByText(/Your rule/) === null);
+});
+
+test('cw-marked-ready: a refusal shows the server’s words and leaves the order as it was', async () => {
+  const got = order({ stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 104000, certificateReceivedOn: day(0), holdUntil: null, next: 'ready' });
+  const on = { '/ready': () => [409, { error: 'No bike is put aside for this order.', code: 'not_held' }] };
+  const { ui, within, fireEvent } = await open({ theOrder: got, on });
+  const next = await nextBox(ui, within, 'Next: get the bike ready');
+  fireEvent.click(next.getByRole('button', { name: 'Mark Maya Patel’s bike ready to collect' }));
+  assert.ok(await ui.findByText('No bike is put aside for this order.'));
+  assert.ok(ui.queryByRole('button', { name: 'Undo' }) === null);
+  await nextBox(ui, within, 'Next: get the bike ready');
+});
