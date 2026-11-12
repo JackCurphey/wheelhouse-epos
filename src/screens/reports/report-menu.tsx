@@ -36,7 +36,7 @@ export function ReportMenu({ name, onRename, onDelete }: { name: string; onRenam
       ><span aria-hidden="true">…</span></button>
       {open ? (
         <div ref={menu} role="menu" aria-label={name} onKeyDown={keys}
-          className="absolute right-0 top-12 z-10 w-60 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-[0_12px_32px_rgba(28,30,25,0.28)]">
+          className="absolute right-0 top-12 z-10 w-60 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-modal">
           <button type="button" role="menuitem" className={`${ITEM} text-[var(--wh-ink)]`} onClick={choose(onRename)}>Rename</button>
           <button type="button" role="menuitem" aria-disabled="true" aria-description={NO_MANAGERS} className={`${ITEM} cursor-not-allowed text-[var(--wh-muted)] line-through`}>Share with managers</button>
           <span className="px-3 pb-1 text-size-13-5 text-[var(--wh-muted)]">{NO_MANAGERS}</span>

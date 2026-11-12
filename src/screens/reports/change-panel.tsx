@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
@@ -38,7 +38,8 @@ export function ChangePanel({ base, period, initial, onClose }: {
   // `want` is what has been clicked, newest last, so a quick second click builds on the first; when the
   // server's answer for it arrives its settled selection (a split moved to one that fits) replaces it.
   const checking = answer.isPlaceholderData;
-  useEffect(() => { if (sel && !checking) setWant(sel); }, [sel, checking]);
+  const [synced, setSynced] = useState<Selection | undefined>(undefined);
+  if (sel && !checking && sel !== synced) { setSynced(sel); setWant(sel); }
   const set = (next: Partial<Selection>) => setWant((w) => ({ ...(w.measure ? w : sel ?? w), ...next }));
   const toggle = (value: string) => setWant((w) => {
     const now = w.measure ? w : sel ?? w;
