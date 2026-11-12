@@ -228,7 +228,12 @@ Connecting Shopify SHALL show the drawn "What happens" list and "Your Shopify ad
 
 ### Requirement: Connected to Shopify, the Website page shows what's sent and can switch back
 
-With Shopify connected, the Website page SHALL show "Connected to your Shopify shop" with the address, when it last sent, how many products, Pause sending and Open Shopify, the drawn rows, and "Change products, prices and stock here in Wheelhouse — changes to them made in Shopify are replaced. Your Shopify theme, pages, cookies and tracking are set in Shopify." "Switch to Wheelhouse's website" SHALL ask first, with the drawn list of what happens; Switch SHALL stop sending, make Wheelhouse's website switched off for the shop to check, and keep the web address, orders and "Show on website" switches.
+With Shopify connected, the Website page SHALL show "Connected to your Shopify shop" with the address, when it last sent, how many products, Pause sending and Open Shopify, the drawn rows, "sent as you change them in Wheelhouse", and "Change products, prices and stock here in Wheelhouse — changes to them made in Shopify are replaced. Your Shopify theme, pages, cookies and tracking are set in Shopify." "Switch to Wheelhouse's website" SHALL ask first, with the drawn list of what happens; Switch SHALL stop sending, make Wheelhouse's website switched off for the shop to check, and keep the web address, orders and "Show on website" switches.
+
+#### Scenario: A change in Wheelhouse goes to Shopify on its own
+
+- **WHEN** a product shown online is sold at the till, its stock or price or photo changes, or a bike of it is held
+- **THEN** the change reaches Shopify within a minute or so with nothing pressed, and a change Shopify can't take is listed with why
 
 #### Scenario: Pausing
 
