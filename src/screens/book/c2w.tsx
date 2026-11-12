@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, Navigate, useParams } from 'react-router';
 import { Bike, Check, TriangleAlert } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ApiError } from '@/lib/api/client.ts';
@@ -7,7 +7,7 @@ import { penceText } from '@/lib/money.ts';
 import { cn } from '@/lib/utils';
 import { BookFrame } from './frame.tsx';
 import { RoundIcon } from './round-icon.tsx';
-import { useC2wLink, type C2wView } from './c2w-query.ts';
+import { useC2wLink, useC2wOrder, type C2wView } from './c2w-query.ts';
 
 /**
  * The customer's Cycle to Work page (cw-customer-view, cw-customer-released,
@@ -36,6 +36,30 @@ export function C2wScreen() {
   if (view.isError) {
     return (
       <BookFrame title="We couldn’t open this link">
+        <Button variant="accent" onClick={() => void view.refetch()}>Try again</Button>
+      </BookFrame>
+    );
+  }
+  return <BookFrame title="Loading…">{null}</BookFrame>;
+}
+
+// The same page by her sign-in, from her account's history (ac-account-c2w;
+// PR 9d): signed out, to sign in and back; not hers, it says so.
+export function C2wAccountScreen() {
+  const { shopSlug = '', id = '' } = useParams();
+  const view = useC2wOrder(shopSlug, id);
+  const home = `/book/${shopSlug}`;
+  if (view.data) return <OrderView view={view.data} shopSlug={shopSlug} />;
+  const status = view.error instanceof ApiError ? view.error.status : null;
+  if (status === 401) {
+    return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/account/cycle-to-work/${id}`)}`} />;
+  }
+  if (status === 404 || !/^\d+$/.test(id)) {
+    return <BookFrame title="We couldn’t find this order" back={`${home}/account`} backLabel="Your account">{null}</BookFrame>;
+  }
+  if (view.isError) {
+    return (
+      <BookFrame title="We couldn’t open this order" back={`${home}/account`} backLabel="Your account">
         <Button variant="accent" onClick={() => void view.refetch()}>Try again</Button>
       </BookFrame>
     );
