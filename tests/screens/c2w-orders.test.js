@@ -260,15 +260,34 @@ test('cw-new: the order is made but the email refused: the order opens and says 
   assert.ok(await r.ui.findByText('Quote CW-1 made, not emailed: This customer has been sent five Cycle to Work quotes in the last hour. Try again later.'));
 });
 
-test('cw-new: Escape in a search box closes its list, not New order', async () => {
+test('cw-new: Escape closes the list, then empties the box; from an empty box it goes on to close New order', async () => {
   const r = await newOrder();
   const box = r.ui.getByRole('combobox', { name: 'Customer' });
   r.fireEvent.change(box, { target: { value: 'Maya' } });
   await r.ui.findByRole('option', { name: /^Maya Patel/ });
-  r.fireEvent.keyDown(box, { key: 'Escape' });
+  // fireEvent says false when the page kept the key to itself (preventDefault).
+  assert.equal(r.fireEvent.keyDown(box, { key: 'Escape' }), false, 'kept: it closes the list');
   assert.ok(r.ui.queryByRole('option', { name: /^Maya Patel/ }) === null, 'the list closed');
-  r.fireEvent.keyDown(box, { key: 'Escape' });
-  assert.ok(r.ui.getByRole('heading', { level: 2, name: 'New Cycle to Work order' }), 'New order is still open');
+  assert.equal(r.fireEvent.keyDown(box, { key: 'Escape' }), false, 'kept: it empties the box');
+  assert.equal(box.value, '');
+  assert.equal(r.fireEvent.keyDown(box, { key: 'Escape' }), true, 'from the empty box Escape goes on to the dialog, which closes');
+});
+
+test('cw-new: the list closes when the focus leaves, Down opens it again, and nothing matching shows no list', async () => {
+  const r = await newOrder();
+  const box = r.ui.getByRole('combobox', { name: 'Customer' });
+  r.fireEvent.change(box, { target: { value: 'Maya' } });
+  await r.ui.findByRole('option', { name: /^Maya Patel/ });
+  r.fireEvent.blur(box, { relatedTarget: r.ui.getByRole('button', { name: 'Cancel' }) });
+  assert.ok(r.ui.queryByRole('listbox') === null);
+  assert.equal(box.getAttribute('aria-expanded'), 'false');
+  r.fireEvent.keyDown(box, { key: 'ArrowDown' });
+  assert.ok(r.ui.getByRole('option', { name: /^Maya Patel/ }));
+  const bike = r.ui.getByRole('combobox', { name: 'Bike' });
+  r.fireEvent.change(bike, { target: { value: 'zz' } });
+  assert.equal((await r.ui.findAllByText('Nothing matches “zz”.')).length, 2, 'said on screen and to screen readers');
+  assert.ok(r.ui.queryByRole('listbox', { name: 'Matching: Bike' }) === null, 'no empty list');
+  assert.equal(bike.getAttribute('aria-expanded'), 'false');
 });
 
 test('cw-new: the arrow keys and Enter pick; the focus goes to Change, back to the box after Change, and to the box after removing a chip', async () => {
@@ -329,6 +348,33 @@ test('cw-quote: every drawn line, the LOGO placeholder, Print and Email to Maya'
   fireEvent.click(main.getByRole('button', { name: 'Email to Maya' }));
   assert.ok(await ui.findByText('Quote emailed to maya@example.test.'));
   assert.equal(posts('/email-quote').length, 1);
+});
+
+test('cw-quote: with the shop’s own logo, Print waits for it to load; the paper is black on white, with no card', async () => {
+  const { ui, within, fireEvent } = await open('/workshop/c2w/9/quote', { quote: { ...QUOTE, shop: { ...QUOTE.shop, logoUrl: 'http://localhost/logo.png' } } });
+  const main = within(await ui.findByRole('main'));
+  fireEvent.click(await main.findByRole('button', { name: 'Print' }));
+  const paper = document.getElementById('wh-print');
+  const logo = paper.querySelector('img');
+  assert.ok(logo !== null && logo.getAttribute('src') === 'http://localhost/logo.png');
+  await new Promise((res) => setTimeout(res, 30));
+  assert.ok(!calls.some((c) => c.method === 'PRINT'), 'not printed before the logo has loaded');
+  logo.dispatchEvent(new window.Event('load'));
+  await new Promise((res) => setTimeout(res, 10));
+  assert.equal(calls.filter((c) => c.method === 'PRINT').length, 1);
+  const classes = [...paper.querySelectorAll('[class]')].map((el) => el.getAttribute('class')).join(' ');
+  for (const look of ['shadow', 'bg-[', 'text-[var(--wh-muted)]', 'border-[var(']) assert.ok(!classes.includes(look), `${look} on paper`);
+});
+
+test('the order: Try again on a failed email locks while it sends, so a double tap sends once', async () => {
+  const { ui, fireEvent } = await open('/workshop/c2w/9', { emailFails: 'fault' });
+  fireEvent.click(await ui.findByRole('button', { name: 'Email the quote again' }));
+  const again = await ui.findByRole('button', { name: 'Try again' });
+  fireEvent.click(again);
+  assert.equal(again.disabled, true, 'the note’s button is off while it sends');
+  fireEvent.click(again);
+  assert.ok(await ui.findByText('Quote emailed to maya@example.test.'));
+  assert.equal(posts('/email-quote').length, 2, 'the first, failed, and one more');
 });
 
 test('cw-quote-revised: the revised heading, Revised [date] and Email the revised quote', async () => {

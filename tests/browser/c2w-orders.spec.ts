@@ -52,14 +52,19 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 900 }], ['ph
     await expect(main.getByText(/^Tuesday 1 September · North Street Cycles/)).toBeVisible();
     await main.getByRole('button', { name: '+ New Cycle to Work order' }).click();
     const box = page.getByRole('dialog', { name: 'New Cycle to Work order' });
-    // Escape in a search closes its list, then empties the box, and never New order.
+    // Escape in a search closes its list, then empties the box; from the empty box it closes New order.
     const find = box.getByRole('combobox', { name: 'Customer' });
+    await expect(find).toBeFocused();
     await find.fill('Maya');
     await expect(box.getByRole('option', { name: /^Maya Patel/ })).toBeVisible();
     await find.press('Escape');
     await expect(box.getByRole('option', { name: /^Maya Patel/ })).toHaveCount(0);
     await find.press('Escape');
     await expect(box).toBeVisible();
+    await expect(find).toHaveValue('');
+    await find.press('Escape');
+    await expect(box).toHaveCount(0);
+    await main.getByRole('button', { name: '+ New Cycle to Work order' }).click();
     await find.fill('Maya');
     await box.getByRole('option', { name: /^Maya Patel/ }).click();
     await expect(box.getByRole('button', { name: 'Change the customer' })).toBeFocused();

@@ -43,36 +43,43 @@ function Search<T extends { id: number }>({ id, label, path, show, name, onPick 
   const items = q.length >= 2 ? found.data ?? null : null;
   const shown = open && items !== null;
   const pick = (t: T) => { onPick(t); setTerm(''); setActive(0); };
+  const listed = shown && items.length > 0;
   return (
-    <div className="flex flex-col gap-1.5">
-      <input id={id} type="text" role="combobox" aria-label={label} aria-autocomplete="list" aria-expanded={shown && items.length > 0} aria-controls={listId}
-        aria-activedescendant={shown && items[active] ? `${listId}-${active}` : undefined}
+    // Leaving the box and its list closes the list (New job's customer search).
+    <div className="flex flex-col gap-1.5" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false); }}>
+      <input id={id} type="text" role="combobox" aria-label={label} aria-autocomplete="list" aria-expanded={listed} aria-controls={listed ? listId : undefined}
+        aria-activedescendant={listed && items[active] ? `${listId}-${active}` : undefined}
         value={term} onChange={(e) => { setTerm(e.target.value); setOpen(true); setActive(0); }} placeholder="Type to search" autoComplete="off" className={INPUT}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
-            // Escape closes the list (or empties the box), never New order (new-job-dialog.tsx's customer search).
+            // Escape closes the list, then empties the box; from an empty box it
+            // reaches New order and closes it (new-job-dialog.tsx's customer search).
+            if (!shown && !term) return;
             e.preventDefault();
             e.stopPropagation();
             if (shown) setOpen(false); else setTerm('');
-          } else if (shown && items.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+          } else if (!shown && e.key === 'ArrowDown' && items !== null) {
+            e.preventDefault();
+            setOpen(true);
+          } else if (listed && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
             e.preventDefault();
             setActive((a) => (a + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length);
-          } else if (shown && e.key === 'Enter' && items[active]) {
+          } else if (listed && e.key === 'Enter' && items[active]) {
             e.preventDefault();
             pick(items[active]);
           }
         }} />
       <span role="status" className="sr-only">{shown ? (items.length ? `${items.length} found.` : `Nothing matches “${q}”.`) : ''}</span>
-      {shown ? (
+      {listed ? (
         <ul id={listId} role="listbox" aria-label={`Matching: ${label}`} className="m-0 flex max-h-48 list-none flex-col gap-1 overflow-y-auto rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1">
           {items.map((t, i) => (
             // Pressing keeps the focus in the box: Safari and iPad don't focus a clicked option.
             <li key={t.id} id={`${listId}-${i}`} role="option" aria-selected={i === active} aria-label={name(t)} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(t)}
               className={`flex min-h-11 cursor-pointer flex-col justify-center rounded-md px-3 py-1 text-left text-sm hover:bg-[var(--wh-hover)] ${i === active ? 'bg-[var(--wh-hover)]' : ''}`}>{show(t)}</li>
           ))}
-          {items.length === 0 ? <li role="presentation" className={`px-3 py-1.5 ${SUB}`}>{`Nothing matches “${q}”.`}</li> : null}
         </ul>
       ) : null}
+      {shown && items.length === 0 ? <p className={`m-0 px-3 py-1.5 ${SUB}`}>{`Nothing matches “${q}”.`}</p> : null}
     </div>
   );
 }

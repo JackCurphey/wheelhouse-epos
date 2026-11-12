@@ -12,7 +12,7 @@ import {
   Back, Box, Kv, Msg, Page, daysBetween, dayOf, firstName, linkClass, longDate, mono, note, plural, pounds, bikeLine,
   useAllProviders, useC2wSettings, type C2wEvent, type C2wOrder, type Provider,
 } from './c2w-bits.tsx';
-import { printPaper } from '@/screens/till/receipt.tsx';
+import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 
 /**
@@ -122,11 +122,11 @@ const commission = (p: Provider) => (p.commissionKind === undefined || p.commiss
 function Details({ o, provider, onEmail, busy }: { o: Full; provider: Provider | undefined; onEmail: () => void; busy: boolean }) {
   const queryClient = useQueryClient();
   const { show } = useSavedNote();
-  // The quote on its own paper, as receipts print (printPaper), without leaving the order.
+  // The quote on its own paper, as receipts print, once its logo has loaded, without leaving the order.
   async function print() {
     try {
       const { quote } = await queryClient.fetchQuery({ queryKey: quoteKey(o.id), queryFn: () => getQuote(o.id) });
-      printPaper(<QuoteDoc q={quote} paper />);
+      await printPaperWhenLoaded(<QuoteDoc q={quote} paper />);
     } catch {
       show({ text: 'Wheelhouse couldn’t load the quote to print. Try again in a moment.', failed: true, action: { label: 'Try again', run: () => void print() } });
     }
@@ -181,7 +181,8 @@ function OrderBody() {
   const shop = session.status === 'signed-in' ? session.shop.name : '';
   const location = useLocation();
   const navigate = useNavigate();
-  const { show } = useSavedNote();
+  const saved = useSavedNote();
+  const { show } = saved;
   const order = useQuery({ queryKey: ['c2w-order', id], queryFn: () => apiGet<{ order: Full; today: string }>(`/api/c2w/orders/${id}`), retry: false, enabled: known });
   const settings = useC2wSettings().data?.settings;
   const providers = useAllProviders().data?.providers;
@@ -194,9 +195,9 @@ function OrderBody() {
     const sent = (location.state as { note?: { text: string; failed: boolean; retry?: boolean } } | null)?.note;
     if (!sent || shown.current) return;
     shown.current = true;
-    show(sent.retry ? { text: sent.text, failed: true, action: { label: 'Try again', run: () => void send() } } : sent);
+    show(sent.retry ? { text: sent.text, failed: true, action: { label: 'Try again', run: () => { saved.busy(); void send(); } } } : sent);
     navigate(location.pathname, { replace: true, state: null });
-  }, [location.state, location.pathname, navigate, show, send]);
+  }, [location.state, location.pathname, navigate, show, send, saved]);
 
   if (!known || order.isError) {
     return <Page><Back to={ROUTES.c2w}>Cycle to Work</Back><p role="alert" className="m-0 text-sm">{!known || (order.error instanceof ApiError && order.error.status === 404) ? 'Order not found' : 'Wheelhouse couldn’t load this order. Try again in a moment.'}</p></Page>;
