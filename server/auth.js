@@ -14,6 +14,7 @@
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { pool } from './db.js';
 import { MAKE_FIRST_SITE } from './lib/first-site.js';
+import { SEED_OTHER_WAYS } from './lib/drawn-other-ways.js';
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -153,6 +154,8 @@ export async function createShop({ shopName, ownerName, email, password }) {
     await client.query('INSERT INTO shop_theme (shop_id) VALUES ($1)', [shop.id]);
     // Every business has a first shop (openspec/changes/stock-per-shop, design 2).
     await client.query(MAKE_FIRST_SITE);
+    // The drawn Other ways to pay (owner-setup-till-payments-eod, design 4).
+    await client.query(SEED_OTHER_WAYS);
     // Every shop starts with a mock supplier so the catalogue-sync feature
     // is immediately testable - revisit once a real distributor adapter
     // (e.g. Madison) exists, since seeding a mock one for every real shop

@@ -99,11 +99,11 @@ async function tillSale(owner, at, payments, { offline = false } = {}) {
 
 test('the entry shows from an hour before closing, all day when the shop is shut, never once closed', () => {
   const hours = { open: '09:00', close: '17:30' };
-  assert.deepEqual(entryFor(hours, 16 * 60 + 29, false), { show: false, closesAt: '17:30' });
-  assert.deepEqual(entryFor(hours, 16 * 60 + 30, false), { show: true, closesAt: '17:30' });
-  assert.deepEqual(entryFor(hours, 23 * 60, false), { show: true, closesAt: '17:30' });
-  assert.deepEqual(entryFor(null, 7 * 60, false), { show: true, closesAt: null });
-  assert.deepEqual(entryFor(hours, 17 * 60, true), { show: false, closesAt: '17:30' });
+  assert.deepEqual(entryFor(hours, 16 * 60 + 29, false, 60), { show: false, closesAt: '17:30' });
+  assert.deepEqual(entryFor(hours, 16 * 60 + 30, false, 60), { show: true, closesAt: '17:30' });
+  assert.deepEqual(entryFor(hours, 23 * 60, false, 60), { show: true, closesAt: '17:30' });
+  assert.deepEqual(entryFor(null, 7 * 60, false, 60), { show: true, closesAt: null });
+  assert.deepEqual(entryFor(hours, 17 * 60, true, 60), { show: false, closesAt: '17:30' });
 });
 
 test('the day: cash sales from both records on the shop\'s own date, and this morning\'s float', async () => {
