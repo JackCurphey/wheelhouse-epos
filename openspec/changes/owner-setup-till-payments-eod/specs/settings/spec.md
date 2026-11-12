@@ -106,14 +106,14 @@ Settings › Front desk › End of day SHALL have a Counting the cash fold with 
 - **THEN** "Saved" shows with Undo, the summary reads "Show the expected amount", and the next Close the day shows the expected figure while counting
 
 ### Requirement: Ways to pay shows Cash as always on
-The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL go on naming only the ways to pay that are built and on. The Card, Gift cards and Deposits switches and Store credit's earn-back SHALL not show until the till pieces that use them are built (Jack's answer 3).
+The Ways to pay fold SHALL show a Cash card first, "Always on", with no switch (`set-pay-ways`). The fold summary SHALL name only the ways to pay that are built and on, Cash first, in the drawing's words ("Cash, card and 4 more"): "Cash", "Cash and store credit", "Cash, store credit and customer accounts". The Card, Gift cards and Deposits switches and Store credit's earn-back SHALL not show until the till pieces that use them are built (Jack's answer 3).
 
 #### Scenario: Cash
 - **WHEN** Jack opens Ways to pay
 - **THEN** Cash shows first, reading "Always on", with nothing to switch
 
 ### Requirement: The shop lists its other ways to pay
-Settings › Front desk › Payments SHALL have an Other ways to pay fold (`set-pay-other`) listing the shop's other ways to pay, each with its line and an outlined Remove. Under the list SHALL be "Add another way to pay" with Add, and the note "These sit under “Other” at the bottom of Take payment, one tap away." Add and Remove SHALL save at once, with "Saved" and Undo. The summary SHALL name them, or read "None".
+Settings › Front desk › Payments SHALL have an Other ways to pay fold (`set-pay-other`) listing the shop's other ways to pay, each with its line and a borderless ✕ button named "Remove" and the way's name, as drawn (`setup.mjs` otherRow). Under the list SHALL be "Add another way to pay" with Add, and the note "These sit under “Other” at the bottom of Take payment, one tap away." Add and Remove SHALL save at once, with "Saved" and Undo. The summary SHALL name them as they are written, joined with commas, or read "None".
 
 #### Scenario: Adding the shop's own
 - **WHEN** Jack types "Bank transfer" and chooses Add
@@ -135,4 +135,4 @@ A shop SHALL start with Finance ("Recorded at the till; the finance company pays
 
 #### Scenario: The starting list
 - **WHEN** Jack first opens Other ways to pay
-- **THEN** he sees Finance, Cycle to Work and Payment link with their lines, and the summary reads "Finance, Cycle to Work, payment link"
+- **THEN** he sees Finance, Cycle to Work and Payment link with their lines, and the summary reads "Finance, Cycle to Work, Payment link"
