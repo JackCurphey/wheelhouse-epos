@@ -188,6 +188,7 @@ test('the title and the line under it say what it was changed from, what it is l
   assert.equal(res.body.title, 'Sales: items sold by product');
   assert.equal(res.body.line, 'Changed from Sales · Accessories only · So far: Mon 14 – Thu 17 September, against the same days last week');
   assert.equal(res.body.total.label, 'Total, Accessories only');
+  assert.equal(res.body.what, 'Sales: items sold by product · Accessories only');
   const supplier = await changed('base=sales&measure=takings&split=product&supplier=Acme&period=this-week');
   assert.deepEqual(supplier.body.rows.map((r) => r.label), ['Water bottle']);
   assert.equal(supplier.body.line, 'Changed from Sales · Acme only · So far: Mon 14 – Thu 17 September, against the same days last week');

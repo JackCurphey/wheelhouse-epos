@@ -28,6 +28,11 @@ export const STEPS = {
   // nothing to release.
   hold_longer: { from: ['quote', 'waiting'], to: null },
   released: { from: ['quote', 'waiting'], to: null },
+  // The certificate (cw-certificate); with the "bike is ready" tick the route
+  // moves it on to ready in the same step.
+  certificate: { from: ['quote', 'waiting'], to: 'certificate' },
+  ready: { from: ['certificate'], to: 'ready' },
+  ready_undone: { from: ['ready'], to: 'certificate' },
 };
 // The stages an order can still be holding a bike in.
 const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
@@ -106,7 +111,13 @@ const iso = (t) => (t ? new Date(t).toISOString() : null);
 // Not in stock when quoted: the hold was wanted but there was nothing to hold
 // ("Don't hold" is only offered for a bike that's in stock, cw-new). A bike held
 // and then released was in stock. Ordering in (pull request 6) fills in the order line.
-export const notInStock = (r) => r.hold_wanted && !r.held_at && !r.released_at && !r.frame_id;
+// From the certificate on, every order needs its bike: one not held is not in stock.
+export const notInStock = (r) => (['certificate', 'ready'].includes(r.stage)
+  ? !r.held_at && !r.frame_id
+  : r.hold_wanted && !r.held_at && !r.released_at && !r.frame_id);
+// Who pays what (cw-order-certificate): the provider pays up to the certificate,
+// the customer the rest at collection.
+export const providerPays = (r) => (r.certificate_pence === null ? null : Math.min(r.certificate_pence, r.total_pence));
 
 // Ready to order: a bike that wasn't in stock, the shop's rule says it's time,
 // and nothing is on order for it yet.
@@ -144,6 +155,9 @@ export function serializeOrder(r) {
     accessories: r.accessories, totalPence: r.total_pence,
     appliedAt: iso(r.applied_at), applicationReference: r.application_reference,
     certificateNumber: r.certificate_number, certificatePence: r.certificate_pence, certificateReceivedOn: r.certificate_received_on_day,
+    differenceChoice: r.difference_choice, providerPaysPence: providerPays(r),
+    customerPaysPence: r.certificate_pence === null ? null : r.total_pence - providerPays(r),
+    certificateLate: r.certificate_received_on_day !== null && r.certificate_received_on_day > r.valid_until_day,
     saleId: r.sale_id, collectedAt: iso(r.collected_at), paidOn: r.paid_on_day, closeReason: r.close_reason,
     inStock: !notInStock(r), held: Boolean(r.held_at), releasedAt: iso(r.released_at), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
   };
@@ -174,8 +188,8 @@ export async function takeStep(orderId, stepName, who, change, { detail = {}, re
     : null;
   if (!row) throw new Refused(404, { error: 'Not found' });
   if (!step.from.includes(row.stage)) throw new Refused(409, WRONG_STAGE);
-  // `change` may add to `detail` from the row it was given.
-  const fields = { ...(await change(row)), ...(step.to ? { stage: step.to } : {}) };
+  // `change` may add to `detail` from the row it was given, and may set a later stage.
+  const fields = { ...(step.to ? { stage: step.to } : {}), ...(await change(row)) };
   const cols = Object.keys(fields);
   await prepare(`UPDATE c2w_orders SET ${cols.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`).run(...Object.values(fields), orderId);
   await addEvent(orderId, stepName, who, { detail, reason });
