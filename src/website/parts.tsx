@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
 import { bookPath } from './address.ts';
 import { detailsLine } from './filters.ts';
-import { hasDetails, useSiteContext, type Category, type FirstShop, type ProductCardData, type ShopEntry, type StockLine } from './site-query.ts';
+import { hasDetails, useCategories, useSiteContext, type Category, type FirstShop, type ProductCardData, type ShopEntry, type StockLine } from './site-query.ts';
 
 /**
  * The pieces the website's pages share, as browse.mjs draws them: headings,
@@ -180,5 +180,22 @@ export function ShopCards({ email = false, book }: { email?: boolean; book?: boo
     <Grid cols={2} phoneCols={1}>
       {site.shops.map((s) => <ShopCard key={s.id} shop={s} title={s.name} book={book ?? true} email={email} />)}
     </Grid>
+  );
+}
+
+/**
+ * "Shop by category": the first four top categories and All categories
+ * (browse.mjs `featuredCats`), on the home page and under no search results.
+ */
+export function ShopByCategory() {
+  const { address } = useSiteContext();
+  const categories = useCategories(address);
+  const cats = topCategories(categories.data ?? []).slice(0, 4);
+  if (categories.error) return <Failed onRetry={() => { void categories.refetch(); }} />;
+  if (cats.length === 0) return null;
+  return (
+    <Section title="Shop by category" id="h-cats" more={<MoreLink to="/shop">All categories</MoreLink>}>
+      <Grid cols={4}>{cats.map((c) => <CategoryCard key={c.id} category={c} categories={categories.data ?? []} />)}</Grid>
+    </Section>
   );
 }

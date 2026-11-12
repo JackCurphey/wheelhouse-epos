@@ -159,17 +159,6 @@ export function useCategoryProducts(address: SiteAddress, categoryId: number, pa
   });
 }
 
-/** The first page for filters not yet applied: the phone Filter panel's "Show [n] products" (design 6). */
-export function useProductsPreview(address: SiteAddress, params: URLSearchParams, enabled: boolean) {
-  return useQuery({
-    queryKey: ['site', address.base, 'products-preview', params.toString()],
-    queryFn: () => apiGet<ProductsPage>(productsPath(address, params)),
-    enabled,
-    placeholderData: keepPreviousData,
-    ...once,
-  });
-}
-
 /** A product page's stock line (server/site-products.js `pageStock`, design 3). */
 export type PageStock = { line: 'none' } | { line: 'ready'; shop: string; qty: number } | { line: 'elsewhere'; shop: string; at: string } | { line: 'sold-out'; shop: string };
 /** GET /api/site/products/:id: a product with sizes has `stock: null` and a line for each of its items. */
@@ -194,6 +183,89 @@ export function useProduct(address: SiteAddress, id: number, shopId: number | nu
     queryKey: ['site', address.base, 'product', id, shopId],
     queryFn: () => apiGet<Product>(apiPath(address, `/api/site/products/${id}`, { shop: shopId == null ? null : String(shopId) })),
     enabled: id > 0,
+    ...once,
+  });
+}
+
+/** GET /api/site/suggest: a few of each kind, from the second letter (server/site-products.js `suggestAnswer`). */
+export type Suggestions = {
+  products: { id: number; name: string; code: string | null; pricePence: number; stock: StockLine }[];
+  repairs: Repair[];
+  categories: { id: number; name: string; path: string }[];
+  pages: { key: string; name: string }[];
+};
+
+/**
+ * Suggestions for words already waited on (search.tsx asks 250 ms after the
+ * last key). Each answer is kept under its own words, so a late answer for
+ * older words can never take the place of the newer one's.
+ */
+export function useSuggestions(address: SiteAddress, q: string, shopId: number | null) {
+  return useQuery({
+    queryKey: ['site', address.base, 'suggest', q, shopId],
+    queryFn: () => apiGet<Suggestions>(apiPath(address, '/api/site/suggest', { q, shop: shopId == null ? null : String(shopId) })),
+    enabled: q.trim().length >= 2,
+    // The list keeps the last answer while the next loads, so it doesn't flicker as the customer types.
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+    ...once,
+  });
+}
+
+/** One page of search results (GET /api/site/search): the products as /products answers them, the repairs and pages that match, and a measurement read as a category and a detail. */
+export type SearchPage = Omit<ProductsPage, 'category' | 'types' | 'filters'> & {
+  filters: ProductsPage['filters'] & { categories: { id: number; name: string; count: number }[] };
+  repairs: Repair[];
+  pages: { key: string; name: string }[];
+  measure: { category: { id: number; name: string }; detail: { id: number; name: string; unit: string | null }; value: number } | null;
+};
+
+const searchPath = (address: SiteAddress, params: URLSearchParams) => apiPath(address, '/api/site/search', params);
+const searchIdsKey = (address: SiteAddress, q: string, categoryId: number | null) => ['site', address.base, 'search-detail-ids', q, categoryId] as const;
+
+/** The details' ids by their names in the address for a search, as useDetailIds does for a category. */
+export function useSearchDetailIds(address: SiteAddress, q: string, categoryId: number | null, needed: boolean) {
+  return useQuery({
+    queryKey: searchIdsKey(address, q, categoryId),
+    queryFn: async () => {
+      const p = new URLSearchParams({ q });
+      if (categoryId !== null) p.set('category', String(categoryId));
+      return detailIdsOf((await apiGet<SearchPage>(searchPath(address, p))).filters.details);
+    },
+    enabled: needed,
+    staleTime: Infinity,
+    ...once,
+  });
+}
+
+/** Search results six at a time, as useCategoryProducts; the last answer for the same words stays while new filters load. */
+export function useSearchProducts(address: SiteAddress, q: string, categoryId: number | null, params: URLSearchParams | null) {
+  const client = useQueryClient();
+  return useInfiniteQuery({
+    queryKey: ['site', address.base, 'search', q, params?.toString() ?? null],
+    queryFn: async ({ pageParam }) => {
+      const p = new URLSearchParams(params ?? undefined);
+      if (pageParam) p.set('after', String(pageParam));
+      const page = await apiGet<SearchPage>(searchPath(address, p));
+      client.setQueryData(searchIdsKey(address, q, categoryId), detailIdsOf(page.filters.details));
+      return page;
+    },
+    initialPageParam: 0,
+    getNextPageParam: (last: SearchPage) => last.after ?? undefined,
+    enabled: params !== null,
+    // Only for the same words: new words are a new page, not new filters.
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[3] === q ? previous : undefined),
+    ...once,
+  });
+}
+
+/** The first page for filters not yet applied, on either page: the phone Filter panel's "Show [n] products" (design 6). */
+export function useListPreview<T>(address: SiteAddress, path: '/api/site/products' | '/api/site/search', params: URLSearchParams, enabled: boolean) {
+  return useQuery({
+    queryKey: ['site', address.base, `${path}-preview`, params.toString()],
+    queryFn: () => apiGet<T>(apiPath(address, path, params)),
+    enabled,
+    placeholderData: keepPreviousData,
     ...once,
   });
 }

@@ -37,7 +37,7 @@ test('on a computer: the home page, then Shop and back home by the shop’s name
   await expect(page.getByRole('heading', { level: 1, name: '[Headline]' })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Website' });
   await expect(nav.getByRole('link', { name: 'Book a repair' })).toBeVisible();
-  await expect(page.getByRole('searchbox', { name: 'Search the shop' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Search the shop' })).toBeVisible();
   await nav.getByRole('link', { name: 'Shop' }).click();
   await expect(page).toHaveURL(new RegExp(`/store/${owner.shop.slug}/shop$`));
   await expect(page.getByRole('heading', { level: 1, name: 'Shop' })).toBeVisible();

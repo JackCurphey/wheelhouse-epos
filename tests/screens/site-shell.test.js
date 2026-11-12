@@ -44,7 +44,7 @@ test('the shell on a computer (site): skip link, name, menu, search, chip, Accou
   assert.equal(href([...nav.querySelectorAll('a')][2]), `${BASE}/shops`);
 
   // The search box is a search area (audit H4); with the chip it says "Search".
-  const search = ui.getByRole('searchbox', { name: 'Search the shop' });
+  const search = ui.getByRole('combobox', { name: 'Search the shop' });
   assert.ok(search.closest('[role="search"]') !== null);
   assert.equal(search.getAttribute('placeholder'), 'Search');
   // Two shops, none chosen: the chip asks, and leads to Our shops until pull request 7.
@@ -92,7 +92,7 @@ test('one shop says Find us, with no chip, and the footer names the one shop', a
   const nav = await r.ui.findByRole('navigation', { name: 'Website' });
   assert.deepEqual([...nav.querySelectorAll('a')].map((a) => a.textContent), ['Shop', 'Book a repair', 'Find us']);
   assert.ok(r.ui.queryByRole('link', { name: /Choose a shop|Collecting from/ }) === null);
-  assert.equal(r.ui.getByRole('searchbox', { name: 'Search the shop' }).getAttribute('placeholder'), 'Search the shop');
+  assert.equal(r.ui.getByRole('combobox', { name: 'Search the shop' }).getAttribute('placeholder'), 'Search the shop');
   const line = document.querySelector('footer').firstElementChild;
   assert.equal(line.textContent, 'North Street Cycles · Bolton');
 });

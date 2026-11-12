@@ -69,12 +69,12 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 6. Search
 
-- [ ] 6.1 Screen test: wb-search-typing (groups, "See all results for “brake”", arrow keys, a listbox inside `role="search"`, a 250 ms wait before asking)
-- [ ] 6.2 Screen test: wb-search-no-suggestions
-- [ ] 6.3 Screen tests: wb-category-search-results ("Results for “brake”", "Repairs for “brake”", Best match first), wb-category-search-measure and wb-category-search-none
-- [ ] 6.4 Build the search box and the results page (reusing group 4's list and filters)
+- [x] 6.1 Screen test: wb-search-typing (groups, "See all results for “brake”", arrow keys, a listbox inside `role="search"`, a 250 ms wait before asking)
+- [x] 6.2 Screen test: wb-search-no-suggestions
+- [x] 6.3 Screen tests: wb-category-search-results ("Results for “brake”", "Repairs for “brake”", Best match first), wb-category-search-measure and wb-category-search-none
+- [x] 6.4 Build the search box and the results page (reusing group 4's list and filters)
 - [ ] 6.5 Measure suggestions with the full seed; note the time in the pull request
-- [ ] 6.6 Browser test: searching from the shell on a phone and a computer
+- [x] 6.6 Browser test: searching from the shell on a phone and a computer
 - [ ] 6.7 Self-review (`reviewer`), full check, merge
 
 ## 7. Risky — the chosen shop, Our shops and the shop page

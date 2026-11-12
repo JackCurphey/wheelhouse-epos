@@ -2,9 +2,9 @@ import { Link } from 'react-router';
 import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
 import { bookPath } from './address.ts';
-import { useCategories, useHome, useSiteContext } from './site-query.ts';
+import { useHome, useSiteContext } from './site-query.ts';
 import { usePageTitle } from './pages.tsx';
-import { Box, CategoryCard, Failed, Grid, H2, MoreLink, ProductCard, Section, ShopCards, linkButton, topCategories } from './parts.tsx';
+import { Box, Failed, Grid, H2, MoreLink, ProductCard, Section, ShopByCategory, ShopCards, linkButton } from './parts.tsx';
 
 /**
  * The home page (website-browse design 8; wb-home, wb-home-lower,
@@ -15,11 +15,9 @@ import { Box, CategoryCard, Failed, Grid, H2, MoreLink, ProductCard, Section, Sh
 export function HomePage() {
   usePageTitle(null);
   const { address, site, chosen, several } = useSiteContext();
-  const categories = useCategories(address);
   const home = useHome(address, chosen?.id ?? null);
   const { parts } = site;
   const book = bookPath(address, several && chosen ? chosen.id : null);
-  const cats = topCategories(categories.data ?? []).slice(0, 4);
   const featured = home.data?.featured ?? [];
   const repairs = home.data?.repairs ?? [];
 
@@ -42,12 +40,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {categories.error && <Failed onRetry={() => { void categories.refetch(); }} />}
-      {cats.length > 0 && (
-        <Section title="Shop by category" id="h-cats" more={<MoreLink to="/shop">All categories</MoreLink>}>
-          <Grid cols={4}>{cats.map((c) => <CategoryCard key={c.id} category={c} categories={categories.data ?? []} />)}</Grid>
-        </Section>
-      )}
+      <ShopByCategory />
 
       {home.error && <Failed onRetry={() => { void home.refetch(); }} />}
       {featured.length > 0 && (

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Menu, Search, ShoppingBasket, Store, User, X } from 'lucide-react';
@@ -7,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { bookPath, chosenShopCookie, siteAddress } from './address.ts';
 import { SiteContext, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
 import { H1 } from './parts.tsx';
+import { SearchCombo } from './search.tsx';
 
 /**
  * The customer website's frame (openspec/changes/website-browse, design 3;
@@ -118,6 +120,9 @@ function Frame() {
   const narrow = useMedia('(max-width: 1023px)');
   const ocean = oceanColour(site);
   const [open, setOpen] = useState(false);
+  // The search across the top on a tablet or phone, opened by Search the shop.
+  const [searching, setSearching] = useState(false);
+  const searchButton = useRef<HTMLButtonElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const main = useRef<HTMLElement>(null);
   const location = useLocation();
@@ -129,6 +134,12 @@ function Frame() {
     setOpen(false);
     main.current?.focus();
   }, [location.pathname]);
+  // Any new address, the results for other words included: the search across the top closes.
+  const [seenAddress, setSeenAddress] = useState(location.key);
+  if (seenAddress !== location.key) {
+    setSeenAddress(location.key);
+    setSearching(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -140,6 +151,14 @@ function Frame() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
+
+  // Cancel or Escape: the search across the top closes and focus goes back to its button.
+  const closeSearch = () => {
+    flushSync(() => setSearching(false));
+    searchButton.current?.focus();
+  };
+  // Wider than a tablet: the header has its own box, so the search across the top goes.
+  if (searching && !narrow) setSearching(false);
 
   const book = bookPath(address, several && chosen ? chosen.id : null);
   const shopsLabel = several ? 'Our shops' : 'Find us';
@@ -175,7 +194,7 @@ function Frame() {
         <header className={headerClass} style={headerStyle}>
           {name}
           <span className="ml-auto flex items-center gap-1">
-            <button type="button" aria-label="Search the shop" className={iconLink}><Search aria-hidden className="size-5" /></button>
+            <button ref={searchButton} type="button" aria-label="Search the shop" aria-expanded={searching} onClick={() => setSearching(true)} className={iconLink}><Search aria-hidden className="size-5" /></button>
             <Link to="/basket" aria-label="Basket, 0 items" className={iconLink} style={linkColour}><ShoppingBasket aria-hidden className="size-5" /></Link>
             <button
               ref={menuButton}
@@ -202,12 +221,9 @@ function Frame() {
           <span className="ml-auto flex items-center gap-2 md:gap-3">
             {!narrow && several && <Chip line={false} />}
             {narrow ? (
-              <button type="button" aria-label="Search the shop" className={iconLink}><Search aria-hidden className="size-5" /></button>
+              <button ref={searchButton} type="button" aria-label="Search the shop" aria-expanded={searching} onClick={() => setSearching(true)} className={iconLink}><Search aria-hidden className="size-5" /></button>
             ) : (
-              <label role="search" className="flex min-h-11 items-center gap-2 rounded-lg border border-[var(--wh-input-border)] bg-white px-3 text-[var(--wh-ink)]">
-                <Search aria-hidden className="size-4 text-[var(--wh-muted)]" />
-                <input type="search" aria-label="Search the shop" placeholder={several ? 'Search' : 'Search the shop'} className="w-44 bg-transparent text-size-15 outline-none" />
-              </label>
+              <SearchCombo variant="header" placeholder={several ? 'Search' : 'Search the shop'} />
             )}
             <a href={`/book/${encodeURIComponent(address.slug)}/account`} aria-label="Your account" className={narrow ? iconLink : 'inline-flex min-h-11 items-center gap-1.5 text-size-15 font-semibold no-underline'} style={linkColour}>
               <User aria-hidden className="size-5" />{!narrow && 'Account'}
@@ -232,7 +248,8 @@ function Frame() {
           <a href={`/book/${encodeURIComponent(address.slug)}/account`} onClick={() => setOpen(false)} className={menuRow}>Account</a>
         </nav>
       )}
-      <main id="main-content" ref={main} tabIndex={-1} className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 py-5 outline-none md:gap-9 md:px-8 md:py-8">
+      <main id="main-content" ref={main} tabIndex={-1} className="relative mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 py-5 outline-none md:gap-9 md:px-8 md:py-8">
+        {narrow && searching && <SearchCombo variant="top" onCancel={closeSearch} />}
         {narrow && several && <Chip line />}
         <Outlet />
       </main>

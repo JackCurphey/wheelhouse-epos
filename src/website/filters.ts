@@ -89,9 +89,8 @@ export function effective(selection: Selection, details: DetailFilter[], readySh
 export const anythingTicked = (s: Selection) =>
   Object.values(s.details).some((v) => v.length > 0) || s.brands.length > 0 || s.from !== null || s.to !== null || s.ready;
 
-/** What /api/site/products is asked: the category, each known detail by id, and the rest as they are. */
-export function productsParams(categoryId: number, s: Selection, sort: Sort, shopId: number | null, ids: Record<string, number>): URLSearchParams {
-  const p = new URLSearchParams({ category: String(categoryId) });
+/** The ticks as the server is asked for them: each known detail by id, and the rest as they are. */
+function appendSelection(p: URLSearchParams, s: Selection, shopId: number | null, ids: Record<string, number>) {
   for (const [slug, values] of Object.entries(s.details)) {
     const id = ids[slug];
     if (id !== undefined) for (const v of values) p.append(`d${id}`, v);
@@ -100,9 +99,50 @@ export function productsParams(categoryId: number, s: Selection, sort: Sort, sho
   if (s.from) p.set('from', s.from);
   if (s.to) p.set('to', s.to);
   if (s.ready) p.set('ready', '1');
+  if (shopId !== null) p.set('shop', String(shopId));
+  return p;
+}
+
+/** What /api/site/products is asked: the category, each known detail by id, and the rest as they are. */
+export function productsParams(categoryId: number, s: Selection, sort: Sort, shopId: number | null, ids: Record<string, number>): URLSearchParams {
+  const p = new URLSearchParams({ category: String(categoryId) });
+  appendSelection(p, s, null, ids);
   if (sort !== 'az') p.set('sort', sort);
   if (shopId !== null) p.set('shop', String(shopId));
   return p;
+}
+
+/** The results' sorts (wb-search-results): Best match first, then a category's. */
+export const SEARCH_SORTS = [{ value: 'best', label: 'Best match' }, ...SORTS] as const;
+export type SearchSort = (typeof SEARCH_SORTS)[number]['value'];
+/** Best match unless the address names another; Best match is never written. */
+export const searchSortOf = (value: string | null): SearchSort => SEARCH_SORTS.find((s) => s.value === value)?.value ?? 'best';
+
+/** What /api/site/search is asked: the words, the category narrowed to, the ticks, the sort. */
+export function searchParams(q: string, categoryId: number | null, s: Selection, sort: SearchSort, shopId: number | null, ids: Record<string, number>): URLSearchParams {
+  const p = new URLSearchParams({ q });
+  if (categoryId !== null) p.set('category', String(categoryId));
+  appendSelection(p, s, null, ids);
+  if (sort !== 'best') p.set('sort', sort);
+  if (shopId !== null) p.set('shop', String(shopId));
+  return p;
+}
+
+// A measurement as the server reads one word of a search ("30mm", "30"; server/routes/stock-list.js MEASURE).
+const MEASURE = /^(-?\d{1,9}(?:\.\d{1,4})?)([a-z]+)?$/i;
+
+/**
+ * The words without the measurement the server read from them ("bearing
+ * 30mm" with 30 mm is "bearing"): the first word that is the value, in the
+ * detail's unit or with none. Words with no such word stay as they are.
+ */
+export function withoutMeasure(q: string, value: number, unit: string | null): string {
+  const words = q.trim().split(/\s+/);
+  const at = words.findIndex((w) => {
+    const m = MEASURE.exec(w);
+    return m !== null && Number(m[1]) === value && (!m[2] || (unit !== null && m[2].toLowerCase() === unit.toLowerCase()));
+  });
+  return at < 0 ? q.trim() : words.filter((_, i) => i !== at).join(' ');
 }
 
 /** A value as the filter shows it: a number with its unit ("30 mm"), words as written. */

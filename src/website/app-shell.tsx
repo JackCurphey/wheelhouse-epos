@@ -8,6 +8,7 @@ import { SiteFailed, SiteLayout } from './shell.tsx';
 import { HomePage } from './home.tsx';
 import { CategoryPage } from './category.tsx';
 import { ProductPage } from './product.tsx';
+import { SearchPage } from './search.tsx';
 import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 
 /**
@@ -34,6 +35,7 @@ export const websiteRoutes: RouteObject[] = [
       { path: 'shop', Component: ShopPage },
       { path: 'shop/:id', Component: CategoryPage },
       { path: 'products/:id', Component: ProductPage },
+      { path: 'search', Component: SearchPage },
       { path: 'contact', Component: ContactPage },
       { path: 'collection-returns', Component: CollectionReturnsPage },
       { path: 'privacy', Component: PrivacyPage },

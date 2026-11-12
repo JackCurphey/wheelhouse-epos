@@ -6,9 +6,10 @@
 // path under the shop, e.g. '/' or '/shop'.
 //
 // Every fetch is answered at once and recorded in `requests` ({url, method}).
-// `site`, `categories`, `home`, `products` and `product` answer GET /api/site,
-// /api/site/categories, /api/site/home, /api/site/products and
-// /api/site/products/<id>; each is a
+// `site`, `categories`, `home`, `products`, `product`, `search` and `suggest`
+// answer GET /api/site, /api/site/categories, /api/site/home,
+// /api/site/products, /api/site/products/<id>, /api/site/search and
+// /api/site/suggest; each is a
 // body (sent with 200) or a function (url) => ({ status, body }). Anything
 // else answers 404. The native dialog's showModal and close, missing in
 // jsdom, are stubbed.
@@ -71,7 +72,7 @@ export const HOME = (stock) => ({
 
 const NOT_FOUND = () => ({ status: 404, body: { error: 'We can’t find that page' } });
 
-export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, product = NOT_FOUND, media, cookie, strict = false, retry = false } = {}) {
+export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, product = NOT_FOUND, search = NOT_FOUND, suggest = NOT_FOUND, media, cookie, strict = false, retry = false } = {}) {
   const uninstall = installDom(`http://localhost${BASE}${url}`);
   // `setMedia(fn)` changes which queries match, as turning a tablet or widening a window does.
   let matching = media;
@@ -92,7 +93,9 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
         : pathname === `${BASE}/api/site/home` ? home
           : pathname === `${BASE}/api/site/products` ? products
             : pathname.startsWith(`${BASE}/api/site/products/`) ? product
-              : NOT_FOUND;
+              : pathname === `${BASE}/api/site/search` ? search
+                : pathname === `${BASE}/api/site/suggest` ? suggest
+                  : NOT_FOUND;
     const answer = typeof source === 'function' ? await source(address) : { status: 200, body: source };
     return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { 'content-type': 'application/json' } });
   };
