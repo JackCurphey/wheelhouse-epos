@@ -22,13 +22,14 @@ const below = (p) => p.stock_qty < 0;
 const priced = (p) => Number(p.price_pence) > 0;
 const SHOWS = {
   'no-photo': (p) => priced(p) && !p.photo_url,
-  'no-price': (p) => !priced(p),
+  // As server/website.js counts them: a price of exactly 0 (one below zero is neither).
+  'no-price': (p) => Number(p.price_pence) === 0,
 };
 function showsOf(query) {
   const which = SHOWS[query.get('show')];
-  if (!which) return () => true;
+  if (!which) return Object.assign(() => true, { on: false });
   const online = query.get('online') === '1';
-  return (p) => which(p) && (!online || p.show_online);
+  return Object.assign((p) => which(p) && (!online || p.show_online), { on: true });
 }
 const low = (p) => p.stock_qty >= 0 && p.low_stock_threshold > 0 && p.stock_qty <= p.low_stock_threshold;
 
@@ -193,7 +194,9 @@ export function register(route) {
       const entry = grouped.get(o.id);
       if (!entry?.found.length) continue;
       const { g, items, found, sized } = entry;
-      if (sized) rows.push(...found.filter((p) => matches(p, g, words, search) !== 'name').map((p) => sizeRow(p, g, costs)));
+      // Opened from See them, each size is a row, as the Website page counts each one.
+      if (shows.on && !sized) rows.push(...found.map((p) => sizeRow(p, g, costs)));
+      else if (sized) rows.push(...found.filter((p) => matches(p, g, words, search) !== 'name').map((p) => sizeRow(p, g, costs)));
       else rows.push(groupRow(g, items, costs));
     }
     // A category's details as columns (st-filter-bearings) and a measurement's line
