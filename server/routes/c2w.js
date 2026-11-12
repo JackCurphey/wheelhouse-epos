@@ -444,7 +444,10 @@ export function register(route) {
         return fields;
       }, { detail });
       await queueCertificateMessage(id, { req, loginId: who.loginId });
-      return { order: serializeOrder(await loadOrder(id)), ...(notReady ? { notReady } : {}) };
+      // The next step rides along, so the bike-was-released popup offers ordering only when the shop's rule allows it.
+      const row = await loadOrder(id);
+      const next = nextFor(row, (await settingsRow()).order_rule, today);
+      return { order: { ...serializeOrder(row), next }, ...(notReady ? { notReady } : {}) };
     });
   });
 
