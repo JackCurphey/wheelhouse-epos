@@ -46,10 +46,10 @@ const area = async (t) => t.within(t.ui.getByRole('region', { name: 'Online orde
 const posted = (path) => calls.filter((c) => c.path === path && c.method === 'POST').length;
 const foldButton = (ui) => ui.getByRole('button', { name: /^Paying online/ });
 
-test('ws-pay-none: Online orders comes after End of day, Buying online is off until connected, and Connect goes to the provider', async () => {
+test('ws-pay-none: Online orders comes after End of day and Cycle to Work, Buying online is off until connected, and Connect goes to the provider', async () => {
   const t = await openOnline(account('none'));
   const jump = t.within(t.ui.getByRole('navigation', { name: 'Jump to' }));
-  assert.deepEqual(jump.getAllByRole('link').map((a) => a.textContent).slice(-2), ['End of day', 'Online orders']);
+  assert.deepEqual(jump.getAllByRole('link').map((a) => a.textContent).slice(-3), ['End of day', 'Cycle to Work', 'Online orders']);
   const box = await area(t);
   assert.ok(box.getByText('What the website sells, paying online, and collecting orders.'));
   assert.ok(await box.findByText('Buying online'));

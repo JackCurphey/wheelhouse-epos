@@ -51,7 +51,7 @@ export function BuyingOnline() {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const d = online.data;
-  if (!d) return null;
+  if (!d?.payments) return null;
   const provider = providerText(d.payments.providerName);
   // Not once a more-details date has passed: payments have stopped (server/payments/provider.js isConnected).
   const can = d.payments.connected;
