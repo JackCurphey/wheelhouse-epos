@@ -25,6 +25,7 @@ import {
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
 import { currentSession, rememberSession, rememberCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
+import { siteOrderPath, siteOrderLimited, handleSiteOrderRequest } from './routes/site-orders.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
 export { serializeWorkshopService } from './routes/workshop-settings.js';
@@ -539,10 +540,28 @@ async function dispatch(req, res) {
     return sendJson(res, 503, withCommit({ status: 'error', error: 'Database unreachable' }));
   }
 
-  if (parseStorefrontSlugCandidate(req, url)) {
+  const storefrontSlug = parseStorefrontSlugCandidate(req, url);
+  if (storefrontSlug) {
+    // Buying online's basket and checkout (website-buy-online design 3): the
+    // visitor turned away past the limit before any database work.
+    const orderPath = siteOrderPath(req, pathname, storefrontSlug);
+    if (orderPath && siteOrderLimited(req, res, orderPath)) return;
     const storefrontShop = await resolveStorefrontShop(req, url);
     if (!storefrontShop) {
       return notFound(res, 'Storefront not found');
+    }
+    if (orderPath) {
+      try {
+        // As a portal route: the body read and the customer looked up before
+        // runWithShop takes this request's connection.
+        if (!(await readBodyFirst(req, res, {}, { gate: readGates.website }))) return;
+        await rememberCustomerSession(req);
+        await runWithShop(storefrontShop.id, () => handleSiteOrderRequest(req, res, orderPath, storefrontShop));
+      } catch (err) {
+        console.error(err);
+        if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
+      }
+      return;
     }
     try {
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));

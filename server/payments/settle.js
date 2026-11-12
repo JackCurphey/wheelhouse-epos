@@ -14,7 +14,7 @@ export async function settleDeposits() {
   const due = await prepare(
     `SELECT id, provider_ref, job_id FROM online_payments
       WHERE provider = ? AND provider_ref <> '' AND (
-        (job_id IS NULL AND status IN ('waiting', 'held') AND updated_at < now() - interval '1 hour')
+        (job_id IS NULL AND purpose = 'deposit' AND status IN ('waiting', 'held') AND updated_at < now() - interval '1 hour')
         OR (job_id IS NOT NULL AND status = 'held'))
       ORDER BY id LIMIT 20`
   ).all(provider.name);

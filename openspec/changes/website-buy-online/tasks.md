@@ -55,18 +55,19 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 4. Basket and checkout — server (pull request 4, about 550 lines, risky: public routes, money and stock)
 
-- [ ] 4.1 Test: `POST /api/site/basket` prices each line from the product, never from the cookie; a tampered price is ignored; the stock line at the chosen shop; "Only 1 left at Bolton — we’ve changed it to 1" and "No longer in stock at Bolton or [Second site]" answers
-- [ ] 4.2 Test: the basket answers "not taking online orders" when buying online is off or payments aren't connected, and for a Shopify-kind website
-- [ ] 4.3 Test: `POST /api/site/checkout` checks the details and answers each box's message ("Enter your name", the email message) and the count; nothing is made
-- [ ] 4.4 Test: a signed-in customer's details and store credit come from their account, when the shop allows credit online; "covers it all" when it does; a guest gets a new customer of their own, never matched on typed details
-- [ ] 4.5 Test: checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice gives the same order; rate limited
-- [ ] 4.6 Write `server/online-orders/basket.js`, `checkout.js` and the routes to pass 4.1–4.5
+- [x] 4.1 Test: `POST /api/site/basket` prices each line from the product, never from the cookie; a tampered price is ignored; the stock line at the chosen shop; "Only 1 left at Bolton — we’ve changed it to 1" and "No longer in stock at Bolton or [Second site]" answers
+- [x] 4.2 Test: the basket answers "not taking online orders" when buying online is off or payments aren't connected, and for a Shopify-kind website
+- [x] 4.3 Test: `POST /api/site/checkout` checks the details and answers each box's message ("Enter your name", the email message) and the count; nothing is made
+- [x] 4.4 Test: a signed-in customer's details and store credit come from their account, when the shop allows credit online; "covers it all" when it does; a guest gets a new customer of their own, never matched on typed details
+- [x] 4.5 Test: checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice gives the same order; rate limited
+- [x] 4.5a Test: a checkout's request key never meets a booking deposit's: the same key sent to both gets each its own answer, never "already booked" (PR 1 review; the order's key is hashed with its own prefix)
+- [x] 4.6 Write `server/online-orders/basket.js`, `checkout.js` and the routes to pass 4.1–4.5
 - [ ] 4.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 5. Paying — server and pretend outcomes (pull request 5, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
 - [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9
-- [ ] 5.0a `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
+- [x] 5.0a (done in pull request 4, the first to write an order payment) `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
 - [ ] 5.0b Before any code writes an order payment: `server/payments/refund.js`'s provider-wide sweep (`refundOwed()` with no `jobId`) would refund order payments too, and it can only refund in full
 - [ ] 5.0c Before any code writes an order payment: `server/shop-data-copy.js` (the Refund rows, about lines 125–133) labels every refunded online payment as a deposit for a job ("Online deposit for job …")
 - [ ] 5.0d Before any code writes an order payment: take the order number (`nextOrderNumber()`) last, just before COMMIT, with no provider calls after it, because the counter's row lock holds the shop's settings and other orders' payments until the commit
