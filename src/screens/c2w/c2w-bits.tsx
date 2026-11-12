@@ -22,6 +22,8 @@ export type C2wOrder = {
   expectedPence: number | null; expectedBy: string | null; paidPence: number | null; next?: Next;
   // Whether a bike is put aside for the order now, and what's been said about any difference.
   held?: boolean; certificateLate?: boolean; differenceChoice?: 'keep' | 'match' | null;
+  // The supplier ordering uses (Settings' spelling), and the supplier order the bike is on.
+  supplier?: string | null; purchaseOrderId?: number | null; orderedFrom?: string | null;
 };
 export type C2wEvent = { kind: string; by: string | null; at: string; reason: string | null; detail: Record<string, string> };
 export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string };
@@ -92,6 +94,9 @@ export function Msg({ tone = 'grey', children }: { tone?: keyof typeof TONES; ch
 }
 
 export const note = 'm-0 text-size-13 text-[var(--wh-muted)]';
+/** "Order from [supplier]" (cw-order-applied, the list's row); with no supplier matched in Settings, the server says why (logged). */
+export const orderLabel = (o: C2wOrder) => (o.supplier ? `Order from ${o.supplier}` : 'Order the bike');
+export const orderedNote = (o: C2wOrder, supplier: string | null | undefined) => `Ordered ${possessive(o.customerName)} bike${supplier ? ` from ${supplier}` : ''}.`;
 export const linkClass = 'inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-semibold text-[var(--wh-ink)]';
 
 /** The way back (c2w.mjs `back`). */

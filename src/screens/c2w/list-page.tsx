@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client.ts';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
+import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
 import { NewOrder } from './new-order.tsx';
 import {
-  Badge, Box, Page, daysBetween, dayOf, linkClass, longDate, note, orderHref, plural, possessive, pounds, bikeLine, useC2wSettings, type C2wOrder,
+  Badge, Box, Page, daysBetween, dayOf, linkClass, longDate, note, orderHref, orderLabel, orderedNote, plural, possessive, pounds, bikeLine, useC2wSettings, type C2wOrder,
 } from './c2w-bits.tsx';
 
 /**
@@ -55,7 +56,7 @@ function Status({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null
   return <>{said}{o.next === 'order' ? <><br /><Badge tone="blue">Ready to order</Badge></> : null}</>;
 }
 
-function Row({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null; now: string }) {
+function Row({ o, remindDays, now, onOrder, busy }: { o: C2wOrder; remindDays: number | null; now: string; onOrder: (o: C2wOrder) => void; busy: boolean }) {
   const late = o.stage === 'collected' && o.expectedBy !== null && o.expectedBy < now;
   const open = o.stage === 'collected' || o.stage === 'paid' || o.stage === 'certificate' || o.stage === 'ready';
   return (
@@ -72,6 +73,9 @@ function Row({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null; n
         <Status o={o} remindDays={remindDays} now={now} />
       </span>
       <span className="justify-self-start md:justify-self-end">
+        {o.next === 'order' && (o.stage === 'quote' || o.stage === 'waiting')
+          ? <Button disabled={busy} aria-label={`Order ${possessive(o.customerName)} bike${o.supplier ? ` from ${o.supplier}` : ''}`} onClick={() => onOrder(o)}>{orderLabel(o)}</Button>
+          : null}
         {open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}
       </span>
     </li>
@@ -118,13 +122,36 @@ function FirstUse({ owner, shop }: { owner: boolean; shop: string }) {
   );
 }
 
-export function C2wListPage() {
+function ListBody() {
   const session = useSession();
   const owner = session.status === 'signed-in' && session.user.isOwner;
   const shop = session.status === 'signed-in' ? session.shop.name : '';
   const list = useQuery({ queryKey: ['c2w-orders'], queryFn: () => apiGet<List>('/api/c2w/orders') });
   const remindDays = useC2wSettings().data?.settings.remindDays ?? null;
   const [starting, setStarting] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const saved = useSavedNote();
+  const queryClient = useQueryClient();
+  const reload = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['c2w-orders'] }),
+    queryClient.invalidateQueries({ queryKey: ['c2w-count'] }),
+  ]);
+  // Order from [supplier] on the row (cw-ordered), with Undo in the note.
+  async function order(o: C2wOrder, path: 'order' | 'order/undo') {
+    setOrdering(true);
+    try {
+      const done = await apiMutate<{ supplier?: string }>(`/api/c2w/orders/${o.id}/${path}`, {});
+      await reload();
+      saved.show(path === 'order'
+        ? { text: orderedNote(o, done.supplier ?? o.supplier), action: { label: 'Undo', run: () => { saved.busy(); void order(o, 'order/undo'); } } }
+        : { text: 'Undone' });
+    } catch (err) {
+      void reload();
+      saved.show({ text: serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.', failed: true });
+    } finally {
+      setOrdering(false);
+    }
+  }
 
   if (list.isError) return <Page><p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load Cycle to Work orders. Try again in a moment.</p></Page>;
   const l = list.data;
@@ -150,11 +177,15 @@ export function C2wListPage() {
           <h2 id={`cw-g-${g}`} className="m-0 text-size-17 font-bold">{`${title} · ${l.groups[g].length}`}</h2>
           {sub ? <p className={note}>{sub}</p> : null}
           <ul aria-labelledby={`cw-g-${g}`} className="m-0 list-none p-0">
-            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} now={l.today} />)}
+            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} now={l.today} onOrder={(x) => void order(x, 'order')} busy={ordering} />)}
           </ul>
         </Box>
       ))}
       {starting ? <NewOrder today={l.today} onClose={() => setStarting(false)} /> : null}
     </Page>
   );
+}
+
+export function C2wListPage() {
+  return <SavedNoteArea room="c2w-list" className="flex w-full flex-col"><ListBody /></SavedNoteArea>;
 }

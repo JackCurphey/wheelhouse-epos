@@ -67,7 +67,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theOrder = order(), emailFails = false, providers = [PROVIDER] } = {}) {
+async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theOrder = order(), emailFails = false, providers = [PROVIDER], ordering = [200, { order: {}, purchaseOrderId: 77, supplier: '[Supplier]' }] } = {}) {
   let emails = 0;
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
@@ -93,6 +93,8 @@ async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theO
       if (emailFails === true) return reply(429, { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' });
       return reply(200, { sent: true, to: 'maya@example.test' });
     }
+    if (p === '/api/c2w/orders/10/order' && method === 'POST') return reply(...ordering);
+    if (p === '/api/c2w/orders/10/order/undo' && method === 'POST') return reply(200, { order: {} });
     if (p === '/api/c2w/orders/9/quote') return reply(200, { quote });
     if (p === '/api/c2w/orders/9') return reply(200, { order: { ...theOrder, events: EVENTS }, today: TODAY });
     if (p.startsWith('/api/')) return reply(200, []);
@@ -180,6 +182,33 @@ test('cw-list: a bike on order says so, ahead of not in stock', async () => {
   const { ui } = await open('/workshop/c2w', { list: { ...LIST, groups: { ...LIST.groups, waiting: [], certificate: [onOrder] } } });
   const row = (await ui.findByRole('list', { name: 'Certificate received · 1' })).querySelector('li');
   assert.ok(row.textContent.includes('[Bike] · [Size] · on order') && !row.textContent.includes('not in stock'), row.textContent);
+});
+
+// ---- 6.4 Order from the list (cw-ordered) ----
+
+const READY_TO_ORDER = { ...LIST, groups: { ...LIST.groups, waiting: [order(), { ...NOT_IN_STOCK, supplier: '[Supplier]' }] } };
+test('cw-ordered: a row ready to order has Order from the supplier; it orders, says so with Undo, and Undo takes it back', async () => {
+  const { ui, within, fireEvent } = await open('/workshop/c2w', { list: READY_TO_ORDER });
+  const waiting = within(await ui.findByRole('list', { name: 'Waiting for the certificate · 2' }));
+  const [held, away] = waiting.getAllByRole('listitem');
+  assert.ok(within(held).queryByRole('button') === null);
+  const button = within(away).getByRole('button', { name: 'Order [Customer]’s bike from [Supplier]' });
+  assert.equal(button.textContent, 'Order from [Supplier]');
+  fireEvent.click(button);
+  assert.ok(await ui.findByText('Ordered [Customer]’s bike from [Supplier].'));
+  assert.equal(posts('/api/c2w/orders/10/order').length, 1);
+  fireEvent.click(ui.getByRole('button', { name: 'Undo' }));
+  assert.ok(await ui.findByText('Undone'));
+  assert.equal(posts('/api/c2w/orders/10/order/undo').length, 1);
+});
+
+test('cw-ordered: a refusal from the list shows the server’s words', async () => {
+  const words = 'This bike is already on order.';
+  const { ui, within, fireEvent } = await open('/workshop/c2w', { list: READY_TO_ORDER, ordering: [409, { error: words, code: 'already_ordered' }] });
+  const away = within(await ui.findByRole('list', { name: 'Waiting for the certificate · 2' })).getAllByRole('listitem')[1];
+  fireEvent.click(within(away).getByRole('button', { name: 'Order [Customer]’s bike from [Supplier]' }));
+  assert.ok(await ui.findByText(words));
+  assert.ok(ui.queryByRole('button', { name: 'Undo' }) === null);
 });
 
 // ---- 4.2 New order ----
