@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { useSavedNote } from './saved-note.tsx';
 
@@ -64,8 +64,15 @@ export function OtherWaysToPay() {
       const undo = change.undo?.(saved);
       note.show({ text: change.text, owner: mine.current, back: () => control(change.back), action: undo ? { label: 'Undo', run: () => void save(undo) } : undefined });
     } catch (err) {
+      // A refusal means the list here may be out of date (a save whose answer was lost, or a way
+      // removed on another computer), so it is read again.
+      if (err instanceof ApiError && err.status < 500) void queryClient.invalidateQueries({ queryKey: KEY });
       const retry = !(err instanceof ApiError) || err.status >= 500;
-      const text = !(err instanceof ApiError) ? NO_INTERNET : !retry && err.hasServerMessage ? err.message : SAVE_FAILED;
+      // The server's own words for a refusal or its busy answer; otherwise the drawn no-connection words or the general ones.
+      const text = serverSaid(err) ? err.message : !(err instanceof ApiError) ? NO_INTERNET : SAVE_FAILED;
+      // The control was switched off while it saved, so the browser may have dropped the focus: put it back.
+      const here = document.activeElement;
+      if (!body.current?.contains(here) && !here?.closest('[data-saved-note]')) focusTo.current = change.failBack;
       note.show({ text, failed: true, owner: mine.current, back: () => control(change.failBack), action: retry ? { label: 'Try again', run: () => void save(change) } : undefined });
     } finally {
       setBusy(false);
@@ -75,7 +82,8 @@ export function OtherWaysToPay() {
     const name = typed.trim();
     if (!name) return;
     void save({
-      send: () => addWay({ name }), text: `Saved · ${name} added`, back: ADD_BOX, failBack: ADD_BOX, after: () => setTyped(''),
+      // The box is emptied only if it still holds the name sent (Try again sends the first one).
+      send: () => addWay({ name }), text: `Saved · ${name} added`, back: ADD_BOX, failBack: ADD_BOX, moveTo: ADD_BOX, after: () => setTyped((t) => (t.trim() === name ? '' : t)),
       // The Undo, once saved, is confirmed: "Saved", with nothing more to undo (as End of day).
       undo: (saved) => ({ send: () => removeWay(saved.id ?? 0), text: 'Saved', back: ADD_BOX, failBack: `Remove ${name}`, moveTo: ADD_BOX }),
     });
@@ -97,7 +105,7 @@ export function OtherWaysToPay() {
       {list.data?.length ? (<div className="flex flex-col gap-2">
         {list.data.map((w, i, all) => (
           <div key={w.id} className="flex min-h-[52px] items-center gap-2.5 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] py-0 pr-1.5 pl-3">
-            <span className="flex grow flex-col gap-px">
+            <span className="flex min-w-0 grow flex-col gap-px break-words">
               <span className="text-size-15 font-semibold">{w.name}</span>
               {w.note ? <span className="text-xs text-[var(--wh-muted)]">{w.note}</span> : null}
             </span>

@@ -27,13 +27,15 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-// A pretend server holding the list, as the routes answer (whole list on each change).
-// `state.fail` makes the next changes fail: 'offline' (no connection) or [status, body].
+// A pretend server holding the list, as the routes answer (whole list on each change), with
+// their refusals: a taken name is 409, a way already removed is 404. `state.fail` makes the next
+// changes fail: 'offline' (no connection), 'lost' (saved, but the answer never arrives) or
+// [status, body]; `state.hold` is a promise the next change waits on.
 async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: false, accountsOn: false, accountLimitPence: null }) {
   calls = [];
-  let ways = start.map((w) => ({ ...w }));
   let nextId = 20;
-  const state = { fail: refuse };
+  const state = { fail: refuse, hold: null, ways: start.map((w) => ({ ...w })) };
+  const renumber = () => { state.ways = state.ways.map((w, i) => ({ ...w, position: i })); };
   globalThis.fetch = async (u0, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -41,23 +43,27 @@ async function render(start = DRAWN, refuse = null, payment = { storeCreditOn: f
     const reply = (status, b) => ({ status, ok: status < 300, json: async () => b });
     const u = new URL(u0, 'http://localhost');
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
-    if (u.pathname.startsWith('/api/payment-ways-other') && method !== 'GET' && state.fail) {
-      if (state.fail === 'offline') throw new TypeError('Failed to fetch');
-      return reply(state.fail[0], state.fail[1]);
-    }
+    const change = u.pathname.startsWith('/api/payment-ways-other') && method !== 'GET';
+    if (change && state.hold) await state.hold;
+    if (change && state.fail === 'offline') throw new TypeError('Failed to fetch');
+    if (change && Array.isArray(state.fail)) return reply(state.fail[0], state.fail[1]);
+    let answer = null;
     if (u.pathname === '/api/payment-ways-other' && method === 'POST') {
+      if (state.ways.some((w) => w.name.toLowerCase() === body.name.toLowerCase())) return reply(409, { error: 'That way to pay is already on the list', code: 'name_taken' });
       const id = nextId++;
-      const at = body.position ?? ways.length;
-      ways.splice(at, 0, { id, name: body.name, note: body.note ?? null, position: 0 });
-      ways = ways.map((w, i) => ({ ...w, position: i }));
-      return reply(201, { id, ways });
-    }
-    if (u.pathname.startsWith('/api/payment-ways-other/') && method === 'DELETE') {
+      state.ways.splice(body.position ?? state.ways.length, 0, { id, name: body.name, note: body.note ?? null, position: 0 });
+      renumber();
+      answer = reply(201, { id, ways: state.ways });
+    } else if (u.pathname.startsWith('/api/payment-ways-other/') && method === 'DELETE') {
       const id = Number(u.pathname.split('/').pop());
-      ways = ways.filter((w) => w.id !== id).map((w, i) => ({ ...w, position: i }));
-      return reply(200, { ways });
+      if (!state.ways.some((w) => w.id === id)) return reply(404, { error: 'That way to pay has already been removed' });
+      state.ways = state.ways.filter((w) => w.id !== id);
+      renumber();
+      answer = reply(200, { ways: state.ways });
     }
-    if (u.pathname === '/api/payment-ways-other') return reply(200, { ways });
+    if (answer && state.fail === 'lost') { state.fail = null; throw new TypeError('Failed to fetch'); }
+    if (answer) return answer;
+    if (u.pathname === '/api/payment-ways-other') return reply(200, { ways: state.ways });
     if (u.pathname === '/api/payment-settings') return reply(200, payment);
     if (u.pathname === '/api/shop-details') return reply(200, { name: 'North Street Cycles' });
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
@@ -205,4 +211,74 @@ test('with no connection the note says so with Try again and the name stays type
   r.fireEvent.click(r.ui.getByRole('button', { name: 'Remove Finance' }));
   await r.waitFor(() => assert.equal(area.textContent, 'Wheelhouse couldn’t save that. Try again in a moment.Try again'));
   assert.ok(r.ui.getByRole('button', { name: 'Remove Finance' }));
+});
+
+test('after a refusal the list is read again: a lost-but-saved Add shows its row; a Remove of a way removed elsewhere says so and the row goes', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
+  r.state.fail = 'lost';
+  r.fireEvent.change(box, { target: { value: 'Bank transfer' } });
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Add' }));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, `${NO_INTERNET}Try again`));
+  r.fireEvent.click(r.within(area).getByRole('button', { name: 'Try again' }));
+  await r.waitFor(() => assert.equal(area.textContent, 'That way to pay is already on the list'));
+  assert.ok(await r.ui.findByRole('button', { name: 'Remove Bank transfer' }), 'the list is read again, so the saved row shows');
+  // Removed on another computer: the server's words, and the row goes.
+  r.state.ways = r.state.ways.filter((w) => w.name !== 'Finance');
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Remove Finance' }));
+  await r.waitFor(() => assert.equal(area.textContent, 'That way to pay has already been removed'));
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('button', { name: 'Remove Finance' }) === null));
+});
+
+test('a busy server says so in its own words, with Try again', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  r.state.fail = [503, { error: 'Someone else is changing the other ways to pay just now. Try again in a moment.', code: 'busy' }];
+  r.fireEvent.click(await r.ui.findByRole('button', { name: 'Remove Finance' }));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, 'Someone else is changing the other ways to pay just now. Try again in a moment.Try again'));
+});
+
+test('Add pressed from the keyboard leaves the focus in the Add box; a failed Remove puts the focus back on its Remove when it was lost', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
+  r.fireEvent.change(box, { target: { value: 'Bank transfer' } });
+  const addButton = r.ui.getByRole('button', { name: 'Add' });
+  addButton.focus();
+  r.fireEvent.click(addButton);
+  assert.ok(await r.ui.findByRole('button', { name: 'Remove Bank transfer' }));
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute("aria-label"), "New way to pay"));
+  // The Remove is switched off while it saves, and the browser drops the focus.
+  let release;
+  r.state.hold = new Promise((ok) => { release = ok; });
+  r.state.fail = [500, { error: 'Internal error' }];
+  const finance = r.ui.getByRole('button', { name: 'Remove Finance' });
+  finance.focus();
+  r.fireEvent.click(finance);
+  // jsdom keeps the focus on a switched-off button, so the page is focused instead, as a browser does.
+  document.body.tabIndex = -1;
+  document.body.focus();
+  assert.ok(document.activeElement === document.body, 'the focus left the fold');
+  release();
+  await r.waitFor(() => assert.match(noteArea(r).textContent, /^Wheelhouse couldn’t save that/));
+  await r.waitFor(() => assert.equal(document.activeElement?.getAttribute('aria-label'), 'Remove Finance'));
+});
+
+test('Try again on a failed Add keeps a corrected name in the box', async () => {
+  const r = await render();
+  await openFold(r, 'Other ways to pay');
+  const box = await r.ui.findByRole('textbox', { name: 'New way to pay' });
+  r.state.fail = 'offline';
+  r.fireEvent.change(box, { target: { value: 'Bank transfr' } });
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Add' }));
+  const area = noteArea(r);
+  await r.waitFor(() => assert.equal(area.textContent, `${NO_INTERNET}Try again`));
+  r.fireEvent.change(box, { target: { value: 'Bank transfer' } });
+  r.state.fail = null;
+  r.fireEvent.click(r.within(area).getByRole('button', { name: 'Try again' }));
+  assert.ok(await r.ui.findByRole('button', { name: 'Remove Bank transfr' }));
+  assert.equal(box.value, 'Bank transfer', 'what is in the box now is kept');
 });

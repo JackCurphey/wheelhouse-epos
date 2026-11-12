@@ -170,7 +170,13 @@ test('DELETE removes and renumbers; Undo re-adds it in place with its line', asy
   assert.equal((await own('/api/payment-ways-other/abc', { method: 'DELETE' })).status, 404);
   assert.equal((await own('/api/payment-ways-other', { method: 'POST', body: { name: '[Way]', position: -1 } })).status, 400);
   assert.equal((await own('/api/payment-ways-other', { method: 'POST', body: { name: '[Way]', position: 1.5 } })).status, 400);
+  // A shop's own rows have no line (design 4): only a drawn line is taken, for Undo.
+  const ownLine = await own('/api/payment-ways-other', { method: 'POST', body: { name: '[Way]', note: '[A line of the shop’s own]' } });
+  assert.equal(ownLine.status, 400, JSON.stringify(ownLine.body));
   assert.deepEqual(shape(await list()), DRAWN, 'nothing added by a refusal');
+  // A removed row's DELETE says so in words.
+  const gone = await own('/api/payment-ways-other/2147483647', { method: 'DELETE' });
+  assert.deepEqual([gone.status, gone.body.error], [404, 'That way to pay has already been removed']);
 });
 
 test('Staff are refused changes with 403, and nothing changes', async () => {

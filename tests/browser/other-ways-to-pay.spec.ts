@@ -82,6 +82,23 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
   });
 }
 
+test('at 320px, a 30-character name with no spaces wraps and its ✕ stays on the screen', async ({ page, context }) => {
+  // [a_thirty_character_way_name_]: a bracketed placeholder exactly 30 characters long, with nowhere to break.
+  const long = '[a_thirty_character_way_name_]';
+  await staffRequest(server!.baseUrl, owner.cookie, '/api/payment-ways-other', { method: 'POST', body: { name: long } });
+  await page.setViewportSize({ width: 320, height: 700 });
+  await signIn(context, owner.cookie);
+  await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk`);
+  await open(page, /^Other ways to pay/);
+  const remove = page.getByRole('button', { name: `Remove ${long}` });
+  await expect(remove).toBeVisible();
+  const box = (await remove.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  await noSideScroll(page);
+  await remove.click();
+  await expect(remove).toHaveCount(0);
+});
+
 test('after adding Bank transfer, Take payment offers the same ways to pay as before', async ({ page, context }) => {
   await staffRequest(server!.baseUrl, owner.cookie, '/api/payment-ways-other', { method: 'POST', body: { name: 'Bank transfer' } });
   await page.setViewportSize({ width: 1440, height: 900 });
