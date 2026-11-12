@@ -65,14 +65,14 @@ function ProductView({ product }: { product: Product }) {
       <div className="flex flex-col gap-1.5">
         <H1>{product.name}</H1>
         <span className="font-mono text-[24px] font-bold">{item ? penceText(item.pricePence) : priceText(product.pricePence, product.priceHighPence)}</span>
-        {product.brand && <span className="text-size-13 text-[var(--wh-muted)]">Includes VAT · {product.brand}</span>}
+        <span className="text-size-13 text-[var(--wh-muted)]">Includes VAT{product.brand ? ` · ${product.brand}` : ''}</span>
       </div>
       {hasColours && (
         <div role="radiogroup" aria-label="Colour" className="flex flex-col gap-2">
           <span className="text-size-15 font-bold">Colour: {colour ?? 'choose one'}</span>
           <div className="flex flex-wrap gap-2">
-            {product.colours.map((c) => (
-              <button key={c} type="button" role="radio" aria-checked={c === colour} onClick={() => setColour(c)} className={radio(c === colour)}>
+            {product.colours.map((c, i) => (
+              <button key={c} type="button" role="radio" aria-checked={c === colour} {...roving(product.colours, colour, setColour, i)} onClick={() => setColour(c)} className={radio(c === colour)}>
                 <span aria-hidden className="size-[18px] rounded-full border border-dashed border-[var(--wh-input-border)] bg-[var(--wh-surface-muted)]" />
                 {c}
               </button>
@@ -84,7 +84,7 @@ function ProductView({ product }: { product: Product }) {
         <div role="radiogroup" aria-label="Size" className="flex flex-col gap-2">
           <span className="text-size-15 font-bold">Size: {size ?? 'choose one'}</span>
           <div className="flex flex-wrap gap-2">
-            {product.sizes.map((s) => {
+            {product.sizes.map((s, i) => {
               const out = sizeOut(s);
               const on = s === size;
               return (
@@ -94,6 +94,7 @@ function ProductView({ product }: { product: Product }) {
                   role="radio"
                   aria-checked={on}
                   aria-describedby={out && on ? outId : undefined}
+                  {...roving(product.sizes, size, setSize, i)}
                   onClick={() => setSize(s)}
                   className={cn(radio(on), 'min-w-14 justify-center text-size-15', out && 'bg-[var(--wh-surface-muted)]', out && !on && 'border-[var(--wh-border)] text-[var(--wh-muted)] line-through')}
                 >
@@ -156,6 +157,26 @@ function ProductView({ product }: { product: Product }) {
   );
 }
 
+/**
+ * The keyboard of a radio group (WAI-ARIA radio group pattern): one tab stop,
+ * the chosen radio or else the first; the arrow keys move to the next or
+ * previous one and choose it, going round at the ends.
+ */
+function roving(values: string[], chosen: string | null, choose: (v: string) => void, i: number) {
+  const stop = chosen === null ? i === 0 : values[i] === chosen;
+  return {
+    tabIndex: stop ? 0 : -1,
+    onKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      const by = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (by === 0) return;
+      e.preventDefault();
+      const j = (i + by + values.length) % values.length;
+      choose(values[j]);
+      (e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]')[j])?.focus();
+    },
+  };
+}
+
 const shopPath = (shops: { id: number; name: string }[], name: string) => {
   const shop = shops.find((s) => s.name === name);
   return shop ? `/shops/${shop.id}` : '/shops';
@@ -194,8 +215,8 @@ function Buy({ name }: { name: string }) {
 /**
  * The photos (design 7): none, the name in a tile; one, that photo; more,
  * the larger photo with a row of them under it, and the viewer: "Photo 2 of
- * 4", moved by the arrows and the arrow keys, closed by Esc or Close, focus
- * going back to the photo that opened it.
+ * 4", moved by the arrows and the arrow keys, closed by Esc or Close, the
+ * larger photo then showing the one last seen, with focus back on it.
  */
 function Photos({ photos, name }: { photos: string[]; name: string }) {
   const [shown, setShown] = useState(0);
@@ -204,7 +225,7 @@ function Photos({ photos, name }: { photos: string[]; name: string }) {
   const titleId = useId();
   const n = photos.length;
   const wasOpen = useRef(false);
-  // Once the viewer has gone (by any way), focus goes back to the photo that opened it.
+  // Once the viewer has gone (by any way), focus goes back to the larger photo.
   useEffect(() => {
     if (wasOpen.current && open === null) big.current?.focus();
     wasOpen.current = open !== null;
@@ -213,6 +234,8 @@ function Photos({ photos, name }: { photos: string[]; name: string }) {
   if (n === 0) return <span aria-hidden data-name-tile className={cn(tall, 'flex items-center justify-center bg-[var(--wh-surface-muted)] p-3 text-center text-size-15 font-semibold')}>{name}</span>;
   if (n === 1) return <img src={photos[0]} alt={`Photo of ${name}`} className={cn(tall, 'object-cover')} />;
   const move = (by: number) => setOpen((i) => (i === null ? i : (i + by + n) % n));
+  // The larger photo stays on the one last seen in the viewer.
+  const close = () => { if (open !== null) setShown(open); setOpen(null); };
   return (
     <div className="flex flex-col gap-2.5">
       <button ref={big} type="button" aria-label={`Open larger photo ${shown + 1} of ${n}`} onClick={() => setOpen(shown)} className="block w-full cursor-zoom-in border-0 bg-transparent p-0">
@@ -235,20 +258,20 @@ function Photos({ photos, name }: { photos: string[]; name: string }) {
       {open !== null && (
         <Dialog
           open
-          onOpenChange={(o) => { if (!o) setOpen(null); }}
+          onOpenChange={(o) => { if (!o) close(); }}
           aria-labelledby={titleId}
           aria-modal="true"
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') move(1);
             else if (e.key === 'ArrowLeft') move(-1);
-            else if (e.key === 'Escape') { e.preventDefault(); setOpen(null); }
+            else if (e.key === 'Escape') { e.preventDefault(); close(); }
           }}
           className="m-0 h-dvh max-h-none w-screen max-w-none rounded-none bg-[var(--wh-panel)] md:m-auto md:h-[640px] md:max-h-[90vh] md:w-[900px] md:max-w-[90vw] md:rounded-xl"
         >
           <div className="flex h-full flex-col gap-3 p-4">
             <div className="flex items-center justify-between">
               <h2 id={titleId} className="m-0 text-[16px] font-bold">Photo {open + 1} of {n}</h2>
-              <button type="button" aria-label="Close photos" onClick={() => setOpen(null)} className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-ink)]">
+              <button type="button" aria-label="Close photos" onClick={close} className="inline-flex size-11 items-center justify-center border-0 bg-transparent text-[var(--wh-ink)]">
                 <X aria-hidden className="size-5" />
               </button>
             </div>

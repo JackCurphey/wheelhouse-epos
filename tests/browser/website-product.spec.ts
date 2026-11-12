@@ -71,7 +71,13 @@ test('on a phone: nothing chosen to start, the stock line once colour and size a
   await expect(line).toHaveText('Choose a colour and size to see when it’s ready');
   for (const radio of await page.getByRole('radio').all()) expect((await radio.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
-  await colour.getByRole('radio', { name: '[Colour 1]' }).click();
+  // The colours by keyboard, as a radio group: one tab stop, and the arrows go round.
+  await expect(colour.getByRole('radio', { name: '[Colour 1]' })).toHaveAttribute('tabindex', '0');
+  await expect(colour.getByRole('radio', { name: '[Colour 2]' })).toHaveAttribute('tabindex', '-1');
+  await colour.getByRole('radio', { name: '[Colour 2]' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(colour.getByRole('radio', { name: '[Colour 1]' })).toBeFocused();
+  await expect(colour.getByRole('radio', { name: '[Colour 1]' })).toHaveAttribute('aria-checked', 'true');
   await expect(colour.getByText('Colour: [Colour 1]')).toBeVisible();
   await expect(line).toHaveText('Choose a colour and size to see when it’s ready');
   const m = size.getByRole('radio', { name: 'M — not in stock at Bolton' });

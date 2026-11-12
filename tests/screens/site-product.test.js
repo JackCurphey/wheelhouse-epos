@@ -93,6 +93,14 @@ test('a product (wb-product): price, "Includes VAT · Shimano", the stock line, 
   assert.ok(ui.queryByText(/in \[?\d*\]? ?days|We order it in/) === null, 'not until WP-6.3 (Jack’s answer 2)');
 });
 
+test('a product with no brand still says "Includes VAT", with nothing after it', async () => {
+  r = await open({ ...PADS, brand: null });
+  const { ui } = r;
+  await ui.findByRole('heading', { level: 1, name: 'Shimano brake pads B05S-RX' });
+  assert.ok(ui.getByText('Includes VAT'));
+  assert.ok(ui.queryByText(/Includes VAT ·/) === null);
+});
+
 test('with no shop chosen there is no stock line, and Add to basket stays', async () => {
   r = await renderWebsite({ url: '/products/101', product: answering({ ...PADS, stock: { line: 'none' } }) });
   const { ui } = r;
@@ -135,6 +143,82 @@ test('a product with sizes (wb-product-sizes): nothing chosen, "Choose a colour 
   assert.deepEqual(rows, [['Sizes', 'S, M, L, XL'], ['Colours', '[Colour 1], [Colour 2]'], ['[Detail]', '[value]'], ['Brand', '[Brand]']]);
 });
 
+test('a product with sizes and no shop chosen: the prompt until both are chosen, then no stock line at all', async () => {
+  const none = { ...SIZED, items: SIZED.items.filter((i) => !(i.colour === '[Colour 2]' && i.size === 'XL')).map((i) => ({ ...i, stock: { line: 'none' } })) };
+  r = await renderWebsite({ url: '/products/501', product: answering(none) });
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: '[Product with sizes]' });
+  assert.equal(line().textContent, 'Choose a colour and size to see when it’s ready');
+  fireEvent.click(ui.getByRole('radio', { name: '[Colour 1]' }));
+  assert.equal(line().textContent, 'Choose a colour and size to see when it’s ready');
+  const size = ui.getByRole('radiogroup', { name: 'Size' });
+  // With no shop, no size is judged out.
+  assert.ok(within(size).getAllByRole('radio').every((b) => !b.className.includes('line-through') && !b.textContent.includes('not in stock')));
+  fireEvent.click(within(size).getByRole('radio', { name: 'M' }));
+  assert.ok(ui.queryByRole('status') === null, 'no prompt and no stock line once both are chosen');
+  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+  // A pair the shop doesn't have, with no shop chosen, is no different.
+  fireEvent.click(ui.getByRole('radio', { name: '[Colour 2]' }));
+  fireEvent.click(within(size).getByRole('radio', { name: 'XL' }));
+  assert.ok(ui.queryByRole('status') === null);
+  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+});
+
+test('a colour and size pair the shop doesn’t have counts as sold out at the chosen shop', async () => {
+  const gap = { ...SIZED, items: SIZED.items.filter((i) => !(i.colour === '[Colour 2]' && i.size === 'XL')) };
+  r = await open(gap);
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: '[Product with sizes]' });
+  fireEvent.click(ui.getByRole('radio', { name: '[Colour 2]' }));
+  const size = ui.getByRole('radiogroup', { name: 'Size' });
+  const xl = within(size).getByRole('radio', { name: 'XL — not in stock at Bolton' });
+  assert.ok(xl.className.includes('line-through'));
+  fireEvent.click(xl);
+  assert.equal(line().textContent, 'Sold out at Bolton');
+  assert.ok(ui.queryByRole('link', { name: 'Add to basket' }) === null);
+  assert.ok(ui.getByRole('button', { name: 'Ask the shop about this' }));
+});
+
+test('the colour and size choosers work as radio groups from the keyboard: one tab stop, arrows move and choose, going round', async () => {
+  r = await open(SIZED);
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: '[Product with sizes]' });
+  const size = ui.getByRole('radiogroup', { name: 'Size' });
+  const colour = ui.getByRole('radiogroup', { name: 'Colour' });
+  const tabs = (group) => within(group).getAllByRole('radio').map((b) => b.tabIndex);
+  const chosen = (group) => within(group).getAllByRole('radio').filter((b) => b.getAttribute('aria-checked') === 'true').map((b) => b.textContent);
+  // Nothing chosen: the first is the one tab stop.
+  assert.deepEqual(tabs(size), [0, -1, -1, -1]);
+  assert.deepEqual(tabs(colour), [0, -1]);
+  const radio = (name) => within(size).getByRole('radio', { name });
+  fireEvent.keyDown(radio('S'), { key: 'ArrowRight' });
+  assert.deepEqual(chosen(size), ['M']);
+  assert.ok(document.activeElement === radio('M'));
+  assert.deepEqual(tabs(size), [-1, 0, -1, -1]);
+  fireEvent.keyDown(radio('M'), { key: 'ArrowDown' });
+  assert.deepEqual(chosen(size), ['L']);
+  fireEvent.keyDown(radio('L'), { key: 'ArrowUp' });
+  assert.deepEqual(chosen(size), ['M']);
+  fireEvent.keyDown(radio('M'), { key: 'ArrowLeft' });
+  assert.deepEqual(chosen(size), ['S']);
+  // Round from the first to the last, and back.
+  fireEvent.keyDown(radio('S'), { key: 'ArrowLeft' });
+  assert.deepEqual(chosen(size), ['XL']);
+  assert.ok(document.activeElement === radio('XL'));
+  assert.deepEqual(tabs(size), [-1, -1, -1, 0]);
+  fireEvent.keyDown(radio('XL'), { key: 'ArrowRight' });
+  assert.deepEqual(chosen(size), ['S']);
+  assert.ok(within(size).getByText('Size: S'));
+  // The colours the same way.
+  fireEvent.keyDown(within(colour).getByRole('radio', { name: '[Colour 1]' }), { key: 'ArrowLeft' });
+  assert.deepEqual(chosen(colour), ['[Colour 2]']);
+  assert.deepEqual(tabs(colour), [-1, 0]);
+  assert.equal(line().textContent, 'Ready today at Bolton · 2 in stock');
+});
+
 test('a product with sizes but no colours asks only for a size', async () => {
   const sizesOnly = { ...SIZED, colours: [], items: SIZED.items.slice(0, 4).map((i) => ({ ...i, colour: null })) };
   r = await open(sizesOnly);
@@ -164,6 +248,7 @@ test('a size at the other shop (wb-product-size-other): struck, read out " — n
   assert.ok(!s.className.includes('line-through'));
   fireEvent.click(m);
   assert.equal(m.getAttribute('aria-checked'), 'true');
+  assert.ok(!m.className.includes('line-through'), 'once chosen it carries the thick border, not the strike (drawing)');
   assert.ok(within(size).getByText('Size: M'));
   assert.equal(document.getElementById(m.getAttribute('aria-describedby')).textContent, 'M isn’t in stock at Bolton in [Colour 1].');
   assert.equal(line().textContent, 'M isn’t in stock at Bolton in [Colour 1] — it’s in stock at our [Second site] shop');
@@ -230,6 +315,54 @@ test('the photo viewer (wb-product-photos): "Photo 2 of 4", the arrows, and Esc 
   fireEvent.click(big);
   fireEvent.click(within(ui.getByRole('dialog')).getByRole('button', { name: 'Close photos' }));
   assert.ok(ui.queryByRole('dialog') === null);
+  assert.ok(document.activeElement === big);
+});
+
+test('the photo viewer goes round from the last photo to the first and back, by keys and by buttons', async () => {
+  r = await open(PADS);
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: 'Shimano brake pads B05S-RX' });
+  const buttons = within(ui.getByRole('group', { name: 'Photos' })).getAllByRole('button');
+  fireEvent.click(buttons[3]);
+  fireEvent.click(ui.getByRole('button', { name: 'Open larger photo 4 of 4' }));
+  const viewer = ui.getByRole('dialog', { name: 'Photo 4 of 4' });
+  fireEvent.keyDown(viewer, { key: 'ArrowRight' });
+  assert.ok(ui.getByRole('dialog', { name: 'Photo 1 of 4' }));
+  assert.equal(viewer.querySelector('img').getAttribute('src'), '/uploads/pads-1.jpg');
+  fireEvent.keyDown(viewer, { key: 'ArrowLeft' });
+  assert.ok(ui.getByRole('dialog', { name: 'Photo 4 of 4' }));
+  assert.equal(viewer.querySelector('img').getAttribute('src'), '/uploads/pads-4.jpg');
+  fireEvent.click(within(viewer).getByRole('button', { name: 'Next photo' }));
+  assert.ok(ui.getByRole('dialog', { name: 'Photo 1 of 4' }));
+  fireEvent.click(within(viewer).getByRole('button', { name: 'Previous photo' }));
+  assert.ok(ui.getByRole('dialog', { name: 'Photo 4 of 4' }));
+});
+
+test('closing the viewer after moving leaves the larger photo on the one last seen, with focus on it', async () => {
+  r = await open(PADS);
+  const { ui } = r;
+  const { fireEvent, within } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: 'Shimano brake pads B05S-RX' });
+  const buttons = within(ui.getByRole('group', { name: 'Photos' })).getAllByRole('button');
+  fireEvent.click(buttons[1]);
+  const big = ui.getByRole('button', { name: 'Open larger photo 2 of 4' });
+  fireEvent.click(big);
+  fireEvent.keyDown(ui.getByRole('dialog'), { key: 'ArrowRight' });
+  fireEvent.keyDown(ui.getByRole('dialog'), { key: 'ArrowRight' });
+  assert.ok(ui.getByRole('dialog', { name: 'Photo 4 of 4' }));
+  fireEvent.keyDown(ui.getByRole('dialog'), { key: 'Escape' });
+  assert.ok(ui.queryByRole('dialog') === null);
+  assert.equal(big.getAttribute('aria-label'), 'Open larger photo 4 of 4');
+  assert.equal(big.querySelector('img').getAttribute('src'), '/uploads/pads-4.jpg');
+  assert.deepEqual(buttons.map((b) => b.getAttribute('aria-current')), [null, null, null, 'true']);
+  assert.ok(document.activeElement === big);
+  // Close photos does the same, and it opens again where it was left.
+  fireEvent.click(big);
+  fireEvent.click(within(ui.getByRole('dialog', { name: 'Photo 4 of 4' })).getByRole('button', { name: 'Previous photo' }));
+  fireEvent.click(within(ui.getByRole('dialog')).getByRole('button', { name: 'Close photos' }));
+  assert.equal(big.getAttribute('aria-label'), 'Open larger photo 3 of 4');
+  assert.deepEqual(buttons.map((b) => b.getAttribute('aria-current')), [null, null, 'true', null]);
   assert.ok(document.activeElement === big);
 });
 
