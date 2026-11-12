@@ -98,8 +98,11 @@ export function checkSaved(raw) {
   if ((raw.only ?? []).length > 50 || (raw.only ?? []).some(bad) || bad(raw.supplier ?? '')) throw new ValidationError(again);
   const sel = { base: raw.base, measure: raw.measure, split: raw.split, only: [...new Set(raw.only ?? [])], supplier: (raw.supplier ?? '').trim(), period: raw.period };
   const fit = fitFor({ ...sel, days: 1 }, { canSeeCosts: true });
+  if (!fit.measure.some((c) => c.value === sel.measure)) throw new ValidationError('Choose Takings or Items sold');
+  if (!fit.split.some((c) => c.value === sel.split)) throw new ValidationError('workshop only');
   const why = fit.measure.find((c) => c.value === sel.measure)?.why || fit.split.find((c) => c.value === sel.split)?.why;
   if (why) throw new ValidationError(why);
+  if (sel.base === 'workshop') sel.supplier = ''; // a supplier means nothing to the workshop
   return sel;
 }
 
@@ -235,6 +238,17 @@ async function firstSaleDay(tz) {
   return row?.day ?? null;
 }
 
+// The day the workshop's own history starts: its first finished job or diary block, so Workshop compares with
+// the period before from its own records and not from the first sale.
+async function firstWorkshopDay(tz) {
+  const row = await prepare(
+    `SELECT least(
+       (SELECT to_char(min(signed_off_at) AT TIME ZONE ?, 'YYYY-MM-DD') FROM workshop_jobs),
+       (SELECT min(part_date) FROM workshop_job_parts)) AS day`
+  ).get(tz);
+  return row?.day ?? null;
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weekLabel = (monday) => `Week of ${Number(monday.slice(8))} ${MONTHS[Number(monday.slice(5, 7)) - 1]}`;
 const mondayOf = (iso) => {
@@ -279,7 +293,7 @@ function settle(sel, fit) {
   const greyed = (group, value) => fit[group].find((c) => c.value === value)?.why;
   const measure = greyed('measure', sel.measure) || !fit.measure.some((c) => c.value === sel.measure) ? BASES[sel.base].measure || 'takings' : sel.measure;
   let split = sel.split;
-  if (greyed('split', split)) split = measure === 'items' ? 'product' : fit.split.find((c) => c.value === 'day' && !c.why) ? 'day' : 'week';
+  if (greyed('split', split) || !fit.split.some((c) => c.value === split)) split = measure === 'items' ? 'product' : fit.split.find((c) => c.value === 'day' && !c.why) ? 'day' : 'week';
   return { measure, split };
 }
 
@@ -351,7 +365,7 @@ export async function changedReport(query, today, ctx) {
   const takingsPence = sum(now, 'pence');
   const beforeValue = key === 'qty' ? figure(beforeRead) : sum(beforeRead.groups, 'pence');
 
-  const firstSaleOn = await firstSaleDay(tz);
+  const firstSaleOn = sel.base === 'workshop' ? await firstWorkshopDay(tz) : await firstSaleDay(tz);
   const nothingBefore = !firstSaleOn || firstSaleOn >= period.from;
   const baseLabel = BASES[sel.base].label;
   const measureLabel = MEASURES.find(([v]) => v === sel.measure)[1];
@@ -371,7 +385,7 @@ export async function changedReport(query, today, ctx) {
     columns: [splitLabel, measureLabel, ...(sel.measure === 'items' || sel.measure === 'margin' ? ['Takings'] : [])],
     rows,
     total: { label: limitParts.length ? `Total, ${limitParts.join(', ')}` : 'Total', value, takingsPence },
-    figures: { value, beforeValue, diffValue: nothingBefore ? null : value - beforeValue },
+    figures: { value, beforeValue, diffValue: nothingBefore ? null : tenth(value - beforeValue) },
     showBefore: !nothingBefore && sel.split !== 'week',
     empty: now.size === 0 || (value === 0 && takingsPence === 0),
     nothingBefore, firstSaleOn,

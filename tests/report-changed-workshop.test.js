@@ -192,3 +192,24 @@ test('a Workshop report can be saved, and the sales measures can not', async () 
   const bad = await as(owner)('/api/reports/saved', { method: 'POST', body: { name: 'Bad', base: 'workshop', measure: 'items', split: 'day', only: [], supplier: '', period: 'this-week', shared: false } });
   assert.deepEqual([bad.status, bad.body.error], [400, SALES_ONLY]);
 });
+
+test('Workshop compares with the period before from the workshop\'s own history, not the first sale', async () => {
+  const res = await changed('measure=jobs&split=day');
+  assert.equal(res.body.nothingBefore, false, 'this shop has jobs last week, and no sales at all');
+  assert.equal(res.body.showBefore, true);
+  assert.equal(res.body.figures.diffValue, 2);
+});
+
+test('a saved report can only be one the panel could show: no Service on Sales, no supplier on Workshop', async () => {
+  const sales = await as(owner)('/api/reports/saved', { method: 'POST', body: { name: 'Odd', base: 'sales', measure: 'takings', split: 'service', only: [], supplier: '', period: 'this-week', shared: false } });
+  assert.deepEqual([sales.status, sales.body.error], [400, 'workshop only']);
+  const supplier = await as(owner)('/api/reports/saved', { method: 'POST', body: { name: 'With supplier', base: 'workshop', measure: 'jobs', split: 'day', only: [], supplier: 'Shimano', period: 'this-week', shared: false } });
+  assert.equal(supplier.status, 201, JSON.stringify(supplier.body));
+  assert.equal(supplier.body.supplier, '');
+  assert.equal(supplier.body.what, 'Workshop: jobs by day');
+});
+
+test('the choices never leave a split that has no chip: Service on Sales moves to one that fits', async () => {
+  const res = await as(owner)('/api/reports/changed/choices?base=sales&split=service&period=this-week');
+  assert.notEqual(res.body.selection.split, 'service');
+});
