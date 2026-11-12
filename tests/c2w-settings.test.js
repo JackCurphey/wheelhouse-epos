@@ -67,6 +67,7 @@ test('137 makes the Cycle to Work tables, each shop’s own, links a frame and a
       [shop, null, 'certificate', 'refund', 'refund', '', 1],
     );
     await assert.rejects(c.query("UPDATE c2w_settings SET order_rule = 'whenever'"), /check/i);
+    await assert.rejects(c.query("UPDATE c2w_settings SET deposit_kind = 'percent', deposit_value = 10001"), /check/i, 'a deposit over 100% refused');
     const provider = (await one(c, "INSERT INTO c2w_providers (name, commission_kind, commission_value) VALUES ('[Provider]', 'percent', 500) RETURNING id")).id;
     await assert.rejects(c.query("INSERT INTO c2w_providers (name, commission_kind, commission_value) VALUES ('[Provider]', 'percent', 10001)"), /check/i, 'over 100% refused');
     const customer = (await one(c, "INSERT INTO customers (name) VALUES ('[Customer]') RETURNING id")).id;
@@ -82,6 +83,7 @@ test('137 makes the Cycle to Work tables, each shop’s own, links a frame and a
     const supplier = (await one(c, "INSERT INTO suppliers (name, adapter_type) VALUES ('[Supplier]', 'mock_csv') RETURNING id")).id;
     const po = (await one(c, 'INSERT INTO purchase_orders (supplier_id) VALUES ($1) RETURNING id', [supplier])).id;
     await c.query("INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, qty_ordered, c2w_order_id) VALUES ($1, $2, '[Bike]', 1, $3)", [po, product, order.id]);
+    const sale = (await one(c, "INSERT INTO sales (subtotal, total, payment_method, cash_amount) VALUES (20, 20, 'Cash', 20) RETURNING id")).id;
 
     await asShop(c, otherShop);
     for (const table of TABLES) assert.equal((await c.query(`SELECT 1 FROM ${table}`)).rowCount, 0, `another shop never reads ${table}`);
@@ -90,6 +92,17 @@ test('137 makes the Cycle to Work tables, each shop’s own, links a frame and a
     const theirCustomer = (await one(c, "INSERT INTO customers (name) VALUES ('[Customer]') RETURNING id")).id;
     const theirProduct = (await one(c, "INSERT INTO products (name, category) VALUES ('[Bike]', 'Bikes') RETURNING id")).id;
     await assert.rejects(c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code) VALUES ($1, $2, $3, 1, 1, '[code 3]')", [theirCustomer, provider, theirProduct]), /foreign key/i);
+    // Nor its customer, frame or sale.
+    const theirProvider = (await one(c, "INSERT INTO c2w_providers (name) VALUES ('[Provider]') RETURNING id")).id;
+    const theirs = [theirCustomer, theirProvider, theirProduct];
+    await assert.rejects(c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code) VALUES ($1, $2, $3, 1, 1, '[code 4]')", [customer, theirProvider, theirProduct]), /foreign key/i, 'another shop\'s customer');
+    await assert.rejects(c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code, frame_id) VALUES ($1, $2, $3, 1, 1, '[code 5]', $4)", [...theirs, frame]), /foreign key/i, 'another shop\'s frame');
+    await assert.rejects(c.query("INSERT INTO c2w_orders (customer_id, provider_id, product_id, quote_number, total_pence, customer_code, sale_id) VALUES ($1, $2, $3, 1, 1, '[code 6]', $4)", [...theirs, sale]), /foreign key/i, 'another shop\'s sale');
+    // Nor can a frame or a purchase order line name another shop's order.
+    await assert.rejects(c.query("INSERT INTO stock_frames (product_id, frame_number, frame_key, state, c2w_order_id) VALUES ($1, '[frame 2]', '[FRAME2]', 'held', $2)", [theirProduct, order.id]), /foreign key/i);
+    const theirSupplier = (await one(c, "INSERT INTO suppliers (name, adapter_type) VALUES ('[Supplier]', 'mock_csv') RETURNING id")).id;
+    const theirPo = (await one(c, 'INSERT INTO purchase_orders (supplier_id) VALUES ($1) RETURNING id', [theirSupplier])).id;
+    await assert.rejects(c.query("INSERT INTO purchase_order_items (purchase_order_id, product_id, product_name, qty_ordered, c2w_order_id) VALUES ($1, $2, '[Bike]', 1, $3)", [theirPo, theirProduct, order.id]), /foreign key/i);
 
     await asShop(c, shop);
     // Removing the order clears the frame's and the order line's links rather than blocking.
@@ -132,7 +145,7 @@ test('1.2 the settings are made on first read, the Owner saves them, and nobody 
   assert.deepEqual(first.body.settings, {
     holdDays: null, remindDays: null, quoteValidDays: null, orderRule: 'certificate',
     depositKind: 'pounds', depositValue: null, depositOnCertificate: 'refund', depositOnPullOut: 'refund',
-    howToApply: '', todayLines: true,
+    howToApply: '', todayLines: true, noCertificateDays: null, paymentLateDays: null,
   });
   const saved = await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 21, remindDays: 3, quoteValidDays: 30, orderRule: 'applied', howToApply: '[The shop’s own words]', todayLines: false } });
   assert.equal(saved.status, 200, JSON.stringify(saved.body));
@@ -143,6 +156,9 @@ test('1.2 the settings are made on first read, the Owner saves them, and nobody 
   // What isn't sent is kept.
   const again = await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 14 } });
   assert.deepEqual([again.body.settings.holdDays, again.body.settings.orderRule], [14, 'applied']);
+  // The On Today fold's two day counts.
+  const today = await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 10, paymentLateDays: 7 } });
+  assert.deepEqual([today.body.settings.noCertificateDays, today.body.settings.paymentLateDays], [10, 7]);
 
   const refused = await as(jo)('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7 } });
   assert.equal(refused.status, 403);
@@ -151,7 +167,7 @@ test('1.2 the settings are made on first read, the Owner saves them, and nobody 
   // Another shop has its own.
   assert.equal((await as(other)('/api/c2w/settings')).body.settings.holdDays, null);
 
-  for (const bad of [{ holdDays: 0 }, { holdDays: 1.5 }, { remindDays: -1 }, { orderRule: 'whenever' }, { howToApply: 'x'.repeat(2001) }, { todayLines: 'yes' }]) {
+  for (const bad of [{ holdDays: 0 }, { holdDays: 1.5 }, { remindDays: -1 }, { orderRule: 'whenever' }, { howToApply: 'x'.repeat(2001) }, { todayLines: 'yes' }, { noCertificateDays: 0 }, { paymentLateDays: 0 }, { paymentLateDays: 366 }]) {
     const r = await own('/api/c2w/settings', { method: 'PUT', body: bad });
     assert.equal(r.status, 400, `${JSON.stringify(bad)} refused`);
   }
@@ -167,6 +183,14 @@ test('1.3 “Straight away, with a deposit” is refused until the till can take
   const kept = await own('/api/c2w/settings', { method: 'PUT', body: { depositKind: 'percent', depositValue: 1000, depositOnCertificate: 'count', depositOnPullOut: 'keep' } });
   assert.equal(kept.status, 200, JSON.stringify(kept.body));
   assert.deepEqual([kept.body.settings.depositKind, kept.body.settings.depositValue, kept.body.settings.depositOnCertificate, kept.body.settings.depositOnPullOut], ['percent', 1000, 'count', 'keep']);
+  // A percent deposit is at most 100%; switching unit needs the amount again, so 10% is never read as 10p.
+  for (const bad of [{ depositValue: 10001 }, { depositKind: 'pounds' }]) {
+    const r = await own('/api/c2w/settings', { method: 'PUT', body: bad });
+    assert.equal(r.status, 400, `${JSON.stringify(bad)} refused`);
+  }
+  assert.deepEqual([(await own('/api/c2w/settings')).body.settings.depositKind, (await own('/api/c2w/settings')).body.settings.depositValue], ['percent', 1000]);
+  const switched = await own('/api/c2w/settings', { method: 'PUT', body: { depositKind: 'pounds', depositValue: 5000 } });
+  assert.deepEqual([switched.body.settings.depositKind, switched.body.settings.depositValue], ['pounds', 5000]);
 });
 
 test('1.4 providers: the Owner adds, edits and retires; the commission is left out for someone who can’t see costs', async () => {
@@ -184,7 +208,7 @@ test('1.4 providers: the Owner adds, edits and retires; the commission is left o
   assert.equal(edited.status, 200, JSON.stringify(edited.body));
   assert.deepEqual([edited.body.provider.name, edited.body.provider.commissionKind, edited.body.provider.commissionValue, edited.body.provider.paysInDays], ['[Provider A]', 'pounds', 2500, 28]);
 
-  for (const bad of [{ name: '' }, { name: 'x'.repeat(61) }, { commissionKind: 'percent', commissionValue: 10001 }, { commissionKind: 'shares' }, { commissionValue: -1 }, { paysInDays: 366 }, { accessoriesInside: 'no' }]) {
+  for (const bad of [{ name: '' }, { name: 'x'.repeat(61) }, { commissionKind: 'percent', commissionValue: 10001 }, { commissionKind: 'shares' }, { commissionValue: -1 }, { commissionKind: 'percent' }, { paysInDays: 366 }, { accessoriesInside: 'no' }]) {
     const r = await own(`/api/c2w/providers/${a.id}`, { method: 'PUT', body: bad });
     assert.equal(r.status, 400, `${JSON.stringify(bad)} refused`);
   }

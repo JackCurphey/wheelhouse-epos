@@ -23,6 +23,7 @@ function serializeSettings(r) {
     holdDays: r.hold_days, remindDays: r.remind_days, quoteValidDays: r.quote_valid_days, orderRule: r.order_rule,
     depositKind: r.deposit_kind, depositValue: r.deposit_value, depositOnCertificate: r.deposit_on_certificate,
     depositOnPullOut: r.deposit_on_pull_out, howToApply: r.how_to_apply, todayLines: r.today_lines,
+    noCertificateDays: r.no_certificate_days, paymentLateDays: r.payment_late_days,
   };
 }
 // The shop's row, made on first read.
@@ -103,7 +104,7 @@ function readProvider(body, current) {
   const kind = oneOf(body.commissionKind, 'how the commission is counted', ['percent', 'pounds']);
   const value = amount(body.commissionValue, kind ?? current?.commission_kind ?? 'percent', 'Commission');
   // Switching between % and £ without a new amount would read the old number in the new unit.
-  if (current && kind !== undefined && kind !== current.commission_kind && value === undefined) {
+  if (current && kind !== undefined && kind !== current.commission_kind && value === undefined && current.commission_value !== null) {
     throw new ValidationError('Give the commission in its new unit');
   }
   return {
@@ -141,6 +142,8 @@ export function register(route) {
         deposit_on_pull_out: oneOf(body.depositOnPullOut, 'what happens to the deposit if the customer pulls out', ['refund', 'keep']),
         how_to_apply: words(body.howToApply, 'How to apply', 2000),
         today_lines: yesNo(body.todayLines, 'On Today'),
+        no_certificate_days: days(body.noCertificateDays, 'No certificate after', 1),
+        payment_late_days: days(body.paymentLateDays, 'Payment late after', 1),
       };
       // Until the till can take a deposit against an order, "Straight away,
       // with a deposit" stays off (default taken 12 Nov,
@@ -158,7 +161,7 @@ export function register(route) {
   route('GET', '/api/c2w/providers', async (req, res, params, query) => {
     const costs = await canSeeCosts(req);
     const all = query.get('retired') === '1';
-    const rows = await db.prepare(`SELECT * FROM c2w_providers${all ? '' : ' WHERE retired_at IS NULL'} ORDER BY retired_at NULLS FIRST, id`).all();
+    const rows = await db.prepare(`SELECT * FROM c2w_providers${all ? '' : ' WHERE retired_at IS NULL'} ORDER BY id`).all();
     sendJson(res, 200, { providers: rows.map((r) => serializeProvider(r, costs)) });
   });
 

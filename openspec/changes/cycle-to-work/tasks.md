@@ -29,7 +29,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 1.1 Test: migrating from empty makes `c2w_settings`, `c2w_providers`, `c2w_orders`, `c2w_order_events`, `c2w_payments`, `c2w_payment_orders`, and the `c2w_order_id` columns on `stock_frames` and `purchase_order_items`, all with row-level security on `shop_id`; another shop's rows can't be read (scratch database)
 - [x] 1.2 Test: `GET /api/c2w/settings` makes the shop's row on first read; `PUT` saves hold days, reminder days, quote days, the ordering rule, how to apply; refused for non-Owners
 - [x] 1.3 Test: "Straight away, with a deposit" is refused while till deposits don't exist
-- [x] 1.4 Test: providers — add, edit, retire; a retired provider can't be picked; commission and terms left out of replies for someone who can't see costs
+- [x] 1.4 Test: providers — add, edit, retire; a retired provider drops off the list to pick from; the commission left out of replies for someone who can't see costs (days to pay and hand-over checks are still sent: `docs/decisions/decided-while-building/2026-11-jack.md`, 12 Nov, item 4)
 - [x] 1.5 Write the migration (next free number) and `server/routes/c2w-settings.js` to pass 1.1–1.4
 - [ ] 1.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
@@ -48,8 +48,9 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [ ] 3.4 Test: a step not allowed from the order's stage is refused and changes nothing
 - [ ] 3.5 Test: the list groups orders by stage, gives the top-line counts and the sidebar count; the owed total only for someone who can see costs
 - [ ] 3.6 Test: the quote document's fields and closing paragraph follow the order; email queues the quote
-- [ ] 3.7 Write `server/c2w/orders.js` and `server/routes/c2w.js` to pass 3.1–3.6
-- [ ] 3.8 Self-review with `reviewer`; full check
+- [ ] 3.7 Test: a retired provider can't be picked for a new order; merging two customers moves their Cycle to Work orders to the kept one, and Undo moves them back (add `c2w_orders` to `MOVED` in `server/routes/customer-merge.js`)
+- [ ] 3.8 Write `server/c2w/orders.js` and `server/routes/c2w.js` to pass 3.1–3.6
+- [ ] 3.9 Self-review with `reviewer`; full check
 
 ## 4. List, New order, quote and order page — screens (pull request 4, about 600 lines)
 
