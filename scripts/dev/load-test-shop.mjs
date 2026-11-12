@@ -28,6 +28,7 @@ const { pool, prepare, dbExec, runWithShop } = await import('../../server/db.js'
 const { createWorkshopJob, syncJobHold } = await import('../../server/workshop/jobs.js');
 const { nowIso } = await import('../../server/lib/http.js');
 const { shopToday } = await import('../../server/clock.js');
+const { SEED_OTHER_WAYS } = await import('../../server/lib/drawn-other-ways.js');
 const { TODAY, JOBS, UNSCHEDULED, PENDING_DIARY, REQUEST_OUTLINE, SERVICE_OPTIONS, SERVICE_GROUPS } =
   JSON.parse(readFileSync(new URL('./test-shop-drawings.json', import.meta.url), 'utf8'));
 
@@ -105,6 +106,7 @@ async function loadShop(shopId) {
   await run('INSERT INTO label_settings DEFAULT VALUES');
   await run('INSERT INTO shop_theme DEFAULT VALUES');
   await run("INSERT INTO suppliers (name, adapter_type, config) VALUES ('Madison (mock)', 'mock_csv', '{}'::jsonb)");
+  await run(SEED_OTHER_WAYS);
 
   await run('INSERT INTO sites (name, code) VALUES (?, ?)', SITE.name, SITE.code);
   const staff = {};
