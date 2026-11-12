@@ -97,3 +97,55 @@ test('switching a tool off keeps its ID, with no toast; Back to Website returns 
   assert.ok(await ui.findByRole('heading', { name: 'Your website is on' }));
   assert.ok(ui.getByText('None — so there’s no cookie choice'));
 });
+
+test('leaving the ID box by pressing the switch saves the ID first, then the switch', async () => {
+  const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: '', on: true } }) };
+  const { ui, fireEvent, waitFor } = await openTracking(state);
+  const box = ui.getByLabelText('Your Google Analytics ID');
+  fireEvent.change(box, { target: { value: 'G-PSW1MY7HB4' } });
+  fireEvent.blur(box);
+  fireEvent.click(ui.getByRole('switch', { name: 'Google Analytics' }));
+  await waitFor(() => assert.deepEqual(sent(GA), [{ on: true, id: 'G-PSW1MY7HB4' }, { on: false }]));
+  await waitFor(() => assert.equal(ui.getByRole('switch', { name: 'Google Analytics' }).getAttribute('aria-checked'), 'false'));
+});
+
+test('Enter then leaving the box saves the ID once', async () => {
+  const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: '', on: true } }) };
+  const { ui, fireEvent, waitFor } = await openTracking(state);
+  const box = ui.getByLabelText('Your Google Analytics ID');
+  fireEvent.change(box, { target: { value: 'G-PSW1MY7HB4' } });
+  fireEvent.keyDown(box, { key: 'Enter' });
+  fireEvent.blur(box);
+  await waitFor(() => assert.equal(ui.getByLabelText('Your Google Analytics ID').value, 'G-PSW1MY7HB4'));
+  await waitFor(() => assert.ok(ui.getByText('When you publish, your website will ask customers about cookies.')));
+  assert.deepEqual(sent(GA), [{ on: true, id: 'G-PSW1MY7HB4' }]);
+});
+
+test('an ID that couldn’t be saved stays in the box, with the problem said', async () => {
+  const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: '', on: true } }) };
+  const opened = await openWebsite(PAGE, { answers: { ...served(state), [`/api/website/tracking/${GA}`]: () => [500, { error: 'Internal server error' }] } });
+  const { ui, fireEvent, waitFor } = opened;
+  fireEvent.click(await ui.findByRole('button', { name: /Tracking tools/ }));
+  const box = await ui.findByLabelText('Your Google Analytics ID');
+  fireEvent.change(box, { target: { value: 'G-PSW1MY7HB4' } });
+  fireEvent.blur(box);
+  await ui.findByRole('alert');
+  await waitFor(() => assert.equal(sent(GA).length, 1));
+  assert.equal(ui.getByLabelText('Your Google Analytics ID').value, 'G-PSW1MY7HB4');
+});
+
+test('one tool live and another waiting for a correct ID: the warning, then the cookie lines for the live one', async () => {
+  const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: 'G-PSW1MY7HB4', on: true }, meta_pixel: { id: 'pixel!', on: true, wrong: true } }) };
+  const { ui } = await openTracking(state);
+  assert.ok(ui.getByText('Meta (Facebook) Pixel needs a correct ID before it can be used.'));
+  assert.ok(ui.getByText('When you publish, your website will ask customers about cookies.'));
+  assert.ok(ui.getByText(/they should name Google Analytics\./));
+  assert.ok(ui.queryByText(/no cookie choice\.$/) === null);
+});
+
+test('a tool on with no ID yet loads nothing, so the no-cookie-choice line stays', async () => {
+  const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: '', on: true } }) };
+  const { ui } = await openTracking(state);
+  assert.ok(ui.getByText('With no tools on, your website only uses the cookies it needs to work — so customers get no cookie choice.'));
+  assert.ok(ui.queryByText(/needs a correct ID/) === null);
+});

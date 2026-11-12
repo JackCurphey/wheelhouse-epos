@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronLeft, TriangleAlert } from 'lucide-react';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -26,8 +26,18 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
   const [problem, setProblem] = useState<string | null>(null);
   const [toast, setToast] = useState<Tool | null>(null);
   const [typed, setTyped] = useState<Record<string, string>>({});
+  // One save at a time, in the order made: leaving the ID box by pressing
+  // the switch sends the ID first, then the switch.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  // The ID being sent per tool, so Enter then leaving the box saves it once.
+  const sending = useRef<Record<string, string>>({});
 
-  async function save(tool: Tool, body: { on: boolean; id?: string }) {
+  function save(tool: Tool, body: { on: boolean; id?: string }): Promise<boolean> {
+    const next = queue.current.then(() => sendSave(tool, body));
+    queue.current = next;
+    return next;
+  }
+  async function sendSave(tool: Tool, body: { on: boolean; id?: string }) {
     setBusy(tool.tool);
     setProblem(null);
     try {
@@ -35,7 +45,7 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
       onState(next);
       return true;
     } catch (err) {
-      setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again.');
+      setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t do that. Try again.');
       return false;
     } finally {
       setBusy(null);
@@ -45,18 +55,22 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
     setToast(null);
     if (await save(tool, { on }) && on) setToast(tool);
   }
+  // What was typed stays in the box until the server has it.
   function saveId(tool: Tool) {
-    const id = typed[tool.tool];
-    if (id === undefined || id.trim() === tool.id) return;
-    void save(tool, { on: tool.on, id: id.trim() }).then(() => setTyped((now) => {
-      const rest = { ...now };
-      delete rest[tool.tool];
-      return rest;
-    }));
+    const id = typed[tool.tool]?.trim();
+    if (id === undefined || id === tool.id || sending.current[tool.tool] === id) return;
+    sending.current[tool.tool] = id;
+    void save(tool, { on: tool.on, id }).then((saved) => {
+      delete sending.current[tool.tool];
+      if (saved) setTyped((now) => {
+        const rest = { ...now };
+        delete rest[tool.tool];
+        return rest;
+      });
+    });
   }
 
-  const on = state.tracking.filter((t) => t.on);
-  const waiting = on.filter((t) => t.waiting && t.idProblem);
+  const waiting = state.tracking.filter((t) => t.on && t.waiting && t.idProblem);
   const live = liveTools(state.tracking);
   const names = (list: Tool[]) => list.map((t) => t.name).join(', ');
   const kinds = [...new Set(live.map((t) => `“${t.kind}”`))].join(' or ');
@@ -74,7 +88,8 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
 
       {waiting.length ? (
         <Note tone="warn">{`${names(waiting)} ${waiting.length === 1 ? 'needs' : 'need'} a correct ID before ${waiting.length === 1 ? 'it' : 'they'} can be used.`}</Note>
-      ) : live.length ? (
+      ) : null}
+      {live.length ? (
         <>
           <Note tone="ok"><strong>When you publish, your website will ask customers about cookies.</strong>{` ${names(live)} only ${live.length === 1 ? 'loads' : 'load'} for customers who say yes to ${kinds}. Every page’s footer gains “Cookie choices”.`}</Note>
           <Note tone="warn">
@@ -83,7 +98,7 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
             {` pages — they should name ${names(live)}.`}
           </Note>
         </>
-      ) : !on.length ? (
+      ) : !waiting.length ? (
         <Note tone="grey">With no tools on, your website only uses the cookies it needs to work — so customers get no cookie choice.</Note>
       ) : null}
 
@@ -99,11 +114,11 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
 
       <div role="status">
         {toast ? (
-          <div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm text-[var(--wh-panel)] shadow-modal max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:translate-x-0">
+          <div className="fixed bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-[10px] bg-[var(--wh-ink)] py-1.5 pr-1.5 pl-4 text-sm whitespace-nowrap text-white shadow-[0_8px_24px_rgba(38,36,32,0.25)] max-md:whitespace-normal max-md:right-3 max-md:bottom-3 max-md:left-3 max-md:translate-x-0">
             <Check aria-hidden="true" size={16} />
-            <span className="grow py-2">{`${toast.name} on · goes live when you publish`}</span>
+            <span className="grow pr-1.5">{`${toast.name} on · goes live when you publish`}</span>
             <button type="button" disabled={busy !== null} onClick={() => { const undo = toast; setToast(null); void save(undo, { on: false }); }}
-              className="min-h-11 cursor-pointer rounded-lg border-0 bg-white/15 px-3.5 text-sm font-bold text-[var(--wh-panel)]">Undo</button>
+              className="min-h-11 cursor-pointer rounded-[8px] border-0 bg-white/[0.14] px-3.5 text-sm font-bold whitespace-nowrap text-white">Undo</button>
           </div>
         ) : null}
       </div>
@@ -124,7 +139,7 @@ function ToolRow({ tool, busy, value, onSwitch, onType, onDone }: {
       <div className="flex items-center gap-3">
         <span className="flex grow flex-col gap-1">
           <span className="text-base font-bold">{tool.name}</span>
-          <span><span className={`rounded-full px-2.5 py-0.5 text-size-13 font-semibold ${marketing ? 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]' : 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]'}`}>{tool.kind}</span></span>
+          <span><span className={`rounded-full px-2.5 py-[3px] text-size-12 font-semibold whitespace-nowrap ${marketing ? 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]' : 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]'}`}>{tool.kind}</span></span>
         </span>
         <span className="w-[180px] shrink-0 max-md:w-[110px]"><RowSwitch label={tool.name} hideLabel on={tool.on} disabled={busy} onChange={onSwitch} /></span>
       </div>
@@ -145,9 +160,9 @@ function ToolRow({ tool, busy, value, onSwitch, onType, onDone }: {
 
 /** website.mjs `msg`: a line in green, amber or grey. */
 function Note({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: ReactNode }) {
-  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : tone === 'warn' ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]';
+  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : tone === 'warn' ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]';
   return (
-    <p className={`m-0 flex items-start gap-2 rounded-lg px-3 py-2.5 text-size-15 leading-[1.45] ${look}`}>
+    <p className={`m-0 flex items-start gap-2 rounded-[8px] px-3 py-2.5 text-size-15 leading-[1.45] ${look}`}>
       <span aria-hidden="true" className="mt-0.5 shrink-0">{tone === 'warn' ? <TriangleAlert size={18} /> : tone === 'ok' ? <Check size={18} /> : <NavIcon name="website" size={18} />}</span>
       <span>{children}</span>
     </p>

@@ -217,7 +217,7 @@ function SummaryRow({ name, badge, to, onOpen, children }: { name: string; badge
         <span className="text-sm text-[var(--wh-muted)]">{children}</span>
       </span>
       {badge ? <span className="rounded-full bg-[var(--wh-warn-bg)] px-2.5 py-0.5 text-size-13 font-semibold whitespace-nowrap text-[var(--wh-warn-ink)]">{badge}</span> : null}
-      {to || onOpen ? <ChevronRight aria-hidden="true" size={18} /> : null}
+      {to || onOpen ? <ChevronRight aria-hidden="true" size={16} className="text-[var(--wh-muted)]" /> : null}
     </>
   );
   const look = 'flex min-h-16 items-center gap-3.5 px-[18px] py-2.5 text-[var(--wh-ink)] no-underline';

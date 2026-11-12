@@ -97,9 +97,50 @@ test('published, customers get only the tools that are on with a right ID, each 
   assert.deepEqual((await info()).tracking, [{ tool: 'google_analytics', kind: 'Statistics', id: 'G-PSW1MY7HB4' }]);
 });
 
+test('the letters-and-numbers tools take a plain ID, trimmed; pasted code or anything around an ID waits and never reaches customers', async (t) => {
+  const { req, tool, info } = await setUpShop(t, '[ID checks shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  const meta = byKey(ok(await tool('meta_pixel', { on: true, id: '  123456789012345 ' })), 'meta_pixel');
+  assert.equal(meta.id, '123456789012345');
+  assert.equal(meta.waiting, false);
+  assert.equal(byKey(ok(await tool('tiktok_pixel', { on: true, id: 'C4A1B2C3D4E5F6G7H8I9' })), 'tiktok_pixel').waiting, false);
+  for (const [key, id] of [
+    ['microsoft_clarity', '<script>alert(1)</script>abc'],
+    ['microsoft_clarity', "fbq('init','123')"],
+    ['google_analytics', 'G-1"><script>x</script>'],
+    ['google_analytics', 'G-'],
+  ]) assert.equal(byKey(ok(await tool(key, { on: true, id })), key).waiting, true, id);
+  ok(await req('/api/website/publish', { method: 'POST' }));
+  assert.deepEqual((await info()).tracking, [
+    { tool: 'meta_pixel', kind: 'Marketing', id: '123456789012345' },
+    { tool: 'tiktok_pixel', kind: 'Marketing', id: 'C4A1B2C3D4E5F6G7H8I9' },
+  ]);
+});
+
+test('with the website off, customers get no answer at all, so no tracking, even when tools are published', async (t) => {
+  const { req, tool, info } = await setUpShop(t, '[Off tracking shop]');
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  ok(await tool('google_analytics', { on: true, id: 'G-PSW1MY7HB4' }));
+  ok(await req('/api/website/publish', { method: 'POST' }));
+  ok(await req('/api/website/turn-off', { method: 'POST' }));
+  assert.deepEqual(await info(), { error: 'Storefront not found' });
+});
+
+test('one shop’s tools never reach another shop’s customers or draft', async (t) => {
+  const a = await setUpShop(t, '[Shop A tools]');
+  const b = await setUpShop(t, '[Shop B tools]');
+  ok(await a.req('/api/website/turn-on', { method: 'POST' }));
+  ok(await a.tool('google_analytics', { on: true, id: 'G-AAA' }));
+  ok(await a.req('/api/website/publish', { method: 'POST' }));
+  ok(await b.req('/api/website/turn-on', { method: 'POST' }));
+  ok(await b.tool('google_analytics', { on: true, id: 'G-BBB' }));
+  assert.deepEqual((await b.info()).tracking, []);
+  assert.equal(byKey(ok(await a.req('/api/website')), 'google_analytics').id, 'G-AAA');
+});
+
 test('an unknown tool, a missing on, an ID that isn’t text and a tool before set-up are refused', async (t) => {
   const { tool } = await setUpShop(t, '[Refused shop]');
-  assert.equal((await tool('hotjar', { on: true, id: 'x' })).status, 404);
+  for (const key of ['hotjar', '__proto__', 'constructor']) assert.equal((await tool(key, { on: true, id: 'x' })).status, 404, key);
   assert.equal((await tool('google_analytics', { id: 'G-1' })).status, 400);
   assert.equal((await tool('google_analytics', { on: true, id: 42 })).status, 400);
   assert.equal((await tool('google_analytics', { on: true, id: `G-${'A'.repeat(200)}` })).status, 400);
