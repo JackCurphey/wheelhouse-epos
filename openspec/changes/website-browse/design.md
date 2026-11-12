@@ -79,7 +79,7 @@ What this piece builds on:
 - For each product, the server answers one of:
   - `ready` with a quantity ("Ready today at Bolton · [n] in stock" on the product page; "Ready today at Bolton" on a card), when the chosen shop's `product_stock.qty` is above 0
   - `elsewhere` with the shop's name, for a size in stock at another shop but not this one (`wb-product-size-other`)
-  - `sold-out` ("Sold out at Bolton", `wb-product-held`), when nothing is left; a Cycle to Work hold already counts the bike out, so it needs nothing of its own
+  - `sold-out` ("Sold out at Bolton", `wb-product-held`), when nothing is left; a bike held for a Cycle to Work order counts out by Cycle to Work's own rule (`freeHere`: frames in stock, or the stock figure less the open orders holding it)
   - `none` (no line), when no shop is chosen
 - With one shop, that shop is always the chosen one.
 - **Availability filter:** "Ready today at Bolton" is the only availability choice in this piece. The "Ready at Bolton in [n] days" and "We order it in" lines, and the setting for them, come with WP-6.3 (Jack's answer 2).

@@ -13,15 +13,20 @@ import { toCapacitySettings } from '../workshop/jobs.js';
 import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames } from '../website.js';
+import { NotFound, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
 
 export const SITE_OFF = 'This website isn’t available';
 export const SITE_FAILED = 'Something went wrong — try again';
+export const SITE_NOT_FOUND = 'We can’t find that page';
 
 // One limit per visitor address for every /api/site route (design 2). The
 // number suits a customer browsing: a page asks for two or three answers, so
 // 300 a minute is a page every second or so (decided while building, Jack's
-// November file). Suggestions get their own limit with their route (PR 2).
+// November file). Suggestions ask as the customer types, so they have their
+// own limit and don't use up the page's (design 2).
 const siteLimiter = makeRateLimiter(300, 60 * 1000);
+const suggestLimiter = makeRateLimiter(120, 60 * 1000);
+const SUGGEST = '/api/site/suggest';
 
 // The path after /store/<slug> when the website is reached that way, or the
 // path as asked on the shop's own address.
@@ -36,7 +41,7 @@ export function isSiteApi(path) {
 
 /** Turns a visitor away past the limit; true when it answered. Run before any database work. */
 export function siteRateLimited(req, res, path) {
-  if (siteLimiter.check(clientIp(req))) return false;
+  if ((path === SUGGEST ? suggestLimiter : siteLimiter).check(clientIp(req))) return false;
   sendJson(res, 429, { error: 'Too many requests — try again in a minute' });
   return true;
 }
@@ -48,8 +53,9 @@ export function siteRateLimited(req, res, path) {
  */
 export async function handleSiteRequest(req, res, path, shop, staff) {
   if (req.method !== 'GET') return false;
-  const handler = READS[path];
-  if (!handler) return false;
+  const found = readFor(path);
+  if (!found) return false;
+  const { handler, params } = found;
   try {
     const website = await prepare('SELECT kind, is_on, published, draft FROM website').get();
     // A shop whose website is its Shopify shop has no Wheelhouse website (design 2).
@@ -58,12 +64,14 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
     // shop's own staff; checking the shop again here keeps a website switched
     // off a moment later from previewing for another shop's staff.
     const preview = staff?.shop.id === shop.id && !(await isOn(website));
-    const answer = await handler({ req, shop, website, preview });
+    const query = new URL(req.url, 'http://site').searchParams;
+    const answer = await handler({ req, shop, website, preview, query, params });
     // Staff and customers ask at the same address, and a preview can carry
     // the draft: nothing in between may keep an answer.
     res.setHeader('Cache-Control', 'no-store');
     sendJson(res, 200, answer);
   } catch (err) {
+    if (err instanceof NotFound) return sendJson(res, 404, { error: SITE_NOT_FOUND }), true;
     // A failed read never stops the server, and the page says so (design 2).
     console.error(err);
     sendJson(res, 503, { error: SITE_FAILED });
@@ -79,7 +87,22 @@ const READS = {
   '/api/site': siteAnswer,
   // screens: wb-shop, wb-home
   '/api/site/categories': categoriesAnswer,
+  // screens: wb-category, wb-category-filtered, wb-category-empty, wb-category-no-shop, wb-category-parent, wb-category-child
+  '/api/site/products': productsAnswer,
+  // screens: wb-search-typing, wb-search-no-suggestions
+  [SUGGEST]: suggestAnswer,
+  // screens: wb-search-results, wb-search-measure, wb-search-none
+  '/api/site/search': searchAnswer,
 };
+
+// screens: wb-product, wb-product-photos, wb-product-sizes, wb-product-size-other, wb-product-held
+const PRODUCT = /^\/api\/site\/products\/([^/]+)$/;
+
+function readFor(path) {
+  if (Object.hasOwn(READS, path)) return { handler: READS[path], params: {} };
+  const product = PRODUCT.exec(path);
+  return product ? { handler: productAnswer, params: { id: product[1] } } : null;
+}
 
 async function siteAnswer({ req, shop, website, preview }) {
   // Customers see only what is published. Staff previewing a website that has

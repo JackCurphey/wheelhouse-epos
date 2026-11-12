@@ -66,8 +66,8 @@ function matches(p, g, conds, whole) {
   return bySize ? 'size' : 'name';
 }
 
-const MEASURE = /^(-?\d{1,9}(?:\.\d{1,4})?)([a-z]+)?$/i;
-const keyOf = (n) => Math.round(Number(n) * 10000);
+export const MEASURE = /^(-?\d{1,9}(?:\.\d{1,4})?)([a-z]+)?$/i;
+export const keyOf = (n) => Math.round(Number(n) * 10000);
 // The products with a number answer of `n`, in any of `detailIds`: an = on whole numbers,
 // which row-level security lets the index serve (migration 121).
 async function answering(detailIds, n) {

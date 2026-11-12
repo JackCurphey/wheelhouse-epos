@@ -17,15 +17,15 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 2. Risky — products: listing, filters, sort, product, suggestions and search
 
-- [ ] 2.1 Test: `GET /api/site/products?category=` lists six at a time A to Z with the total and `after` for the next six; offline, archived and £0 products never appear
-- [ ] 2.2 Test: filters from the category's own details (number with unit, text), AND between details and OR within one, Brand, Price From/To, and "Ready today at [shop]"; each value's count agrees with the list
-- [ ] 2.3 Test: a parent category offers only Availability, Brand and Price, and its subcategories
-- [ ] 2.4 Test: the sorts A to Z, Price low to high and high to low, and Newest
-- [ ] 2.5 Test: `GET /api/site/products/:id?shop=` answers name, price, brand, description, photos (own and sizes', no repeats), specifications, sizes and colours with the stock line `ready`, `elsewhere`, `sold-out` or `none`; never cost or supplier; a held last bike counts as sold out
-- [ ] 2.6 Test: a `shop` that isn't one of this business's shops is ignored (no stock line)
-- [ ] 2.7 Test: `GET /api/site/suggest` groups products, repairs, categories and pages, starts from the second letter, and has its own limit
-- [ ] 2.8 Test: `GET /api/site/search` answers repairs and pages that match and products by Best match; "bearing 30 mm" answers Bearings with inner diameter 30 mm ticked; nothing found answers empty
-- [ ] 2.9 Build the queries in `server/site-products.js`, reusing Stock's detail filter and "bearing 30 mm" reading
+- [x] 2.1 Test: `GET /api/site/products?category=` lists six at a time A to Z with the total and `after` for the next six; offline, archived and £0 products never appear
+- [x] 2.2 Test: filters from the category's own details (number with unit, text), AND between details and OR within one, Brand, Price From/To, and "Ready today at [shop]"; each value's count agrees with the list
+- [x] 2.3 Test: a parent category offers only Availability, Brand and Price, and its subcategories
+- [x] 2.4 Test: the sorts A to Z, Price low to high and high to low, and Newest
+- [x] 2.5 Test: `GET /api/site/products/:id?shop=` answers name, price, brand, description, photos (own and sizes', no repeats), specifications, sizes and colours with the stock line `ready`, `elsewhere`, `sold-out` or `none`; never cost or supplier; a held last bike counts as sold out
+- [x] 2.6 Test: a `shop` that isn't one of this business's shops is ignored (no stock line)
+- [x] 2.7 Test: `GET /api/site/suggest` groups products, repairs, categories and pages, starts from the second letter, and has its own limit
+- [x] 2.8 Test: `GET /api/site/search` answers repairs and pages that match and products by Best match; "bearing 30 mm" answers Bearings with inner diameter 30 mm ticked; nothing found answers empty
+- [x] 2.9 Build the queries in `server/site-products.js`, reusing Stock's detail filter and "bearing 30 mm" reading
 - [ ] 2.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 3. Risky — the website app: shell, home, Shop, not found, off, footer pages
