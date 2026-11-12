@@ -113,7 +113,7 @@ test('a first visit with two shops (wb-first-visit): no shop asked for and no st
   r = await renderWebsite({ home: HOME({ line: 'none' }) });
   const { ui } = r;
   await ui.findByRole('heading', { level: 2, name: 'Featured products' });
-  assert.ok(ui.getByRole('link', { name: 'Choose a shop to collect from' }));
+  assert.ok(ui.getByRole('button', { name: 'Choose a shop to collect from' }));
   assert.equal(new URL(homeAsked()[0].url, 'http://localhost').searchParams.has('shop'), false);
   assert.ok(!main().textContent.includes('Ready today'));
 });

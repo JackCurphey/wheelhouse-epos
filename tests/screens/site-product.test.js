@@ -263,6 +263,22 @@ test('a size at the other shop (wb-product-size-other): struck, read out " — n
   assert.equal(line().textContent, 'Ready today at Bolton · 2 in stock');
 });
 
+test('"Collect from [Second site] instead" opens that shop’s page, not "We can’t find that page"', async () => {
+  r = await open(SIZED);
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('heading', { level: 1, name: '[Product with sizes]' });
+  fireEvent.click(ui.getByRole('radio', { name: '[Colour 1]' }));
+  fireEvent.click(ui.getByRole('radio', { name: 'M — not in stock at Bolton' }));
+  fireEvent.click(ui.getByRole('link', { name: 'Collect from [Second site] instead' }));
+  const h1 = await ui.findByRole('heading', { level: 1 });
+  assert.notEqual(h1.textContent, '[Product with sizes]', 'the link went somewhere');
+  assert.notEqual(h1.textContent, 'We can’t find that page');
+  // Pull request 7's shop page, for the shop the link names.
+  assert.equal(h1.textContent, 'North Street Cycles, [Second site]');
+  assert.ok(ui.getByRole('button', { name: 'Collect from here' }));
+});
+
 // ---------- 5.4 wb-product-held ----------
 
 test('sold out at the chosen shop (wb-product-held): "Sold out at Bolton", no Add to basket, Ask the shop', async () => {

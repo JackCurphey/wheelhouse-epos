@@ -47,10 +47,9 @@ test('the shell on a computer (site): skip link, name, menu, search, chip, Accou
   const search = ui.getByRole('combobox', { name: 'Search the shop' });
   assert.ok(search.closest('[role="search"]') !== null);
   assert.equal(search.getAttribute('placeholder'), 'Search');
-  // Two shops, none chosen: the chip asks, and leads to Our shops until pull request 7.
-  const chip = ui.getByRole('link', { name: 'Choose a shop to collect from' });
+  // Two shops, none chosen: the chip asks, and opens "Which shop will you collect from?" (site-shops.test.js).
+  const chip = ui.getByRole('button', { name: 'Choose a shop to collect from' });
   assert.equal(chip.textContent, 'Choose a shop');
-  assert.equal(href(chip), `${BASE}/shops`);
 
   const account = ui.getByRole('link', { name: 'Your account' });
   assert.equal(account.textContent, 'Account');
@@ -69,14 +68,14 @@ test('the shell on a computer (site): skip link, name, menu, search, chip, Accou
 
 test('the chip names the chosen shop from the wh_shop cookie, and ignores a shop the business doesn’t have', async () => {
   r = await renderWebsite({ cookie: 'wh_shop=1' });
-  const chip = await r.ui.findByRole('link', { name: 'Collecting from North Street Cycles, Bolton — change the shop' });
+  const chip = await r.ui.findByRole('button', { name: 'Collecting from North Street Cycles, Bolton — change the shop' });
   assert.equal(chip.textContent, 'Collecting from Bolton · Change');
   assert.equal(chip.querySelector('strong')?.textContent, 'Bolton');
   r.ui.unmount();
   r.client.clear();
   r.uninstall();
   r = await renderWebsite({ cookie: 'wh_shop=99' });
-  assert.ok(await r.ui.findByRole('link', { name: 'Choose a shop to collect from' }));
+  assert.ok(await r.ui.findByRole('button', { name: 'Choose a shop to collect from' }));
 });
 
 test('the shop’s uploaded logo shows beside its name, with the name as the link', async () => {
@@ -91,6 +90,7 @@ test('one shop says Find us, with no chip, and the footer names the one shop', a
   r = await renderWebsite({ site: ONE_SHOP });
   const nav = await r.ui.findByRole('navigation', { name: 'Website' });
   assert.deepEqual([...nav.querySelectorAll('a')].map((a) => a.textContent), ['Shop', 'Book a repair', 'Find us']);
+  assert.ok(r.ui.queryByRole('button', { name: /Choose a shop|Collecting from/ }) === null);
   assert.ok(r.ui.queryByRole('link', { name: /Choose a shop|Collecting from/ }) === null);
   assert.equal(r.ui.getByRole('combobox', { name: 'Search the shop' }).getAttribute('placeholder'), 'Search the shop');
   const line = document.querySelector('footer').firstElementChild;
@@ -130,7 +130,7 @@ test('on a tablet the header uses icons with the same names', async () => {
   assert.equal(r.ui.getByRole('link', { name: 'Your account' }).textContent, '');
   assert.equal(r.ui.getByRole('link', { name: 'Basket, 0 items' }).textContent, '');
   // The chip moves to the top of the page on narrower screens.
-  const chip = r.ui.getByRole('link', { name: /Choose a shop to collect from/ });
+  const chip = r.ui.getByRole('button', { name: /Choose a shop to collect from/ });
   assert.ok(document.getElementById('main-content').contains(chip));
 });
 
@@ -145,7 +145,7 @@ test('the phone menu (site-menu) opens, closes on Esc and returns focus to the m
   assert.ok(ui.getByRole('button', { name: 'Search the shop' }));
   assert.ok(ui.getByRole('link', { name: 'Basket, 0 items' }));
   // On a phone the chip is a line at the top of the page.
-  const chip = ui.getByRole('link', { name: /Collecting from Bolton/ });
+  const chip = ui.getByRole('button', { name: /Collecting from Bolton/ });
   assert.ok(chip.textContent.includes('Change'));
 
   fireEvent.click(button);

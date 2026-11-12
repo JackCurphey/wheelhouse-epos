@@ -292,6 +292,8 @@ test("today's hours and the next opening are worked out in the shop's time zone"
   let bolton = ok(await site(north)).shops[0];
   assert.deepEqual(bolton.today, { open: '09:00', close: '17:30' });
   assert.equal(bolton.nextOpening, null);
+  // Today's date, so the shop's page can put today in bold (wb-shop-page).
+  assert.equal(bolton.todayDate, '2026-09-01');
 
   // Closed on Tuesdays: opens Wednesday.
   await setOpeningDays(north.shop.id, [1, 3, 4, 5, 6]);
@@ -328,6 +330,7 @@ test("today's hours and the next opening are worked out in the shop's time zone"
   try {
     await setOpeningDays(north.shop.id, [1]);
     assert.deepEqual(ok(await site(north)).shops[0].today, { open: '09:00', close: '17:30' });
+    assert.equal(ok(await site(north)).shops[0].todayDate, '2026-08-31');
     await setOpeningDays(north.shop.id, [2]);
     bolton = ok(await site(north)).shops[0];
     assert.equal(bolton.today, null);

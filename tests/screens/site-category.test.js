@@ -273,8 +273,12 @@ test('before a shop is chosen (wb-category-no-shop): Availability asks for a sho
   const availability = [...filters().querySelectorAll('fieldset')][0];
   assert.equal(availability.querySelector('legend').textContent, 'Availability');
   assert.ok(availability.querySelector('input') === null);
-  const choose = within(availability).getByRole('link', { name: 'Choose a shop to collect from' });
-  assert.equal(href(choose), `${BASE}/shops`);
+  // It opens the chip's "Which shop will you collect from?" (pull request 7).
+  const choose = within(availability).getByRole('button', { name: 'Choose a shop to collect from' });
+  const { fireEvent } = await rtl();
+  fireEvent.click(choose);
+  assert.ok(ui.getByRole('dialog', { name: 'Which shop will you collect from?' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Cancel' }));
   assert.equal(cards().length, 6);
   assert.ok(cards().every((c) => !c.textContent.includes('Ready today') && !c.textContent.includes('Sold out')));
 });
