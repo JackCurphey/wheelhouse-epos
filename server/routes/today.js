@@ -3,6 +3,7 @@
 // shop, for the Owner. Each item has a `kind` and what its line shows; later
 // packages add kinds here (a short float, stock below zero, online orders…),
 // so Today grows a line per kind and nothing else changes.
+import { paymentsNeedDetails } from './online-payments.js';
 import { prepare } from '../db.js';
 import { currentSession } from '../lib/session.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
@@ -203,7 +204,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id))] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision

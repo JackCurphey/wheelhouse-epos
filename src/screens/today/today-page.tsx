@@ -10,6 +10,7 @@ import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
 import { penceText } from '@/lib/cash-count.ts';
 import { HOW, dayText } from '@/screens/customers/privacy-requests.tsx';
+import { PAYING_ONLINE, providerText } from '@/screens/settings/online-orders-settings.tsx';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ type Attention =
   | { kind: 'restock_new'; count: number; forJobs: number }
   // Cycle to Work (openspec/changes/cycle-to-work, task 10.1; server/c2w/today.js).
   | { kind: 'c2w_hold_ended'; orderId: number; customerName: string; bike: string; holdUntil: string }
+  | { kind: 'payments_need_details'; providerName: string | null; needsDetailsBy: string | null; needsWhat: string | null }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
 type TillToday = { code: string | null; openedAt: string | null; openedBy: string | null; floatCheck: { byName: string; at: string; short: boolean; seenByName: string | null } | null };
@@ -349,6 +351,17 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${who} asked us to delete their account`}
           sub={`${from}${from === 'Asked' ? '' : ','} ${dayText(i.askedOn)} · answer by ${dayText(i.dueBy)}`}
           right={<Link to={ROUTES['cs-privacy']} aria-label={`Open ${who}’s request`} className={linkButton(touch)}>Open</Link>} />
+      );
+    }
+    // ws-today-pay-more (opening.mjs line 150; website-management design 6):
+    // the payment provider wants more details by a date. Add the details opens Paying online.
+    if (i.kind === 'payments_need_details') {
+      const provider = providerText(i.providerName);
+      return (
+        <Line key="payments-need-details" lead={warn}
+          title={`${provider} needs more details by ${i.needsDetailsBy ? dayText(i.needsDetailsBy) : '[date]'}`}
+          sub={`Or online payments and “Pay now” for repairs stop · usually ${i.needsWhat ?? '[what they need]'}`}
+          right={<Link to={PAYING_ONLINE} className={linkButton(touch)}>Add the details</Link>} />
       );
     }
     if (i.kind === 'quote_no_answer') {

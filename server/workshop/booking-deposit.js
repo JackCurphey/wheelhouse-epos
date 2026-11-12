@@ -25,7 +25,7 @@ export async function bookingDeposit({ serviceIds, notSure }) {
     cancelHours: s.deposit_cancel_hours,
     pence: depositPence({
       depositOn: true, depositKind: s.deposit_kind, depositPercent: s.deposit_percent, depositFixedPence: s.deposit_fixed_pence,
-      depositUnknownPence: s.deposit_unknown_pence, paymentsConnected: paymentsConnected(),
+      depositUnknownPence: s.deposit_unknown_pence, paymentsConnected: await paymentsConnected(),
     }, prices),
   };
 }

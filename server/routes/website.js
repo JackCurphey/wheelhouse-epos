@@ -12,7 +12,7 @@ import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, s
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
 import { currentSession } from '../lib/session.js';
 import {
-  WebsiteError, discard, history, historyVersion, ownerNames, publish, restore, saveLogo, savePart, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
+  WebsiteError, discard, history, historyVersion, ownerNames, publish, restore, saveColour, saveLogo, savePart, saveTracking, setUp, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
 } from '../website.js';
 
 // Public-storefront on/off switch plus its branding fields (tagline,
@@ -70,6 +70,18 @@ function registerWebsite(route) {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
     await answer(res, async () => saveLogo(await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES), await loginId(req)));
   }, uploadedImageBody(MAX_SHOP_IMAGE_BYTES));
+  route('POST', '/api/website/set-up', async (req, res) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, async () => setUp(await readJsonBody(req), await loginId(req)));
+  });
+  route('PUT', '/api/website/colour', async (req, res) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, async () => saveColour((await readJsonBody(req))?.colour, await loginId(req)));
+  });
+  route('PUT', '/api/website/tracking/:tool', async (req, res, params) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, async () => saveTracking(params.tool, await readJsonBody(req), await loginId(req)));
+  });
   route('POST', '/api/website/publish', async (req, res) => {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
     await answer(res, async () => publish(await loginId(req)));
