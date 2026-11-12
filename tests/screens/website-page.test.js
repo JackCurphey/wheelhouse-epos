@@ -15,7 +15,7 @@ const served = (state, extra = {}) => ({ '/api/website': () => [200, state], '/a
 
 // 2.1 ws-page: off, never published.
 test('off and never published: the free address, Turn it on with its drawn lines, the starting wording and the product counts', async () => {
-  const { ui, within } = await openWebsite(PAGE, { answers: served(OFF_NEVER) });
+  const { ui, within, fireEvent } = await openWebsite(PAGE, { answers: served(OFF_NEVER) });
   assert.ok(await ui.findByRole('heading', { name: 'Your website is off' }));
   assert.ok(ui.getByText(/Only your staff can see it\. Customers will find it at/));
   assert.ok(ui.getByRole('link', { name: 'north-street.wheelhouseepos.com' }));
@@ -26,12 +26,18 @@ test('off and never published: the free address, Turn it on with its drawn lines
   assert.ok(ui.getByText('212 products go online'));
   assert.ok(ui.getByText('14 have no photo (shown with their name)'));
   assert.ok(ui.getByText('3 have no price (stay off until priced)'));
-  assert.equal(ui.getAllByRole('link', { name: 'See them' }).length, 2);
+  // website.mjs seeThem (line 57): the links say what they open.
+  assert.equal(ui.getByRole('link', { name: 'See the products with no photo, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-photo');
+  assert.equal(ui.getByRole('link', { name: 'See the products with no price, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-price');
   assert.ok(ui.getByText('Not published yet'));
-  // History is dimmed until there is something to go back to.
+  // History is dimmed until there is something to go back to (website.mjs line 236),
+  // but stays reachable by keyboard, with the reason as its title; pressing it opens nothing.
   const historyButton = ui.getByRole('button', { name: 'History' });
-  assert.ok(historyButton.disabled);
-  assert.equal(ui.getByText('Nothing published yet').id, historyButton.getAttribute('aria-describedby'));
+  assert.equal(historyButton.disabled, false);
+  assert.equal(historyButton.getAttribute('aria-disabled'), 'true');
+  assert.equal(historyButton.getAttribute('title'), 'Nothing published yet');
+  fireEvent.click(historyButton);
+  assert.ok(ui.queryByRole('dialog') === null);
   assert.ok(ui.queryByRole('region', { name: 'Unpublished changes' }) === null);
   const summary = within(ui.getByRole('list', { name: 'Your website' }));
   assert.ok(summary.getByText('Taking payments'));
@@ -40,7 +46,18 @@ test('off and never published: the free address, Turn it on with its drawn lines
   assert.ok(summary.getByText('None — so there’s no cookie choice'));
   assert.ok(summary.getByText(/north-street\.wheelhouseepos\.com · your free address/));
   assert.ok(summary.getByText('Wheelhouse’s website'));
-  assert.ok(ui.getByRole('link', { name: 'Open Online orders settings' }));
+  assert.equal(ui.getByRole('link', { name: 'Open Online orders settings' }).getAttribute('href'), '/workshop/settings');
+});
+
+test('Edit words and photos and the Pages row both take you to the Words and photos list', async () => {
+  const { ui, fireEvent } = await openWebsite(PAGE, { answers: served(OFF_NEVER) });
+  const heading = await ui.findByRole('heading', { name: 'Words and photos' });
+  fireEvent.click(ui.getByRole('button', { name: 'Edit words and photos: opens the Words and photos list' }));
+  assert.ok(document.activeElement === heading);
+  heading.blur();
+  fireEvent.click(ui.getByRole('button', { name: /^Pages/ }));
+  assert.ok(document.activeElement === heading);
+  assert.equal(ui.getByRole('link', { name: /^Taking payments/ }).getAttribute('href'), '/workshop/settings');
 });
 
 test('Turn it on publishes and switches on together, then the page says it is on', async () => {
@@ -246,6 +263,7 @@ test('Discard that fails says why inside the box', async () => {
   const box = within(await ui.findByRole('dialog', { name: 'Discard your 3 unpublished changes?' }));
   fireEvent.click(box.getByRole('button', { name: 'Discard changes' }));
   assert.equal((await box.findByRole('alert')).textContent, 'There are no changes to discard');
+  assert.equal(ui.getAllByRole('alert').length, 1, 'said once, inside the box');
 });
 
 test('History: View shows that version’s words under its row', async () => {
@@ -308,4 +326,21 @@ test('Website is not in a Staff sidebar', async () => {
   const navs = ui.getAllByRole('navigation', { name: /Main/ }).map((n) => within(n));
   assert.ok(navs.some((nav) => nav.queryAllByRole('link', { name: 'Today' }).length));
   assert.ok(navs.every((nav) => nav.queryAllByRole('link', { name: 'Website' }).length === 0));
+});
+
+test('Publish that fails says the server’s reason on the page, and the list stays open', async () => {
+  const { ui, fireEvent } = await openWebsite(PAGE, {
+    answers: served(ON_CHANGES, { '/api/website/publish': () => [409, { error: 'Someone else published first' }] }),
+  });
+  await openList(ui, fireEvent);
+  fireEvent.click(await ui.findByRole('button', { name: 'Publish' }));
+  assert.equal((await ui.findByRole('alert')).textContent, 'Someone else published first');
+  assert.ok(ui.getByRole('region', { name: 'Unpublished changes' }), 'the list stays open');
+});
+
+test('Turn it on that fails says so in general words, and the website stays off', async () => {
+  const off = await openWebsite(PAGE, { answers: served(OFF_NEVER, { '/api/website/turn-on': () => [500, {}] }) });
+  off.fireEvent.click(await off.ui.findByRole('button', { name: 'Turn it on' }));
+  assert.equal((await off.ui.findByRole('alert')).textContent, 'Wheelhouse couldn’t do that. Try again.');
+  assert.ok(off.ui.getByRole('heading', { name: 'Your website is off' }));
 });
