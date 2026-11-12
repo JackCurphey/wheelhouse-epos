@@ -240,7 +240,10 @@ export async function websiteState(row = null) {
     ...(website.kind ? {} : { startCounts: await startCounts() }),
     address: `${shop.slug}.${STOREFRONT_BASE_DOMAIN}`,
     // The Taking payments row: the same state as Settings › Online orders (design 6).
-    payments: { state: paymentsState(await paymentAccount()), providerName: payments()?.displayName ?? null },
+    payments: await (async () => {
+      const account = await paymentAccount();
+      return { state: paymentsState(account), providerName: payments()?.displayName ?? null, needsDetailsBy: account?.status === 'needs_details' ? account.needs_details_by ?? null : null };
+    })(),
   };
 }
 

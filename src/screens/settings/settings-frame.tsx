@@ -15,7 +15,8 @@ import { ROUTES } from '@/staff/routes.ts';
  * each fold then opens and closes on its own.
  */
 export type SettingsFold = { key: string; title: string; summary: ReactNode; body: ReactNode };
-export type SettingsArea = { key: string; title: string; intro: string; folds: SettingsFold[] };
+// `lead` sits between the area's heading and its folds (website.mjs `master`, Buying online).
+export type SettingsArea = { key: string; title: string; intro: string; lead?: ReactNode; folds: SettingsFold[] };
 export type SettingsRoom = { key: string; name: string; intro: string; areas: SettingsArea[] };
 
 const roomHref = (key: string) => `${ROUTES.settings}?room=${key}`;
@@ -97,9 +98,10 @@ function RoomPage({ room, fold }: { room: SettingsRoom; fold: string | null }) {
             <h3 id={`set-${a.key}`} className="m-0 text-lg font-bold">{a.title}</h3>
             <p className="m-0 text-sm text-[var(--wh-muted)]">{a.intro}</p>
           </div>
+          {a.lead}
           {folds(a)}
         </section>
-      ) : <div key={a.key}>{folds(a)}</div>))}
+      ) : <div key={a.key} className="flex flex-col gap-2">{a.lead}{folds(a)}</div>))}
     </div>
   );
 }

@@ -42,6 +42,7 @@ export const OFF_NEVER = {
   logo: null, mainColour: '#2b2b2b', tracking: tools(),
   productCounts: { goOnline: 212, noPhoto: 14, noPrice: 3 },
   address: 'north-street.wheelhouseepos.com',
+  payments: { state: 'none', providerName: null, needsDetailsBy: null },
 };
 
 // On, with three unpublished changes: ws-page-on and ws-page-changes.

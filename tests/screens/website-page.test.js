@@ -311,3 +311,46 @@ test('Website is not in a Staff sidebar', async () => {
   assert.ok(navs.some((nav) => nav.queryAllByRole('link', { name: 'Today' }).length));
   assert.ok(navs.every((nav) => nav.queryAllByRole('link', { name: 'Website' }).length === 0));
 });
+
+// Taking payments (design 6; website.mjs PAY_ROW): the same state as Settings › Front desk › Online orders.
+const paying = (state, needsDetailsBy = null) => ({ ...ON_CLEAN, payments: { state, providerName: null, needsDetailsBy } });
+const payRow = async (state, by) => {
+  const { ui, within } = await openWebsite(PAGE, { answers: served(paying(state, by)) });
+  await ui.findByRole('heading', { name: 'Your website is on' });
+  const row = within(ui.getByRole('list', { name: 'Your website' })).getByText('Taking payments').closest('li');
+  return { ui, row, link: row.querySelector('a') };
+};
+const WHERE = ' · in Settings › Front desk › Online orders';
+
+test('Taking payments, connected but not tested: make a test payment, badge Not tested, opening Paying online', async () => {
+  const { row, link } = await payRow('connected');
+  assert.ok(row.textContent.includes(`Connected · make a test payment before customers use it${WHERE}`));
+  assert.ok(row.textContent.includes('Not tested'));
+  assert.equal(link.getAttribute('href'), '/workshop/settings?room=front-desk&fold=paying-online');
+});
+
+test('Taking payments, tested: connected, test payment done, with no badge', async () => {
+  const { row } = await payRow('tested');
+  assert.ok(row.textContent.includes(`Connected to [payment provider] · test payment done${WHERE}`));
+  assert.ok(!/Not tested|Not connected|Needs details/.test(row.textContent));
+});
+
+test('Taking payments, needs more details: the date, or online payments stop, badge Needs details', async () => {
+  const { row } = await payRow('more', '2026-11-30');
+  assert.ok(row.textContent.includes(`[payment provider] needs more details by Mon 30 Nov, or online payments stop${WHERE}`));
+  assert.ok(row.textContent.includes('Needs details'));
+});
+
+test('switched off but connected, the page doesn’t say customers can only look', async () => {
+  const { ui } = await openWebsite(PAGE, { answers: served({ ...OFF_CHANGES, payments: { state: 'tested', providerName: null, needsDetailsBy: null } }) });
+  await ui.findByRole('heading', { name: 'Your website is off' });
+  assert.ok(ui.queryByText('Customers can look but not buy until you connect payments.') === null);
+});
+
+test('a connection that didn’t finish reads as not connected', async () => {
+  const { ui, within } = await openWebsite(PAGE, { answers: served({ ...OFF_CHANGES, payments: { state: 'failed', providerName: null, needsDetailsBy: null } }) });
+  await ui.findByRole('heading', { name: 'Your website is off' });
+  assert.ok(ui.getByText('Customers can look but not buy until you connect payments.'));
+  const row = within(ui.getByRole('list', { name: 'Your website' })).getByText('Taking payments').closest('li');
+  assert.ok(row.textContent.includes('Not connected · customers can look but not buy · open to connect [payment provider]'));
+});

@@ -17,6 +17,7 @@ import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-gro
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { FloatSettings, useFloatSummary } from './end-of-day-settings.tsx';
+import { BuyingOnline, PayingOnline, usePayingOnlineSummary } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
 import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroom-settings.tsx';
@@ -1037,6 +1038,7 @@ function OwnerSettings() {
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
   const bikeWarranties = useBikeWarrantiesSummary();
+  const payingOnline = usePayingOnlineSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1062,6 +1064,11 @@ function OwnerSettings() {
         // After Messages, as drawn (settings-frame.mjs SETTINGS_ROOMS); only Float works yet (set-eod).
         { key: 'end-of-day', title: 'End of day', intro: 'How the till closes each day.', folds: [
           { key: 'float', title: 'Float', summary: float, body: <FloatSettings /> },
+        ] },
+        // After End of day, as drawn (website.mjs ONLINE_INTRO, ws-pay-*): Buying online above
+        // Paying online only (defaults taken 12 Nov, 4; website-management design 6).
+        { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
+          { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
         ] },
       ],
     },

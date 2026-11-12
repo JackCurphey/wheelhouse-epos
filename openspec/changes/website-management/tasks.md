@@ -66,8 +66,8 @@ the code. While building, run only the related test files
 - [x] 5.3 Test: `paymentsConnected` is per shop; with it off, booking deposits are off and "Pay now" is hidden — one test per caller (`server/workshop/deposit.js`, `booking-deposit.js`, `routes/portal.js`, `routes/workshop-settings.js`)
 - [x] 5.4 Test: Buying online can't be switched On while not connected; connecting switches it On
 - [x] 5.5 Test: Today's Needs attention shows "[payment provider] needs more details by [date]" with Add the details for the Owner, and drops it when no longer needed
-- [ ] 5.6 Screen test: `ws-pay-none`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-today-pay-more`, and the Website page's Taking payments row in each state
-- [ ] 5.7 Build the migration, adapter calls, routes, the Online orders settings page (Buying online and Paying online only) and the Today source to pass 5.1–5.6
+- [x] 5.6 Screen test: `ws-pay-none`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-today-pay-more`, and the Website page's Taking payments row in each state
+- [x] 5.7 Build the migration, adapter calls, routes, the Online orders settings page (Buying online and Paying online only) and the Today source to pass 5.1–5.6
 - [ ] 5.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 6. Shopify in the new frame (pull request 6a and 6b, about 500 lines each)

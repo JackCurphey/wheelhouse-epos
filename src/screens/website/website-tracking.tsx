@@ -158,12 +158,16 @@ function ToolRow({ tool, busy, value, onSwitch, onType, onDone }: {
   );
 }
 
-/** website.mjs `msg`: a line in green, amber or grey. */
-function Note({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: ReactNode }) {
-  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : tone === 'warn' ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]';
+/**
+ * website.mjs `msg`: a line in green, amber or grey; `bad` looks amber but,
+ * when `live`, is said at once (role alert) where the others are a status.
+ */
+export function Note({ tone, live = false, children }: { tone: 'ok' | 'warn' | 'bad' | 'grey'; live?: boolean; children: ReactNode }) {
+  const amber = tone === 'warn' || tone === 'bad';
+  const look = tone === 'ok' ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-state-ready-ink)]' : amber ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-ink)]';
   return (
-    <p className={`m-0 flex items-start gap-2 rounded-[8px] px-3 py-2.5 text-size-15 leading-[1.45] ${look}`}>
-      <span aria-hidden="true" className="mt-0.5 shrink-0">{tone === 'warn' ? <TriangleAlert size={18} /> : tone === 'ok' ? <Check size={18} /> : <NavIcon name="website" size={18} />}</span>
+    <p role={live ? (tone === 'bad' ? 'alert' : 'status') : undefined} className={`m-0 flex items-start gap-2 rounded-[8px] px-3 py-2.5 text-size-15 leading-[1.45] ${look}`}>
+      <span aria-hidden="true" className="mt-0.5 shrink-0">{amber ? <TriangleAlert size={18} /> : tone === 'ok' ? <Check size={18} /> : <NavIcon name="website" size={18} />}</span>
       <span>{children}</span>
     </p>
   );

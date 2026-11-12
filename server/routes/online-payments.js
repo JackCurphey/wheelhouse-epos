@@ -11,7 +11,7 @@ import { currentSession } from '../lib/session.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { isConnected, paymentAccount, paymentsState } from '../payments/provider.js';
 
-const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=online-orders';
+const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
 const TEST_PENCE = 100;
 

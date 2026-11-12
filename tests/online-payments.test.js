@@ -27,7 +27,7 @@ after(async () => {
   await pool.end();
 });
 const ok = (res, status = 200) => { assert.equal(res.status, status, JSON.stringify(res.body)); return res.body; };
-const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=online-orders';
+const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 
 async function freshShop(t, name, on = server) {
   const s = await staffSignup(on.baseUrl, { shopName: name });
@@ -267,9 +267,11 @@ test('connected, Buying online switches off and on; it reads off again if the co
 test('the Website page’s Taking payments row reads the same state', async (t) => {
   const shop = await freshShop(t, '[Website row shop]');
   ok(await shop.req('/api/website/set-up', { method: 'POST', body: { kind: 'wheelhouse', startWith: 'nothing', mainColour: '#1A3F66' } }));
-  assert.deepEqual(ok(await shop.req('/api/website')).payments, { state: 'none', providerName: null });
+  assert.deepEqual(ok(await shop.req('/api/website')).payments, { state: 'none', providerName: null, needsDetailsBy: null });
   await connectPayments(shop.shop.id, { testPaid: true });
-  assert.deepEqual(ok(await shop.req('/api/website')).payments, { state: 'tested', providerName: null });
+  assert.deepEqual(ok(await shop.req('/api/website')).payments, { state: 'tested', providerName: null, needsDetailsBy: null });
+  await connectPayments(shop.shop.id, { status: 'needs_details', needsDetailsBy: '2026-09-30' });
+  assert.deepEqual(ok(await shop.req('/api/website')).payments, { state: 'more', providerName: null, needsDetailsBy: '2026-09-30' });
 });
 
 // ---------- 5.5 Today ----------

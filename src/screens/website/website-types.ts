@@ -46,6 +46,8 @@ export type WebsiteState = {
   /** Before set-up: what "Every product online" would give. */
   startCounts?: { goOnline: number; noPhoto: number; noPrice: number };
   address: string;
+  /** Taking payments: the same state as Settings › Front desk › Online orders (design 6). */
+  payments: { state: 'none' | 'failed' | 'connected' | 'tested' | 'more'; providerName: string | null; needsDetailsBy: string | null };
 };
 
 export type Version = {

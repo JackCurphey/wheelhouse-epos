@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Box, Page, Refusal } from '@/screens/reports/reports-bits.tsx';
 import { DiscardBox, HistoryBox, PartBox } from './website-boxes.tsx';
 import { WebsiteStart } from './website-start.tsx';
+import { PAYING_ONLINE, providerText } from '@/screens/settings/online-orders-settings.tsx';
+import { dayText } from '@/screens/customers/privacy-requests.tsx';
 import { TrackingTools, liveTools } from './website-tracking.tsx';
 import { changeWords, customerSite, plural, when, type Part, type WebsiteState } from './website-types.ts';
 
@@ -65,6 +67,8 @@ export function WebsitePage() {
     ?? s.parts.find((p) => 'photo' in p) ?? null;
   const hasChanges = s.changeCount > 0;
   const live = liveTools(s.tracking);
+  // Connected (tested or not, or needing details): customers can buy once it's on.
+  const paying = ['connected', 'tested', 'more'].includes(s.payments.state);
 
   if (tracking) {
     return (
@@ -99,7 +103,7 @@ export function WebsitePage() {
         {s.isOn ? null : (
           <div className="flex flex-col gap-0.5 text-size-13 text-[var(--wh-muted)] md:items-end md:text-right">
             {s.neverPublished ? <span>This also publishes your website as it is now.</span> : null}
-            <span>Customers can look but not buy until you connect payments.</span>
+            {paying ? null : <span>Customers can look but not buy until you connect payments.</span>}
             {s.partsToCheck.length ? (
               <span>
                 {`${plural(s.partsToCheck.length, 'page')} still ${s.partsToCheck.length === 1 ? 'has' : 'have'} starting wording: `}
@@ -162,7 +166,7 @@ export function WebsitePage() {
       </Box>
 
       <ul aria-label="Your website" className="m-0 flex list-none flex-col overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-0">
-        <SummaryRow name="Taking payments" to={ROUTES.settings} badge="Not connected">Not connected · customers can look but not buy · open to connect [payment provider] · in Settings › Front desk › Online orders</SummaryRow>
+        <PaymentsRow payments={s.payments} />
         <SummaryRow name="Pages">Home, About us, Contact us, Collection and returns, Privacy, Cookies</SummaryRow>
         <SummaryRow name="Tracking tools" onOpen={() => setTracking(true)}>{live.length ? `${live.map((t) => t.name).join(', ')} · cookie choice on` : 'None — so there’s no cookie choice'}</SummaryRow>
         <SummaryRow name="Web address">{`${s.address} · your free address · Wheelhouse sets up your own address for you`}</SummaryRow>
@@ -184,7 +188,7 @@ export function WebsitePage() {
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-[18px] py-3.5">
         <span className="grow text-size-15">What the website sells, “Show on website” and online payments are in <strong>Settings › Front desk › Online orders</strong>.</span>
-        <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center text-size-15 font-semibold text-[var(--wh-ink)]">Open Online orders settings</Link>
+        <Link to={PAYING_ONLINE} className="inline-flex min-h-11 items-center text-size-15 font-semibold text-[var(--wh-ink)]">Open Online orders settings</Link>
       </div>
 
       {editing ? <PartBox part={editing} onState={saved} onSaved={(next) => { saved(next); setEditing(null); }} onClose={() => setEditing(null)} /> : null}
@@ -195,6 +199,16 @@ export function WebsitePage() {
       {history ? <HistoryBox changeCount={s.changeCount} parts={s.parts} onRestored={(next) => { saved(next); setListOpen(true); setHistory(false); }} onClose={() => setHistory(false)} /> : null}
     </Page>
   );
+}
+
+/** website.mjs PAY_ROW: Taking payments, opening Settings › Front desk › Online orders › Paying online. */
+function PaymentsRow({ payments: p }: { payments: WebsiteState['payments'] }) {
+  const provider = providerText(p.providerName);
+  const [words, badge] = p.state === 'connected' ? ['Connected · make a test payment before customers use it', 'Not tested']
+    : p.state === 'tested' ? [`Connected to ${provider} · test payment done`, undefined]
+    : p.state === 'more' ? [`${provider} needs more details by ${p.needsDetailsBy ? dayText(p.needsDetailsBy) : '[date]'}, or online payments stop`, 'Needs details']
+    : [`Not connected · customers can look but not buy · open to connect ${provider}`, 'Not connected'];
+  return <SummaryRow name="Taking payments" to={PAYING_ONLINE} badge={badge}>{`${words} · in Settings › Front desk › Online orders`}</SummaryRow>;
 }
 
 /** website.mjs `productCounts`: what goes online, with See them opening Stock. */
