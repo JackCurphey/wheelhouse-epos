@@ -15,6 +15,7 @@ import { DiaryBlocksSettings, useDiaryBlocksSummary } from './diary-blocks-setti
 import { StorageSlotsSettings, useStorageSlotsSummary } from './storage-slots-settings.tsx';
 import { CustomerGroupsSettings, useCustomerGroupsSummary } from './customer-groups-settings.tsx';
 import { WaysToPaySettings, useWaysToPaySummary } from './ways-to-pay-settings.tsx';
+import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
@@ -1031,6 +1032,7 @@ function OwnerSettings() {
   const storageSlots = useStorageSlotsSummary();
   const customerGroups = useCustomerGroupsSummary();
   const waysToPay = useWaysToPaySummary();
+  const otherWays = useOtherWaysSummary();
   const collection = useCollectionSummary();
   const float = useFloatSummary();
   const closeEntry = useCloseEntrySummary();
@@ -1055,9 +1057,11 @@ function OwnerSettings() {
           // Beside Tills, its own fold (stage-1 gaps 9; trust-pin-workshop).
           { key: 'signing-in', title: 'Signing in', summary: signingIn, body: <SigningInSettings /> },
         ] },
-        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers) and Customer groups (cs-groups).
+        // After Till, as drawn (settings-frame.mjs): Ways to pay (set-pay-ways; finish-customers), Other ways to pay
+        // (set-pay-other; owner-setup-till-payments-eod) and Customer groups (cs-groups).
         { key: 'payments', title: 'Payments', intro: 'How customers can pay.', folds: [
           { key: 'ways-to-pay', title: 'Ways to pay', summary: waysToPay, body: <WaysToPaySettings /> },
+          { key: 'other-ways-to-pay', title: 'Other ways to pay', summary: otherWays, body: <OtherWaysToPay /> },
           { key: 'customer-groups', title: 'Customer groups', summary: customerGroups, body: <CustomerGroupsSettings /> },
         ] },
         { key: 'messages', title: 'Messages', intro: 'The texts and emails customers get from the shop.', folds: [
