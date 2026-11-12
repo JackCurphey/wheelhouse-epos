@@ -12,6 +12,7 @@ import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { returningReport, returningCsv } from '../lib/report-customers.js';
+import { vatReport, vatCsv } from '../lib/report-vat.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { listSaved, createSaved, renameSaved, deleteSaved, undoSaved, SavedNotFound } from '../lib/saved-reports.js';
@@ -49,6 +50,7 @@ const dates = (p) => `${p.from}-to-${p.through}`;
 
 // A period asked for in the address, or a 400 saying what to fix.
 const asked = (query) => ({ period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to') });
+const vatAsked = (query) => ({ ...asked(query), period: query.get('period') || 'this-vat-quarter' });
 const returningAsked = (query) => ({ ...asked(query), period: query.get('period') || 'last-12-months', months: query.get('months') });
 
 export function register(route) {
@@ -202,6 +204,39 @@ export function register(route) {
       throw err;
     }
   });
+
+  // VAT: the till's sales by VAT rate for the shop's VAT quarter, and the old
+  // record's sales on their own (needsQuarter asks for the quarter). What
+  // things cost is behind canSeeCosts too (design 1).
+  // screens: rp-vat, rp-vat-first
+  route('GET', '/api/reports/vat', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await vatReport(vatAsked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-vat
+  route('GET', '/api/reports/vat.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const report = await vatReport(vatAsked(query), await currentShopToday());
+      sendCsv(res, `vat-${ctx.shop.slug}-${dates(report.period)}`, vatCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
 
   // Change what's shown (Sales, and Takings and cash-ups): another measure, split
   // and limits, read from the sale lines. A combination that doesn't fit is a 400

@@ -240,3 +240,52 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
     await noSideScroll(page);
   });
 }
+
+// VAT (openspec/changes/reports-ready-made, group 3; rp-vat, rp-vat-first): the Owner opens
+// it from its card and is asked when the VAT quarter starts. At a computer they save March
+// (so September to November); at a phone they choose Not now and see calendar quarters.
+for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['phone', { width: 375, height: 812 }]] as const) {
+  test(`on a ${size}, the Owner opens VAT and is asked when the VAT quarter starts`, async ({ page, context }) => {
+    await page.setViewportSize(viewport);
+    const owner = await staffSignup(server!.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+    shops.push(owner.shop.id);
+    await runWithShop(owner.shop.id, async () => {
+      const site = await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get();
+      const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id').get(site.id, 'V1', 'Till 1', randomUUID());
+      const sale = await prepare(`INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, received_at, total_pence, vat_pence)
+        VALUES (?, ?, ?, 1, false, ?, ?, 1200, 200) RETURNING id`).get(randomUUID(), till.id, site.id, '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z');
+      await prepare(`INSERT INTO till_sale_lines (till_sale_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence)
+        VALUES (?, 'Item', 1, 1200, 1200, 2000, 200)`).run(sale.id);
+      await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES (?, 30, 30, 'Cash', 30)").run('2026-09-05T12:00:00Z');
+    });
+    await context.clearCookies();
+    const [name, value] = owner.cookie.split('=');
+    await context.addCookies([{ name, value, url: server!.baseUrl }]);
+
+    await page.goto(`${server!.baseUrl}/workshop/reports`);
+    await page.getByRole('region', { name: 'Ready-made reports' }).getByRole('link', { name: /^VAT/ }).click();
+    await expect(page).toHaveURL(`${server!.baseUrl}/workshop/reports/vat`);
+    const dialog = page.getByRole('dialog', { name: 'When does your VAT quarter start?' });
+    await expect(dialog).toBeVisible();
+    if (size === 'computer') {
+      await dialog.getByRole('radio', { name: 'March, June, September, December' }).click();
+      await dialog.getByRole('button', { name: 'Save' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByText(/· this VAT quarter, 1 September – 30 November, against the quarter before$/)).toBeVisible();
+      await page.reload();
+      await expect(page.getByRole('table', { name: 'VAT on sales by rate' })).toBeVisible();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    } else {
+      await dialog.getByRole('button', { name: 'Not now' }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByText(/^Showing calendar quarters/)).toBeVisible();
+      await expect(page.getByText(/· this VAT quarter, 1 July – 30 September, against the quarter before$/)).toBeVisible();
+    }
+    const sales = page.getByRole('table', { name: 'VAT on sales by rate' });
+    await expect(sales.getByRole('row', { name: /^Standard 20%/ }).getByRole('cell')).toHaveText(['£10.00', '£2.00', '£0.00']);
+    await expect(page.getByRole('table', { name: 'Sales without their VAT' }).getByRole('row', { name: /^VAT not recorded/ }).getByRole('cell')).toHaveText(['£30.00', '£0.00']);
+    await expect(page.getByRole('region', { name: 'Stock purchases' }).getByRole('note')).toBeVisible();
+    await expect(page.getByRole('img')).toHaveCount(0);
+    await noSideScroll(page);
+  });
+}
