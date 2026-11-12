@@ -64,6 +64,35 @@ function parse(query) {
   };
 }
 
+export const PERIOD_KINDS = ['today', 'this-week', 'this-month', 'last-month', 'last-12-months', 'dates'];
+
+// A report's title and what it is limited to, as the title, the line under it and a saved report's
+// description say them: "Sales: items sold by product" and ["Accessories only"].
+export function describeChoice(sel) {
+  const measureLabel = MEASURES.find(([v]) => v === sel.measure)[1];
+  const splitLabel = SPLITS.find(([v]) => v === sel.split)[1];
+  const limitParts = [sel.only.length ? `${list(sel.only)} only` : null, sel.supplier ? `${sel.supplier} only` : null].filter(Boolean);
+  return { title: `${BASES[sel.base].label}: ${lower(measureLabel)} by ${lower(splitLabel)}`, limitParts, measureLabel, splitLabel, baseLabel: BASES[sel.base].label };
+}
+
+// What a saved report may be made of: the same choices the panel offers, refused for the same reasons
+// as a typed address. The period is only its kind (a Pick dates report is not checked for days).
+export function checkSaved(raw) {
+  const text = (v) => typeof v === 'string';
+  if (!text(raw.base) || !BASES[raw.base]) throw new ValidationError('Choose Sales or Takings and cash-ups');
+  if (!text(raw.period) || !PERIOD_KINDS.includes(raw.period)) throw new ValidationError('Choose Today, This week, This month, Last month, Last 12 months or Pick dates');
+  if (!text(raw.measure) || !MEASURES.some(([v]) => v === raw.measure)) throw new ValidationError('Choose Takings or Items sold');
+  if (!text(raw.split) || !SPLITS.some(([v]) => v === raw.split)) throw new ValidationError('Choose how to split it');
+  const again = 'Choose what to limit it to again';
+  if (raw.only !== undefined && (!Array.isArray(raw.only) || !raw.only.every(text))) throw new ValidationError(again);
+  if (raw.supplier !== undefined && raw.supplier !== null && !text(raw.supplier)) throw new ValidationError(again);
+  const sel = { base: raw.base, measure: raw.measure, split: raw.split, only: [...new Set(raw.only ?? [])], supplier: (raw.supplier ?? '').trim(), period: raw.period };
+  const fit = fitFor({ ...sel, days: 1 }, { canSeeCosts: true });
+  const why = fit.measure.find((c) => c.value === sel.measure)?.why || fit.split.find((c) => c.value === sel.split)?.why;
+  if (why) throw new ValidationError(why);
+  return sel;
+}
+
 const daysIn = (period) => Math.round((Date.parse(period.to) - Date.parse(period.from)) / 86400000) + 1;
 const lower = (label) => label.toLowerCase();
 const list = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
@@ -71,7 +100,7 @@ const list = (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -
 const rangeSql = (col) => `${col} >= (?::date)::timestamp AT TIME ZONE ? AND ${col} < (?::date + 1)::timestamp AT TIME ZONE ?`;
 
 // The shop's top-level Stockroom categories, and Labour.
-async function onlyChoices() {
+export async function onlyChoices() {
   const rows = await prepare('SELECT name FROM product_categories WHERE parent_id IS NULL ORDER BY lower(name), name').all();
   return [...rows.map((r) => r.name), 'Labour'];
 }

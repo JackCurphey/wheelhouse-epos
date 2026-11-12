@@ -5,7 +5,7 @@
 // (row-level security), so another shop's sales never count.
 import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
-import { sendJson, ValidationError } from '../lib/http.js';
+import { sendJson, readJsonBody, ValidationError } from '../lib/http.js';
 import { currentShopToday, currentShopTimeZone } from '../workshop/jobs.js';
 import { prepare } from '../db.js';
 import { salesReport } from '../lib/report-sales.js';
@@ -13,6 +13,7 @@ import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
+import { listSaved, createSaved } from '../lib/saved-reports.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
@@ -203,6 +204,27 @@ export function register(route) {
     try {
       const report = await changedReport(query, await currentShopToday(), { canSeeCosts: await canSeeCosts(req) });
       sendCsv(res, `${report.fileName}-${ctx.shop.slug}-${dates(report.period)}`, changedCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+  // Your reports: the person's own saved reports, and saving one under a name. A saved report is
+  // the person's alone; nobody else can list or open it.
+  // screens: rp-home
+  route('GET', '/api/reports/saved', async (req, res) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    sendJson(res, 200, { reports: await listSaved(ctx.login.id) });
+  });
+  // screens: rp-save, rp-save-taken
+  route('POST', '/api/reports/saved', async (req, res) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const body = await readJsonBody(req);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) return sendJson(res, 400, { error: 'Send the report as an object' });
+      sendJson(res, 201, await createSaved(ctx.login.id, body));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;
