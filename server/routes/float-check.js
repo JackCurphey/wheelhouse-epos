@@ -66,7 +66,7 @@ async function checkedInTakesPayments(checkin) {
 // (openspec/changes/close-the-day, design 6).
 const SHORT = 'f.counted_pence < f.expected_pence';
 const OVER_AFTER_CLOSED = `f.counted_pence > f.expected_pence AND EXISTS (SELECT 1 FROM day_closes c
-  WHERE c.day = (SELECT max(p.day) FROM float_checks p WHERE p.day < f.day))`;
+  WHERE c.reopened_at IS NULL AND c.day = (SELECT max(p.day) FROM float_checks p WHERE p.day < f.day))`;
 const WAITING_TO_BE_SEEN = `f.seen_at IS NULL AND (${SHORT} OR (${OVER_AFTER_CLOSED}))`;
 
 export async function floatsToSee() {

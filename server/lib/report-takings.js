@@ -7,13 +7,17 @@
 // months, their closed days added up (answer 9).
 import { prepare } from '../db.js';
 import { periodFor, addDays } from './report-periods.js';
-import { onlineSoFar, daysWaiting, takingsSoFarFor } from '../routes/close-the-day.js';
+import { onlineSoFar, daysWaiting, takingsSoFarFor, reopenedOn } from '../routes/close-the-day.js';
 
 const CLOSES = `SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.closed_at, COALESCE(l.name, 'Unknown') AS closed_by_name,
     c.takings_pence, c.card_pence, c.cash_pence, c.other_pence, c.online_pence,
     c.counted_pence - c.expected_pence AS difference_pence, c.banked_pence
   FROM day_closes c LEFT JOIN logins l ON l.id = c.login_id
-  WHERE c.day BETWEEN ?::date AND ?::date ORDER BY c.day`;
+  WHERE c.reopened_at IS NULL AND c.day BETWEEN ?::date AND ?::date ORDER BY c.day`;
+
+const DAY3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const reopenedLabel = (iso) => `${DAY3[new Date(`${iso}T00:00:00Z`).getUTCDay()]} ${Number(iso.slice(8))} ${MON3[Number(iso.slice(5, 7)) - 1]}`;
 
 const sum = (list, k) => list.reduce((n, c) => n + c[k], 0);
 
@@ -35,7 +39,7 @@ export async function takingsReport(choice, today) {
   const beforeTo = todayOpen && period.before.to > period.before.from ? addDays(period.before.to, -1) : period.before.to;
   period = { ...period, before: { from: period.before.from, to: beforeTo } };
   const before = await prepare(CLOSES).all(period.before.from, period.before.to);
-  const { first } = await prepare("SELECT to_char(min(day), 'YYYY-MM-DD') AS first FROM day_closes").get();
+  const { first } = await prepare("SELECT to_char(min(day), 'YYYY-MM-DD') AS first FROM day_closes WHERE reopened_at IS NULL").get();
   const nothingBefore = !first || first >= period.from;
 
   const keyOf = (c) => (unit === 'month' ? c.day.slice(0, 7) : c.day);
@@ -49,6 +53,9 @@ export async function takingsReport(choice, today) {
 
   // Days nobody closed that were counted with a later morning's float: Close the day can still close them.
   const waiting = new Set((await daysWaiting()).map((w) => w.for_day));
+  // The reopened day, if it falls in this period.
+  const reopenedAny = await reopenedOn();
+  const reopened = reopenedAny && reopenedAny.day >= period.from && reopenedAny.day <= period.through ? reopenedAny : null;
   const rows = [];
   for (const b of [...buckets].reverse()) {
     if (b.notReached) continue;
@@ -69,6 +76,9 @@ export async function takingsReport(choice, today) {
         differencePence: c.difference_pence, closedByName: c.closed_by_name, closedAt: c.closed_at,
       });
       rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: c.online_pence });
+    } else if (reopened?.day === b.key) {
+      // A reopened day (reports-accounts-and-reopen): left out of every figure, said so, and where to close it again.
+      rows.push({ kind: 'day', key: b.key, label: b.label, closed: false, reopened: true, closeDay: b.key });
     } else if (b.key === today) {
       rows.push({ kind: 'day', key: b.key, label: b.label, closed: false });
       // Today's online money so far, as drawn ("[£] so far"): not yet in any close.
@@ -99,5 +109,6 @@ export async function takingsReport(choice, today) {
       online: figure('online_pence'), cashDifference: figure('difference_pence'),
     },
     rows, bars, empty: rows.length === 0, nothingBefore, firstCloseOn: first ?? null,
+    reopened: reopened ? { day: reopened.day, label: reopenedLabel(reopened.day), reason: reopened.reason, reopenedByName: reopened.reopenedByName } : null,
   };
 }
