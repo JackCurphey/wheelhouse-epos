@@ -4,7 +4,7 @@
 // Not in ROUTE_AREAS: these are public, found from the address, never from a
 // staff session.
 import { prepare } from '../db.js';
-import { sendJson, makeRateLimiter } from '../lib/http.js';
+import { sendJson, makeRateLimiter, parseCookies } from '../lib/http.js';
 import { clientIp } from '../proxy-trust.js';
 import { currentSession } from '../lib/session.js';
 import { shopToday } from '../clock.js';
@@ -12,7 +12,7 @@ import { effectiveHours, openingHoursFor, weekdayOf } from '../capacity.js';
 import { toCapacitySettings } from '../workshop/jobs.js';
 import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
-import { ownerNames } from '../website.js';
+import { ownerNames, turnOn, turnOff, WebsiteError } from '../website.js';
 import { JOIN } from '../lib/categories.js';
 import { NotFound, homeAnswer, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
 
@@ -53,7 +53,7 @@ export function siteRateLimited(req, res, path) {
  * /store/<slug>/ (Jack's answer 4), or null.
  */
 export async function handleSiteRequest(req, res, path, shop, staff) {
-  if (req.method !== 'GET') return false;
+  if (req.method !== 'GET') return siteActionRequest(req, res, path, shop, staff);
   const found = readFor(path);
   if (!found) return false;
   const { handler, params } = found;
@@ -118,8 +118,9 @@ async function siteAnswer({ req, shop, website, preview }) {
     mainColour: content?.main_colour || null,
     parts: publishedParts(content),
     shops: await shopsAnswer(),
-    // Kind and name only: a tool's ID reaches the page only once the visitor accepts (design 4).
-    tracking: content ? liveTracking(content).map((t) => ({ kind: t.kind, name: TOOL_BY_KEY.get(t.tool).name })) : [],
+    // Kind and name only, until the visitor's wh_cookies choice turns the
+    // tool's kind on: only then does its ID reach the page (design 4).
+    tracking: content ? trackingAnswer(liveTracking(content), cookieChoices(req)) : [],
     preview,
     canTurnOn: false,
   };
@@ -200,4 +201,52 @@ async function categoriesAnswer() {
     id: r.id, name: r.name, parentId: r.parent_id, path: r.path,
     products: counts.filter((c) => c.category === r.path || c.category.startsWith(`${r.path}${JOIN}`)).reduce((sum, c) => sum + c.n, 0),
   }));
+}
+
+// ---- Cookie choices (website-browse PR 8, design 4) -----------------------
+
+// The cookie the visitor's choices are kept in; the page sets it (cookies.tsx).
+export const COOKIE_CHOICES = 'wh_cookies';
+// Which choice each kind of tool needs: the Choose cookies rows.
+export const CHOICE_FOR_KIND = { Statistics: 'measuring', Marketing: 'advertising' };
+
+/** The kinds the visitor said yes to, from `measuring-on.advertising-off`; anything else is no. */
+export function cookieChoices(req) {
+  const value = parseCookies(req)[COOKIE_CHOICES] || '';
+  return new Set(value.split('.').filter((part) => /^[a-z]+-on$/.test(part)).map((part) => part.slice(0, -3)));
+}
+
+function trackingAnswer(tools, yes) {
+  return tools.map((t) => {
+    const named = { kind: t.kind, name: TOOL_BY_KEY.get(t.tool).name };
+    return yes.has(CHOICE_FOR_KIND[t.kind]) ? { ...named, tool: t.tool, id: t.id } : named;
+  });
+}
+
+// ---- The staff banner's switch (website-browse PR 8, design 5) ------------
+
+export const SITE_TURN_REFUSED = 'Only the shop’s owner can turn the website on';
+const ACTIONS = { '/api/site/turn-on': 'on', '/api/site/turn-off': 'off' };
+
+// Turn it on and Turn off on the staff banner, at /store/<slug>/ only (server.js
+// finds `staff` there alone). The Owner only, until roles (WP-1.1), using the
+// Website page's own code; everyone else gets what a customer would.
+async function siteActionRequest(req, res, path, shop, staff) {
+  if (req.method !== 'POST' || !Object.hasOwn(ACTIONS, path)) return false;
+  res.setHeader('Cache-Control', 'no-store');
+  if (staff?.shop.id !== shop.id) return sendJson(res, 404, { error: SITE_OFF }), true;
+  // Another site's page can't make a signed-in Owner's browser press it.
+  const from = req.headers['sec-fetch-site'];
+  if (from && from !== 'same-origin' && from !== 'none') return sendJson(res, 403, { error: 'This can only be done from the shop’s own pages' }), true;
+  const ctx = await currentSession(req);
+  if (!ctx?.login.is_owner) return sendJson(res, 403, { error: SITE_TURN_REFUSED, owners: await ownerNames(shop.id) }), true;
+  try {
+    if (ACTIONS[path] === 'on') await turnOn(ctx.login.id);
+    else await turnOff();
+    sendJson(res, 200, { on: ACTIONS[path] === 'on' });
+  } catch (err) {
+    if (!(err instanceof WebsiteError)) throw err;
+    sendJson(res, err.status, { error: err.message });
+  }
+  return true;
 }
