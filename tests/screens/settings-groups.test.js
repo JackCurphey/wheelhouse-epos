@@ -58,6 +58,8 @@ async function openGroups(start = [{ id: 3, name: 'Club members', discountPercen
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
   await ui.findByRole('heading', { level: 3, name: 'Payments' });
+  // Quick buttons, open first, has its own "+ Add a group" (set-till-quick).
+  rtl.fireEvent.click(await ui.findByRole('button', { name: /^Quick buttons/ }));
   const fold = await ui.findByRole('button', { name: /^Customer groups/ });
   if (fold.getAttribute('aria-expanded') !== 'true') rtl.fireEvent.click(fold);
   await ui.findByRole('button', { name: '+ Add a group' });

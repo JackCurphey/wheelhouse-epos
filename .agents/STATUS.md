@@ -11,9 +11,14 @@ Who is on what, and what's next. Change these lines in the pull request
 that takes or finishes a piece. Everything that was here before 11 Nov is in
 `ARCHIVE.md`, "Moved from STATUS on 2026-11-11 (#669)".
 
-**Jack is on:** `your-data-download`, the rest of it: sales and refunds,
-workshop jobs, and the Citrus Lime left-out rows, with #661 (#667 is in).
+**Jack is on:** the Settings plan (`owner-setup-till-payments-eod`): quick
+buttons on the server (#698) and in Settings, End of day (#701) and Ways to
+pay (#709) are in; quick buttons on the till waits for Mark's yes on #693,
+and the change is archived with it. `your-data-download` is in (#678).
 `finish-account` is built and archived (#657 to #666).
+Also on: WP-6.1 website management (`website-management`), built
+overnight from 12 Nov, pull requests 1 to 6b; 7 waits for WP-1.1, 8 for WP-8.1.
+Also on: Reports part 3, your own reports (`reports-your-own`, WP-5.3), built overnight from 12 Nov in four pull requests: 1 Change what's shown and the changed Sales report, 2 saving a report (migration), 3 rename and delete, 4 Workshop's Change what's shown. Margin's measure waits for part 2's sale-line costs.
 
 **Jack next:**
 1. Products, stock, sizes and colours (WP-1.5): nine of ten pieces in.
@@ -38,7 +43,8 @@ required"; overrule the 26 and 28-29 Oct sections of
 `docs/decisions/decided-while-building.md` if you want. Later: switching
 real sending on, Stripe and the S700 reader, a Google account (#140).
 
-**Waiting on Mark:** what would free up more work (#560): the till deposit,
+**Waiting on Mark:** his yes on #693 for quick buttons on the till
+(`till-page.tsx`); what would free up more work (#560): the till deposit,
 step C (an offline key for a new till, #564; PIN hashes in the offline
 copy), roles and the settings store, WP-1.5, and his open pull requests
 (#499, #511, #520). Also: `PUT /api/sale-documents/:id` can write an order

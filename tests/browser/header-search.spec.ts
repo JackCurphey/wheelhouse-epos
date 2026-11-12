@@ -60,9 +60,17 @@ test.describe('on a computer', () => {
     await expect(results.getByRole('link', { name: `${job.reference} · Maya Patel` })).toBeVisible();
     const [b, r] = [await box.boundingBox(), await results.boundingBox()];
     expect(r!.y).toBeGreaterThan(b!.y + b!.height - 1);
-    await results.getByRole('link', { name: `${job.reference} · Maya Patel` }).click();
-    await expect(page).toHaveURL(new RegExp(`/workshop/diary\\?job=${job.id}`));
+    // The link asks the diary for the job. The diary reads ?job= and drops it
+    // from the address at once (diary-page.tsx, so going back doesn't open it
+    // again), so the address is checked before the click, on the link, and the
+    // job opening is checked by its dialog. Checking the address for ?job= after
+    // the click passed only when it looked before the diary dropped it: about 1
+    // run in 5 failed on main (11 Nov).
+    const link = results.getByRole('link', { name: `${job.reference} · Maya Patel` });
+    await expect(link).toHaveAttribute('href', `/workshop/diary?job=${job.id}`);
+    await link.click();
     await expect(page.getByRole('dialog', { name: /Standard service/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/workshop\/diary$/);
   });
 });
 
