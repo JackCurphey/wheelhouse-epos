@@ -77,7 +77,7 @@ the code. While building, run only the related test files
 - [x] 6.3 Build the adapter, pretend version and routes to pass 6.1–6.2 (pull request 6a)
 - [x] 6.4 Screen test: `ws-start-shopify`, `ws-shopify-connect` with `-failed`, `-check`, `-sending`, `-problem`, `-switch`; `ws-shopify-on` on the Website page; `ws-pay-shopify` in Online orders settings
 - [x] 6.5 Build the Shopify screens to pass 6.4 (pull request 6b)
-- [ ] 6.6 Self-review each with `reviewer`; full check
+- [x] 6.6 Self-review each with `reviewer`; full check
 
 ## 7. Roles (pull request 7, about 250 lines — waits for WP-1.1)
 
