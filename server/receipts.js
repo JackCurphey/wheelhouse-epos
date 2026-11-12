@@ -8,6 +8,7 @@
 import { prepare } from './db.js';
 import { receiptLabel } from './till/money.js';
 import { MONTHS } from './workshop/job-messages.js';
+import { penceText } from './lib/money-text.js';
 
 // A line break typed into a detail stays on its line (company customers' review 3).
 const oneLine = (v) => (v ? String(v).replace(/\s*[\r\n]+\s*/g, ' ').trim() : v);
@@ -59,7 +60,7 @@ export async function receiptFor({ source, id }) {
   };
 }
 
-const pounds = (pence) => `${pence < 0 ? '−' : ''}£${(Math.abs(pence) / 100).toFixed(2)}`;
+const pounds = penceText;
 const row = (left, right) => `${left}  ${right}`;
 
 // "25 Aug 2026 · 10:05" in the shop's time, as the printed receipt says it.
