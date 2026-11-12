@@ -40,6 +40,7 @@ POST /api/website/parts/:key/photo
 POST /api/website/logo
 POST /api/website/set-up
 PUT /api/website/colour
+PUT /api/website/tracking/:tool
 POST /api/website/publish
 POST /api/website/discard
 POST /api/website/turn-on
