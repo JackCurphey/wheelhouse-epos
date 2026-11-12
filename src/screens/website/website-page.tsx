@@ -57,7 +57,7 @@ export function WebsitePage() {
   if (!s) return <Page><p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
   if (!s.setUp) return <WebsiteStart state={s} failedAddress={fromShopify} onState={(next) => queryClient.setQueryData(['website'], next)} />;
   if (s.kind === 'shopify' && s.shopify) return <ShopifyPage state={s} link={s.shopify} onState={(next) => queryClient.setQueryData(['website'], next)} />;
-  if (connecting) return <ShopifyConnect failedAddress={fromShopify} onBack={() => setConnecting(false)} />;
+  if (connecting) return <ShopifyConnect failedAddress={fromShopify} siteOn={s.isOn} onBack={() => setConnecting(false)} />;
 
   /** Sends a change; the server answers with the whole Website page's state. */
   async function send(path: string, after?: (next: WebsiteState) => void) {
@@ -128,7 +128,7 @@ export function WebsitePage() {
                 ))}
               </span>
             ) : null}
-            {s.neverPublished ? <ProductCounts counts={s.productCounts} /> : null}
+            {s.neverPublished ? <ProductCounts counts={s.productCounts} online /> : null}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--wh-border)] pt-3.5">
@@ -229,12 +229,14 @@ function PaymentsRow({ payments: p }: { payments: WebsiteState['payments'] }) {
 }
 
 /** website.mjs `productCounts`: what goes online, with See them opening Stock. */
-export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'] }) {
+export function ProductCounts({ counts, online = false }: { counts: WebsiteState['productCounts']; online?: boolean }) {
+  // The Website page counts only products switched to show online; the set-up's step 3 counts them all.
+  const only = online ? '&online=1' : '';
   return (
     <ul aria-label="Your products online" className="m-0 flex list-none flex-col p-0 text-size-15">
       <li className="flex min-h-8 items-center">{`${plural(counts.goOnline, 'product')} ${counts.goOnline === 1 ? 'goes' : 'go'} online`}</li>
-      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo`} aria-label="See the products with no photo, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
-      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price`} aria-label="See the products with no price, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
+      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo${only}`} aria-label="See the products with no photo, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
+      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price${only}`} aria-label="See the products with no price, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
     </ul>
   );
 }
