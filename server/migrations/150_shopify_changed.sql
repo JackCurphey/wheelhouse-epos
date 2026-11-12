@@ -26,15 +26,21 @@ CREATE POLICY shopify_changed_shop_isolation ON shopify_changed
 -- Queues one product. Never stops the change that called it: a sale or a
 -- stock count must go through even if queueing fails, so a failure is only a
 -- warning in the log (Send in Wheelhouse still catches the product up).
+-- The checks before the inner block keep its savepoint to shops linked to
+-- Shopify, so a big delivery or count in any other shop costs nothing extra:
+-- with no shop set (a script), or another shop's, it can't be queued anyway.
 CREATE OR REPLACE FUNCTION shopify_queue_product(sid INTEGER, pid INTEGER) RETURNS void AS $$
 BEGIN
-  INSERT INTO shopify_changed (shop_id, product_id)
-    SELECT sid, pid
-     WHERE EXISTS (SELECT 1 FROM shopify_link WHERE shop_id = sid AND state <> 'stopped')
-       AND EXISTS (SELECT 1 FROM products WHERE id = pid AND shop_id = sid AND active = 1 AND show_online)
-    ON CONFLICT (shop_id, product_id) DO UPDATE SET changed_at = clock_timestamp();
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'Shopify: product % not queued: %', pid, SQLERRM;
+  IF sid IS NULL OR pid IS NULL OR current_setting('app.current_shop_id', true) IS DISTINCT FROM sid::text THEN RETURN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM shopify_link WHERE shop_id = sid AND state <> 'stopped') THEN RETURN; END IF;
+  BEGIN
+    INSERT INTO shopify_changed (shop_id, product_id)
+      SELECT sid, pid
+       WHERE EXISTS (SELECT 1 FROM products WHERE id = pid AND shop_id = sid AND active = 1 AND show_online)
+      ON CONFLICT (shop_id, product_id) DO UPDATE SET changed_at = clock_timestamp();
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'Shopify: product % not queued: %', pid, SQLERRM;
+  END;
 END $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION shopify_product_changed() RETURNS trigger AS $$
