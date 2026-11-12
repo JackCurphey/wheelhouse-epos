@@ -43,7 +43,8 @@ test('step 1: Wheelhouse’s website or Shopify, with Not now and its note', asy
 test('step 2: the logo, the skip line, Wheelhouse’s own colour, and another colour checked for reading', async () => {
   const { ui, fireEvent } = await start();
   next(ui, fireEvent);
-  assert.ok(await ui.findByRole('heading', { name: 'Your logo and colour' }));
+  const heading = await ui.findByRole('heading', { name: 'Your logo and colour' });
+  assert.ok(document.activeElement === heading, 'a new step moves focus to its heading');
   assert.ok(ui.getByRole('progressbar', { name: 'Step 2 of 3' }));
   assert.ok(ui.getByRole('button', { name: 'Add a logo' }));
   assert.ok(ui.getByText('No logo yet? Skip it — your shop’s name is shown instead, and you can add one later.'));
@@ -52,6 +53,7 @@ test('step 2: the logo, the skip line, Wheelhouse’s own colour, and another co
   assert.ok(ui.getByText('Every colour is checked so text on it stays easy to read.'));
   fireEvent.click(ui.getByRole('button', { name: 'Choose another colour' }));
   const another = ui.getByLabelText('Another colour');
+  assert.ok(document.activeElement === another, 'the colour picker takes focus when it opens');
   fireEvent.change(another, { target: { value: '#f5d90a' } });
   assert.match((await ui.findByRole('alert')).textContent, /hard to read/);
   assert.ok(ui.getByRole('radio', { name: 'Soft sand charcoal, #2A2822' }).checked);
@@ -71,6 +73,17 @@ test('step 2: adding a logo uploads it and shows it', async () => {
   assert.equal(calls.find((c) => c.path === '/api/website/logo').body.contentType, 'image/png');
   assert.ok(await ui.findByRole('img', { name: 'Your logo, uploaded' }));
   assert.ok(ui.getByRole('button', { name: 'Change logo' }));
+});
+
+test('step 2: a file that isn’t a picture says so and sends nothing', async () => {
+  const { ui, fireEvent } = await start({ '/api/website/logo': () => [200, NOT_SET_UP] });
+  next(ui, fireEvent);
+  await ui.findByRole('heading', { name: 'Your logo and colour' });
+  const file = new window.File(['pdf'], 'price-list.pdf', { type: 'application/pdf' });
+  fireEvent.change(ui.getByLabelText('Logo file'), { target: { files: [file] } });
+  assert.equal((await ui.findByRole('alert')).textContent, 'price-list.pdf isn’t a picture Wheelhouse can use. Choose a JPEG, PNG or WebP.');
+  assert.equal(calls.filter((c) => c.path === '/api/website/logo').length, 0);
+  assert.ok(ui.getByRole('button', { name: 'Add a logo' }));
 });
 
 test('step 3: every product or nothing, the counts with See them, and Make my website sets it up', async () => {

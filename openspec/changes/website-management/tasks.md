@@ -26,7 +26,7 @@ the code. While building, run only the related test files
 - [x] 1.7 Test: `/api/storefront/info` gives the published words, logo and colour, never the draft, and nothing while the website is off
 - [x] 1.8 Test: every write is refused for a non-Owner (`ownerOnly`)
 - [x] 1.9 Write the migration, `server/website.js` (model, changes, `websiteReady`) and the routes in `server/routes/website.js` to pass 1.1–1.8; keep `storefront_settings.enabled` in step with `is_on`
-- [ ] 1.10 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 1.10 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 2. The Website page — screen (pull request 2, about 550 lines)
 
