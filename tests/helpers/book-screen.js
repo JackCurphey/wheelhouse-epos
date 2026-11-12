@@ -54,6 +54,8 @@ export async function renderBookScreen({
   account = () => ({ status: 401, body: { error: 'Not signed in' } }),
   // The conversation's GET and POST /messages (ask-the-shop-screens).
   messages = () => ({ status: 401, body: { error: 'Not signed in' } }),
+  // A Cycle to Work order's private link, /c2w-links/<code> (cycle-to-work PR 9b).
+  c2wLink = NO_LINK,
 }) {
   const uninstall = installDom(`http://localhost${url}`);
   // A pretend screen: media(query) says which media queries match, as a phone
@@ -93,6 +95,7 @@ export async function renderBookScreen({
             : pathname.includes('/photo-codes/') ? photoCode
             : pathname.includes('/reminder-stops/') ? stopCode
             : pathname.includes('/reminder-links/') ? reminderLink
+            : pathname.includes('/c2w-links/') ? c2wLink
             : pathname.endsWith('/privacy') ? privacy
             : pathname.includes('/sign-in/') ? signIn
             : /\/(me|me\/contact|me\/email|me\/email\/confirm|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
@@ -144,7 +147,7 @@ export async function renderBookScreen({
   for (const [path, name] of Object.entries(real)) {
     realScreens[path] = (await importFresh(new URL(`screens/book/${path}.js`, BUILD).href))[name];
   }
-  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in', 'account', 'messages', 'from-reminder/:code', 'privacy']
+  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in', 'account', 'messages', 'from-reminder/:code', 'privacy', 'cycle-to-work/:code']
     .map((p) => ({ ...child(p), Component: p === at ? Screen : realScreens[p] ?? Where }));
   const start = new URL(url, 'http://localhost');
   const entry = state ? { pathname: start.pathname, search: start.search, state } : url;
