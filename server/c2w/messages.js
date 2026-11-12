@@ -55,6 +55,23 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
   return queued;
 }
 
+/**
+ * Released: "Your bike is no longer put aside", unless "Your bike is put aside"
+ * is still in its minute. Then that one is stopped and nothing is sent, so the
+ * customer isn't told a put-aside ended that she never heard of.
+ */
+export async function queueReleasedMessage(orderId, opts) {
+  const r = await prepare('SELECT customer_id FROM c2w_orders WHERE id = ?').get(orderId);
+  const waiting = await prepare(
+    "SELECT 1 FROM customer_messages WHERE intent_state = 'intended' AND template_key = 'c2w_put_aside' AND customer_id = ? LIMIT 1",
+  ).get(r.customer_id);
+  if (waiting) {
+    await stopWaiting(r.customer_id, 'c2w_put_aside');
+    return { skipped: 'put_aside_waiting' };
+  }
+  return queueC2wMessage(orderId, 'c2w_released', opts);
+}
+
 // The customer's Cycle to Work messages of one kind still waiting are stopped.
 // Messages aren't tied to an order, so this is by customer (decided while
 // building, 12 Nov, PR 9c item 6).

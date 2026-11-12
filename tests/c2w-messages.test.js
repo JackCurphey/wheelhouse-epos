@@ -241,8 +241,8 @@ test('9.1 Your bike is put aside: not sent once the bike is released within its 
   assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
   await dueNow(maya);
   await sendDueForShop(owner.shop.id);
-  // Put aside is undone; the released message (journey 6, as Jack answered on 12 Nov) goes in its place.
-  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone'], ['c2w_released', 'delivered']]);
+  // Put aside is undone, and nor is she told "no longer put aside" about a put-aside she never heard of.
+  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone']]);
   // A bike still held is told as usual.
   const kept = await newMaya();
   await quote(kept, await framedBike(1));
@@ -279,9 +279,15 @@ test('9.1 Your hold ends on [date]: not sent for a hold no longer than the remin
   assert.deepEqual((await messagesTo(longer)).map((m) => m.template_key), ['c2w_put_aside', 'c2w_hold_ending']);
 });
 
+const toldPutAside = async (maya) => {
+  await dueNow(maya);
+  await sendDueForShop(owner.shop.id);
+};
+
 test('9.1 Your bike is no longer put aside: sent when the bike is released, with the drawn words (cw-texts-hold)', async () => {
   const maya = await newMaya();
   const made = await quote(maya, await framedBike(1));
+  await toldPutAside(maya);
   assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
   const sent = await messagesTo(maya);
   assert.deepEqual(sent.map((m) => m.template_key), ['c2w_put_aside', 'c2w_released']);
@@ -292,16 +298,18 @@ test('9.1 Your bike is no longer put aside: sent when the bike is released, with
 test('9.1 Your bike is no longer put aside: still sent once its minute has passed, as the bike stays released', async () => {
   const maya = await newMaya();
   const made = await quote(maya, await framedBike(1));
+  await toldPutAside(maya);
   assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
   await dueNow(maya);
   await sendDueForShop(owner.shop.id);
-  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'undone'], ['c2w_released', 'delivered']]);
+  assert.deepEqual((await messagesTo(maya)).map((m) => [m.template_key, m.intent_state]), [['c2w_put_aside', 'delivered'], ['c2w_released', 'delivered']]);
 });
 
 test('9.1 Your bike is no longer put aside: not sent once the bike is held again within its minute', async () => {
   // Released, then the certificate comes in the same minute and the bike is held again (cw-certificate-released).
   const maya = await newMaya();
   const made = await quote(maya, await framedBike(1));
+  await toldPutAside(maya);
   assert.equal((await post(`/api/c2w/orders/${made.id}/release`, {})).status, 200);
   assert.equal((await certify(made.id, { amountPence: 100000 })).status, 200);
   await dueNow(maya);

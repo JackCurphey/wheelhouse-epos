@@ -99,7 +99,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [ ] 8.4 Test: the money steps are refused for non-Owners and logged with who and why
 - [ ] 8.5 Test: cancelling frees the frame and keeps the order; Staff can cancel with no deposit
 - [ ] 8.6 Screen test: `cw-order-owed`, `-part-paid`, `-paid`, `cw-mark-paid`, `-diff`, `cw-record-payment`, `-more`, `cw-owed`, `cw-owed-reports`, `cw-owed-provider`, `cw-cancel`, `cw-cancel-ordered`
-- [ ] 8.7 Build to pass 8.1–8.6
+- [ ] 8.7 Build to pass 8.1–8.6. When Cancel turns on "Your order is cancelled" (found in PR 9e's review): fill `Shop phone` and `Deposit amount`, send it with no link (`queueC2wMessage` refuses one without a link today), let Settings › Messages edit both deposit wordings (it shows one `partOf` wording), and check switching it off stops all three
 - [ ] 8.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 9. Messages and the customer's view (pull request 9, about 500 lines, risky: messaging and public route)
