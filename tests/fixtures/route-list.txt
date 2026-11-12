@@ -373,6 +373,8 @@ GET /api/reports/takings.csv
 GET /api/reports/days/:id/csv
 GET /api/reports/workshop
 GET /api/reports/workshop.csv
+GET /api/reports/returning
+GET /api/reports/returning.csv
 GET /api/reports/changed
 GET /api/reports/changed/choices
 GET /api/reports/changed.csv
