@@ -47,9 +47,9 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
 const WORKSHOP_HTML = path.join(PUBLIC_DIR, 'workshop.html');
 const BOOK_HTML = path.join(PUBLIC_DIR, 'book.html');
+const WEBSITE_HTML = path.join(PUBLIC_DIR, 'website.html');
 const VITE_MANIFEST = path.join(PUBLIC_DIR, 'dist', '.vite', 'manifest.json');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -384,10 +384,10 @@ export async function appEntryTags(entryKey, manifestPath = VITE_MANIFEST) {
 // reaches its screen. No build means a 500 that says so, not a blank page.
 // The response body is a fixed string - the real error (which can include an
 // absolute manifest path) goes to the server log only, never to the visitor.
-async function serveAppPage(res, htmlPath, entryKey, label) {
+async function serveAppPage(res, htmlPath, entryKey, label, status = 200) {
   try {
     const [html, tags] = await Promise.all([readFile(htmlPath, 'utf8'), appEntryTags(entryKey)]);
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(html.replace('<!--WH_ENTRY-->', tags));
   } catch (err) {
     console.error(err);
@@ -423,22 +423,28 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     if (bookSlug && bookSlug !== shop.slug) return notFound(res, 'Storefront not found');
     return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
+  // The React apps' built files (Vite's /dist/): on the shop's own address
+  // every path reaches here, the website app's own scripts included.
+  if (pathname.startsWith('/dist/')) return serveStatic(req, res, pathname, PUBLIC_DIR);
   const storePrefix = `/store/${shop.slug}`;
-  // The website's HTML references its CSS/JS with relative hrefs, which
-  // the browser resolves against the current URL's directory. Without a
-  // trailing slash here, "/store/<slug>" has no directory segment of its
-  // own, so the browser drops the slug entirely (e.g. requests
-  // "/store/storefront.css" instead of "/store/<slug>/storefront.css").
-  // Redirecting to the trailing-slash form fixes relative resolution for
-  // every asset without needing per-request URL rewriting.
+  // The website app's router reads its addresses under /store/<slug>/, so
+  // the bare store path goes to the slash form, keeping the query.
   if (pathname === storePrefix) {
     const queryIndex = req.url.indexOf('?');
     const search = queryIndex === -1 ? '' : req.url.slice(queryIndex);
     res.writeHead(302, { Location: `${storePrefix}/${search}` });
     return res.end();
   }
-  const relative = pathname.startsWith(storePrefix) ? (pathname.slice(storePrefix.length) || '/') : pathname;
-  return serveStatic(req, res, relative, STOREFRONT_DIR);
+  // Every other address is one of the website app's pages
+  // (openspec/changes/website-browse, design 1); its router says which.
+  return serveWebsitePage(res);
+}
+
+// The customer website's page. A switched-off or unknown shop gets the same
+// page with a 404, carrying nothing about the shop: the app asks /api/site
+// and shows "This website isn't available" (wb-off).
+function serveWebsitePage(res, status = 200) {
+  return serveAppPage(res, WEBSITE_HTML, 'src/website/main.tsx', 'website', status);
 }
 
 // Steady-state health, not boot health: the boot chain already runs
@@ -564,7 +570,13 @@ async function dispatch(req, res) {
       }
       const storefrontShop = await resolveStorefrontShop(req, url, staff?.shop.id);
       if (!storefrontShop) {
-        return notFound(res, siteApi ? SITE_OFF : 'Storefront not found');
+        if (siteApi) return notFound(res, SITE_OFF);
+        // A page of the website gets the website's own page with a 404; the
+        // old JSON answer stays for the storefront API, the booking app and
+        // the built files, which aren't pages of the website.
+        const notAPage = pathname.startsWith('/api/') || pathname.startsWith('/dist/') || pathname === '/book' || pathname.startsWith('/book/');
+        if (notAPage) return notFound(res, 'Storefront not found');
+        return serveWebsitePage(res, 404);
       }
       if (siteApi) {
         const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff));
