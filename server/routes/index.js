@@ -40,5 +40,6 @@ import * as bulkPrices from './bulk-prices.js';
 import * as stockFrames from './stock-frames.js';
 import * as customerMoney from './customer-money.js';
 import * as reports from './reports.js';
+import * as quickButtons from './quick-buttons.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, customerMessages, messages, ownMessages, auth, products, workshop, workshopSettings, portal, customers, salesRoutes, dashboard, today, yourSettings, receiptEmail, search, customerMerge, depositPayments, floatCheck, closeTheDay, tillPins, stockTakes, privacyRequests, move, productCategories, stockList, productGroups, restock, bulkPrices, stockFrames, customerMoney, stockroomWarranties, reports, quickButtons];
