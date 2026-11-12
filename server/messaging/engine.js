@@ -227,6 +227,12 @@ export async function sendDueForShop(shopId) {
   } catch (err) {
     console.error(`Messages: the shop's own messages couldn't be checked for shop ${shopId}`, err);
   }
+  // Cycle to Work's "Your hold ends on [date]" (openspec/changes/cycle-to-work design 9).
+  try {
+    await runWithShop(shopId, async () => (await import('../c2w/messages.js')).holdEndingRound(shopId, now));
+  } catch (err) {
+    console.error(`Messages: Cycle to Work hold endings couldn't be checked for shop ${shopId}`, err);
+  }
   const due = await runWithShop(shopId, async () => {
     await prepare(
       `UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown'

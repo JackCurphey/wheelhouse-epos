@@ -88,6 +88,16 @@ test('the preview fills the drawing’s example, as a text and as an email', asy
   assert.equal((await as(jo)('/api/message-templates/nope/preview', { method: 'POST', body: {} })).status, 404);
 });
 
+// Cycle to Work decision 6 (c2w.mjs cw-texts-*): the previews fill the drawn
+// placeholders, never an invented bike, date, quote or amount.
+test('the Cycle to Work previews fill the drawing’s placeholders', async () => {
+  const preview = async (key) => (await as(jo)(`/api/message-templates/${key}/preview`, { method: 'POST', body: {} })).body.text;
+  assert.equal(await preview('c2w_put_aside'), 'Hi Maya, we’re now holding [Bike] · [Size] for you until [date]. Quote [quote number]. See your Cycle to Work bike: [link]');
+  assert.equal(await preview('c2w_ready'), 'Hi Maya, your Cycle to Work certificate has reached us and [Bike] · [Size] is ready to collect. Quote [quote number]. See your Cycle to Work bike: [link]');
+  assert.equal(await preview('c2w_certificate_less'), 'Hi Maya, your certificate for £[£] has reached us. You pay £[£] when you collect. See your Cycle to Work bike: [link]');
+  assert.equal(await preview('c2w_hold_ending'), 'Hi Maya, your hold on [Bike] · [Size] ends on [date]. Quote [quote number]. See your Cycle to Work bike: [link]');
+});
+
 test('a key that only exists on every object is no message', async () => {
   assert.equal((await as(owner)('/api/message-templates/constructor', { method: 'PUT', body: { enabled: false } })).status, 404);
   assert.equal((await as(jo)('/api/message-templates/toString/preview', { method: 'POST', body: {} })).status, 404);

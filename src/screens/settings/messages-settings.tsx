@@ -44,8 +44,13 @@ export function AutomaticMessages() {
   // Bike still waiting says the shop's days, as drawn ("after [n] days"; cp-setting).
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<{ collectionReminderDays?: number }>('/api/workshop-settings') });
   const days = settings.data?.collectionReminderDays;
+  // "Your hold ends on [date]" says the shop's reminder days (setup.mjs C2W_MSGS: "[n] days before a hold ends").
+  const c2w = useQuery({ queryKey: ['c2w-settings'], queryFn: () => apiGet<{ settings: { remindDays: number | null } }>('/api/c2w/settings') });
+  const remind = c2w.data?.settings.remindDays;
+  const dayWord = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
   const withDays = (t: Template, where = ''): Template => (t.key === 'bike_still_waiting' && days !== undefined
-    ? { ...t, when: `When a ready bike isn’t collected after ${days} ${days === 1 ? 'day' : 'days'}${where}` } : t);
+    ? { ...t, when: `When a ready bike isn’t collected after ${dayWord(days)}${where}` }
+    : t.key === 'c2w_hold_ending' && typeof remind === 'number' ? { ...t, when: `${dayWord(remind)} before a hold ends` } : t);
 
   async function change(key: string, body: object) {
     setBusy((b) => new Set(b).add(key));
@@ -74,7 +79,9 @@ export function AutomaticMessages() {
   const live = templates.data?.filter((t) => t.live && !t.partOf) ?? [];
   // The quote reminder sits under Quote to approve, not as a row of its own (setup.mjs).
   const reminder = live.find((t) => t.key === 'quote_reminder');
-  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.key !== 'quote_reminder');
+  const jobMessages = live.filter((t) => t.group !== 'booking' && t.group !== 'reminders' && t.group !== 'c2w' && t.key !== 'quote_reminder');
+  // The Cycle to Work messages, before the booking messages (setup.mjs msgListOpen).
+  const c2wMessages = live.filter((t) => t.group === 'c2w');
   const bookingMessages = live.filter((t) => t.group === 'booking');
   // Bringing customers back: the service reminder (service-reminder-send; setup.mjs bringBackRows).
   const bringBack = live.filter((t) => t.group === 'reminders');
@@ -96,6 +103,13 @@ export function AutomaticMessages() {
         {jobMessages.map((t) => (t.key === 'quote_to_approve' && reminder
           ? <div key={t.key} className="flex flex-col gap-2">{row(t)}<ReminderRow onEdit={() => setEditing(reminder)} /></div>
           : row(t)))}
+        {c2wMessages.length ? (
+          <>
+            <h5 className="m-0 mt-2 text-sm font-bold">Cycle to Work messages</h5>
+            <p className="m-0 text-size-13 text-[var(--wh-muted)]">Sent the way each customer chose: text, WhatsApp or email. The quote itself is always emailed, because it’s a document.</p>
+          </>
+        ) : null}
+        {c2wMessages.map(row)}
         {/* The booking messages under their own heading, as drawn (msgListOpen). */}
         {bookingMessages.length ? (
           <>

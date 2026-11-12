@@ -14,6 +14,7 @@ import { currentMoment, isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
+import { queueC2wMessage, queueCertificateMessage, undoReadyMessage } from '../c2w/messages.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
@@ -170,7 +171,10 @@ export function register(route) {
       const made = await loadOrder(id);
       // The line keeps the sentence the quote was given with, whatever Settings say later.
       await addEvent(id, 'quote_given', who, { detail: { quoteRef: quoteRef(s.taken), closing: quoteClosing(made, s.order_rule) } });
-      if (held) await addEvent(id, 'held', who, { detail: { until } });
+      if (held) {
+        await addEvent(id, 'held', who, { detail: { until } });
+        await queueC2wMessage(id, 'c2w_put_aside', { req, loginId: who.loginId });
+      }
       return { order: serializeOrder(made) };
     });
   });
@@ -246,6 +250,7 @@ export function register(route) {
         Object.assign(detail, { from, until });
         return { hold_until: until };
       }, { detail });
+      await queueC2wMessage(id, 'c2w_put_aside', { req, loginId: who.loginId });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });
@@ -434,6 +439,7 @@ export function register(route) {
         }
         return fields;
       }, { detail });
+      await queueCertificateMessage(id, { req, loginId: who.loginId });
       return { order: serializeOrder(await loadOrder(id)), ...(notReady ? { notReady } : {}) };
     });
   });
@@ -449,6 +455,8 @@ export function register(route) {
           if (step === 'ready' && !row.held_at) throw new Refused(409, NOT_HELD);
           return {};
         });
+        if (step === 'ready') await queueC2wMessage(id, 'c2w_ready', { req, loginId: who.loginId });
+        else await undoReadyMessage(id);
         return { order: serializeOrder(await loadOrder(id)) };
       });
     });
