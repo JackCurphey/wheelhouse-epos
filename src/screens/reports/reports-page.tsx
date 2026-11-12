@@ -4,6 +4,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import { ROUTES } from '@/staff/routes.ts';
 import { BoxHeading, Page, Refusal } from './reports-bits.tsx';
 import { money } from './reports-format.ts';
+import { YourReports } from './your-reports.tsx';
 
 /**
  * Reports (rp-home in generator/reports.mjs; Jack's answers 1 and 2 of
@@ -53,6 +54,7 @@ export function ReportsPage() {
           ))}
         </div>
       </section>
+      <YourReports />
     </Page>
   );
 }
