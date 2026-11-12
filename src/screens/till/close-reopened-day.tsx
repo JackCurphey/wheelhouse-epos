@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiMutate, ApiError } from '@/lib/api/client.ts';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api/client.ts';
 import { parseTotal, penceText } from '@/lib/cash-count.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { ROUTES } from '@/staff/routes.ts';
@@ -31,9 +33,12 @@ function Line({ label, value, strong = false }: { label: string; value: string; 
   );
 }
 
-export function ReopenedDay({ data }: { data: ReopenedDayData }) {
+export function ReopenedDay({ data: first }: { data: ReopenedDayData }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // The figures can change while counting (a sale, cash taken out): the page reads them again when the server says so.
+  const live = useQuery({ queryKey: ['close-the-day', first.day], queryFn: () => apiGet<ReopenedDayData>(`/api/close-the-day?day=${encodeURIComponent(first.day)}`), initialData: first, staleTime: Infinity, retry: false });
+  const data = live.data && 'reopened' in live.data ? live.data : first;
   const [typed, setTyped] = useState('');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,13 +56,21 @@ export function ReopenedDay({ data }: { data: ReopenedDayData }) {
     setSaving(true);
     setFailed(null);
     try {
-      const why = reason.trim();
+      // A reason only goes with a difference: one typed before a recount that came out right is dropped.
+      const why = difference !== null && difference !== 0 ? reason.trim() : '';
       const { close } = await apiMutate<{ close: { id: number } }>('/api/close-the-day', { day: data.day, countedPence: counted, expectedPence: expected, ...(why ? { reason: why } : {}) }, { method: 'POST' });
       void queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
       void queryClient.invalidateQueries({ queryKey: ['close-the-day'] });
       void queryClient.invalidateQueries({ queryKey: ['reports-takings'] });
+      void queryClient.invalidateQueries({ queryKey: ['reports-day'] });
       navigate(`${ROUTES['rp-takings']}?day=${close.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409 && (err.body as { code?: string } | null)?.code === 'expected_changed') {
+        // Show the figures the server has now, so the difference is checked again.
+        await live.refetch();
+        setFailed('The till’s figures changed while you were counting. Check the difference again.');
+        return;
+      }
       setFailed(err instanceof ApiError && err.status < 500 && err.hasServerMessage ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
     } finally {
       setSaving(false);

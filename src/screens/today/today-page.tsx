@@ -357,7 +357,7 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       return (
         <Line key={`r${i.day}`} lead={warn}
           title={`${dayLabel(i.day)} was reopened`}
-          sub={`Reopened by ${i.reopenedByName} at ${clock(i.reopenedAt)} · ${i.reason}`}
+          sub={`Reopened by ${i.reopenedByName} at ${clock(i.reopenedAt)} · “${i.reason}”`}
           right={<Link to={i.day === today ? ROUTES['eod-count'] : `${ROUTES['eod-count']}?day=${i.day}`} aria-label={`Close ${dayLabel(i.day)}`} className={linkButton(touch)}>Close it</Link>} />
       );
     }

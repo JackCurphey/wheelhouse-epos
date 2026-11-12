@@ -380,9 +380,9 @@ async function closeLate(res, ctx, shopId, day, today) {
 // spent reopened changes nothing about the next morning (money review of the reopen change). At most
 // one is reopened at a time, the latest closed day.
 export async function reopenedOn(day = null) {
-  const r = await prepare(`SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.reopened_at, c.reopened_at::text AS reopened_exact, c.reopen_reason, l.name AS by_name
+  const r = await prepare(`SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.reopened_at, c.closed_at::text AS closed_exact, c.reopen_reason, l.name AS by_name
     FROM day_closes c JOIN logins l ON l.id = c.reopened_by WHERE c.reopened_at IS NOT NULL${day ? ' AND c.day = ?' : ''} ORDER BY c.day LIMIT 1`).get(...(day ? [day] : []));
-  return r ? { id: r.id, day: r.day, reason: r.reopen_reason, reopenedByName: r.by_name, reopenedAt: iso(r.reopened_at), reopenedExact: r.reopened_exact } : null;
+  return r ? { id: r.id, day: r.day, reason: r.reopen_reason, reopenedByName: r.by_name, reopenedAt: iso(r.reopened_at), closedExact: r.closed_exact } : null;
 }
 
 // Whether a close can be reopened now (the rules `reopenClose` refuses on): it is the latest close, was made the
@@ -435,7 +435,7 @@ export async function reopenClose(shopId, ctx, id, rawReason) {
 // with the new count and banking, the reopening cleared and the first close kept in the history.
 async function closeAgain(res, ctx, shopId, day, { counted, reason, shown }) {
   const reply = await lockedOnShop(shopId, async () => {
-    const row = await prepare('SELECT id, reopened_at::text AS reopened_exact FROM day_closes WHERE day = ? AND reopened_at IS NOT NULL').get(day);
+    const row = await prepare('SELECT id, closed_at::text AS closed_exact FROM day_closes WHERE day = ? AND reopened_at IS NOT NULL').get(day);
     if (!row) return { status: 409, body: { error: 'That day isn’t reopened', code: 'not_reopened' } };
     if (await prepare('SELECT 1 FROM day_closes WHERE day > ?::date').get(day)) return { status: 409, body: { error: 'Only the latest closed day can be closed again', code: 'not_latest' } };
     const { float_pence: floatPence } = await prepare('SELECT float_pence FROM shops WHERE id = ?').get(shopId);
@@ -445,8 +445,8 @@ async function closeAgain(res, ctx, shopId, day, { counted, reason, shown }) {
     if (!isPence(counted)) return { status: 400, body: { error: 'The count must be pounds and pence' } };
     const counts = closedBy(row.id);
     const t = await takingsIn(counts);
-    // Cash taken out up to the moment it was reopened, and today's own after it: a later day's is not this day's.
-    const d = await drawer(day, start, counts, row.reopened_exact);
+    // Cash taken out up to the close's own time, and the day's own after it: a later day's is not this day's.
+    const d = await drawer(day, start, counts, row.closed_exact);
     if (shown !== undefined && shown !== d.expectedPence) {
       return { status: 409, body: { error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: d.expectedPence } };
     }
@@ -482,7 +482,7 @@ export function register(route) {
       if (reopened) {
         const start = await floatStartOn(asked);
         if (!start) return sendJson(res, 409, { error: 'Check the float before closing the day', code: 'float_not_checked' });
-        const d = await drawer(asked, start, closedBy(reopened.id), reopened.reopenedExact);
+        const d = await drawer(asked, start, closedBy(reopened.id), reopened.closedExact);
         return sendJson(res, 200, {
           day: asked, floatPence, floatStart: { ...start.start, pence: d.startPence }, cashPence: d.cashPence, paidOutsPence: d.paidOutsPence,
           expectedPence: d.expectedPence, earlierBankedPence: d.earlierBankedPence, paidOuts: d.paidOuts, countFirst, reopened, close: null,
@@ -501,7 +501,7 @@ export function register(route) {
     const start = await floatStartOn(day);
     // A reopened today works from the sales its own close already counted, which stay marked with it.
     const reopenedToday = await reopenedOn(day);
-    const d = start ? await drawer(day, start, reopenedToday ? closedBy(reopenedToday.id) : await openSales(day), reopenedToday?.reopenedExact ?? null) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null, earlierBankedPence: 0 };
+    const d = start ? await drawer(day, start, reopenedToday ? closedBy(reopenedToday.id) : await openSales(day), reopenedToday?.closedExact ?? null) : { cashPence: 0, paidOuts: await paidOutsSince(day, null), expectedPence: null, earlierBankedPence: 0 };
     const [waiting] = await daysWaiting();
     sendJson(res, 200, {
       day, floatPence, floatStart: start ? { ...start.start, pence: d.startPence } : null, cashPence: d.cashPence,

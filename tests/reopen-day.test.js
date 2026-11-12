@@ -318,3 +318,16 @@ test('a closed day\'s report says whether it can be reopened: only the latest, o
   await reopen(owner, today.id);
   assert.equal((await call(owner, `/api/reports/days/${yesterday.id}`)).body.canReopen, false, 'and not while the later day is reopened: it must be closed again first');
 });
+
+test('a day that had only a look at closing, reopened after cash was taken out on a later day, does not count that cash', async () => {
+  const owner = await shop();
+  await sql(owner, 'UPDATE float_checks SET counted_pence = NULL WHERE id = ? RETURNING id', owner.yesterdayCheck.id); // the Owner\'s look at closing, no count
+  const yesterday = await closedYesterday(owner);
+  const out = await post(owner, '/api/paid-outs', { amountPence: 2000, reason: 'milk' });
+  assert.equal(out.status, 201, JSON.stringify(out.body));
+  assert.equal((await reopen(owner, yesterday.id)).status, 200);
+  const entry = await call(owner, `/api/close-the-day?day=${YESTERDAY}`);
+  assert.equal(entry.status, 200, JSON.stringify(entry.body));
+  assert.equal(entry.body.paidOutsPence, 0, 'today\'s cash taken out is today\'s');
+  assert.equal(entry.body.expectedPence, FLOAT);
+});

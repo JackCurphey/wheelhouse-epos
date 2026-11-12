@@ -13,6 +13,7 @@ import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
 import { ReopenDialog } from './reopen-dialog.tsx';
 import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 import { ChangeWhatsShown } from './change-panel.tsx';
 import { Figure, PERIODS } from './sales-report.tsx';
 
@@ -132,7 +133,7 @@ function DayReport({ id, onClose }: { id: number; onClose: () => void }) {
   if (!day.data) return null;
   const { close, canReopen } = day.data;
   if (reopening) return <ReopenDialog id={id} day={close.day} onClose={() => setReopening(false)} onDone={() => { setReopening(false); onClose(); }} />;
-  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay actions={<span className="flex flex-wrap items-center gap-2"><DownloadButton path={`/api/reports/days/${id}/csv`} />{canReopen ? <Button variant="default" className="min-h-11" onClick={() => setReopening(true)}>Reopen this day</Button> : null}</span>} />;
+  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay actions={<span className="flex flex-wrap items-center gap-2">{canReopen ? <Button variant="default" className="min-h-11" onClick={() => setReopening(true)}>Reopen this day</Button> : null}<DownloadButton path={`/api/reports/days/${id}/csv`} /></span>} />;
 }
 
 export function TakingsReportPage() {
@@ -182,6 +183,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
     <>
       {report.reopened ? (
         <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+          <AlertCircle size={18} aria-hidden="true" />
           <span className="min-w-[260px] flex-1">{`${report.reopened.label} is reopened — its figures are left out until it’s closed again`}</span>
           <Link to={closeDayPath(report.reopened.day, report.today)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold text-[var(--wh-ink)] no-underline">Close the day</Link>
         </div>
@@ -204,7 +206,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         </Box>
       )}
       <Note>Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.</Note>
-      <Note>Open a closed day for its end-of-day report.</Note>
+      <Note>Open a closed day for its end-of-day report. The owner can reopen the latest closed day from there, with a reason.</Note>
     </>
   );
 }
