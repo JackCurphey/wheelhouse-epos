@@ -97,7 +97,7 @@ the code. While building, run only the related test files
 
 - [x] 10.1 Q1 test and build: See them opens Stock filtered (`/api/stock-list?show=no-photo|no-price`, `online=1` from the Website page) with "Showing products with no photo · Show all", and no new pills
 - [x] 10.2 Q3 test and build: with the website on, "Your Wheelhouse website will be switched off when Shopify is connected." above Connect on `ws-shopify-connect`
-- [ ] 10.3 Q2 test and build: each sale, stock change and product edit is queued and sent to Shopify as it happens, through the adapter; the connected page's line goes back to the drawn "sent as you change them in Wheelhouse" (risky: stock and sales)
+- [x] 10.3 Q2 test and build: each sale, stock change and product edit is queued and sent to Shopify as it happens, through the adapter; the connected page's line goes back to the drawn "sent as you change them in Wheelhouse" (risky: stock and sales)
 - [x] 10.4 Q4: the change stays open until groups 7 and 8 are built; archive in the last of them
 
 ## 9. Before the last pull request merges

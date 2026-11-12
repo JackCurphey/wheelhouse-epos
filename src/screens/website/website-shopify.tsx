@@ -159,10 +159,11 @@ export function ShopifyPage({ state, link, onState }: { state: WebsiteState; lin
           <div className="flex min-w-0 grow flex-col gap-1">
             <h2 className="m-0 text-size-17 font-bold">Connected to your Shopify shop</h2>
             <span className="text-size-15 text-[var(--wh-muted)]">
-              {nothingSent ? `${link.address} · nothing sent yet` : `${link.address} · last sent ${when(link.lastSentAt)} · ${plural(link.products, 'product')} · sent when you press Send`}
+              {nothingSent ? `${link.address} · nothing sent yet` : `${link.address} · last sent ${when(link.lastSentAt)} · ${plural(link.products, 'product')} · sent as you change them in Wheelhouse`}
             </span>
           </div>
-          <Button variant="ghost" onClick={() => setChecking(true)}>See what will change</Button>
+          {/* Only before the first Send: after it, changes go as they're made (Jack's answer to Q2, 12 Nov). */}
+          {nothingSent ? <Button variant="ghost" onClick={() => setChecking(true)}>See what will change</Button> : null}
           {nothingSent ? null : paused
             ? <Button variant="ghost" disabled={busy} onClick={() => void post('/api/shopify/resume')}>Resume sending</Button>
             : <Button variant="ghost" disabled={busy} onClick={() => void post('/api/shopify/pause')}>Pause sending</Button>}
