@@ -52,6 +52,8 @@ Jack's answers of 11 Nov are folded in (`docs/decisions/2026-11-11-settings-rest
 
   Verify: each fails first.
 - [x] 2.2 Add `src/screens/settings/quick-buttons-settings.tsx` (the fold, the Add/Edit box, the group box), with the fold added to `OwnerSettings()`'s Till area. Verify: 2.1 passes.
+- [x] 2.3 Move left and Move right in a group's "…" menu (and its right-click), between Rename… and Remove (Jack's answers of 12 Nov evening, Q2 option 2). Each moves the group one place with the group update route's `position`, in the same line as button moves; the first group has no Move left and the last no Move right; the focus goes back to "…"; Settings' note shows Saved with Undo; a refusal shows the server's words and fetches the list again, as for buttons. Tests first in both files above, each watched failing. Verify: they pass.
+- [x] 2.4 Press and hold a button row on a touch screen for 500 ms to show Edit and Remove, as Safari on an iPhone sends no contextmenu (Jack's answers of 12 Nov evening, Q4 option 2). Lifting, moving more than 6 px or the browser taking the touch cancels it; a hold on the handle isn't one; Android's own contextmenu during the hold cancels the timer, so the row opens once. No visual change. Tests first in both files above, each watched failing. Verify: they pass.
 
 ## 3. Quick buttons on the till (PR 3, about 250 lines; waits for Mark's yes, because it edits `till-page.tsx`)
 
