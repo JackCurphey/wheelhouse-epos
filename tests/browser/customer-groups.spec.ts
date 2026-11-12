@@ -32,7 +32,8 @@ for (const [size, viewport, name] of [['computer', { width: 1280, height: 800 },
     await page.goto(`${server!.baseUrl}/workshop/settings?room=front-desk`);
     const fold = page.getByRole('button', { name: /^Customer groups/ });
     if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();
-    await page.getByRole('button', { name: '+ Add a group' }).click();
+    // In its own fold: Quick buttons has a "+ Add a group" too (set-till-quick).
+    await page.locator('#set-fold-customer-groups').getByRole('button', { name: '+ Add a group' }).click();
     const box = page.getByRole('dialog', { name: 'Add a group' });
     await box.getByLabel('Name').fill(name);
     await box.getByLabel('% off').fill('10');
