@@ -1,4 +1,4 @@
-// Migration 143 (openspec/changes/website-management design 7, task 6.3): a
+// Migration 148 (openspec/changes/website-management design 7, task 6.3): a
 // shop's link to its own Shopify shop, and the pretend Shopify's records of
 // the shops it pretends to be. From empty, under the app role, then run again.
 import '../server/load-env.js';
@@ -13,7 +13,7 @@ import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../s
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIGRATE = path.join(ROOT, 'server/migrations/run-migrations.js');
-const FILE = '143_shopify_link.sql';
+const FILE = '148_shopify_link.sql';
 const SQL = readFileSync(path.join(ROOT, 'server/migrations', FILE), 'utf8');
 
 function adminUrlOrSkip(t) {
@@ -34,10 +34,10 @@ const migrate = (env) => execFileSync('node', [MIGRATE], { env, encoding: 'utf8'
 const one = async (c, sql, args) => (await c.query(sql, args)).rows[0];
 const asShop = (c, id) => c.query("SELECT set_config('app.current_shop_id', $1, false)", [String(id)]);
 
-test('143 makes the Shopify link and the pretend Shopify per shop, each kept to its own shop, and runs twice', async (t) => {
+test('148 makes the Shopify link and the pretend Shopify per shop, each kept to its own shop, and runs twice', async (t) => {
   const admin = adminUrlOrSkip(t);
   if (!admin) return;
-  const name = `epos_mig143_${process.pid}`;
+  const name = `epos_mig148_${process.pid}`;
   const url = new URL(process.env.DATABASE_URL);
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));

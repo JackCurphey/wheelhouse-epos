@@ -112,6 +112,25 @@ let printHost: HTMLElement | null = null;
  * tag (21 Oct) both print this way.
  */
 export function printPaper(paper: ReactElement) {
+  drawPaper(paper);
+  window.print();
+}
+
+/**
+ * As printPaper, once the paper's pictures (a shop's uploaded logo on a Cycle
+ * to Work quote) have loaded or failed, so none prints blank; at most 5 seconds.
+ */
+export async function printPaperWhenLoaded(paper: ReactElement) {
+  const host = drawPaper(paper);
+  const waiting = [...host.querySelectorAll('img')].filter((img) => !img.complete).map((img) => new Promise<void>((done) => {
+    img.addEventListener('load', () => done(), { once: true });
+    img.addEventListener('error', () => done(), { once: true });
+  }));
+  if (waiting.length) await Promise.race([Promise.all(waiting), new Promise<void>((done) => { setTimeout(done, 5000); })]);
+  window.print();
+}
+
+function drawPaper(paper: ReactElement): HTMLElement {
   let host = document.getElementById('wh-print');
   if (!host) {
     host = document.createElement('div');
@@ -125,7 +144,7 @@ export function printPaper(paper: ReactElement) {
   }
   const root = printRoot;
   flushSync(() => root.render(paper));
-  window.print();
+  return host;
 }
 
 /** Prints the receipt (Jack, 18 Oct, docs/decisions/2026-10-18-print-receipt.md). */

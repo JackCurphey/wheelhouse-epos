@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router';
-import { apiMutate } from '@/lib/api/client.ts';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { pageNav } from '@/lib/page-nav.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
 import { useAccessibilityClasses, useYourSettings } from '@/lib/your-settings.ts';
@@ -34,17 +35,31 @@ function initials(name: string): string {
 
 const ITEM_ON = 'bg-[var(--sidebar-primary)] font-bold shadow-[inset_3px_0_0_var(--wh-highlight)]';
 
+/**
+ * Cycle to Work's count: the orders due or late (decision M3; c2w.mjs countIn,
+ * drawn on the full sidebar only). Nothing shows at none. Asked again each
+ * minute and on coming back to the window, as Today's lists are.
+ */
+function useC2wCount(on: boolean): number | null {
+  const count = useQuery({ queryKey: ['c2w-count'], queryFn: () => apiGet<{ count: number }>('/api/c2w/count'), enabled: on, refetchInterval: 60_000, refetchOnWindowFocus: true }).data?.count;
+  return on && typeof count === 'number' && count > 0 ? count : null;
+}
+
 function SideItem({ item, onPick }: { item: NavItem; onPick?: () => void }) {
+  const count = useC2wCount(item.key === 'c2w');
   return (
     <NavLink
       to={NAV_ROUTES[item.key]}
       onClick={onPick}
+      // Read as "Cycle to Work, 3 due or late"; the drawing's hidden words, in one name.
+      aria-label={count ? `${item.label}, ${count} due or late` : undefined}
       className={({ isActive }) =>
         `flex min-h-[30px] items-center gap-3 rounded-md px-3 text-sm font-medium text-[var(--sidebar-foreground)] no-underline hover:bg-[var(--sidebar-accent)] ${isActive ? ITEM_ON : ''}`
       }
     >
       <NavIcon name={item.icon} />
       <span>{item.label}</span>
+      {count ? <span className="ml-auto rounded-full bg-[var(--wh-highlight)] px-[7px] text-xs font-bold text-[var(--wh-on-highlight)]">{count}</span> : null}
     </NavLink>
   );
 }
