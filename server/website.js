@@ -474,8 +474,9 @@ export async function setUp(body, loginId) {
   return inTransaction(async () => {
     const website = await prepare('SELECT * FROM website FOR UPDATE').get();
     if (website.kind) throw new WebsiteError(409, 'The website is already set up');
-    // Every product online: those with a price; one with no price stays off until priced.
-    await prepare('UPDATE products SET show_online = ? AND price > 0 WHERE active = 1').run(body.startWith === 'every');
+    // Every product online: active ones with a price; one with no price stays
+    // off until priced. Nothing online: every product off, inactive ones too.
+    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
     await prepare(
       `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
               draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`
@@ -487,8 +488,10 @@ export async function setUp(body, loginId) {
 export async function saveColour(colour, loginId) {
   const checked = checkColour(colour);
   await getOrCreateWebsite();
-  await prepare(
-    "UPDATE website SET draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)), draft_saved_by = ?, draft_saved_at = now(), updated_at = now()"
+  const saved = await prepare(
+    "UPDATE website SET draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)), draft_saved_by = ?, draft_saved_at = now(), updated_at = now() WHERE kind IS NOT NULL"
   ).run(checked, loginId);
+  // Before set-up the colour is chosen in the three steps, and sent with them.
+  if (!saved.changes) throw new WebsiteError(409, 'Set up the website first');
   return websiteState();
 }

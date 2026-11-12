@@ -9,7 +9,8 @@ import '../server/load-env.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { pool, runWithShop, prepare } from '../server/db.js';
-import { colourProblem } from '../server/website.js';
+import { colourProblem, contrastWithWhite } from '../server/website.js';
+import { contrastWithWhite as screenContrast, colourProblem as screenProblem } from '../src/screens/website/website-colour.ts';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -38,6 +39,7 @@ async function addProducts(shopId) {
     await add.run('[priced no photo]', 5, false, null);
     await add.run('[priced on]', 5, true, '/uploads/b.jpg');
     await add.run('[no price]', 0, true, null);
+    await prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, show_online, active, updated_at) VALUES ('[inactive on]', '[Product]', 'Parts', 5, 0, 0, true, 0, now())").run();
   });
 }
 const switches = (shopId) => runWithShop(shopId, async () =>
@@ -63,7 +65,7 @@ test('"Every product online" switches Show on website on for priced products onl
   assert.equal(state.kind, 'wheelhouse');
   assert.equal(state.isOn, false);
   assert.equal(state.mainColour, '#1A3F66');
-  assert.deepEqual(await switches(shop.id), { '[no price]': false, '[priced]': true, '[priced no photo]': true, '[priced on]': true });
+  assert.deepEqual(await switches(shop.id), { '[inactive on]': false, '[no price]': false, '[priced]': true, '[priced no photo]': true, '[priced on]': true });
   assert.deepEqual(state.productCounts, { goOnline: 3, noPhoto: 1, noPrice: 0 });
 });
 
@@ -71,7 +73,7 @@ test('"Nothing online" leaves every product off', async (t) => {
   const { shop, req } = await freshShop(t, '[Nothing shop]');
   await addProducts(shop.id);
   ok(await req('/api/website/set-up', { method: 'POST', body: { ...SET_UP, startWith: 'nothing' } }));
-  assert.deepEqual(await switches(shop.id), { '[no price]': false, '[priced]': false, '[priced no photo]': false, '[priced on]': false });
+  assert.deepEqual(await switches(shop.id), { '[inactive on]': false, '[no price]': false, '[priced]': false, '[priced no photo]': false, '[priced on]': false });
 });
 
 test('a second set-up is refused, and changes nothing', async (t) => {
@@ -98,6 +100,21 @@ test('the reading check passes the drawn colours and refuses ones white text is 
   for (const colour of ['#1A3F66', '#2F6B4F', '#2A2822', '#1a3f66']) assert.equal(colourProblem(colour), null, colour);
   for (const colour of ['#F5D90A', '#FFFFFF', '#7FB3E0']) assert.match(colourProblem(colour), /hard to read/, colour);
   for (const colour of ['blue', '#12345', '', null]) assert.match(colourProblem(colour), /colour/, String(colour));
+});
+
+test('the screen’s reading check gives the server’s answer for every colour', () => {
+  for (let r = 0; r < 256; r += 17) for (let g = 0; g < 256; g += 17) for (let b = 0; b < 256; b += 17) {
+    const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    assert.equal(screenContrast(hex).toFixed(6), contrastWithWhite(hex).toFixed(6), hex);
+    assert.equal(screenProblem(hex), colourProblem(hex), hex);
+  }
+});
+
+test('the main colour can only be changed once the website is set up', async (t) => {
+  const { req } = await freshShop(t, '[Early colour shop]');
+  const early = await req('/api/website/colour', { method: 'PUT', body: { colour: '#2F6B4F' } });
+  assert.equal(early.status, 409);
+  assert.equal(early.body.error, 'Set up the website first');
 });
 
 test('the main colour route saves a readable colour to the draft and refuses a pale one', async (t) => {

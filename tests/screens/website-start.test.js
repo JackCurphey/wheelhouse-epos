@@ -25,6 +25,7 @@ const next = (ui, fireEvent) => fireEvent.click(ui.getByRole('button', { name: '
 
 test('step 1: Wheelhouse’s website or Shopify, with Not now and its note', async () => {
   const { ui, fireEvent } = await start();
+  assert.ok(ui.getByRole('heading', { level: 1, name: 'Website' }));
   const bar = ui.getByRole('progressbar', { name: 'Step 1 of 3' });
   assert.equal(bar.getAttribute('aria-valuenow'), '1');
   assert.ok(ui.getByText('SET UP YOUR WEBSITE · STEP 1 OF 3'));
@@ -106,11 +107,60 @@ test('Back keeps each step’s choice, and Nothing online is sent when chosen', 
   fireEvent.click(ui.getByRole('radio', { name: /Nothing online/ }));
   fireEvent.click(ui.getByRole('button', { name: 'Back' }));
   assert.ok(ui.getByRole('radio', { name: 'Soft sand charcoal, #2A2822' }).checked);
+  fireEvent.click(ui.getByRole('button', { name: 'Choose another colour' }));
+  fireEvent.change(ui.getByLabelText('Another colour'), { target: { value: '#2f6b4f' } });
+  await ui.findByRole('radio', { name: 'Green, #2F6B4F' });
   next(ui, fireEvent);
   assert.ok(ui.getByRole('radio', { name: /Nothing online/ }).checked);
+  fireEvent.click(ui.getByRole('button', { name: 'Back' }));
+  assert.ok(ui.getByRole('radio', { name: 'Green, #2F6B4F' }).checked, 'your own colour is still shown, and chosen');
+  next(ui, fireEvent);
   fireEvent.click(ui.getByRole('button', { name: 'Make my website' }));
   await waitFor(() => assert.equal(calls.filter((c) => c.path === '/api/website/set-up').length, 1));
-  assert.deepEqual(calls.find((c) => c.path === '/api/website/set-up').body, { kind: 'wheelhouse', startWith: 'nothing', mainColour: '#2A2822' });
+  assert.deepEqual(calls.find((c) => c.path === '/api/website/set-up').body, { kind: 'wheelhouse', startWith: 'nothing', mainColour: '#2F6B4F' });
+});
+
+// jsdom has no canvas: a pretend picture and canvas give every pixel one colour.
+function pretendLogoReading(rgb) {
+  const OldImage = window.Image;
+  const oldContext = window.HTMLCanvasElement.prototype.getContext;
+  window.Image = class { set src(_v) { setTimeout(() => this.onload?.(), 0); } };
+  const data = new Uint8ClampedArray(64 * 64 * 4).map((_, i) => (i % 4 === 3 ? 255 : rgb[i % 4]));
+  window.HTMLCanvasElement.prototype.getContext = () => ({ drawImage() {}, getImageData: () => ({ data }) });
+  return () => { window.Image = OldImage; window.HTMLCanvasElement.prototype.getContext = oldContext; };
+}
+
+test('step 2: with a logo, its colour is suggested first and chosen', async (t) => {
+  let state = { ...NOT_SET_UP, logo: '/uploads/logo.png' };
+  const { ui, fireEvent, waitFor } = await openWebsite(PAGE, {
+    answers: { '/api/website': () => [200, state], '/api/website/set-up': () => { state = OFF_NEVER; return [200, OFF_NEVER]; } },
+  });
+  t.after(pretendLogoReading([0x1a, 0x3f, 0x66]));
+  await ui.findByRole('heading', { name: 'Wheelhouse’s website, or your Shopify shop?' });
+  next(ui, fireEvent);
+  assert.ok(await ui.findByText('From your logo'));
+  assert.ok((await ui.findByRole('radio', { name: 'Dark blue, #1A3F66' })).checked);
+  assert.equal(ui.getByRole('radio', { name: 'Soft sand charcoal, #2A2822' }).checked, false);
+  next(ui, fireEvent);
+  fireEvent.click(ui.getByRole('button', { name: 'Make my website' }));
+  await waitFor(() => assert.equal(calls.filter((c) => c.path === '/api/website/set-up').length, 1));
+  assert.equal(calls.find((c) => c.path === '/api/website/set-up').body.mainColour, '#1A3F66');
+});
+
+test('set up in another tab meanwhile: Make my website shows the Website page as it now is', async () => {
+  let state = NOT_SET_UP;
+  const { ui, fireEvent } = await openWebsite(PAGE, {
+    answers: {
+      '/api/website': () => [200, state],
+      '/api/website/set-up': () => { state = OFF_NEVER; return [409, { error: 'The website is already set up' }]; },
+    },
+  });
+  await ui.findByRole('heading', { name: 'Wheelhouse’s website, or your Shopify shop?' });
+  next(ui, fireEvent);
+  await ui.findByRole('heading', { name: 'Your logo and colour' });
+  next(ui, fireEvent);
+  fireEvent.click(await ui.findByRole('button', { name: 'Make my website' }));
+  assert.ok(await ui.findByRole('heading', { name: 'Your website is off' }));
 });
 
 test('choosing Shopify says connecting it comes later, and sets nothing up', async () => {

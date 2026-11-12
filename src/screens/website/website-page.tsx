@@ -65,7 +65,6 @@ export function WebsitePage() {
 
   return (
     <Page>
-      <h1 className="m-0 text-size-22 font-bold">Website</h1>
       <div role="status">{toast ? <Toast state={toast} address={customerSite(s.address)} /> : null}</div>
       {problem ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{problem}</p> : null}
 
@@ -189,10 +188,10 @@ export function WebsitePage() {
 /** website.mjs `productCounts`: what goes online, with See them opening Stock. */
 export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'] }) {
   return (
-    <ul aria-label="Your products online" className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
-      <li>{`${plural(counts.goOnline, 'product')} ${counts.goOnline === 1 ? 'goes' : 'go'} online`}</li>
-      <li className="flex flex-wrap gap-2"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo`} aria-label="See the products with no photo, in Stock" className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
-      <li className="flex flex-wrap gap-2"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price`} aria-label="See the products with no price, in Stock" className="font-semibold text-[var(--wh-ink)]">See them</Link></li>
+    <ul aria-label="Your products online" className="m-0 flex list-none flex-col p-0 text-size-15">
+      <li className="flex min-h-8 items-center">{`${plural(counts.goOnline, 'product')} ${counts.goOnline === 1 ? 'goes' : 'go'} online`}</li>
+      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPhoto} ${counts.noPhoto === 1 ? 'has' : 'have'} no photo (shown with their name)`}</span><Link to={`${ROUTES.stock}?show=no-photo`} aria-label="See the products with no photo, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
+      <li className="flex min-h-11 flex-wrap items-center gap-x-3"><span>{`${counts.noPrice} ${counts.noPrice === 1 ? 'has' : 'have'} no price (stay off until priced)`}</span><Link to={`${ROUTES.stock}?show=no-price`} aria-label="See the products with no price, in Stock" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link></li>
     </ul>
   );
 }
