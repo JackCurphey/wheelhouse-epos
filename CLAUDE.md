@@ -71,9 +71,11 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    have passed locally on its final commit (after merging the latest main) and
    you have read your own diff against the spec and the drawings (a
    self-review). If main moves after a clean full run, and what it brings in
-   doesn't overlap your files, touch a risky area or change test
-   infrastructure, lint plus your related tests on the merged commit are
-   enough (Jack, 11 Nov, `docs/decisions/2026-11-11-rerun-only-when-main-overlaps.md`).
+   doesn't overlap your files, add a migration or change test infrastructure,
+   lint plus your related tests on the merged commit are enough, in a risky
+   area too (Jack, 11 and 12 Nov,
+   `docs/decisions/2026-11-11-rerun-only-when-main-overlaps.md`,
+   `docs/decisions/2026-11-12-rerun-in-risky-areas.md`).
    CI runs once a day, not on each pull request (Jack, 28 Oct,
    `docs/decisions/2026-10-28-ci-once-a-day.md`); in a risky area, also run it
    by hand on the branch (`gh workflow run test.yml --ref <branch>`) and merge
