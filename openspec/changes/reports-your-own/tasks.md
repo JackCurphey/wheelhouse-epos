@@ -2,14 +2,14 @@ Four pull requests, each about 250–600 changed lines, in this order. Before PR
 
 ## 1. PR 1: Change what's shown and the changed Sales report (not risky)
 
-- [ ] 1.1 Tests first, in `tests/report-changed.test.js`: the fit table (each greyed row of design decision 2, with its reason; Margin hidden without `canSeeCosts`, greyed before sale lines keep a cost); Takings by Category adds up to Sales' Takings with a sale-level discount shared in proportion (old and new records); Items sold by Product; Payment type with a Split sale; a line with no product under Labour or its own row; Only with a parent category counting its children; Supplier chips from products sold in the period; a refused combination answers 400 with its reason; Owner only. Verify: each fails first, for the missing module or route.
-- [ ] 1.2 `server/lib/report-changed.js`: the choices and what fits with what (one table), the rows for Takings, Items sold and (greyed) Margin by Day, Week, Category, Product, Staff member and Payment type, the period before, the title and the line under it.
-- [ ] 1.3 `GET /api/reports/changed` and `/api/reports/changed.csv` in `server/routes/reports.js`, `ownerOnly` first, `// screens: rp-change, rp-changed`.
-- [ ] 1.4 Screen tests first (`tests/screens/reports-change.test.tsx`): the panel opens from Sales on Takings by Day and from Takings and cash-ups on Takings by Payment type; greyed chips are `aria-disabled` with their reason; "Show report" goes to the changed report with its title, line, graph, table and total row; "Back to Sales"; Download. Verify: each fails first.
-- [ ] 1.5 `change-panel.tsx` and `changed-report.tsx` (at `/reports/changed?…`), and the button on `sales-report.tsx` and `takings-report.tsx`, to the drawings `rp-change` and `rp-changed`. "Save as my report" is in PR 2; until then the bar shows only "Back to Sales".
-- [ ] 1.6 Measure a Last 12 months changed report on a shop-sized test set; write the time in the pull request. If it is slow, say so and stop before adding an index (that would be a migration).
-- [ ] 1.7 Log the undrawn wording (design decision 2's default reasons, "No product") in this month's `docs/decisions/decided-while-building/` file.
-- [ ] 1.8 `reviewer` agent self-review; lint and the related tests.
+- [x] 1.1 Tests first, in `tests/report-changed.test.js`: the fit table (each greyed row of design decision 2, with its reason; Margin hidden without `canSeeCosts`, greyed before sale lines keep a cost); Takings by Category adds up to Sales' Takings with a sale-level discount shared in proportion (old and new records); Items sold by Product; Payment type with a Split sale; a line with no product under Labour or its own row; Only with a parent category counting its children; Supplier chips from products sold in the period; a refused combination answers 400 with its reason; Owner only. Verify: each fails first, for the missing module or route.
+- [x] 1.2 `server/lib/report-changed.js`: the choices and what fits with what (one table), the rows for Takings, Items sold and (greyed) Margin by Day, Week, Category, Product, Staff member and Payment type, the period before, the title and the line under it.
+- [x] 1.3 `GET /api/reports/changed` and `/api/reports/changed.csv` in `server/routes/reports.js`, `ownerOnly` first, `// screens: rp-change, rp-changed`.
+- [x] 1.4 Screen tests first (`tests/screens/reports-change.test.tsx`): the panel opens from Sales on Takings by Day and from Takings and cash-ups on Takings by Payment type; greyed chips are `aria-disabled` with their reason; "Show report" goes to the changed report with its title, line, graph, table and total row; "Back to Sales"; Download. Verify: each fails first.
+- [x] 1.5 `change-panel.tsx` and `changed-report.tsx` (at `/reports/changed?…`), and the button on `sales-report.tsx` and `takings-report.tsx`, to the drawings `rp-change` and `rp-changed`. "Save as my report" is in PR 2; until then the bar shows only "Back to Sales".
+- [x] 1.6 Measure a Last 12 months changed report on a shop-sized test set; write the time in the pull request. If it is slow, say so and stop before adding an index (that would be a migration).
+- [x] 1.7 Log the undrawn wording (design decision 2's default reasons, "No product") in this month's `docs/decisions/decided-while-building/` file.
+- [x] 1.8 `reviewer` agent self-review; lint and the related tests.
 
 ## 2. PR 2: Saving a report and Your reports (risky: migration)
 

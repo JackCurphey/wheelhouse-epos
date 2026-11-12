@@ -20,6 +20,10 @@ export const ROUTES = {
   till: '/workshop/till',
   orders: '/workshop/orders',
   c2w: '/workshop/c2w',
+  // A Cycle to Work order (cw-order-held) and its quote (cw-quote), from the list
+  // (openspec/changes/cycle-to-work group 4).
+  'cw-order-held': '/workshop/c2w/:id',
+  'cw-quote': '/workshop/c2w/:id/quote',
   customers: '/workshop/customers',
   messages: '/workshop/messages',
   diary: '/workshop/diary',
@@ -40,6 +44,9 @@ export const ROUTES = {
   'rp-workshop': '/workshop/reports/workshop',
   // Returning customers (rp-returning): new and returning customers by month, and who hasn't been in lately.
   'rp-returning': '/workshop/reports/returning',
+  // A changed report (rp-changed), from "Change what's shown" on Sales or Takings and cash-ups
+  // (openspec/changes/reports-your-own); its choices and period are in the address.
+  'rp-changed': '/workshop/reports/changed',
   website: '/workshop/website',
   settings: '/workshop/settings',
   'your-settings': '/workshop/your-settings',

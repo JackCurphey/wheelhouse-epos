@@ -12,6 +12,8 @@ import { salesReport } from '../lib/report-sales.js';
 import { takingsReport } from '../lib/report-takings.js';
 import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { returningReport, returningCsv } from '../lib/report-customers.js';
+import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
+import { canSeeCosts } from '../lib/can-see-costs.js';
 import { closeOn } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
@@ -194,6 +196,45 @@ export function register(route) {
     try {
       const report = await returningReport(returningAsked(query), await currentShopToday());
       sendCsv(res, `returning-${ctx.shop.slug}-${dates(report.period)}`, returningCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // Change what's shown (Sales, and Takings and cash-ups): another measure, split
+  // and limits, read from the sale lines. A combination that doesn't fit is a 400
+  // with its reason; the choices route answers any selection with one that fits.
+  // screens: rp-change, rp-changed
+  route('GET', '/api/reports/changed', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await changedReport(query, today, { canSeeCosts: await canSeeCosts(req) });
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+  // screens: rp-change
+  route('GET', '/api/reports/changed/choices', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    try {
+      sendJson(res, 200, await changedChoices(query, await currentShopToday(), { canSeeCosts: await canSeeCosts(req) }));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+  // screens: rp-changed
+  route('GET', '/api/reports/changed.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const ctx = await currentSession(req);
+    try {
+      const report = await changedReport(query, await currentShopToday(), { canSeeCosts: await canSeeCosts(req) });
+      sendCsv(res, `${report.fileName}-${ctx.shop.slug}-${dates(report.period)}`, changedCsv(report));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;
