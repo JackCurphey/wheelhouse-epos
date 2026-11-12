@@ -30,7 +30,13 @@ const customer = (fields) => inShop(async () => (await prepare(
   'INSERT INTO customers (name, phone, email, update_channel) VALUES (?, ?, ?, ?) RETURNING id'
 ).get(fields.name ?? 'Maya Patel', fields.phone ?? null, fields.email ?? null, fields.channel ?? null)).id);
 const message = (id) => inShop(() => prepare('SELECT * FROM customer_messages WHERE id = ?').get(id));
-const until = async (check, ms = 30000) => {
+// The server's timer sends in rounds that go through every shop in the shared
+// test database: hundreds (938 on 11 Nov, most left by old runs), at about 6 ms
+// each, so a round takes seconds, and tens of seconds under a full run's load.
+// A message can wait for the round in progress to finish and the next to reach
+// its shop: up to two rounds. 30 s was too short under load (11 Nov); this is a
+// ceiling, not a pause: each wait ends as soon as the message has gone.
+const until = async (check, ms = 120_000) => {
   const end = Date.now() + ms;
   for (;;) {
     const v = await check();
