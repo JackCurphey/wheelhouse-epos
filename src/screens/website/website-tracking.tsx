@@ -70,7 +70,8 @@ export function TrackingTools({ state, onState, onBack, onEditPrivacy }: {
     });
   }
 
-  const waiting = state.tracking.filter((t) => t.on && t.waiting && t.idProblem);
+  // On but not usable yet, with no ID or a wrong one: nothing loads for it.
+  const waiting = state.tracking.filter((t) => t.on && t.waiting);
   const live = liveTools(state.tracking);
   const names = (list: Tool[]) => list.map((t) => t.name).join(', ');
   const kinds = [...new Set(live.map((t) => `“${t.kind}”`))].join(' or ');
@@ -151,7 +152,7 @@ function ToolRow({ tool, busy, value, onSwitch, onType, onDone }: {
               onChange={(e) => onType(e.target.value)} onBlur={onDone} onKeyDown={(e) => { if (e.key === 'Enter') onDone(); }} />
             <span id={said} className={`text-size-13 ${tool.idProblem ? 'text-[var(--wh-danger)]' : 'text-[var(--wh-muted)]'}`}>{tool.idProblem ?? tool.idHelp}</span>
           </div>
-          {tool.idProblem ? <p className="m-0 text-sm text-[var(--wh-muted)]">Waiting for a correct ID — until then, no cookie choice and nothing loads.</p> : null}
+          {tool.waiting ? <p className="m-0 text-sm text-[var(--wh-muted)]">Waiting for a correct ID — until then, no cookie choice and nothing loads.</p> : null}
         </>
       ) : null}
     </li>

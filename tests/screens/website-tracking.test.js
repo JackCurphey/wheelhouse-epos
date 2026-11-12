@@ -143,9 +143,14 @@ test('one tool live and another waiting for a correct ID: the warning, then the 
   assert.ok(ui.queryByText(/no cookie choice\.$/) === null);
 });
 
-test('a tool on with no ID yet loads nothing, so the no-cookie-choice line stays', async () => {
+test('a tool on with no ID yet waits like a wrong one: the warning and the waiting line, not "with no tools on"', async () => {
   const state = { ...ON_CLEAN, tracking: tools({ [GA]: { id: '', on: true } }) };
   const { ui } = await openTracking(state);
-  assert.ok(ui.getByText('With no tools on, your website only uses the cookies it needs to work — so customers get no cookie choice.'));
-  assert.ok(ui.queryByText(/needs a correct ID/) === null);
+  assert.ok(ui.getByText('Google Analytics needs a correct ID before it can be used.'));
+  assert.ok(ui.getByText('Waiting for a correct ID — until then, no cookie choice and nothing loads.'));
+  assert.ok(ui.queryByText(/^With no tools on/) === null);
+  assert.ok(ui.queryByText(/ask customers about cookies/) === null);
+  const box = ui.getByLabelText('Your Google Analytics ID');
+  assert.equal(document.getElementById(box.getAttribute('aria-describedby')).textContent, 'From your Google Analytics account. It starts with G-', 'no problem to show yet, so the hint stays');
+  assert.ok(box.getAttribute('aria-invalid') === null);
 });
