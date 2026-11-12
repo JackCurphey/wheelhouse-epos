@@ -51,7 +51,7 @@ export async function productsToSend(ids = null) {
 }
 
 // Each Wheelhouse product against Shopify's: matched on Wheelhouse's id, then SKU.
-function compare(ours, theirs) {
+export function compare(ours, theirs) {
   const byId = new Map(theirs.filter((p) => p.wheelhouseId != null).map((p) => [String(p.wheelhouseId), p]));
   const bySku = new Map(theirs.filter((p) => p.sku).map((p) => [p.sku, p]));
   const matched = new Set();

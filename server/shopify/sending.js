@@ -17,7 +17,7 @@
 // sending again, as above, and isn't asked again by itself.
 import { pool, prepare, runWithShop } from '../db.js';
 import { shopify } from './index.js';
-import { countInShopify, noPriceProblem, PROBLEM_WORDS, productsToSend } from './link.js';
+import { compare, countInShopify, noPriceProblem, PROBLEM_WORDS, productsToSend } from './link.js';
 
 const BATCH = 10;
 // Longer than any batch of ten takes, so only a round no one is finishing.
@@ -27,12 +27,18 @@ const problem = (product, answer) => ({
   productId: product.wheelhouseId, sku: product.sku, name: product.title, kind: answer.kind, reason: answer.reason ?? PROBLEM_WORDS[answer.kind],
 });
 
+// When each shop was last caught up with Shopify (in memory, so once after
+// each restart).
+const caughtUp = new Map();
+
 async function finish(address, still) {
   const inShopify = await countInShopify(address);
-  await prepare(
+  const done = await prepare(
     `UPDATE shopify_link SET state = 'idle', last_sent_at = now(), product_count = ?, updated_at = now()
       WHERE state IN ('sending', 'paused') AND ${still} RETURNING shop_id`
-  ).run(inShopify);
+  ).get(inShopify);
+  // A full Send compared everything with Shopify, so it counts as the day's catch-up.
+  if (done) caughtUp.set(done.shop_id, Date.now());
 }
 
 /** One batch for one shop; false when there was nothing to send. */
@@ -83,10 +89,31 @@ export async function sendRound(shopId) {
   });
 }
 
+// Once a day, anything that differs from Shopify is queued as well: a change
+// the queue missed (a script with no shop set, a failed queue warning, or a
+// change made while a product was with Shopify in a way the queue can't see)
+// can't leave Shopify's stock wrong for good.
+async function catchUp(provider, link) {
+  const every = Number(process.env.WH_SHOPIFY_CATCH_UP_MS ?? 24 * 60 * 60 * 1000);
+  if (Date.now() - (caughtUp.get(link.shop_id) ?? -Infinity) < every) return;
+  caughtUp.set(link.shop_id, Date.now());
+  try {
+    const { changing } = compare(await productsToSend(), await provider.listProducts(link.address));
+    await prepare('INSERT INTO shopify_changed (product_id) SELECT unnest(?::int[]) ON CONFLICT DO NOTHING RETURNING product_id')
+      .run(changing.map((p) => p.wheelhouseId));
+  } catch (err) {
+    console.error('Shopify: the daily check couldn’t compare with Shopify', err.code ?? err.name);
+  }
+}
+
 /** What changed in Wheelhouse, a batch at a time, while nothing else is sending. */
 async function liveRound(provider) {
-  const link = await prepare("SELECT address FROM shopify_link WHERE provider = ? AND state = 'idle'").get(provider.name);
+  // Only once Send has been pressed: before that the Owner hasn't seen what will change.
+  const link = await prepare(
+    "SELECT shop_id, address FROM shopify_link WHERE provider = ? AND state = 'idle' AND last_sent_at IS NOT NULL"
+  ).get(provider.name);
   if (!link) return false;
+  await catchUp(provider, link);
   const taken = await prepare(`SELECT product_id, changed_at::text AS changed_at FROM shopify_changed ORDER BY changed_at, product_id LIMIT ${BATCH}`).all();
   if (!taken.length) return false;
   const ids = taken.map((r) => r.product_id);
@@ -94,6 +121,7 @@ async function liveRound(provider) {
   const problems = [];
   let sent = 0;
   let added = 0;
+  let silent = false;
   for (const [i, product] of products.entries()) {
     if (product.pricePence <= 0) { problems.push(noPriceProblem(product)); continue; }
     let answer;
@@ -102,6 +130,7 @@ async function liveRound(provider) {
     } catch (err) {
       console.error('Shopify: no answer while sending a change', err.code ?? err.name);
       problems.push(...products.slice(i).map((p) => problem(p, { kind: 'no_answer' })));
+      silent = true;
       break;
     }
     if (!answer.ok) problems.push(problem(product, answer));
@@ -109,17 +138,19 @@ async function liveRound(provider) {
   }
   // Off the queue unless changed again while with Shopify (changed_at moved on;
   // read as text so the microseconds a JavaScript date drops still match).
-  await prepare(
-    `DELETE FROM shopify_changed c USING unnest(?::int[], ?::timestamptz[]) AS t(product_id, changed_at)
-      WHERE c.product_id = t.product_id AND c.changed_at = t.changed_at`
-  ).run(ids, taken.map((r) => r.changed_at));
+  // One row a statement, in product order, so this never holds two queue rows
+  // at once and can't deadlock with a sale queueing several products.
+  for (const row of [...taken].sort((a, b) => a.product_id - b.product_id)) {
+    await prepare('DELETE FROM shopify_changed WHERE product_id = ? AND changed_at = ?::timestamptz').run(row.product_id, row.changed_at);
+  }
   await prepare(
     `UPDATE shopify_link SET problems = COALESCE((SELECT jsonb_agg(p ORDER BY n) FROM jsonb_array_elements(problems) WITH ORDINALITY e(p, n)
                                                    WHERE (p->>'productId')::int <> ALL(?::int[])), '[]'::jsonb) || ?::jsonb,
             last_sent_at = CASE WHEN ? THEN now() ELSE last_sent_at END, product_count = product_count + ?, updated_at = now()
-      WHERE provider = ? AND state <> 'stopped' RETURNING shop_id`
-  ).run(ids, JSON.stringify(problems), sent > 0, added, provider.name);
-  return true;
+      WHERE provider = ? AND address = ? AND state <> 'stopped' RETURNING shop_id`
+  ).run(ids, JSON.stringify(problems), sent > 0, added, provider.name, link.address);
+  // Shopify silent: the rest of the queue waits for the next round.
+  return !silent;
 }
 
 // As bringing a Citrus Lime file across (server/move/bring-across.js): every

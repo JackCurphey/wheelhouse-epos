@@ -15,7 +15,7 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { sendRound } from '../server/shopify/sending.js';
+import { sendRound, startShopifySending } from '../server/shopify/sending.js';
 import { pretendShopify as pretend } from '../server/shopify/pretend.js';
 
 process.env.SHOPIFY_PROVIDER = 'pretend';
@@ -83,12 +83,12 @@ test('a sale at the till lowers the stock in Shopify, with nothing pressed', asy
 });
 
 test('a price or photo edit goes; a product not shown online, or a field Shopify doesn’t take, queues nothing', async (t) => {
-  const { shop, ids } = await connectedAndSent(t, 'Live edits', [{ sku: 'E1' }, { sku: 'E2' }, { sku: 'OFF', online: false }]);
+  const { shop, ids } = await connectedAndSent(t, 'Live edits', [{ sku: 'E1' }, { sku: 'E2' }, { sku: 'E3' }, { sku: 'OFF', online: false }]);
   await shop.inShop(async () => {
     await prepare('UPDATE products SET price = 12.5 WHERE id = ?').run(ids.E1);
     await prepare("UPDATE products SET photo_url = '/p/new.jpg' WHERE id = ?").run(ids.E2);
     await prepare('UPDATE products SET price = 99 WHERE id = ?').run(ids.OFF);
-    await prepare("UPDATE products SET supplier = '[Supplier]' WHERE id = ?").run(ids.E1);
+    await prepare("UPDATE products SET supplier = '[Supplier]' WHERE id = ?").run(ids.E3);
   });
   assert.deepEqual(await queued(shop), [ids.E1, ids.E2].sort((a, b) => a - b));
   await rounds(shop);
@@ -103,6 +103,7 @@ test('a product switched to show online goes to Shopify as it is switched', asyn
   await shop.inShop(() => prepare('UPDATE products SET show_online = true WHERE id = ?').run(ids.LATER));
   await rounds(shop);
   assert.equal((await inShopify(shop)).get('LATER').stock, 5);
+  assert.equal((await link(shop)).products, 1, 'the count of products in Shopify goes up');
 });
 
 test('a bike held for someone leaves the stock Shopify sells, as it happens', async (t) => {
@@ -131,6 +132,69 @@ test('paused, changes wait and go on Resume; switched to Wheelhouse’s website,
   ok(await shop.req('/api/shopify/switch-to-wheelhouse', { method: 'POST' }));
   await shop.inShop(() => prepare('UPDATE products SET stock_qty = 1 WHERE id = ?').run(ids.P1));
   assert.deepEqual(await queued(shop), [], 'nothing queued once the shop uses Wheelhouse’s website');
+});
+
+test('paused with a change waiting, connecting again or switching to Wheelhouse’s website drops it', async (t) => {
+  const { shop, ids } = await connectedAndSent(t, 'Live drop', [{ sku: 'D1', stock: 5 }]);
+  ok(await shop.req('/api/shopify/pause', { method: 'POST' }));
+  await shop.inShop(() => prepare('UPDATE products SET stock_qty = 3 WHERE id = ?').run(ids.D1));
+  assert.deepEqual(await queued(shop), [ids.D1]);
+  await connect(shop);
+  assert.deepEqual(await queued(shop), [], 'connecting again starts afresh, with Send');
+
+  const other = await connectedAndSent(t, 'Live drop 2', [{ sku: 'D2', stock: 5 }]);
+  ok(await other.shop.req('/api/shopify/pause', { method: 'POST' }));
+  await other.shop.inShop(() => prepare('UPDATE products SET stock_qty = 3 WHERE id = ?').run(other.ids.D2));
+  assert.deepEqual(await queued(other.shop), [other.ids.D2]);
+  ok(await other.shop.req('/api/shopify/switch-to-wheelhouse', { method: 'POST' }));
+  assert.deepEqual(await queued(other.shop), []);
+});
+
+test('connected but never sent, a change waits for the first Send', async (t) => {
+  const shop = await freshShop(t, 'Live unsent');
+  const id = await addProduct(shop, { sku: 'U1', stock: 5 });
+  await connect(shop);
+  await shop.inShop(() => prepare('UPDATE products SET stock_qty = 4 WHERE id = ?').run(id));
+  assert.deepEqual(await queued(shop), [], 'nothing queued before Send');
+  await rounds(shop);
+  assert.equal((await inShopify(shop)).size, 0, 'nothing in Shopify before Send');
+  assert.equal((await link(shop)).lastSentAt, null);
+});
+
+test('the background job sends a change by itself', async (t) => {
+  const { shop, ids } = await connectedAndSent(t, 'Live timer', [{ sku: 'T1', stock: 5 }]);
+  await shop.inShop(() => prepare('UPDATE products SET stock_qty = 2 WHERE id = ?').run(ids.T1));
+  const stop = startShopifySending(50, { scanAtStart: false, liveMs: 100 });
+  try {
+    for (let i = 0; i < 100 && (await queued(shop)).length; i += 1) await new Promise((r) => { setTimeout(r, 50); });
+  } finally { await stop(); }
+  assert.deepEqual(await queued(shop), []);
+  assert.equal((await inShopify(shop)).get('T1').stock, 2);
+});
+
+test('Shopify not answering leaves the rest of a long queue for the next round', async (t) => {
+  const products = Array.from({ length: 12 }, (_, i) => ({ sku: `L${i}`, stock: 5 }));
+  const { shop, ids } = await connectedAndSent(t, 'Live long', products);
+  await shop.inShop(() => prepare('UPDATE products SET stock_qty = 4 WHERE id = ANY(?::int[])').run(Object.values(ids)));
+  let calls = 0;
+  t.mock.method(pretend, 'send', async () => { calls += 1; throw Object.assign(new Error('no answer'), { code: 'ETIMEDOUT' }); });
+  await rounds(shop);
+  assert.equal(calls, 1, 'one round, one question');
+  assert.equal((await queued(shop)).length, 2, 'the rest wait for the next round');
+});
+
+test('once a day Wheelhouse catches Shopify up with anything a change missed', async (t) => {
+  const { shop } = await connectedAndSent(t, 'Live catch-up', [{ sku: 'C1', stock: 5 }]);
+  const drift = () => shop.inShop(() => prepare(
+    `UPDATE pretend_shopify SET products = (SELECT jsonb_agg(jsonb_set(p, '{stock}', '99')) FROM jsonb_array_elements(products) p) WHERE address = ?`
+  ).run(ADDRESS));
+  await drift();
+  await rounds(shop);
+  assert.equal((await inShopify(shop)).get('C1').stock, 99, 'not checked again within the day');
+  process.env.WH_SHOPIFY_CATCH_UP_MS = '0';
+  t.after(() => { delete process.env.WH_SHOPIFY_CATCH_UP_MS; });
+  await rounds(shop);
+  assert.equal((await inShopify(shop)).get('C1').stock, 5, 'put right by the daily check');
 });
 
 test('a shop with no Shopify queues nothing, and its stock changes as usual', async (t) => {

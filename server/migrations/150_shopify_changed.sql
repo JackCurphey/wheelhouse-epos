@@ -32,7 +32,10 @@ CREATE POLICY shopify_changed_shop_isolation ON shopify_changed
 CREATE OR REPLACE FUNCTION shopify_queue_product(sid INTEGER, pid INTEGER) RETURNS void AS $$
 BEGIN
   IF sid IS NULL OR pid IS NULL OR current_setting('app.current_shop_id', true) IS DISTINCT FROM sid::text THEN RETURN; END IF;
-  IF NOT EXISTS (SELECT 1 FROM shopify_link WHERE shop_id = sid AND state <> 'stopped') THEN RETURN; END IF;
+  -- Linked, and Send pressed at least once: before the first Send nothing goes
+  -- (the Owner sees what will change first, ws-shopify-check).
+  IF NOT EXISTS (SELECT 1 FROM shopify_link WHERE shop_id = sid AND state <> 'stopped'
+                   AND (last_sent_at IS NOT NULL OR state <> 'idle')) THEN RETURN; END IF;
   BEGIN
     INSERT INTO shopify_changed (shop_id, product_id)
       SELECT sid, pid

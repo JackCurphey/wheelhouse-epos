@@ -42,7 +42,7 @@ export const pretendShopify = {
     if (!product.photoUrl && shop.needs_photo.includes(product.category)) return { ok: false, kind: 'no_photo' };
     if (shop.refuses[product.sku]) return { ok: false, kind: 'shopify', reason: shop.refuses[product.sku] };
     const id = String(product.wheelhouseId);
-    const before = (await this.listProducts(address)).some((p) => String(p.wheelhouseId) === id || p.sku === product.sku);
+    const before = (await this.listProducts(address)).some((p) => String(p.wheelhouseId) === id || (product.sku && p.sku === product.sku));
     // Shopify keeps the product without Wheelhouse's category.
     const record = { ...product };
     delete record.category;
