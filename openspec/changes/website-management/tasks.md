@@ -75,8 +75,8 @@ the code. While building, run only the related test files
 - [x] 6.1 Test: the pretend Shopify adapter — connect finishes, "Couldn't connect" on an unknown address or a cancel, preview counts, the only-in-Shopify list (left alone in Shopify, never hidden or deleted), sending progress, the three problem kinds, pause and resume
 - [x] 6.2 Test: the routes — nothing is sent until Send; sending carries on as a background job; switch-to-Wheelhouse stops sending, makes Wheelhouse's website switched off, and keeps `show_online` and orders
 - [x] 6.3 Build the adapter, pretend version and routes to pass 6.1–6.2 (pull request 6a)
-- [ ] 6.4 Screen test: `ws-start-shopify`, `ws-shopify-connect` with `-failed`, `-check`, `-sending`, `-problem`, `-switch`; `ws-shopify-on` on the Website page; `ws-pay-shopify` in Online orders settings
-- [ ] 6.5 Build the Shopify screens to pass 6.4 (pull request 6b)
+- [x] 6.4 Screen test: `ws-start-shopify`, `ws-shopify-connect` with `-failed`, `-check`, `-sending`, `-problem`, `-switch`; `ws-shopify-on` on the Website page; `ws-pay-shopify` in Online orders settings
+- [x] 6.5 Build the Shopify screens to pass 6.4 (pull request 6b)
 - [ ] 6.6 Self-review each with `reviewer`; full check
 
 ## 7. Roles (pull request 7, about 250 lines — waits for WP-1.1)

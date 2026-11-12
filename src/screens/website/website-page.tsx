@@ -1,6 +1,6 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { Check, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -12,6 +12,7 @@ import { WebsiteStart } from './website-start.tsx';
 import { PAYING_ONLINE, providerText } from '@/screens/settings/online-orders-settings.tsx';
 import { dayText } from '@/screens/customers/privacy-requests.tsx';
 import { TrackingTools, liveTools } from './website-tracking.tsx';
+import { ShopifyConnect, ShopifyPage } from './website-shopify.tsx';
 import { changeWords, customerSite, plural, when, type Part, type WebsiteState } from './website-types.ts';
 
 /**
@@ -22,7 +23,20 @@ import { changeWords, customerSite, plural, when, type Part, type WebsiteState }
  */
 export function WebsitePage() {
   const queryClient = useQueryClient();
-  const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<WebsiteState>('/api/website') });
+  // While products are being sent to Shopify, ask again each second for how far it has got.
+  const site = useQuery({
+    queryKey: ['website'], queryFn: () => apiGet<WebsiteState>('/api/website'),
+    refetchInterval: (q) => (q.state.data?.shopify?.state === 'sending' ? 1000 : false),
+  });
+  // What coming back from Shopify says, read once and then dropped from the
+  // address, so a reload doesn't say it again (as Online orders' payments do).
+  const [params, setParams] = useSearchParams();
+  const [fromShopify] = useState(() => (params.get('shopify') === 'failed' ? params.get('address') ?? '' : null));
+  useEffect(() => {
+    if (!params.has('shopify') && !params.has('address')) return;
+    setParams((now) => { const next = new URLSearchParams(now); next.delete('shopify'); next.delete('address'); return next; }, { replace: true });
+  }, [params, setParams]);
+  const [connecting, setConnecting] = useState(fromShopify !== null);
   const [toast, setToast] = useState<'on' | 'off' | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,7 +55,9 @@ export function WebsitePage() {
   if (site.error) return <Page><Refusal error={site.error} /></Page>;
   const s = site.data;
   if (!s) return <Page><p className="m-0 text-sm text-[var(--wh-muted)]">Loading…</p></Page>;
-  if (!s.setUp) return <WebsiteStart state={s} onState={(next) => queryClient.setQueryData(['website'], next)} />;
+  if (!s.setUp) return <WebsiteStart state={s} failedAddress={fromShopify} onState={(next) => queryClient.setQueryData(['website'], next)} />;
+  if (s.kind === 'shopify' && s.shopify) return <ShopifyPage state={s} link={s.shopify} onState={(next) => queryClient.setQueryData(['website'], next)} />;
+  if (connecting) return <ShopifyConnect failedAddress={fromShopify} onBack={() => setConnecting(false)} />;
 
   /** Sends a change; the server answers with the whole Website page's state. */
   async function send(path: string, after?: (next: WebsiteState) => void) {
@@ -171,7 +187,7 @@ export function WebsitePage() {
         <SummaryRow name="Pages" onOpen={toWords}>Home, About us, Contact us, Collection and returns, Privacy, Cookies</SummaryRow>
         <SummaryRow name="Tracking tools" onOpen={() => setTracking(true)}>{live.length ? `${live.map((t) => t.name).join(', ')} · cookie choice on` : 'None — so there’s no cookie choice'}</SummaryRow>
         <SummaryRow name="Web address">{`${s.address} · your free address · Wheelhouse sets up your own address for you`}</SummaryRow>
-        <SummaryRow name="Wheelhouse’s website or Shopify">{s.kind === 'shopify' ? 'Shopify' : 'Wheelhouse’s website'}</SummaryRow>
+        <SummaryRow name="Wheelhouse’s website or Shopify" onOpen={() => setConnecting(true)}>Wheelhouse’s website</SummaryRow>
       </ul>
 
       <section aria-labelledby="ws-words" className="overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)]">
@@ -224,7 +240,7 @@ export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'
 }
 
 /** website.mjs `row`: a title over its line; Taking payments opens its settings, Pages the Words and photos list, Tracking tools its box. */
-function SummaryRow({ name, badge, to, onOpen, children }: { name: string; badge?: string; to?: string; onOpen?: () => void; children: ReactNode }) {
+export function SummaryRow({ name, badge, to, onOpen, children }: { name: string; badge?: string; to?: string; onOpen?: () => void; children: ReactNode }) {
   const inner = (
     <>
       <span className="flex min-w-0 grow flex-col gap-[3px]">

@@ -3,8 +3,10 @@ import { ApiError, apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Box, Page } from '@/screens/reports/reports-bits.tsx';
 import { PHOTO_TYPES, readAsBase64 } from './website-boxes.tsx';
+import { Note } from './website-tracking.tsx';
 import { colourName, colourProblem, coloursFromPixels, hexOf, type Swatch } from './website-colour.ts';
 import { ProductCounts } from './website-page.tsx';
+import { ConnectBox, WhatHappens, connectFailed } from './website-shopify.tsx';
 import type { WebsiteState } from './website-types.ts';
 
 const CHARCOAL: Swatch = { hex: hexOf('2A2822'), name: 'Soft sand charcoal' };
@@ -16,12 +18,14 @@ const failed = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse co
  * docs/design/user-journeys/generator/website.mjs, lines 155-172): three
  * steps, then the Website page. Not now shows "Not set up yet".
  */
-export function WebsiteStart({ state, onState }: { state: WebsiteState; onState: (next: WebsiteState) => void }) {
+export function WebsiteStart({ state, onState, failedAddress = null }: { state: WebsiteState; onState: (next: WebsiteState) => void; failedAddress?: string | null }) {
   const [later, setLater] = useState(false);
-  const [step, setStep] = useState(1);
+  // Back from Shopify without connecting: step 2 again, saying so (ws-shopify-failed).
+  const [step, setStep] = useState(failedAddress === null ? 1 : 2);
   // Back and Next move focus to the new step's title, so a screen reader hears where it is.
   const [moved, setMoved] = useState(false);
-  const [kind, setKind] = useState<'wheelhouse' | 'shopify'>('wheelhouse');
+  const [kind, setKind] = useState<'wheelhouse' | 'shopify'>(failedAddress === null ? 'wheelhouse' : 'shopify');
+  const [notConnected, setNotConnected] = useState(failedAddress);
   const [colour, setColour] = useState<string | null>(null);
   const [startWith, setStartWith] = useState<'every' | 'nothing'>('every');
   const [problem, setProblem] = useState<string | null>(null);
@@ -56,7 +60,7 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
       setBusy(false);
     }
   }
-  const go = (n: number) => { setMoved(true); setProblem(null); setStep(n); };
+  const go = (n: number) => { setMoved(true); setProblem(null); setNotConnected(null); setStep(n); };
 
   if (step === 1) {
     return (
@@ -72,10 +76,14 @@ export function WebsiteStart({ state, onState }: { state: WebsiteState; onState:
     );
   }
   if (kind === 'shopify') {
+    // ws-start-shopify: Connect goes to Shopify and comes back to the Website page, set up.
     return (
-      <Steps moved={moved} n={2} title="Connect your Shopify shop" sub="Connecting Shopify isn’t built yet." problem={null}
-        back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>} next={null}>
-        <p className="m-0 text-size-15">Choose Wheelhouse’s website for now, or come back to connect Shopify later.</p>
+      <Steps moved={moved} n={2} title="Connect your Shopify shop" sub="Then choose which products to send. Your Shopify look stays as it is." problem={null}
+        back={<Button variant="ghost" onClick={() => go(1)}>Back</Button>}
+        next={<Button variant="accent" aria-disabled="true" title="Connect first" className="cursor-not-allowed opacity-50">Next</Button>}>
+        <WhatHappens />
+        {notConnected !== null ? <Note tone="bad" live>{connectFailed(notConnected)}</Note> : null}
+        <ConnectBox address={failedAddress ?? ''} />
       </Steps>
     );
   }

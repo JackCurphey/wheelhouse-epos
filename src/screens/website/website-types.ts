@@ -23,6 +23,17 @@ export type Tool = {
   idProblem: string | null;
 };
 
+/** The link to the shop's own Shopify shop, as server/shopify/link.js `linkState` sends it. */
+export type ShopifyLink = {
+  address: string;
+  state: 'idle' | 'sending' | 'paused';
+  total: number;
+  sentCount: number;
+  lastSentAt: string | null;
+  products: number;
+  problems: { productId: number | null; sku: string; name: string; kind: string; reason: string }[];
+};
+
 export type WebsiteState = {
   kind: 'wheelhouse' | 'shopify' | null;
   setUp: boolean;
@@ -48,6 +59,8 @@ export type WebsiteState = {
   address: string;
   /** Taking payments: the same state as Settings › Front desk › Online orders (design 6). */
   payments: { state: 'none' | 'failed' | 'connected' | 'tested' | 'more'; providerName: string | null; needsDetailsBy: string | null };
+  /** Connected to Shopify (design 7), or null. */
+  shopify?: ShopifyLink | null;
 };
 
 export type Version = {

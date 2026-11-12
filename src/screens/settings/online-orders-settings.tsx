@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -27,6 +27,11 @@ type OnlineOrders = {
 };
 const KEY = ['online-orders-settings'];
 const useOnlineOrders = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<OnlineOrders>('/api/online-orders-settings') });
+/** Whether the website is the shop's Shopify shop (ws-pay-shopify): Shopify's checkout takes the website's payments. */
+const useShopifyWebsite = () => {
+  const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
+  return site.data?.kind === 'shopify';
+};
 
 /** Where "Add the details" and the Website page's Taking payments row open. */
 export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-online`;
@@ -38,9 +43,11 @@ const connectedNow = (s: PayState) => s === 'connected' || s === 'tested' || s =
 /** The Paying online fold's summary (website.mjs paySettings), without the wallets that aren't built (gap 57). */
 export function usePayingOnlineSummary(): string {
   const online = useOnlineOrders();
+  const shopify = useShopifyWebsite();
   const p = online.data?.payments;
   if (!p) return '';
   if (!connectedNow(p.state)) return 'Not connected';
+  if (shopify) return `Shopify for website orders · ${providerText(p.providerName, true)} for repairs`;
   return providerText(p.providerName, true);
 }
 
@@ -88,6 +95,7 @@ export function BuyingOnline() {
 /** website.mjs PAY: the fold's body for each state, and what coming back from the provider says. */
 export function PayingOnline() {
   const online = useOnlineOrders();
+  const shopify = useShopifyWebsite();
   const [params, setParams] = useSearchParams();
   // What coming back from the provider says, read once and then dropped from
   // the address, so a reload or a later visit doesn't announce it again.
@@ -150,6 +158,17 @@ export function PayingOnline() {
     );
   }
 
+  // ws-pay-shopify: Shopify's checkout takes the website's payments; the provider is for Pay now on repairs.
+  if (shopify) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Note tone="grey"><strong>Shopify takes the payment</strong> for orders on your Shopify shop. Wheelhouse’s payments are only for “Pay now” on repairs.</Note>
+        <Note tone="ok" live={back === 'connected'}>{`${back === 'connected' ? `Connected to ${provider}${by} just now` : connectedOn} · for “Pay now” on repairs`}</Note>
+        {p.state === 'tested' ? null : <TestPayment busy={busy} declined={back === 'declined'} said={said} onTest={() => void go('/api/online-payments/test-payment')} />}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {back === 'connected' ? <Note tone="ok" live>{`Connected to ${provider}${by} just now`}</Note> : <Note tone="ok">{connectedOn}</Note>}
@@ -159,14 +178,21 @@ export function PayingOnline() {
           {` £1.00 taken and refunded. Payouts go to the account ending ${p.payoutLast4 ?? '[last 4 digits]'}, ${p.payoutTiming ?? '[payout timing]'}.`}
         </Note>
       ) : (
-        <div className="flex flex-col gap-2 rounded-[10px] border border-[var(--wh-warn-ink)] bg-[var(--wh-warn-bg)] p-3.5">
-          <h3 className="m-0 text-size-17 font-bold">Make a test payment before customers use it</h3>
-          <p className="m-0 text-size-15 leading-normal">Pay £1.00 with your own card to check everything works. It’s refunded; [what the provider charges on a refund].</p>
-          {back === 'declined' ? <Note tone="bad" live>The test card was declined. Nothing was taken — try again.</Note> : null}
-          <div><Button disabled={busy} onClick={() => void go('/api/online-payments/test-payment')}>Make a test payment</Button></div>
-          {said}
-        </div>
+        <TestPayment busy={busy} declined={back === 'declined'} said={said} onTest={() => void go('/api/online-payments/test-payment')} />
       )}
+    </div>
+  );
+}
+
+/** website.mjs PAY connected: make a £1.00 test payment before customers use it. */
+function TestPayment({ busy, declined, said, onTest }: { busy: boolean; declined: boolean; said: ReactNode; onTest: () => void }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-[10px] border border-[var(--wh-warn-ink)] bg-[var(--wh-warn-bg)] p-3.5">
+      <h3 className="m-0 text-size-17 font-bold">Make a test payment before customers use it</h3>
+      <p className="m-0 text-size-15 leading-normal">Pay £1.00 with your own card to check everything works. It’s refunded; [what the provider charges on a refund].</p>
+      {declined ? <Note tone="bad" live>The test card was declined. Nothing was taken — try again.</Note> : null}
+      <div><Button disabled={busy} onClick={onTest}>Make a test payment</Button></div>
+      {said}
     </div>
   );
 }
