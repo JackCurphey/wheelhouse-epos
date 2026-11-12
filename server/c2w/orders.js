@@ -111,7 +111,11 @@ export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certif
   (SELECT i.purchase_order_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1) AS on_order_po,
   (SELECT s.name FROM suppliers s WHERE s.id = (SELECT po.supplier_id ${ON_ORDER} ORDER BY i.id DESC LIMIT 1)) AS on_order_from,
   -- The supplier ordering uses: the product's supplier matched to Settings' by name (restock's nameKey).
-  (SELECT s.name FROM suppliers s WHERE btrim(pr.supplier) <> '' AND lower(btrim(s.name)) = lower(btrim(pr.supplier)) ORDER BY s.id LIMIT 1) AS bike_supplier
+  (SELECT s.name FROM suppliers s WHERE btrim(pr.supplier) <> '' AND lower(btrim(s.name)) = lower(btrim(pr.supplier)) ORDER BY s.id LIMIT 1) AS bike_supplier,
+  -- cw-certificate-released "and has since been sold": the frame the order last released has gone.
+  (SELECT sf.state = 'sold' FROM (SELECT e.detail->>'frameId' AS fid FROM c2w_order_events e
+    WHERE e.order_id = o.id AND e.kind = 'released' ORDER BY e.id DESC LIMIT 1) last
+    JOIN stock_frames sf ON sf.id::text = last.fid) AS released_sold
   FROM c2w_orders o
   JOIN customers c ON c.id = o.customer_id
   JOIN c2w_providers p ON p.id = o.provider_id
@@ -172,7 +176,7 @@ export function serializeOrder(r) {
     certificateLate: r.certificate_received_on_day !== null && r.certificate_received_on_day > r.valid_until_day,
     saleId: r.sale_id, collectedAt: iso(r.collected_at), paidOn: r.paid_on_day, closeReason: r.close_reason,
     inStock: !notInStock(r), held: Boolean(r.held_at),
-    onOrder: Boolean(r.on_order), purchaseOrderId: r.on_order_po ?? null, orderedFrom: r.on_order_from ?? null, supplier: r.bike_supplier ?? null, releasedAt: iso(r.released_at), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
+    onOrder: Boolean(r.on_order), purchaseOrderId: r.on_order_po ?? null, orderedFrom: r.on_order_from ?? null, supplier: r.bike_supplier ?? null, releasedAt: iso(r.released_at), releasedSold: Boolean(r.released_sold), expectedPence: r.expected_pence, expectedBy: r.expected_by_day, paidPence: r.paid_pence, providerReference: r.provider_reference,
   };
 }
 

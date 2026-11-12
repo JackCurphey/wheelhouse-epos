@@ -24,6 +24,8 @@ export type C2wOrder = {
   held?: boolean; certificateLate?: boolean; differenceChoice?: 'keep' | 'match' | null;
   // The supplier ordering uses (Settings' spelling), and the supplier order the bike is on.
   supplier?: string | null; purchaseOrderId?: number | null; orderedFrom?: string | null;
+  // When the bike put aside was let go, and whether that frame has since been sold (cw-certificate-released).
+  releasedAt?: string | null; releasedSold?: boolean;
 };
 export type C2wEvent = { kind: string; by: string | null; at: string; reason: string | null; detail: Record<string, string> };
 export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string };

@@ -4,7 +4,7 @@ import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { AMOUNT_WORDS, amountOf } from '@/screens/customers/credit-dialog.tsx';
-import { Kv, Msg, firstName, longDate, mono, note, pounds, type C2wOrder } from './c2w-bits.tsx';
+import { Kv, Msg, dayOf, firstName, longDate, mono, note, pounds, type C2wOrder } from './c2w-bits.tsx';
 
 /**
  * The order's pop-ups for its next steps (c2w.mjs applied, certificate,
@@ -40,17 +40,17 @@ function Tick({ checked, onChange, label, sub }: { checked: boolean; onChange: (
   );
 }
 
-function Choice<T extends string>({ legend, name, value, options, onPick }: { legend: string; name: string; value: T; options: { value: T; label: string; hint: string }[]; onPick: (v: T) => void }) {
+function Choice<T extends string>({ legend, name, value, options, onPick }: { legend: string; name: string; value: T; options: { value: T; label: string; hint?: string }[]; onPick: (v: T) => void }) {
   return (
     <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
       <legend className="mb-1 p-0 text-size-15 font-bold">{legend}</legend>
       {options.map((o) => (
         <label key={o.value} className="flex min-h-11 items-start gap-2.5 py-1.5">
           <input type="radio" name={name} className="mt-1 size-4" checked={value === o.value} onChange={() => onPick(o.value)}
-            aria-label={o.label} aria-describedby={`${name}-${o.value}-hint`} />
+            aria-label={o.label} aria-describedby={o.hint ? `${name}-${o.value}-hint` : undefined} />
           <span className="flex flex-col gap-0.5">
             <span className="text-size-15 font-semibold">{o.label}</span>
-            <span id={`${name}-${o.value}-hint`} className={SUB}>{o.hint}</span>
+            {o.hint ? <span id={`${name}-${o.value}-hint`} className={SUB}>{o.hint}</span> : null}
           </span>
         </label>
       ))}
@@ -132,7 +132,8 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
   const [ready, setReady] = useState(true);
   const [less, setLess] = useState<Difference>('match');
   const [more, setMore] = useState<Difference>('keep');
-  const [step, setStep] = useState<'certificate' | 'lines'>('certificate');
+  const [step, setStep] = useState<'certificate' | 'lines' | 'released'>('certificate');
+  const [after, setAfter] = useState<C2wOrder | null>(null);
   const [off, setOff] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -162,11 +163,28 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
     if (p === null) return;
     setBusy(true);
     try {
-      await apiMutate(`/api/c2w/orders/${o.id}/certificate`, {
+      const saved = await apiMutate<{ order: C2wOrder }>(`/api/c2w/orders/${o.id}/certificate`, {
         number: number.trim(), amountPence: p, receivedOn: received, ready: tickShown && ready,
         ...(difference ? { difference } : {}),
         ...(difference === 'match' ? { accessoryIds: (kind === 'less' ? kept : o.accessories).map((a) => a.productId) } : {}),
       });
+      await reload();
+      // cw-certificate-released: the bike was let go and none could be put aside again.
+      const got = saved?.order;
+      if (got?.releasedAt && got.next === 'order') {
+        setAfter(got); setStep('released'); setBusy(false);
+        return;
+      }
+      onClose();
+    } catch (err) {
+      setProblem(canSay(err) ? err.message : SAVE_FAILED);
+      setBusy(false);
+    }
+  }
+  async function orderOne() {
+    setBusy(true);
+    try {
+      await apiMutate(`/api/c2w/orders/${o.id}/order`, {});
       await reload();
       onClose();
     } catch (err) {
@@ -175,6 +193,28 @@ export function CertificateDialog({ o, today, onClose }: { o: C2wOrder; today: s
     }
   }
   const close = (v: boolean) => { if (!v) onClose(); };
+
+  if (step === 'released' && after?.releasedAt) {
+    // "Hold another" from the other shop waits for Jack (question 8), and there's no lead time for "About [n] days" (both logged).
+    const orderChoice = after.supplier ? `Order one from ${after.supplier}` : 'Order the bike';
+    return (
+      <Dialog open onOpenChange={close} aria-labelledby="cr-title" className="md:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle id="cr-title">The bike was released</DialogTitle>
+          <p className="m-0 text-sm text-[var(--wh-muted)]">{`${o.customerName} · certificate ${number.trim()} saved`}</p>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-3">
+          <Msg tone="warn"><strong>{`${after.bike} was released on ${longDate(dayOf(after.releasedAt))}`}</strong>{after.releasedSold ? ' and has since been sold.' : '.'}</Msg>
+          <Choice legend={`What to do for ${name}`} name="cr" value="order" onPick={() => {}} options={[{ value: 'order', label: orderChoice }]} />
+          {problemLine(problem)}
+        </DialogBody>
+        <DialogFooter className="flex justify-end gap-2.5">
+          <Button variant="ghost" disabled={busy} onClick={onClose}>Decide later</Button>
+          <Button key="save-released" variant="primary" disabled={busy} onClick={() => void orderOne()}>Save</Button>
+        </DialogFooter>
+      </Dialog>
+    );
+  }
 
   if (step === 'lines' && pence !== null) {
     return (

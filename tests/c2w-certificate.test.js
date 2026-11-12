@@ -270,6 +270,14 @@ test('6.2 a released order with no frame free is saved, not held, and counts as 
   const res = await certify(made.id, { amountPence: 100000 });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual([res.body.order.stage, res.body.order.held, res.body.order.inStock], ['certificate', false, false]);
+  assert.equal(res.body.order.releasedSold, false, 'held for someone else is not sold');
+  assert.equal(res.body.order.next, 'order', 'the reply says ordering is next, so the popup can offer it');
+  // cw-certificate-released: "and has since been sold" only once the released frame has gone.
+  await inShop(async () => prepare("UPDATE stock_frames SET state = 'sold' WHERE id = ? RETURNING id").get(other.frameId));
+  assert.equal((await order(made.id)).releasedSold, true);
+  // Only the latest release counts: a later one with no frame never says sold.
+  await inShop(async () => prepare("INSERT INTO c2w_order_events (order_id, kind, detail) VALUES (?, 'released', '{}'::jsonb) RETURNING id").get(made.id));
+  assert.equal((await order(made.id)).releasedSold, false);
 });
 
 test('6.1 a till with nobody checked in can’t add a certificate', async () => {
