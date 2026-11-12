@@ -269,10 +269,14 @@ export async function sendDueForShop(shopId) {
         continue;
       }
       const stillNeeded = DUE_CHECKS[m.template_key];
-      // Cycle to Work's Put aside and Your hold ends: only while a bike is still held (review).
-      const c2wGone = (m.template_key === 'c2w_put_aside' || m.template_key === 'c2w_hold_ending')
+      // Cycle to Work's Put aside and Your hold ends: only while a bike is still held (review);
+      // No longer put aside: only while it is still let go.
+      const c2wGone = ['c2w_put_aside', 'c2w_hold_ending', 'c2w_released'].includes(m.template_key)
         && !(await (await import('../c2w/messages.js')).c2wStillNeeded(m));
-      if (c2wGone || (stillNeeded && !(await stillNeeded(m.job_id)))) {
+      // An online order's ready email: only while that order is still ready (risky-area review).
+      const orderGone = m.template_key === 'order_ready'
+        && !(await (await import('../online-orders/messages.js')).orderReadyStillNeeded(m.id));
+      if (c2wGone || orderGone || (stillNeeded && !(await stillNeeded(m.job_id)))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
         continue;
       }

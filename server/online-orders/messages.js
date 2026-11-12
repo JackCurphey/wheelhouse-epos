@@ -107,17 +107,27 @@ export async function undoOrderReady(orderId) {
 }
 
 /**
- * The order's latest email that couldn't reach the customer, for the row's
- * "Email didn’t arrive · [phone]" (on-orders): { failed: its key, phone }, or
- * null when none failed.
+ * Checked as the ready email comes due (server/messaging/engine.js): it goes
+ * only while it is still its order's ready email and the order is still
+ * ready, so one moved back, collected or cancelled in its seconds sends none.
+ */
+export async function orderReadyStillNeeded(messageId) {
+  return Boolean(await prepare("SELECT 1 FROM online_orders WHERE ready_message_id = ? AND stage = 'ready'").get(messageId));
+}
+
+/**
+ * The order's email that couldn't reach the customer, for the row's "Email
+ * didn’t arrive · [phone]" (on-orders): { failed: its key, phone } when the
+ * order's latest email that has been tried failed, or null. One that arrived
+ * after it clears it (risky-area review).
  */
 export async function orderEmailProblem(orderId) {
   const row = await prepare(
-    `SELECT m.template_key, o.phone FROM online_order_events e
+    `SELECT m.template_key, m.intent_state, o.phone FROM online_order_events e
      JOIN online_orders o ON o.id = e.order_id
      JOIN customer_messages m ON m.id = (e.detail->>'messageId')::int
-     WHERE e.order_id = ? AND e.kind = 'message' AND m.intent_state = 'failed'
+     WHERE e.order_id = ? AND e.kind = 'message' AND m.intent_state IN ('failed', 'delivered')
      ORDER BY m.id DESC LIMIT 1`,
   ).get(orderId);
-  return row ? { failed: row.template_key, phone: row.phone } : null;
+  return row?.intent_state === 'failed' ? { failed: row.template_key, phone: row.phone } : null;
 }

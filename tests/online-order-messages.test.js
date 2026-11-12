@@ -16,7 +16,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { TEMPLATES, LIVE_KEYS } from '../server/messaging/templates.js';
-import { UNDO_MS } from '../server/messaging/engine.js';
+import { UNDO_MS, sendDueForShop } from '../server/messaging/engine.js';
 import { ORDER_KEYS, READY_WAIT_SECONDS, queueOrderMessage, undoOrderReady, orderEmailProblem } from '../server/online-orders/messages.js';
 import { orderReference } from '../server/online-orders/numbers.js';
 
@@ -43,13 +43,13 @@ after(async () => {
 });
 
 // A paid order for Maya, to get ready, with its own email so its messages are only this test's.
-async function paidOrder({ stage = 'to_get_ready', keepUntil = null } = {}) {
+async function paidOrder({ stage = 'to_get_ready', keepUntil = null, customerId = null } = {}) {
   numbers += 1;
   const email = `maya-${tag()}@example.test`;
   const order = await inShop(() => prepare(
-    `INSERT INTO online_orders (site_id, name, email, phone, total_pence, card_pence, order_code, request_key_hash, number, paid_at, stage, keep_until)
-     VALUES (?, 'Maya Patel', ?, '07700 900123', 4500, 4500, ?, ?, ?, now(), ?, ?) RETURNING id, number`,
-  ).get(site, email, `code-${tag()}`, `key-${tag()}`, numbers, stage, keepUntil));
+    `INSERT INTO online_orders (site_id, customer_id, name, email, phone, total_pence, card_pence, order_code, request_key_hash, number, paid_at, stage, keep_until)
+     VALUES (?, ?, 'Maya Patel', ?, '07700 900123', 4500, 4500, ?, ?, ?, now(), ?, ?) RETURNING id, number`,
+  ).get(site, customerId, email, `code-${tag()}`, `key-${tag()}`, numbers, stage, keepUntil));
   return { ...order, email };
 }
 const messagesFor = (order) => inShop(() => prepare(
@@ -203,4 +203,45 @@ test('3.4 the Edit box’s preview fills an order message with the drawing’s e
   const supplied = await own('/api/message-templates/order_item_not_supplied/preview', { method: 'POST', body: {} });
   assert.match(supplied.body.email.body, /\[Item\]/);
   assert.match(supplied.body.email.body, /£\[£\]/);
+});
+
+test('3.2 a signed-in customer who chose text still gets the order’s emails, at the order’s address', async () => {
+  const customer = await inShop(() => prepare(
+    "INSERT INTO customers (name, phone, email, update_channel) VALUES ('Maya Patel', '07700 900456', ?, 'sms') RETURNING id",
+  ).get(`maya-account-${tag()}@example.test`));
+  const order = await paidOrder({ customerId: customer.id });
+  const queued = await queue(order, 'order_confirmation');
+  assert.equal(queued.channel, 'email');
+  assert.equal(queued.to, order.email);
+  const [m] = await messagesFor(order);
+  assert.equal(m.channel, 'email');
+});
+
+// Sends this shop's due messages now, as the timer would.
+async function dueNow(id) {
+  await inShop(() => prepare("UPDATE customer_messages SET send_after = now() - interval '1 second' WHERE id = ?").run(id));
+  await sendDueForShop(owner.shop.id);
+}
+
+test('3.2 the ready email goes only while the order is still ready when it comes due', async () => {
+  const stillReady = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+  const a = await queue(stillReady, 'order_ready');
+  await dueNow(a.id);
+  assert.equal((await messagesFor(stillReady))[0].intent_state, 'delivered');
+
+  const movedBack = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+  const b = await queue(movedBack, 'order_ready');
+  await inShop(() => prepare("UPDATE online_orders SET stage = 'to_get_ready' WHERE id = ?").run(movedBack.id));
+  await dueNow(b.id);
+  assert.equal((await messagesFor(movedBack))[0].intent_state, 'undone', 'not ready after all, before it went: nothing sent');
+});
+
+test('3.3 a failed email stops showing once a later email to the order arrives', async () => {
+  const order = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+  const first = await queue(order, 'order_confirmation');
+  await inShop(() => prepare("UPDATE customer_messages SET intent_state = 'failed', status = 'failed' WHERE id = ?").run(first.id));
+  assert.equal((await inShop(() => orderEmailProblem(order.id))).failed, 'order_confirmation');
+  const later = await queue(order, 'order_ready');
+  await inShop(() => prepare("UPDATE customer_messages SET intent_state = 'delivered', status = 'sent' WHERE id = ?").run(later.id));
+  assert.equal(await inShop(() => orderEmailProblem(order.id)), null);
 });

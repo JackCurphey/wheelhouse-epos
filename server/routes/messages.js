@@ -52,6 +52,7 @@ const EXAMPLE = {
 const C2W_EXAMPLE = {
   Bike: '[Bike] · [Size]', 'Hold until': '[date]', 'Quote number': '[quote number]',
   'Certificate amount': '£[£]', 'Amount to pay': '£[£]', 'Link to your Cycle to Work bike': '[link]',
+  'Deposit amount': '£[£]',
 };
 // The online order emails' drawing (online.mjs on-email-ready) keeps the
 // order number, the date and the shop's address as placeholders; the refund's
@@ -65,7 +66,8 @@ const EXAMPLE_FOR = {
   order_item_not_supplied: ORDER_EXAMPLE, order_cancelled: ORDER_EXAMPLE, order_not_ready: ORDER_EXAMPLE,
   date_change_answered: { 'When to drop off': 'Drop your Trek Domane AL 3 off by [time], half an hour before your booking.' },
   c2w_put_aside: C2W_EXAMPLE, c2w_certificate: C2W_EXAMPLE, c2w_certificate_less: C2W_EXAMPLE,
-  c2w_ready: C2W_EXAMPLE, c2w_hold_ending: C2W_EXAMPLE,
+  c2w_ready: C2W_EXAMPLE, c2w_hold_ending: C2W_EXAMPLE, c2w_released: C2W_EXAMPLE,
+  c2w_cancelled: C2W_EXAMPLE, c2w_cancelled_kept: C2W_EXAMPLE, c2w_cancelled_refunded: C2W_EXAMPLE,
 };
 
 const asSetting = (t) => ({
