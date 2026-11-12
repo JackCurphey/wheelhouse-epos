@@ -176,9 +176,11 @@ export function serializeStorefrontProduct(row) {
   };
 }
 
+// A product at £0 stays off until it is priced (ws-page: "have no price (stay
+// off until priced)"; server/website.js productCounts counts it the same way).
 export async function listStorefrontProducts() {
   const rows = await prepare(
-    'SELECT id, name, price, description, photo_url, shopify_variant_id FROM products WHERE show_online = ? AND active = 1 ORDER BY category, name'
+    'SELECT id, name, price, description, photo_url, shopify_variant_id FROM products WHERE show_online = ? AND active = 1 AND price > 0 ORDER BY category, name'
   ).all(true);
   return rows.map(serializeStorefrontProduct);
 }

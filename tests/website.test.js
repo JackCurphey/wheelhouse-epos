@@ -448,3 +448,31 @@ test('the page says who published last and how long History keeps changes; View 
   assert.equal(view.firstPublished, true);
   assert.equal((await req('/api/website/history/999999999')).status, 404);
 });
+
+// ---------- Found by risky-area-reviewer ----------
+
+test('a product at £0 stays off the customer site until it is priced, as the page says', async (t) => {
+  const { shop, req } = await freshShop(t, '[Unpriced shop]');
+  await runWithShop(shop.id, async () => {
+    const add = prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, show_online, updated_at) VALUES (?, ?, 'Parts', ?, 0, 0, true, now())");
+    await add.run('[sku no price]', '[No price yet]', 0);
+    await add.run('[sku priced]', '[Priced]', 5);
+  });
+  ok(await req('/api/website/turn-on', { method: 'POST' }));
+  const res = await fetch(`${server.baseUrl}/api/storefront/products?storefrontSlug=${shop.slug}`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  const names = (Array.isArray(body) ? body : body.products).map((p) => p.name);
+  assert.deepEqual(names, ['[Priced]']);
+});
+
+test("one shop can't View or Go back to another shop's History", async (t) => {
+  const a = await freshShop(t, '[Shop A]');
+  const b = await freshShop(t, '[Shop B]');
+  ok(await b.req('/api/website/turn-on', { method: 'POST' }));
+  const theirs = ok(await b.req('/api/website/history')).versions[0];
+  ok(await a.req('/api/website'));
+  assert.equal((await a.req(`/api/website/history/${theirs.id}`)).status, 404);
+  assert.equal((await a.req(`/api/website/history/${theirs.id}/restore`, { method: 'POST' })).status, 404);
+  assert.equal(ok(await b.req(`/api/website/history/${theirs.id}`)).id, theirs.id);
+});
