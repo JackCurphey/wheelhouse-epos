@@ -69,7 +69,7 @@ function monthBuckets(from, to, through, beforeFrom) {
   return out;
 }
 
-export function periodFor({ period, today, from, to, openingHour = 9, closingHour = 18 }) {
+export function periodFor({ period, today, from, to, openingHour = 9, closingHour = 18, quarterStartMonth = null }) {
   const monday = addDays(today, -((dayOf(today) + 6) % 7));
   let result;
   if (period === 'today') {
@@ -127,6 +127,23 @@ export function periodFor({ period, today, from, to, openingHour = 9, closingHou
       label: `${monthLabel(first)} – ${monthLabel(today)}`,
       against: `the ${months} months before`, before: { from: beforeFrom, to: addDays(first, -1) },
       buckets: monthBuckets(first, end, today, beforeFrom),
+    };
+  } else if (period === 'this-vat-quarter' || period === 'last-vat-quarter') {
+    // VAT quarters (openspec/changes/reports-ready-made, design 4 and 5): they
+    // start in month 1, 2 or 3 and every three months on; calendar quarters
+    // while the shop hasn't said. Always against the whole quarter before.
+    const startMonth = quarterStartMonth ?? 1;
+    const offset = (((Number(today.slice(5, 7)) - startMonth) % 3) + 3) % 3;
+    const thisStart = addMonths(monthStart(today), -offset);
+    const first = period === 'this-vat-quarter' ? thisStart : addMonths(thisStart, -3);
+    const end = addDays(addMonths(first, 3), -1);
+    const beforeFrom = addMonths(first, -3);
+    const through = end < today ? end : today;
+    result = {
+      from: first, to: end, through, soFar: today <= end, unit: 'month',
+      label: rangeLabel(first, end, false),
+      against: 'the quarter before', before: { from: beforeFrom, to: addDays(first, -1) },
+      buckets: monthBuckets(first, end, through, beforeFrom),
     };
   } else if (period === 'dates') {
     if (!isDate(from) || !isDate(to)) throw new ValidationError('Pick a From and a To date');
