@@ -34,7 +34,7 @@ export const connectFailed = (address: string) => `Couldn’t connect. Shopify d
 /** website.mjs WHAT_HAPPENS; Jack's default 2 (12 Nov) fills [what happens to them]. */
 export function WhatHappens() {
   return (
-    <Box label="What happens">
+    <Box>
       <h3 className="m-0 text-size-17 font-bold">What happens</h3>
       <ul aria-label="What happens" className="m-0 flex flex-col gap-2 pl-5 text-size-15 leading-normal">
         <li><strong>Wheelhouse will replace the prices, photos and stock of the products in your Shopify shop with Wheelhouse’s.</strong> You’ll see how many will change before anything is sent.</li>
@@ -68,7 +68,7 @@ export function ConnectBox({ address: start = '' }: { address?: string }) {
     }
   }
   return (
-    <Box label="Your Shopify address">
+    <Box>
       <div className="flex max-w-[600px] flex-wrap items-end gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-1.5">
           <label htmlFor={fieldId} className="text-sm font-semibold">Your Shopify address</label>
@@ -77,7 +77,7 @@ export function ConnectBox({ address: start = '' }: { address?: string }) {
             onChange={(e) => { setAddress(e.target.value); setProblem(null); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !busy) void connect(); }} />
         </div>
-        <Button disabled={busy} onClick={() => void connect()}>Connect</Button>
+        <Button variant="accent" disabled={busy} onClick={() => void connect()}>Connect</Button>
       </div>
       {problem ? <p id={saidId} role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
       <p className="m-0 text-sm leading-normal text-[var(--wh-muted)]">Opens Shopify to approve the connection, then brings you back here. Nothing is sent until you say so.</p>
@@ -99,7 +99,7 @@ export function ShopifyConnect({ failedAddress, onBack }: { failedAddress: strin
     <Page>
       <BackToWebsite onBack={onBack} />
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-size-26 font-bold">Connect your Shopify shop</h2>
+        <h2 className="m-0 text-size-17 font-bold">Connect your Shopify shop</h2>
         <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">Keep your Shopify look, theme and checkout. Wheelhouse looks after what’s for sale.</p>
       </div>
       <WhatHappens />
@@ -145,7 +145,7 @@ export function ShopifyPage({ state, link, onState }: { state: WebsiteState; lin
   const troubled = link.problems.length > 0;
   return (
     <Page>
-      {said}
+      {switching ? null : said}
       <Box label="Connected to your Shopify shop">
         <div className="flex flex-wrap items-center gap-4">
           <span aria-hidden="true" className={`inline-flex size-12 items-center justify-center rounded-xl ${troubled ? 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]' : 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]'}`}>
@@ -192,13 +192,13 @@ function ReadyToSend({ link, busy, said, onSend, onNotNow }: { link: ShopifyLink
     <Page>
       <BackToWebsite onBack={onNotNow} />
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-size-26 font-bold">Ready to send to Shopify</h2>
+        <h2 className="m-0 text-size-17 font-bold">Ready to send to Shopify</h2>
         <p className="m-0 text-size-15 leading-normal text-[var(--wh-muted)]">
           {link.lastSentAt ? `Connected to ${link.address}. Last sent ${when(link.lastSentAt)}.` : `Connected to ${link.address}. Nothing has been sent yet.`}
         </p>
       </div>
       {said}
-      <Box label="What will change">
+      <Box>
         {preview.error ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{failed(preview.error)}</p> : null}
         {!p ? (preview.error ? null : <p className="m-0 text-sm text-[var(--wh-muted)]">Asking Shopify…</p>) : (
           <>
@@ -220,7 +220,7 @@ function ReadyToSend({ link, busy, said, onSend, onNotNow }: { link: ShopifyLink
               <button type="button" onClick={() => setListOpen(true)} className="inline-flex min-h-11 cursor-pointer items-center self-start border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">See the list of products</button>
             )}
             <div className="flex flex-wrap gap-3">
-              <Button disabled={busy || p.count === 0} onClick={onSend}>{`Send ${plural(p.count, 'product')}`}</Button>
+              <Button variant="accent" disabled={busy || p.count === 0} onClick={onSend}>{`Send ${plural(p.count, 'product')}`}</Button>
               <Button variant="ghost" onClick={onNotNow}>Not now</Button>
             </div>
           </>
@@ -281,8 +281,8 @@ function Problems({ link, busy, onSend }: { link: ShopifyLink; busy: boolean; on
     <div role="alert" className="flex flex-col gap-2.5 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-3 text-[var(--wh-warn-ink)]">
       <strong className="flex items-center gap-2 text-size-15"><TriangleAlert aria-hidden="true" size={18} />{`${plural(link.problems.length, 'product')} couldn’t be sent to Shopify`}</strong>
       <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[var(--wh-ink)]">
-        {link.problems.map((x) => (
-          <li key={`${x.productId}-${x.kind}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-size-15">
+        {link.problems.map((x, i) => (
+          <li key={`${x.productId ?? x.sku}-${x.kind}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-size-15">
             <strong>{x.name}</strong><span>{x.reason}</span>
             {x.productId ? <Link to={`${ROUTES.stock}/${x.productId}`} aria-label={`Fix ${x.name} in Stock`} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)]">Fix in Stock</Link> : null}
           </li>
@@ -317,7 +317,7 @@ function SwitchBox({ busy, problem, onSwitch, onClose }: { busy: boolean; proble
       </DialogBody>
       <DialogFooter className="justify-between">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button disabled={busy} onClick={onSwitch}>Switch</Button>
+        <Button variant="accent" disabled={busy} onClick={onSwitch}>Switch</Button>
       </DialogFooter>
     </Dialog>
   );

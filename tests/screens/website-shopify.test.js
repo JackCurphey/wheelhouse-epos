@@ -29,7 +29,8 @@ async function open(start, path = PAGE, extra = {}) {
     answers: {
       '/api/website': () => [200, state],
       '/api/website/history': () => [200, HISTORY],
-      '/api/shopify/connect': (_q, _m, sent) => (sent.address ? [200, { address: 'about:blank#shopify' }] : [400, { error: 'Type your Shopify address' }]),
+      // A same-page address, so the test can see Connect go where the server says (jsdom only follows #changes).
+      '/api/shopify/connect': (_q, _m, sent) => (sent.address ? [200, { address: `${window.location.href.split('#')[0]}#approve-${sent.address}` }] : [400, { error: 'Type your Shopify address' }]),
       '/api/shopify/preview': () => [200, PREVIEW],
       '/api/shopify/send': () => { state = SHOPIFY({ state: 'sending', total: 5, sentCount: 2 }); return [202, { shopify: state.shopify }]; },
       '/api/shopify/pause': () => { state = SHOPIFY({ ...SENT, state: 'paused' }); return [200, { shopify: state.shopify }]; },
@@ -42,7 +43,7 @@ async function open(start, path = PAGE, extra = {}) {
 }
 
 test('ws-start-shopify: step 2 says what happens, Next waits for Connect first, and Connect opens Shopify with the address', async () => {
-  const { ui, fireEvent, within } = await open(NOT_SET_UP);
+  const { ui, fireEvent, within, waitFor } = await open(NOT_SET_UP);
   fireEvent.click(await ui.findByRole('radio', { name: /Connect your Shopify shop/ }));
   fireEvent.click(ui.getByRole('button', { name: 'Next' }));
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connect your Shopify shop' }));
@@ -62,12 +63,12 @@ test('ws-start-shopify: step 2 says what happens, Next waits for Connect first, 
   assert.ok(ui.getByText('Opens Shopify to approve the connection, then brings you back here. Nothing is sent until you say so.'));
   const field = ui.getByRole('textbox', { name: 'Your Shopify address' });
   assert.equal(field.getAttribute('placeholder'), '[your-shop].myshopify.com');
+  assert.ok(ui.getByRole('button', { name: 'Connect' }).className.includes('bg-[var(--accent)]'), 'drawn filled in the accent colour (ui.mjs button)');
   fireEvent.click(ui.getByRole('button', { name: 'Connect' }));
   assert.ok(await ui.findByText('Type your Shopify address'), 'the server’s words, by the field');
   fireEvent.change(field, { target: { value: ADDRESS } });
   fireEvent.click(ui.getByRole('button', { name: 'Connect' }));
-  await ui.findByRole('button', { name: 'Connect' });
-  await new Promise((r) => setTimeout(r, 50));
+  await waitFor(() => assert.equal(window.location.hash, `#approve-${ADDRESS}`), 'off to the address the server gave');
   assert.deepEqual(posted('/api/shopify/connect').map((c) => c.body), [{ address: '' }, { address: ADDRESS }]);
 });
 
@@ -117,6 +118,7 @@ test('ws-shopify-check: connected, nothing sent, how many products will change, 
   assert.ok(ui.getByText('Road helmet'));
   assert.ok(ui.getByText('Old bell'));
   assert.ok(ui.getByText('Old pump'));
+  assert.ok(ui.getByRole('button', { name: 'Send 5 products' }).className.includes('bg-[var(--accent)]'), 'drawn filled in the accent colour');
   fireEvent.click(ui.getByRole('button', { name: 'Send 5 products' }));
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Sending to your Shopify shop' }));
   assert.equal(posted('/api/shopify/send').length, 1);
@@ -192,9 +194,45 @@ test('ws-shopify-switch: what changes, Cancel keeps Shopify, and Switch makes Wh
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(ui.queryByRole('dialog') === null);
   fireEvent.click(ui.getByRole('button', { name: /^Wheelhouse’s website or Shopify/ }));
-  fireEvent.click(within(await ui.findByRole('dialog')).getByRole('button', { name: 'Switch' }));
+  const doIt = within(await ui.findByRole('dialog')).getByRole('button', { name: 'Switch' });
+  assert.ok(doIt.className.includes('bg-[var(--accent)]'), 'drawn filled in the accent colour');
+  fireEvent.click(doIt);
   assert.ok(await ui.findByRole('heading', { name: 'Your website is off' }));
   assert.equal(posted('/api/shopify/switch-to-wheelhouse').length, 1);
+});
+
+test('a Switch that fails says why once, in the pop-up, and the pop-up stays open', async () => {
+  const { ui, fireEvent, within } = await open(SHOPIFY({ ...SENT }), PAGE, {
+    '/api/shopify/switch-to-wheelhouse': () => [409, { error: 'Wheelhouse is still sending to Shopify. Wait for it to finish.', code: 'shopify_sending' }],
+  });
+  fireEvent.click(await ui.findByRole('button', { name: /^Wheelhouse’s website or Shopify/ }));
+  const ask = within(await ui.findByRole('dialog'));
+  fireEvent.click(ask.getByRole('button', { name: 'Switch' }));
+  assert.ok(await ask.findByText('Wheelhouse is still sending to Shopify. Wait for it to finish.'));
+  assert.equal(ui.getAllByText('Wheelhouse is still sending to Shopify. Wait for it to finish.').length, 1, 'not again behind the pop-up');
+  fireEvent.click(ask.getByRole('button', { name: 'Cancel' }));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(ui.queryByText('Wheelhouse is still sending to Shopify. Wait for it to finish.') === null, 'gone with the pop-up');
+});
+
+test('problems with no product in Wheelhouse each show, without Fix in Stock, and without React key clashes', async () => {
+  const problems = [
+    { productId: null, sku: 'A-1', name: 'Front light', kind: 'no_answer', reason: 'Shopify didn’t answer — try sending again' },
+    { productId: null, sku: 'A-2', name: 'Rear light', kind: 'no_answer', reason: 'Shopify didn’t answer — try sending again' },
+  ];
+  const said = [];
+  const was = console.error;
+  console.error = (...a) => { said.push(a.join(' ')); };
+  try {
+    const { ui, within } = await open(SHOPIFY({ ...SENT, problems }));
+    const alert = within((await ui.findByText('2 products couldn’t be sent to Shopify')).closest('[role="alert"]'));
+    assert.ok(alert.getByText('Front light'));
+    assert.ok(alert.getByText('Rear light'));
+    assert.ok(alert.queryByRole('link', { name: /Fix/ }) === null);
+  } finally {
+    console.error = was;
+  }
+  assert.deepEqual(said.filter((t) => /same key/.test(t)), []);
 });
 
 test('ws-pay-shopify: Online orders settings says Shopify takes the website’s payments, and the provider is for Pay now on repairs', async () => {
