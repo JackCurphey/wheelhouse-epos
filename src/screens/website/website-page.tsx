@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { Check, ChevronDown, ChevronRight, Lock } from 'lucide-react';
@@ -28,7 +28,7 @@ export function WebsitePage() {
   const [discarding, setDiscarding] = useState(false);
   const [history, setHistory] = useState(false);
   const wordsHeading = useRef<HTMLHeadingElement>(null);
-  const historyTip = useId();
+  const toWords = () => wordsHeading.current?.focus();
 
   if (site.error instanceof ApiError && site.error.status === 403) {
     const owners = (site.error.body as { owners?: unknown })?.owners;
@@ -66,7 +66,7 @@ export function WebsitePage() {
   return (
     <Page>
       <div role="status">{toast ? <Toast state={toast} address={customerSite(s.address)} /> : null}</div>
-      {problem ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{problem}</p> : null}
+      {problem && !discarding ? <p role="alert" className="m-0 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-sm font-semibold">{problem}</p> : null}
 
       <Box label={s.isOn ? 'Your website is on' : 'Your website is off'}>
         <div className="flex flex-wrap items-center gap-4">
@@ -100,7 +100,7 @@ export function WebsitePage() {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--wh-border)] pt-3.5">
-          <Button variant={s.neverPublished ? 'default' : 'accent'} onClick={() => wordsHeading.current?.focus()}><NavIcon name="website" size={18} />Edit words and photos</Button>
+          <Button variant={s.neverPublished ? 'default' : 'accent'} aria-label="Edit words and photos: opens the Words and photos list" onClick={toWords}><NavIcon name="website" size={18} />Edit words and photos</Button>
           {hasChanges ? (
             <>
               <button type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}
@@ -116,8 +116,9 @@ export function WebsitePage() {
             </span>
           )}
           <span className="ml-auto flex items-center gap-2">
-            {s.neverPublished ? <span id={historyTip} className="text-size-13 text-[var(--wh-muted)]">Nothing published yet</span> : null}
-            <Button variant="ghost" disabled={s.neverPublished} aria-describedby={s.neverPublished ? historyTip : undefined} onClick={() => setHistory(true)}>History</Button>
+            {/* website.mjs histBtn (line 236): dimmed, with the reason as its title, and still reachable. */}
+            <Button variant="ghost" aria-disabled={s.neverPublished || undefined} title={s.neverPublished ? 'Nothing published yet' : undefined}
+              className={s.neverPublished ? 'opacity-45' : undefined} onClick={() => { if (!s.neverPublished) setHistory(true); }}>History</Button>
           </span>
         </div>
         {hasChanges && listOpen ? (
@@ -151,7 +152,7 @@ export function WebsitePage() {
 
       <ul aria-label="Your website" className="m-0 flex list-none flex-col overflow-hidden rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] p-0">
         <SummaryRow name="Taking payments" to={ROUTES.settings} badge="Not connected">Not connected · customers can look but not buy · open to connect [payment provider] · in Settings › Front desk › Online orders</SummaryRow>
-        <SummaryRow name="Pages">Home, About us, Contact us, Collection and returns, Privacy, Cookies</SummaryRow>
+        <SummaryRow name="Pages" onOpen={toWords}>Home, About us, Contact us, Collection and returns, Privacy, Cookies</SummaryRow>
         <SummaryRow name="Tracking tools">{s.tracking.length ? `${s.tracking.map((t) => t.name).join(', ')} · cookie choice on` : 'None — so there’s no cookie choice'}</SummaryRow>
         <SummaryRow name="Web address">{`${s.address} · your free address · Wheelhouse sets up your own address for you`}</SummaryRow>
         <SummaryRow name="Wheelhouse’s website or Shopify">{s.kind === 'shopify' ? 'Shopify' : 'Wheelhouse’s website'}</SummaryRow>
@@ -196,8 +197,8 @@ export function ProductCounts({ counts }: { counts: WebsiteState['productCounts'
   );
 }
 
-/** website.mjs `row`: a title over its line; Taking payments opens its settings. */
-function SummaryRow({ name, badge, to, children }: { name: string; badge?: string; to?: string; children: ReactNode }) {
+/** website.mjs `row`: a title over its line; Taking payments opens its settings, Pages the Words and photos list. */
+function SummaryRow({ name, badge, to, onOpen, children }: { name: string; badge?: string; to?: string; onOpen?: () => void; children: ReactNode }) {
   const inner = (
     <>
       <span className="flex min-w-0 grow flex-col gap-[3px]">
@@ -205,13 +206,15 @@ function SummaryRow({ name, badge, to, children }: { name: string; badge?: strin
         <span className="text-sm text-[var(--wh-muted)]">{children}</span>
       </span>
       {badge ? <span className="rounded-full bg-[var(--wh-warn-bg)] px-2.5 py-0.5 text-size-13 font-semibold whitespace-nowrap text-[var(--wh-warn-ink)]">{badge}</span> : null}
-      {to ? <ChevronRight aria-hidden="true" size={18} /> : null}
+      {to || onOpen ? <ChevronRight aria-hidden="true" size={18} /> : null}
     </>
   );
   const look = 'flex min-h-16 items-center gap-3.5 px-[18px] py-2.5 text-[var(--wh-ink)] no-underline';
   return (
     <li className="border-t border-[var(--wh-border)] first:border-t-0">
-      {to ? <Link to={to} className={look}>{inner}</Link> : <div className={look}>{inner}</div>}
+      {to ? <Link to={to} className={look}>{inner}</Link>
+        : onOpen ? <button type="button" onClick={onOpen} className={`${look} w-full cursor-pointer border-0 bg-transparent text-left font-[inherit]`}>{inner}</button>
+          : <div className={look}>{inner}</div>}
     </li>
   );
 }
