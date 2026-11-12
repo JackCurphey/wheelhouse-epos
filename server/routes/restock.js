@@ -80,7 +80,8 @@ export function register(route) {
 
   // Add to an order: the ticked lines onto the supplier's draft order, made if there isn't
   // one; a product already there for the same job (or none) goes up. A line for a job keeps
-  // its job ("for job WH-1042"), so it leaves For customers.
+  // its job ("for job WH-1042"), so it leaves For customers. A Cycle to Work order's
+  // line is its own: nothing is added to it (openspec/changes/cycle-to-work, task 6.3).
   // screens: rs-restock, rs-restock-customers
   route('POST', '/api/restock/add-to-order', async (req, res) => {
     if (await ownerOnly(req, res, ORDER_STOCK)) return;
@@ -115,7 +116,7 @@ export function register(route) {
       }
       for (const { product, qty, unitCost, jobId } of loaded) {
         const there = await db.prepare(
-          'SELECT id, qty_ordered FROM purchase_order_items WHERE purchase_order_id = ? AND product_id = ? AND workshop_job_id IS NOT DISTINCT FROM ? ORDER BY id LIMIT 1'
+          'SELECT id, qty_ordered FROM purchase_order_items WHERE purchase_order_id = ? AND product_id = ? AND workshop_job_id IS NOT DISTINCT FROM ? AND c2w_order_id IS NULL ORDER BY id LIMIT 1'
         ).get(order.id, product.id, jobId);
         if (there && there.qty_ordered + qty > MAX_QTY) throw new ValidationError(`A line can order at most ${MAX_QTY}`);
         if (there) await db.prepare('UPDATE purchase_order_items SET qty_ordered = qty_ordered + ? WHERE id = ?').run(qty, there.id);

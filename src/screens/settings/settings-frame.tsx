@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ROUTES } from '@/staff/routes.ts';
+import { SavedNoteArea } from './saved-note.tsx';
 
 /**
  * The Settings frame (WP-1.3; drawn in docs/design/user-journeys/generator/settings-frame.mjs,
@@ -15,14 +16,16 @@ import { ROUTES } from '@/staff/routes.ts';
  * each fold then opens and closes on its own.
  */
 export type SettingsFold = { key: string; title: string; summary: ReactNode; body: ReactNode };
-export type SettingsArea = { key: string; title: string; intro: string; folds: SettingsFold[] };
+// `lead` sits between the area's heading and its folds (website.mjs `master`, Buying online).
+export type SettingsArea = { key: string; title: string; intro: string; lead?: ReactNode; folds: SettingsFold[] };
 export type SettingsRoom = { key: string; name: string; intro: string; areas: SettingsArea[] };
 
 const roomHref = (key: string) => `${ROUTES.settings}?room=${key}`;
 // The phone list's line under each room: what's in it.
 const roomLine = (room: SettingsRoom) => {
   const titles = room.areas.length > 1 ? room.areas.map((a) => a.title) : room.areas[0]?.folds.map((f) => f.title) ?? [];
-  return titles.map((t, i) => (i === 0 ? t : t.charAt(0).toLowerCase() + t.slice(1))).join(', ');
+  // A name with capitals of its own ("Cycle to Work") keeps them.
+  return titles.map((t, i) => (i === 0 || /[A-Z]/.test(t.slice(1)) ? t : t.charAt(0).toLowerCase() + t.slice(1))).join(', ');
 };
 
 function Chevron({ open }: { open: boolean }) {
@@ -97,9 +100,10 @@ function RoomPage({ room, fold }: { room: SettingsRoom; fold: string | null }) {
             <h3 id={`set-${a.key}`} className="m-0 text-lg font-bold">{a.title}</h3>
             <p className="m-0 text-sm text-[var(--wh-muted)]">{a.intro}</p>
           </div>
+          {a.lead}
           {folds(a)}
         </section>
-      ) : <div key={a.key}>{folds(a)}</div>))}
+      ) : <div key={a.key} className="flex flex-col gap-2">{a.lead}{folds(a)}</div>))}
     </div>
   );
 }
@@ -110,8 +114,9 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
   // A computer opens on the first room; a phone on the list of rooms.
   const room = asked ?? rooms[0];
   if (!room) return null;
+  // The page, with the one "Saved" note any fold can show (saved-note.tsx); a new room starts with none.
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
+    <SavedNoteArea room={room.key} className="mx-auto flex w-full max-w-[1040px] gap-6 p-5 max-md:p-4">
       <nav aria-label="Settings" className="hidden w-[190px] shrink-0 flex-col gap-0.5 md:flex lg:w-[220px]">
         {rooms.map((r) => (
           <Link key={r.key} to={roomHref(r.key)} aria-current={r.key === room.key ? 'page' : undefined}
@@ -138,6 +143,6 @@ export function SettingsFrame({ rooms }: { rooms: SettingsRoom[] }) {
         {asked ? <Link to={ROUTES.settings} className="inline-flex min-h-11 items-center self-start text-sm font-semibold md:hidden"><span aria-hidden="true">‹&nbsp;</span>Settings</Link> : null}
         <RoomPage key={room.key} room={room} fold={params.get('fold')} />
       </div>
-    </div>
+    </SavedNoteArea>
   );
 }

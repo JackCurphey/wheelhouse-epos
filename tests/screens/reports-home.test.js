@@ -34,7 +34,8 @@ test('only reports that are built have a card, and no Margin tile on the strip',
     assert.ok(cards.queryByText(name) === null, name);
   }
   assert.ok(ui.queryByText('Margin') === null);
-  assert.ok(ui.queryByRole('region', { name: 'Your reports' }) === null);
+  // Your reports is the person's own saved reports (reports-your-own), not a ready-made card.
+  assert.ok(await ui.findByRole('region', { name: 'Your reports' }) !== null);
 });
 
 test('the Owner sees Reports in the sidebar and Staff do not', async () => {

@@ -185,3 +185,13 @@ test('a request the shop logged without saying how reads “Asked [date]”', as
   const box = await card(ui, (await ui.findByRole('heading', { name: 'Needs attention · 1' })).textContent);
   assert.ok(box.queryByText('Asked Mon 19 Oct · answer by Thu 19 Nov') !== null);
 });
+
+// Online payments need more details (ws-today-pay-more; opening.mjs line 150; website-management design 6).
+test('the payment provider needing more details reads as drawn, with Add the details opening Paying online', async () => {
+  const MORE = { kind: 'payments_need_details', providerName: null, needsDetailsBy: '2026-11-30', needsWhat: null };
+  const { ui } = await openToday({ items: [MORE] });
+  const box = await card(ui, (await ui.findByRole('heading', { name: 'Needs attention · 1' })).textContent);
+  assert.ok(box.queryByText('[payment provider] needs more details by Mon 30 Nov') !== null);
+  assert.ok(box.queryByText('Or online payments and “Pay now” for repairs stop · usually [what they need]') !== null);
+  assert.equal(box.getByRole('link', { name: 'Add the details' }).getAttribute('href'), '/workshop/settings?room=front-desk&fold=paying-online');
+});

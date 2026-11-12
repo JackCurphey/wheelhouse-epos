@@ -3,6 +3,7 @@ import '../../server/load-env.js';
 import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
 import { staffSignup, staffRequest } from '../helpers/staff.js';
+import { connectPayments } from '../helpers/payments.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 
 // Settings › Workshop › Online booking › Deposits in a real browser against
@@ -18,6 +19,7 @@ test.use({ viewport: { width: 1440, height: 900 } });
 test.beforeAll(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  await connectPayments(owner.shop.id);
 });
 test.afterAll(async () => {
   try {

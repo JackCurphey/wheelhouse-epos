@@ -4,13 +4,13 @@
 // tills at once queue rather than overdraw, and a deletion or merge at the same moment waits.
 // Runs in the request's shop, so row-level security keeps it to that business.
 import { prepare } from '../db.js';
-import { penceToPounds } from './pence.js';
+import { penceText } from './money-text.js';
 
 // The most one change can be: £1,000,000.00, well inside an INTEGER column.
 export const MAX_CHANGE_PENCE = 100_000_000;
 export const AMOUNT_WORDS = 'Pounds and pence, like 5.00';
 export const MAX_REASON = 200;
-export const pounds = (pence) => `£${penceToPounds(pence)}`;
+export const pounds = (pence) => penceText(pence);
 // A whole number of pence above nothing; a JSON number only.
 export const changeAmount = (v) => Number.isSafeInteger(v) && v > 0 && v <= MAX_CHANGE_PENCE;
 

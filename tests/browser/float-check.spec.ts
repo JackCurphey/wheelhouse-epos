@@ -47,7 +47,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     const box = page.getByLabel('Leave this much in the drawer each night');
     await box.fill('150.00');
     await box.blur();
-    await expect(page.getByText('Saved.')).toBeVisible();
+    // Settings' note (set-save-failed draws it on this fold).
+    await expect(page.locator('[data-saved-note][role="status"]')).toHaveText('Saved');
     await expect(fold).toContainText('£150.00');
 
     // Jo has a till PIN (Wheelhouse picked it), and is first in: she

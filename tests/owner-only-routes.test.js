@@ -111,6 +111,16 @@ const ROUTES = [
   ['POST', `/api/till-setup/tills/${MISSING}/remove`, {}],
   ['PUT', `/api/till-setup/workshop/${MISSING}`, {}],
   ['POST', `/api/till-setup/workshop/${MISSING}/remove`, {}],
+  // The new Website page (openspec/changes/website-management, design 2).
+  ['GET', '/api/website'],
+  ['PUT', '/api/website/parts/no_such_part', {}],
+  ['POST', '/api/website/parts/no_such_part/photo', {}],
+  ['POST', '/api/website/logo', {}],
+  ['POST', '/api/website/discard', {}],
+  ['POST', '/api/website/turn-off', {}],
+  ['GET', '/api/website/history'],
+  ['GET', `/api/website/history/${MISSING}`],
+  ['POST', `/api/website/history/${MISSING}/restore`, {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
@@ -158,10 +168,15 @@ const NOT_OWNER_ONLY = new Map([
   ['POST /api/stock-takes/:id/join', 'day-to-day: anyone joins a stock take (stock control decisions 5 and 11)'],
   ['POST /api/stock-takes/:id/counts', 'day-to-day: anyone counts in a stock take (stock control decisions 5 and 11)'],
   ['POST /api/stock-takes/:id/finish', 'day-to-day: I’ve finished my part of a stock take (stock control decision 5)'],
+  // customer-money.js: only Ways to pay and undoing an entry are the Owner's (finish-customers, design 1, 2 and 4).
+  ['POST /api/customers/:id/store-credit', 'day-to-day: any staff member adds or takes store credit, like a discount (customer service decision 6; cs-credit)'],
+  ['POST /api/customers/:id/account/transfers', 'day-to-day: any staff member records a bank transfer onto a customer’s account (finish-customers; cs-transfer)'],
+  ['POST /api/customers/:id/account/email-statement', 'day-to-day: any staff member emails a customer’s statement (finish-customers; cs-account)'],
 ]);
 // The settings and team files, and the ones the 22 Oct audit found unscanned
-// (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10).
-const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js', 'stock-takes.js', 'today.js'];
+// (docs/reviews/2026-10-22-flagged-merges-audit.md, missing tests item 10),
+// and customer-money.js for Ways to pay (owner-setup-till-payments-eod, design 4).
+const FILES = ['workshop-settings.js', 'shop-settings.js', 'team.js', 'website.js', 'messages.js', 'sites-tills.js', 'purchase-orders.js', 'float-check.js', 'close-the-day.js', 'till-pins.js', 'stock-takes.js', 'today.js', 'quick-buttons.js', 'customer-money.js'];
 
 // Comments out, so a guard named only in a comment doesn't count. A "//"
 // straight after ":" is left, as in a URL.
