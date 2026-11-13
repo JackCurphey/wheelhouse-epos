@@ -17,8 +17,8 @@ and the pages (#750 to #752, #754 to #756) are in; left: timing the
 suggestions with the full test shop, removing the old website, and the
 archive. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
 order tables and settings on the server (#753, migration 154) and the six
-order messages (#758) are in; the settings screen, basket and checkout are
-next; paying, staff steps and refunds wait for Jack's answers 9 and 11
+order messages (#758) are in; the settings screen (four folds, then
+Showing products), basket and checkout are being built (claude/buy-online-*); paying, staff steps and refunds wait for Jack's answers 9 and 11
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
