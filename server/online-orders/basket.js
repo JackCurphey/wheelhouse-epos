@@ -3,11 +3,10 @@
 // The browser keeps only which products and how many: every name, price, total
 // and stock line is worked out here, from the shop's own products, each time.
 import { prepare } from '../db.js';
-import { parseCookies } from '../lib/http.js';
-import { getCustomerSessionContext } from '../customer-auth.js';
+import { currentCustomerSession } from '../lib/session.js';
 import { paymentsConnected } from '../payments/provider.js';
 import { creditOf } from '../lib/customer-money.js';
-import { ONLINE, freeStock } from '../site-products.js';
+import { ONLINE, freeStock, pageStock } from '../site-products.js';
 
 export const NOT_TAKING = 'Not taking online orders right now. Ask in the shop, or call us, to buy this';
 export const CHANGED = 'Something in your basket changed. Sort the lines marked below before checking out.';
@@ -24,7 +23,8 @@ export class BasketError extends Error {
   constructor(message) { super(message); this.status = 400; }
 }
 
-const id = (v) => (Number.isSafeInteger(v) && v > 0 ? v : null);
+// Ids are Postgres integers: a larger number is no product or shop of ours.
+const id = (v) => (Number.isInteger(v) && v > 0 && v <= 2_147_483_647 ? v : null);
 
 /** The lines asked for, the same product twice made one; throws BasketError when they aren't ids and counts. */
 export function linesFrom(lines) {
@@ -46,9 +46,12 @@ export async function takingOrders() {
   return { taking: !!settings?.buying_online && (await paymentsConnected()), creditOnline: settings ? settings.store_credit_on : true };
 }
 
-/** The signed-in customer of this shop, or null: another shop's sign-in is a guest here. */
-export async function customerOf(req, shop) {
-  const ctx = await getCustomerSessionContext(parseCookies(req).wh_customer_session);
+/**
+ * The signed-in customer of this shop, or null: another shop's sign-in is a
+ * guest here. A session this visit renewed has its cookie set again on `res`.
+ */
+export async function customerOf(req, res, shop) {
+  const ctx = await currentCustomerSession(req, res);
   if (!ctx || ctx.shop.id !== shop.id) return null;
   const customer = await prepare('SELECT id, name, phone FROM customers WHERE id = ? AND deleted_at IS NULL AND merged_into_id IS NULL').get(ctx.login.customer_id);
   return customer ? { id: customer.id, name: customer.name ?? '', email: ctx.login.email ?? '', phone: customer.phone ?? '' } : null;
@@ -66,14 +69,6 @@ async function creditFor(customer, creditOnline, totalPence) {
   return { availablePence, usePence, leftToPayPence: totalPence - usePence, coversAll: usePence === totalPence && totalPence > 0 ? COVERS : null };
 }
 
-function stockLine(productId, shop, sites, free) {
-  if (!shop) return { line: 'none' };
-  const qty = free(productId, shop.id);
-  if (qty > 0) return { line: 'ready', shop: shop.name, qty };
-  const at = sites.find((s) => s.id !== shop.id && free(productId, s.id) > 0);
-  return at ? { line: 'elsewhere', shop: shop.name, at: at.name } : { line: 'sold-out', shop: shop.name };
-}
-
 // "Bolton or [Second site]"; with three, "Bolton, [Second site] or [Third site]".
 const shopNames = (sites) => {
   const names = sites.map((s) => s.name);
@@ -81,11 +76,16 @@ const shopNames = (sites) => {
 };
 
 function priced(asked, product, shop, sites, free) {
-  if (!product) return { productId: asked.productId, name: null, code: null, pricePence: null, qty: asked.qty, linePence: 0, stock: null, note: null, gone: true };
-  const stock = stockLine(product.id, shop, sites, free);
-  const line = { productId: product.id, name: product.name, code: product.sku ?? null, pricePence: Number(product.price_pence), qty: asked.qty, stock, note: null, gone: false };
+  if (!product) return { productId: asked.productId, name: null, code: null, size: null, colour: null, photo: null, pricePence: null, qty: asked.qty, linePence: 0, stock: null, note: null, gone: true, cut: false };
+  // The product page's own stock line (site-products.js), so the two always agree.
+  const stock = pageStock(product.id, { shop, sites, free });
+  const line = {
+    productId: product.id, name: product.name, code: product.sku ?? null, size: product.size ?? null, colour: product.colour ?? null, photo: product.photo_url ?? null,
+    pricePence: Number(product.price_pence), qty: asked.qty, stock, note: null, gone: false, cut: false,
+  };
   if (stock.line === 'ready' && stock.qty < asked.qty) {
     line.qty = stock.qty;
+    line.cut = true;
     line.note = `Only ${stock.qty} left at ${shop.name} — we’ve changed it to ${stock.qty}`;
   } else if (stock.line === 'elsewhere') {
     line.gone = true;
@@ -100,32 +100,40 @@ function priced(asked, product, shop, sites, free) {
 }
 
 /**
- * The basket as the customer sees it: `lines` from linesFrom, collected from
- * the site `shopId` (the only site when there is one).
+ * The basket as the customer sees it (`answer`, safe to send): `lines` from
+ * linesFrom, collected from the site `shopId` (the only site when there is
+ * one). `customer` is the signed-in customer, id included, for the server only.
  */
-export async function basketAnswer({ req, shop, lines, shopId }) {
+export async function basketAnswer({ req, res, shop, lines, shopId }) {
   const sites = await prepare('SELECT id, name FROM sites ORDER BY id').all();
   const chosen = sites.length === 1 ? sites[0] : sites.find((s) => s.id === id(shopId)) ?? null;
   const ids = lines.map((l) => l.productId);
-  const products = ids.length ? await prepare(`SELECT id, name, sku, price_pence FROM products WHERE id = ANY(?::int[]) AND ${ONLINE}`).all(ids) : [];
+  // A size or colour is named as the website names it: its group's name and
+  // photo (when it has none of its own), with the size and colour beneath.
+  const products = ids.length ? await prepare(
+    `SELECT p.id, COALESCE(g.name, p.name) AS name, p.sku, p.size, p.colour, COALESCE(p.photo_url, g.photo_url) AS photo_url, p.price_pence
+       FROM (SELECT * FROM products WHERE id = ANY(?::int[]) AND ${ONLINE}) p LEFT JOIN product_groups g ON g.id = p.group_id`
+  ).all(ids) : [];
   const byId = new Map(products.map((p) => [p.id, p]));
   const free = await freeStock(ids);
-  const priceLines = lines.map((l) => priced(l, byId.get(l.productId), chosen, sites, free));
+  const allPriced = lines.map((l) => priced(l, byId.get(l.productId), chosen, sites, free));
+  const changed = allPriced.some((l) => l.gone || l.cut);
+  const priceLines = allPriced.map(({ cut, ...line }) => line);
   const { taking, creditOnline } = await takingOrders();
   const totalPence = priceLines.reduce((sum, l) => sum + l.linePence, 0);
-  const customer = await customerOf(req, shop);
-  const changed = priceLines.some((l) => l.gone || l.qty !== lines.find((a) => a.productId === l.productId).qty);
-  return {
+  const customer = await customerOf(req, res, shop);
+  const answer = {
     taking,
     notTaking: taking ? null : NOT_TAKING,
     shop: chosen && { id: chosen.id, name: chosen.name },
     lines: priceLines,
-    count: priceLines.reduce((n, l) => n + (l.gone ? 0 : l.qty), 0),
+    // Every line still in the basket, a gone one too, as on-basket-changed's "2 items".
+    count: priceLines.reduce((n, l) => n + l.qty, 0),
     totalPence,
     changed: changed ? CHANGED : null,
     blocked: priceLines.some((l) => l.gone) ? REMOVE_FIRST : null,
     you: customer && { name: customer.name, email: customer.email, phone: customer.phone },
     credit: await creditFor(customer, creditOnline, totalPence),
-    customer,
   };
+  return { answer, customer };
 }

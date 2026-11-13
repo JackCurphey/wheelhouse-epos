@@ -230,7 +230,7 @@ function sharedDetails(u, ctx) {
 // A card's line: ready at the chosen shop, or sold out there; none with no shop chosen.
 const cardStock = (u, ctx) => (!ctx.shop ? { line: 'none' } : { line: ready(u, ctx) ? 'ready' : 'sold-out', shop: ctx.shop.name });
 // A product page's line: how many are ready, or the first other shop that has one.
-function pageStock(productId, { shop, sites, free }) {
+export function pageStock(productId, { shop, sites, free }) {
   if (!shop) return { line: 'none' };
   const qty = free(productId, shop.id);
   if (qty > 0) return { line: 'ready', shop: shop.name, qty };

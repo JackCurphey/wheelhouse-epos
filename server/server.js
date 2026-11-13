@@ -25,7 +25,7 @@ import {
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
 import { currentSession, signedInSession, rememberSession, rememberCustomerSession } from './lib/session.js';
 import { SESSION_COOKIE } from './auth.js';
-import { SITE_OFF, SITE_FAILED, sitePath, isSiteApi, siteRateLimited, handleSiteRequest } from './routes/site.js';
+import { SITE_OFF, SITE_FAILED, sitePath, isSiteApi, siteRateLimited, siteBodyNeeds, handleSiteRequest } from './routes/site.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -568,6 +568,13 @@ async function dispatch(req, res) {
     // lookup included: a failed read of the website's own answers says
     // "Something went wrong — try again" (design 2).
     try {
+      // A basket's or checkout's body is read, and the customer's sign-in looked
+      // up, before runWithShop takes this request's connection, as for the
+      // portal: a slow sender, or a second connection, mustn't hold one.
+      if (siteApi && req.method !== 'GET') {
+        if (!(await readBodyFirst(req, res, siteBodyNeeds(sitePathname), { gate: readGates.website }))) return;
+        await rememberCustomerSession(req);
+      }
       let staff = null;
       const atStorePath = pathname === `/store/${storefrontSlug}` || pathname.startsWith(`/store/${storefrontSlug}/`);
       if (atStorePath && parseCookies(req)[SESSION_COOKIE]) {

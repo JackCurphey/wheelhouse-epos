@@ -39,17 +39,18 @@ function detailsFrom(body, customer) {
 }
 
 /** POST /api/site/checkout: { shop, lines, name, phone, email, useCredit, requestKey }. */
-export async function checkout({ req, shop, body }) {
+export async function checkout({ req, res, shop, body }) {
   const key = readRequestKey(body);
   if (key.error || !key.value) throw new BasketError('That checkout can’t be read — refresh the page and try again');
   const lines = linesFrom(body.lines);
   if (!lines.length) throw new BasketError('Your basket is empty');
-  const { customer, ...basket } = await basketAnswer({ req, shop, lines, shopId: body.shop });
+  const { answer: basket, customer } = await basketAnswer({ req, res, shop, lines, shopId: body.shop });
   if (!basket.taking) throw new CheckoutRefused(409, { error: NOT_TAKING });
+  // "Pay SHALL check the details first" (spec, Checkout).
+  detailsFrom(body, customer);
   if (!basket.shop) throw new BasketError('Choose which shop to collect from');
   // What the customer saw is what they pay for: any line changed sends the basket back.
   if (basket.changed) throw new CheckoutRefused(409, { error: CHANGED, basket });
-  detailsFrom(body, customer);
   const creditPence = body.useCredit === true && basket.credit ? basket.credit.usePence : 0;
   throw new CheckoutRefused(501, {
     error: 'Paying online isn’t ready yet',

@@ -242,20 +242,25 @@ const BUYING = { '/api/site/basket': 'basket', '/api/site/checkout': 'checkout' 
 const checkoutLimiter = makeRateLimiter(30, 60 * 60 * 1000);
 const BASKET_BYTES = 20_000;
 
+/** What a website POST needs of its body, for the dispatcher's readBodyFirst. */
+export const siteBodyNeeds = (path) => (Object.hasOwn(BUYING, path) ? { maxBody: BASKET_BYTES, answerOverflow: true } : {});
+
 async function buyingRequest(req, res, kind, shop) {
   res.setHeader('Cache-Control', 'no-store');
-  if (kind === 'checkout' && !checkoutLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many requests — try again in a minute' }), true;
+  if (kind === 'checkout' && !checkoutLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries — try again in an hour' }), true;
   let body;
-  try { body = await readJsonBody(req, BASKET_BYTES); } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
+  try { body = await readJsonBody(req, BASKET_BYTES, { answerOverflow: true }); } catch (err) {
+    if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
+    if (err.message === 'Payload too large') return sendJson(res, 413, { error: 'That basket can’t be read' }), true;
+    throw err;
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
   try {
     const website = await prepare('SELECT kind FROM website').get();
     if (website?.kind === 'shopify') return sendJson(res, 404, { error: SITE_OFF }), true;
-    if (kind === 'checkout') await checkout({ req, shop, body });
-    const { customer, ...answer } = await basketAnswer({ req, shop, lines: linesFrom(body.lines), shopId: body.shop });
+    const answer = kind === 'checkout'
+      ? await checkout({ req, res, shop, body })
+      : (await basketAnswer({ req, res, shop, lines: linesFrom(body.lines), shopId: body.shop })).answer;
     sendJson(res, 200, answer);
   } catch (err) {
     if (err instanceof BasketError) return sendJson(res, err.status, { error: err.message }), true;
