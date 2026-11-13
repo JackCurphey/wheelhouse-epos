@@ -27,8 +27,8 @@ test('off and never published: the free address, Turn it on with its drawn lines
   assert.ok(ui.getByText('14 have no photo (shown with their name)'));
   assert.ok(ui.getByText('3 have no price (stay off until priced)'));
   // website.mjs seeThem (line 57): the links say what they open.
-  assert.equal(ui.getByRole('link', { name: 'See the products with no photo, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-photo');
-  assert.equal(ui.getByRole('link', { name: 'See the products with no price, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-price');
+  assert.equal(ui.getByRole('link', { name: 'See the products with no photo, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-photo&online=1');
+  assert.equal(ui.getByRole('link', { name: 'See the products with no price, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-price&online=1');
   assert.ok(ui.getByText('Not published yet'));
   // History is dimmed until there is something to go back to (website.mjs line 236),
   // but stays reachable by keyboard, with the reason as its title; pressing it opens nothing.

@@ -18,23 +18,24 @@ their options are in the overnight file `spec-c2w.md`.
    The order holds "one of these", available stock goes down by one until
    it is released, and the actual bike is picked at hand-over.
 
-## Waiting for Jack
+## Answered by Jack — 12 Nov evening
 
-3. **Four messages or six.** The 2 Oct decision (point 6) names four:
-   "Your bike is put aside", "Certificate received", "Ready to collect" and
-   "Your hold ends on [date]". The drawn message list (`cw-messages`) adds
-   "Your bike is no longer put aside" and "Your order is cancelled". Adding
-   them goes beyond the recorded decision, so only the four are built; the
-   other two wait.
-4. **The paid box wording for a certificate-only hand-over.** The 3 Oct
-   change (third walk, answer 4) says one line, "Paid · Cycle to Work ·
-   [Provider]". The drawing (`till-c2w-paid-cert`) shows "Paid" with
-   "Cycle to Work · [Provider] · receipt [receipt number]" under it. These
-   differ, so the wording waits.
+Jack answered both questions that were waiting (relayed by the Front desk,
+12 Nov evening).
 
-Also waiting, under the same answer: pull requests 7 (the hand-over at the
-till) and 8 (the provider's money), because money taken at the till is
-Jack's to approve.
+3. **Four messages or six — six, as drawn (option 1).** The drawn message
+   list (`cw-messages`) is built in full: "Your bike is put aside",
+   "Certificate received", "Ready to collect", "Your hold ends on [date]",
+   "Your bike is no longer put aside" and "Your order is cancelled". This
+   changes the 2 Oct decision (journey 6, point 6), which named four.
+4. **The paid box wording for a certificate-only hand-over — build the
+   drawing (option 1).** The paid box shows "Paid" with "Cycle to Work ·
+   [Provider] · receipt [receipt number]" under it, as `till-c2w-paid-cert`
+   draws it. This changes the 3 Oct wording (third walk, answer 4), which
+   was one line, "Paid · Cycle to Work · [Provider]".
 
-Status: items 1–2 defaults taken; items 3–4 and pull requests 7–8 waiting
-for Jack.
+With those answers, pull requests 7 (the hand-over at the till) and 8 (the
+provider's money) go ahead, under the risky-area rules.
+
+Status: items 1–2 defaults taken; items 3–4 answered by Jack on 12 Nov;
+pull requests 7–8 going ahead.

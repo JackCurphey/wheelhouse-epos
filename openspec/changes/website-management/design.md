@@ -343,6 +343,51 @@ are the last pull request and wait for it.
 7. Tracking ID checks for Clarity, Meta and TikTok, checked against each
    company's help pages.
 
+### Sending each change to Shopify as it happens (Jack's answer to Q2, 12 Nov evening)
+
+`ws-shopify-on` says products are "sent as you change them in Wheelhouse".
+Jack chose option 1: each change goes on its own, through the pretend
+adapter until a real Shopify account exists.
+
+- **The database keeps the list** (migration 150, `shopify_changed`, one row
+  per shop and product, with RLS like `shopify_link`). Triggers on
+  `products` (insert, or a change to SKU, name, price, photo, stock, "Show on
+  website" or active) and on `stock_frames` (a bike held, sold, put back or
+  moved) queue the product. That catches every way stock moves (sales,
+  refunds, receiving, counts, holds) without touching that code. A product is
+  queued only when the shop has a link that isn't stopped, Send has been
+  pressed at least once (before that the Owner hasn't seen what will
+  change), and the product is active and shown online. A failure to queue is a warning in the log, never
+  a failed sale.
+- **The background job sends it** (`server/shopify/sending.js`, `liveRound`):
+  every 30 seconds (`WH_SHOPIFY_LIVE_MS`) it looks at every shop. While the
+  link is idle it sends up to 10 queued products. Paused, changes wait for
+  Resume; during a full Send, they wait for it to finish. A product goes
+  off the queue only if it didn't change again while it was with Shopify,
+  one row at a time so the job never holds two queue rows and can't
+  deadlock with a sale queueing several products.
+- **Once a day it catches up** (`WH_SHOPIFY_CATCH_UP_MS`, and once after
+  each restart; a finished full Send counts as that day's): it compares
+  every product with Shopify, as the check before Send does, and queues any
+  that differ. A change the queue missed (made by a
+  script with no shop set, or a queueing warning) can't leave Shopify's stock
+  wrong for good.
+- **Problems** work like Send's. A price of 0 isn't sent ("no price"); a
+  refusal is listed; Shopify not answering lists the rest of the batch as
+  "no answer" for Try sending again, and isn't retried by itself; the rest
+  of the queue waits for the next round rather than asking again at once. Each
+  product's problem is replaced by how its latest send went.
+- **Connecting again or switching to Wheelhouse's website** empties the
+  queue.
+- **The connected page** goes back to the drawn line, "sent as you change
+  them in Wheelhouse". "See what will change" shows only before the first
+  Send.
+- **Not changed:** a product switched off "Show on website" after it was sent
+  stays in Shopify as it was (gap entry 60).
+- **Known limit:** a full Send pressed while a round of changes is with
+  Shopify can send a product twice; both carry its latest details, so
+  Shopify ends up right.
+
 ## Risks / Trade-offs
 
 - **The money switch.** Making `paymentsConnected()` per shop changes when

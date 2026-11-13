@@ -11,7 +11,7 @@ import { sendJson } from '../lib/http.js';
 import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
 import { customerConversations } from '../workshop/job-notes.js';
 import { floatsToSee } from './float-check.js';
-import { daysWaiting } from './close-the-day.js';
+import { daysWaiting, reopenedOn } from './close-the-day.js';
 import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
 import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
@@ -41,6 +41,11 @@ async function quotesWithNoAnswer() {
 // A day nobody closed, counted with a morning's float and still to bank
 // (op-today-unclosed, op-today-two; openspec/changes/unclosed-day): oldest
 // first, after the short float as drawn. It goes once Close it closes it.
+// A reopened day (reports-accounts-and-reopen): back in Needs attention with Close it until it is closed again.
+async function daysReopened() {
+  const r = await reopenedOn();
+  return r ? [{ kind: 'day_reopened', day: r.day, closeId: r.id, reason: r.reason, reopenedByName: r.reopenedByName, reopenedAt: r.reopenedAt }] : [];
+}
 async function daysNotClosed() {
   return (await daysWaiting()).map((w) => ({
     kind: 'day_not_closed', day: w.for_day, checkId: w.id, checkDay: w.day, countedByName: w.by_name, checkedAt: iso(w.checked_at), tillCode: w.till_code ?? null,
@@ -204,7 +209,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await daysReopened()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision
