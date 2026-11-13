@@ -9,6 +9,7 @@ import { prepare } from '../db.js';
 
 const BOOKING = ['Customer’s first name', 'Bike', 'Service', 'Booked day and time', 'Shop name', 'Link to the booking', 'Job number'];
 const C2W = ['Customer’s first name', 'Bike', 'Hold until', 'Quote number', 'Link to your Cycle to Work bike', 'Shop name'];
+const C2W_CANCELLED = ['Customer’s first name', 'Quote number', 'Shop phone', 'Shop name'];
 
 export const TEMPLATES = {
   quote_to_approve: {
@@ -167,10 +168,11 @@ export const TEMPLATES = {
     subject: 'Thanks for coming to [Shop name]',
     tapIns: ['Customer’s first name', 'Shop name', 'Link to review'],
   },
-  // The four Cycle to Work messages (decision 2026-10-02-cycle-to-work-review
-  // point 6; openspec/changes/cycle-to-work design 9), each switchable off. Names
-  // and when they go as drawn (cw-messages); wording as drawn on cw-texts-hold and
-  // cw-texts-certificate. Subjects aren't drawn. "Your hold ends on [date]"'s
+  // The six Cycle to Work messages (decision 2026-10-02-cycle-to-work-review
+  // point 6, made six by Jack on 12 Nov: 2026-11-12-cycle-to-work-defaults-taken
+  // item 3; openspec/changes/cycle-to-work design 9), each switchable off. Names
+  // and when they go as drawn (cw-messages); wording as drawn on cw-texts-hold,
+  // cw-texts-certificate and cw-texts-cancelled. Subjects aren't drawn. "Your hold ends on [date]"'s
   // wording isn't drawn either: the default taken, Jack can overrule (spec-c2w.md
   // question 6). Queued by server/c2w/messages.js.
   c2w_put_aside: {
@@ -216,6 +218,42 @@ export const TEMPLATES = {
     subject: 'Your Cycle to Work hold ends soon — [Shop name]',
     tapIns: C2W,
   },
+  c2w_released: {
+    group: 'c2w',
+    name: 'Your bike is no longer put aside',
+    when: 'When a held bike is released — the order stays open',
+    wording: 'Hi [Customer’s first name], [Bike] is no longer put aside. We’ll still get you one when your certificate comes. See your Cycle to Work bike: [Link to your Cycle to Work bike]',
+    subject: 'Your Cycle to Work bike is no longer put aside — [Shop name]',
+    tapIns: C2W,
+  },
+  // Drawn with no link (cw-texts-cancelled): the shop's phone instead. The
+  // no-deposit wording is the row's; the two deposit wordings are part of it.
+  c2w_cancelled: {
+    group: 'c2w',
+    name: 'Your order is cancelled',
+    when: 'When a Cycle to Work order is cancelled, with what happens to any deposit',
+    wording: 'Hi [Customer’s first name], your Cycle to Work order, quote [Quote number], is cancelled. Questions? Call [Shop phone].',
+    subject: 'Your Cycle to Work order is cancelled — [Shop name]',
+    tapIns: C2W_CANCELLED,
+  },
+  c2w_cancelled_kept: {
+    partOf: 'c2w_cancelled',
+    group: 'c2w',
+    name: 'Your order is cancelled',
+    when: 'When the deposit is kept, by the shop’s rule, because the bike was ordered in',
+    wording: 'Hi [Customer’s first name], your Cycle to Work order, quote [Quote number], is cancelled. Your [Deposit amount] deposit is kept, as your quote said, because the bike was ordered in for you. Questions? Call [Shop phone].',
+    subject: 'Your Cycle to Work order is cancelled — [Shop name]',
+    tapIns: [...C2W_CANCELLED, 'Deposit amount'],
+  },
+  c2w_cancelled_refunded: {
+    partOf: 'c2w_cancelled',
+    group: 'c2w',
+    name: 'Your order is cancelled',
+    when: 'When the deposit is refunded',
+    wording: 'Hi [Customer’s first name], your Cycle to Work order, quote [Quote number], is cancelled. Your [Deposit amount] deposit is being refunded, the way you paid it. Questions? Call [Shop phone].',
+    subject: 'Your Cycle to Work order is cancelled — [Shop name]',
+    tapIns: [...C2W_CANCELLED, 'Deposit amount'],
+  },
 };
 
 /** The messages something sends today, so Settings › Messages lists only these (stage 1 drawing gaps 7). */
@@ -225,8 +263,9 @@ export const TEMPLATES = {
 // and the review request (openspec/changes/review-requests). Reply to a
 // message joined 26 Oct (openspec/changes/ask-the-shop-server).
 export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request',
-  // Cycle to Work's four (openspec/changes/cycle-to-work design 9).
-  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending'];
+  // Cycle to Work's (openspec/changes/cycle-to-work design 9). "Your order is
+  // cancelled" joins when cancelling is built (pull request 8).
+  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending', 'c2w_released'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and

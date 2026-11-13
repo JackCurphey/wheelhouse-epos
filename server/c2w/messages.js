@@ -1,5 +1,5 @@
-// The four Cycle to Work messages (decision 2026-10-02-cycle-to-work-review point 6;
-// openspec/changes/cycle-to-work design 9): queued like every automatic message,
+// The Cycle to Work messages (decision 2026-10-02-cycle-to-work-review point 6,
+// six from Jack's 12 Nov answer; openspec/changes/cycle-to-work design 9): queued like every automatic message,
 // sent the customer's chosen way after the Undo wait, and not at all when the shop
 // has switched that message off. Inside the shop's runWithShop, on the request's
 // own connection, so a step that is rolled back sends nothing.
@@ -55,6 +55,23 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
   return queued;
 }
 
+/**
+ * Released: "Your bike is no longer put aside", unless "Your bike is put aside"
+ * is still in its minute. Then that one is stopped and nothing is sent, so the
+ * customer isn't told a put-aside ended that she never heard of.
+ */
+export async function queueReleasedMessage(orderId, opts) {
+  const r = await prepare('SELECT customer_id FROM c2w_orders WHERE id = ?').get(orderId);
+  const waiting = await prepare(
+    "SELECT 1 FROM customer_messages WHERE intent_state = 'intended' AND template_key = 'c2w_put_aside' AND customer_id = ? LIMIT 1",
+  ).get(r.customer_id);
+  if (waiting) {
+    await stopWaiting(r.customer_id, 'c2w_put_aside');
+    return { skipped: 'put_aside_waiting' };
+  }
+  return queueC2wMessage(orderId, 'c2w_released', opts);
+}
+
 // The customer's Cycle to Work messages of one kind still waiting are stopped.
 // Messages aren't tied to an order, so this is by customer (decided while
 // building, 12 Nov, PR 9c item 6).
@@ -81,9 +98,18 @@ async function toldTheEnd(orderId, until) {
  * Checked as each message comes due (the sender's DUE_CHECKS): Put aside and
  * Your hold ends go only while the customer still has a bike held for an order
  * before its certificate, so a release in the message's minute stops it. By
- * customer, as the message isn't tied to an order.
+ * customer, as the message isn't tied to an order. No longer put aside goes
+ * only while a released bike is still let go.
  */
 export async function c2wStillNeeded(m) {
+  // No longer put aside: not once the bike is held again (the certificate or the
+  // bike's arrival in the same minute), as the next message says so.
+  if (m.template_key === 'c2w_released') {
+    return Boolean(await prepare(
+      `SELECT 1 FROM c2w_orders o WHERE o.customer_id = ? AND o.stage IN ('quote', 'waiting')
+         AND o.released_at IS NOT NULL AND o.held_at IS NULL LIMIT 1`,
+    ).get(m.customer_id));
+  }
   const held = m.template_key === 'c2w_hold_ending' ? 'o.hold_until IS NOT NULL' : 'o.held_at IS NOT NULL';
   return Boolean(await prepare(
     `SELECT 1 FROM c2w_orders o WHERE o.customer_id = ? AND o.stage IN ('quote', 'waiting') AND ${held} LIMIT 1`,

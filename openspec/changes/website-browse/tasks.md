@@ -4,15 +4,15 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 1. Risky — the site's read routes: shop, published words, categories, shops
 
-- [ ] 1.1 Test: `GET /api/site` finds the shop by `<slug>.wheelhouseepos.com` and by `/store/<slug>/`, and answers name, logo, main colour, the seven published parts and the shops (two shops in the test; neither sees the other)
-- [ ] 1.2 Test: a switched-off website, an unknown shop and a Shopify-kind website all answer the same 404, "This website isn’t available" (wb-off)
-- [ ] 1.3 Test: the draft is never in the answer, and tracking tools come with kind and name only, no ID
-- [ ] 1.4 Test: `preview` and `canTurnOn` are set only for signed-in staff of this shop, with the site off
-- [ ] 1.5 Test: `GET /api/site/categories` answers the tree with counts of online, active, priced products only
-- [ ] 1.6 Test: the rate limit turns away a visitor past the limit and not another visitor
-- [ ] 1.7 Test: a failed read answers 503 with "Something went wrong — try again" and the server keeps running
-- [ ] 1.8 Build `server/routes/site.js` with `resolveStorefrontShop`, `runWithShop`, the limiter and `// screens:` lines; mount it in `server/server.js`
-- [ ] 1.9 Today's hours and the next opening worked out in the shop's time zone (the shared hours on the first shop's card only, Jack's answer 1); test it on an open day, a closed day and a closure
+- [x] 1.1 Test: `GET /api/site` finds the shop by `<slug>.wheelhouseepos.com` and by `/store/<slug>/`, and answers name, logo, main colour, the seven published parts and the shops (two shops in the test; neither sees the other)
+- [x] 1.2 Test: a switched-off website, an unknown shop and a Shopify-kind website all answer the same 404, "This website isn’t available" (wb-off)
+- [x] 1.3 Test: the draft is never in the answer, and tracking tools come with kind and name only, no ID
+- [x] 1.4 Test: `preview` and `canTurnOn` are set only for signed-in staff of this shop, with the site off
+- [x] 1.5 Test: `GET /api/site/categories` answers the tree with counts of online, active, priced products only
+- [x] 1.6 Test: the rate limit turns away a visitor past the limit and not another visitor
+- [x] 1.7 Test: a failed read answers 503 with "Something went wrong — try again" and the server keeps running
+- [x] 1.8 Build `server/routes/site.js` with `resolveStorefrontShop`, `runWithShop`, the limiter and `// screens:` lines; mount it in `server/server.js`
+- [x] 1.9 Today's hours and the next opening worked out in the shop's time zone (the shared hours on the first shop's card only, Jack's answer 1); test it on an open day, a closed day and a closure
 - [ ] 1.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 2. Risky — products: listing, filters, sort, product, suggestions and search
