@@ -12,6 +12,7 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { changeTable } from './helpers/table-change.js';
 
 let server;
 before(async () => { server = await startLiveServer(); });
@@ -158,7 +159,7 @@ test('a sign-off whose history row cannot be saved leaves no half sign-off, and 
   await admin.connect();
   const fn = `refuse_sign_off_${job.id}_${shop.id}`;
   await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.workshop_job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
-  await admin.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON workshop_job_sign_offs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(admin, `CREATE TRIGGER ${fn} BEFORE INSERT ON workshop_job_sign_offs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const paid = await pay({ signedOffBy: alex });
     assert.equal(paid.status, 201, JSON.stringify(paid.body));
@@ -168,7 +169,7 @@ test('a sign-off whose history row cannot be saved leaves no half sign-off, and 
     const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
     assert.equal(order.status, 'converted', 'the payment stands');
   } finally {
-    await admin.query(`DROP TRIGGER ${fn} ON workshop_job_sign_offs`);
+    await changeTable(admin, `DROP TRIGGER ${fn} ON workshop_job_sign_offs`);
     await admin.query(`DROP FUNCTION ${fn}()`);
     await admin.end();
     await deleteTestShop(shop.id);
@@ -192,7 +193,7 @@ for (const what of ['deleted', 'switched off']) {
     const fn = `till_signer_goes_${job.id}_${shop.id}`;
     const change = what === 'deleted' ? `DELETE FROM employees WHERE id = ${signer}` : `UPDATE employees SET active = 0 WHERE id = ${signer}`;
     await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN ${change}; RETURN NEW; END $$`);
-    await admin.query(`CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW WHEN (NEW.id = ${job.id} AND NEW.work_state = 'complete') EXECUTE FUNCTION ${fn}()`);
+    await changeTable(admin, `CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW WHEN (NEW.id = ${job.id} AND NEW.work_state = 'complete') EXECUTE FUNCTION ${fn}()`);
     try {
       const paid = await pay({ signedOffBy: signer });
       assert.equal(paid.status, 201, JSON.stringify(paid.body));
@@ -204,7 +205,7 @@ for (const what of ['deleted', 'switched off']) {
       const order = await runWithShop(shop.id, () => prepare('SELECT status FROM sale_documents WHERE id = ?').get(job.orderId));
       assert.equal(order.status, 'converted', 'the payment stands');
     } finally {
-      await admin.query(`DROP TRIGGER ${fn} ON workshop_jobs`);
+      await changeTable(admin, `DROP TRIGGER ${fn} ON workshop_jobs`);
       await admin.query(`DROP FUNCTION ${fn}()`);
       await admin.end();
       await deleteTestShop(shop.id);

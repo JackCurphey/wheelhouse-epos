@@ -12,6 +12,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
+import { changeTable } from './helpers/table-change.js';
 // The admin address on this test database, as the other tests find it: from
 // ADMIN_DATABASE_URL or the superuser password in .env (it crashed without the first).
 const adminDatabaseUrl = () => { const u = new URL(adminUrlFrom(process.env)); u.pathname = new URL(process.env.DATABASE_URL).pathname; return u.href; };
@@ -49,7 +50,7 @@ test('a cancel or decline that fails after the state change leaves the booking a
   const db = await admin();
   const fn = `refuse_answer_${shop.id}`;
   await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id IN (${toCancel.id}, ${toDecline.id}) AND (NEW.cancelled_by IS NOT NULL OR NEW.decline_message IS NOT NULL) THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
-  await db.query(`CREATE TRIGGER ${fn} BEFORE UPDATE ON workshop_jobs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(db, `CREATE TRIGGER ${fn} BEFORE UPDATE ON workshop_jobs FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const cancel = await req(`/api/workshop-jobs/${toCancel.id}/cancel`, { method: 'POST', body: { version: toCancel.version } });
     assert.equal(cancel.status, 500, JSON.stringify(cancel.body));
@@ -63,7 +64,7 @@ test('a cancel or decline that fails after the state change leaves the booking a
     assert.equal((await liveHolds(shop.id, toCancel.id)).length, 1, 'the cancelled job still holds its time');
     assert.equal((await liveHolds(shop.id, toDecline.id)).length, 1, 'the declined job still holds its time');
   } finally {
-    await db.query(`DROP TRIGGER ${fn} ON workshop_jobs`);
+    await changeTable(db, `DROP TRIGGER ${fn} ON workshop_jobs`);
     await db.query(`DROP FUNCTION ${fn}()`);
     await db.end();
     await deleteTestShop(shop.id);
@@ -84,7 +85,7 @@ test('deleting a job while its order is being paid is refused, not a paid order 
   const db = await admin();
   const fn = `slow_payment_${shop.id}`;
   await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id = ${job.orderId} AND NEW.status = 'converted' THEN PERFORM pg_sleep(1.5); END IF; RETURN NEW; END $$`);
-  await db.query(`CREATE TRIGGER ${fn} BEFORE UPDATE ON sale_documents FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(db, `CREATE TRIGGER ${fn} BEFORE UPDATE ON sale_documents FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const pay = req(`/api/sale-documents/${job.orderId}/convert`, { method: 'POST', body: { cardAmount: 65, cashierId: cashier, signedOffBy: null } });
     await new Promise((r) => setTimeout(r, 600));
@@ -98,7 +99,7 @@ test('deleting a job while its order is being paid is refused, not a paid order 
     const order = await runWithShop(shop.id, () => prepare('SELECT status, workshop_job_id FROM sale_documents WHERE id = ?').get(job.orderId));
     assert.deepEqual([order.status, order.workshop_job_id], ['converted', job.id], 'the paid order is still linked to its job');
   } finally {
-    await db.query(`DROP TRIGGER ${fn} ON sale_documents`);
+    await changeTable(db, `DROP TRIGGER ${fn} ON sale_documents`);
     await db.query(`DROP FUNCTION ${fn}()`);
     await db.end();
     await deleteTestShop(shop.id);
