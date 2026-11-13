@@ -20,6 +20,7 @@ export type C2wOrder = {
   appliedAt: string | null; applicationReference: string | null; certificateNumber: string | null; certificatePence: number | null;
   certificateReceivedOn: string | null; collectedAt: string | null; paidOn: string | null; inStock: boolean;
   expectedPence: number | null; expectedBy: string | null; paidPence: number | null; next?: Next;
+  closeReason?: string | null;
   // Whether a bike is put aside for the order now, and what's been said about any difference.
   held?: boolean; certificateLate?: boolean; differenceChoice?: 'keep' | 'match' | null;
   // The supplier ordering uses (Settings' spelling), and the supplier order the bike is on.
@@ -30,7 +31,7 @@ export type C2wOrder = {
   providerPaysPence?: number; frameId?: number | null; frameNumber?: string | null; saleId?: number | null;
 };
 export type C2wEvent = { kind: string; by: string | null; at: string; reason: string | null; detail: Record<string, string> };
-export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string };
+export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string; paymentLateDays?: number | null };
 export type Provider = { id: number; name: string; paysInDays: number | null; accessoriesInside: boolean; commissionKind?: 'percent' | 'pounds'; commissionValue?: number | null; handoverChecks?: string[] };
 
 export const useC2wSettings = () => useQuery({ queryKey: ['c2w-settings'], queryFn: () => apiGet<{ settings: Settings }>('/api/c2w/settings') });

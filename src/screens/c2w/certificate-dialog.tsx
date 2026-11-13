@@ -12,12 +12,12 @@ import { Kv, Msg, dayOf, firstName, longDate, mono, note, pounds, type C2wOrder 
  * Add the certificate with what to do when it's for less or more, and Change
  * the order to match. Each saves to `server/routes/c2w.js` and reloads the order.
  */
-const canSay = (err: unknown): err is ApiError => err instanceof ApiError && err.status < 500 && err.hasServerMessage;
-const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
-const SUB = 'text-size-13 text-[var(--wh-muted)]';
-const problemLine = (p: string | null) => (p ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{p}</p> : null);
+export const canSay = (err: unknown): err is ApiError => err instanceof ApiError && err.status < 500 && err.hasServerMessage;
+export const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
+export const SUB = 'text-size-13 text-[var(--wh-muted)]';
+export const problemLine = (p: string | null) => (p ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{p}</p> : null);
 
-function Field({ id, label, value, onChange, type = 'text', hint, max }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; hint?: string; max?: string }) {
+export function Field({ id, label, value, onChange, type = 'text', hint, max }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; hint?: string; max?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
