@@ -98,7 +98,7 @@ export async function renderBookScreen({
             : pathname.includes('/c2w-links/') ? c2wLink
             : pathname.endsWith('/privacy') ? privacy
             : pathname.includes('/sign-in/') ? signIn
-            : /\/(me|me\/contact|me\/email|me\/email\/confirm|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
+            : /\/(me|me\/contact|me\/email|me\/email\/confirm|me\/data-copy|me\/delete-request|me\/delete-request\/cancel|bikes|history|c2w-orders|c2w-orders\/\d+|logout|receipts\/[a-z]+\/\d+(\/email)?)$/.test(pathname) ? account
             : pathname.endsWith('/messages') ? messages
             : pathname.endsWith('/deposit-holds') ? depositHold
             : pathname.includes('/pretend-payments/') ? card
@@ -147,7 +147,7 @@ export async function renderBookScreen({
   for (const [path, name] of Object.entries(real)) {
     realScreens[path] = (await importFresh(new URL(`screens/book/${path}.js`, BUILD).href))[name];
   }
-  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in', 'account', 'messages', 'from-reminder/:code', 'privacy', 'cycle-to-work/:code']
+  const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code', 'photo/:code', 'stop/:code', 'sign-in', 'account', 'messages', 'from-reminder/:code', 'privacy', 'cycle-to-work/:code', 'account/cycle-to-work/:id']
     .map((p) => ({ ...child(p), Component: p === at ? Screen : realScreens[p] ?? Where }));
   const start = new URL(url, 'http://localhost');
   const entry = state ? { pathname: start.pathname, search: start.search, state } : url;
