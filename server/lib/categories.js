@@ -20,6 +20,14 @@ export function tidyCategory(text) {
   return parts.length === 0 ? NONE : parts.join(JOIN);
 }
 
+// A new category shows on the website as the one it's inside does; a new top-level
+// one shows unless the website started with nothing online (openspec/changes/
+// website-buy-online, Showing products: new products follow their category).
+const SHOWS_LIKE_PARENT = `COALESCE(
+  (SELECT show_online FROM product_categories WHERE id = ?),
+  (SELECT started_with IS DISTINCT FROM 'nothing' FROM website),
+  true)`;
+
 /**
  * The tidied path, with every category in it found or made, in the caller's transaction
  * and under its lock limit. Each one found is held against renaming (KEY SHARE), so a
@@ -37,10 +45,18 @@ export async function categoryFor(text) {
     let found = await find();
     if (!found) {
       found = await prepare(
-        'INSERT INTO product_categories (parent_id, name, path) VALUES (?, ?, ?) ON CONFLICT (shop_id, path) DO NOTHING RETURNING id'
-      ).get(parent, parts[i - 1], here) ?? await find();
+        `INSERT INTO product_categories (parent_id, name, path, show_online)
+         VALUES (?, ?, ?, ${SHOWS_LIKE_PARENT}) ON CONFLICT (shop_id, path) DO NOTHING RETURNING id`
+      ).get(parent, parts[i - 1], here, parent) ?? await find();
     }
     parent = found.id;
   }
   return path;
+}
+
+// A new product with no switch of its own follows its category; one with no
+// category (Uncategorised) stays off until switched on, as before.
+export async function categoryShows(path) {
+  const row = await prepare('SELECT show_online FROM product_categories WHERE path = ?').get(path);
+  return row ? row.show_online : false;
 }

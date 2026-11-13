@@ -112,7 +112,7 @@ test('% and _ in a search are plain characters, not wildcards', async () => {
 // online=1 keeps to the products switched to show on the website, as the Website page counts.
 test('show=no-photo and show=no-price list just the products the Website page counts', async () => {
   const shown = await pads({ name: 'Website pads shown no photo' });
-  const hidden = await pads({ name: 'Website pads hidden no photo' });
+  const hidden = await pads({ name: 'Website pads hidden no photo', showOnline: false });
   const pictured = await pads({ name: 'Website pads with photo' });
   const free = await pads({ name: 'Website pads no price', price: 0 });
   await runWithShop(owner.shop.id, async () => {
@@ -139,7 +139,7 @@ test('show= lists one row per counted product, with the same edges as the counts
   const sizeB = await pads({ name: 'Counted pads size B' });
   const blank = await pads({ name: 'Counted pads blank photo' });
   const gone = await pads({ name: 'Counted pads off sale' });
-  const offline = await pads({ name: 'Counted pads offline free', price: 0 });
+  const offline = await pads({ name: 'Counted pads offline free', price: 0, showOnline: false });
   const below = await pads({ name: 'Counted pads below zero' });
   await runWithShop(owner.shop.id, async () => {
     const g = await prepare("INSERT INTO product_groups (name, category) VALUES ('Counted pads sized', '[Category]') RETURNING id").get();

@@ -11,7 +11,7 @@ import { serializeProduct } from '../lib/serializers.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
-import { categoryFor, tidyCategory } from '../lib/categories.js';
+import { categoryFor, categoryShows, tidyCategory } from '../lib/categories.js';
 import { notProductEditor } from '../lib/product-editor.js';
 import { detailsOf, saveAnswers } from '../lib/product-details.js';
 import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js';
@@ -255,7 +255,6 @@ export function register(route) {
     const supplier = (body.supplier || '').trim();
     const brand = brandOf(body.brand);
     if (brand === undefined) return badRequest(res, BRAND_TOO_LONG);
-    const showOnline = Boolean(body.showOnline);
     const description = (body.description || '').trim();
     const photoUrl = body.photoUrl || null;
 
@@ -270,6 +269,8 @@ export function register(route) {
         // Its category's path found or made (category-tree), with a limit on waiting.
         await limitLockWait();
         const category = await categoryFor(body.category);
+        // Sent with no switch of its own, it follows its category (Showing products).
+        const showOnline = body.showOnline === undefined ? await categoryShows(category) : Boolean(body.showOnline);
         info = await db
           .prepare(
             `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, brand, show_online, description, photo_url, updated_at)

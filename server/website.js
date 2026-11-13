@@ -12,6 +12,7 @@ import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
 import { linkState } from './shopify/link.js';
+import { START_CHOICES, startProducts } from './website-showing.js';
 import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
 
 // History keeps 90 days (spec question 3, default taken:
@@ -126,7 +127,7 @@ const lockWebsite = async () => {
   return prepare('SELECT * FROM website FOR UPDATE').get();
 };
 
-async function inTransaction(fn) {
+export async function inTransaction(fn) {
   await dbExec('BEGIN');
   try {
     const result = await fn();
@@ -499,15 +500,13 @@ function checkColour(colour) {
 // Shopify is set up by connecting it (pull request 6b).
 export async function setUp(body, loginId) {
   if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
-  if (!['every', 'nothing'].includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
+  if (!START_CHOICES.includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
   const colour = checkColour(body.mainColour);
   await getOrCreateWebsite();
   return inTransaction(async () => {
     const website = await prepare('SELECT * FROM website FOR UPDATE').get();
     if (website.kind) throw new WebsiteError(409, 'The website is already set up');
-    // Every product online: active ones with a price; one with no price stays
-    // off until priced. Nothing online: every product off, inactive ones too.
-    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
+    await startProducts(body.startWith);
     await prepare(
       `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
               draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`

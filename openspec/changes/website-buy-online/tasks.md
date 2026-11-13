@@ -39,9 +39,9 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 2.1 Screen test: `on-settings` — What the website sells with only "Only what’s on the shelf" and its hint, and the held line; no other choice (question 10)
 - [x] 2.2 Screen test: `on-settings-pay` — WP-6.1's connected line, the Apple Pay and Google Pay and Store credit switches, no Gift cards switch, summary "[Payment provider] · store credit"; Not collected with its two boxes and the drawn explanation
 - [x] 2.3 Screen test: `on-settings-keep` — Keep orders for, and "Shelf or spot" with its hint
-- [ ] 2.4 Test (server): a category's switch sets every product in it; a new product follows its category; the count of products set differently; "Started with every product online on [date]" from the website's set-up date; Change reuses set-up step 3's code
-- [ ] 2.5 Screen test: `on-settings-show` — a switch per category, "[n] products are set differently from their category." with See them (opens Stock filtered, as WP-6.1's See them does), "New products follow their category."
-- [ ] 2.6 Build the folds in `src/screens/settings/online-orders-settings.tsx` and the category switch route to pass 2.1–2.5
+- [x] 2.4 Test (server): a category's switch sets every product in it; a new product follows its category; the count of products set differently; "Started with every product online on [date]" from the website's set-up date; Change reuses set-up step 3's code
+- [x] 2.5 Screen test: `on-settings-show` — a switch per category, "[n] products are set differently from their category." with See them (opens Stock filtered, as WP-6.1's See them does), "New products follow their category."
+- [x] 2.6 Build the folds in `src/screens/settings/online-orders-settings.tsx` and the category switch route to pass 2.1–2.5
 - [ ] 2.7 Self-review with `reviewer`; full check
 
 ## 3. The six order messages (pull request 3, about 400 lines, risky: messaging core)
