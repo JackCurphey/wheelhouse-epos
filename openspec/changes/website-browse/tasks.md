@@ -127,3 +127,5 @@ Logged for Jack or a later piece; none blocks this change.
 - For Jack (design): the chip's spoken name doesn't start with its visible words "Collecting from Bolton" (WCAG 2.5.3; the words are the drawing's).
 - For Jack (design): on a phone the cookie banner covers the footer until it is answered.
 - For WP-6.3: the basket's "0 items" is fixed text until Buy online is built.
+- The booking app on a shop's own address (`<slug>.<base domain>/book`) can't reach `/api/portal/...`: those calls land in the website's handler (a JSON 404 now, the website page before this change). Send `/api/portal/` on to its own handler next to `/book` (public routes: a risky area).
+- The old on/off switch (`storefront_settings.enabled`) is no longer kept in step with the website's; it only matters if a website row were ever deleted. Set it to off once, or stop reading it as a fallback.
