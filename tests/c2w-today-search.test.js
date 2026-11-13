@@ -147,6 +147,29 @@ test('10.1 Today: a quote given the “No certificate after” days ago or more 
   assert.ok(!(await c2wLines()).some((l) => l.kind === 'c2w_no_certificate'), 'no days set in Settings, no line');
 });
 
+test('10.1 Today: a collected bike the provider hasn’t paid for by its expected date is a late-payment line, oldest expected first; one due today, one paid and one with no date are not', async () => {
+  const collectedOrder = async (customer, columns) => {
+    const o = await quote(customer);
+    await set(o.id, { stage: 'collected', certificate_number: `[certificate ${tag()}]`, certificate_pence: 100000, collected_at: `${day(-20)}T10:00:00.000Z`, ...columns });
+    return o;
+  };
+  const late = await collectedOrder(maya, { expected_pence: 90000, expected_by: day(-12) });
+  const partPaid = await collectedOrder(sam, { expected_pence: 90000, paid_pence: 40000, expected_by: day(-1), collected_at: `${day(-15)}T10:00:00.000Z` });
+  const dueToday = await collectedOrder(maya, { expected_pence: 90000, expected_by: day(0) });
+  const paid = await collectedOrder(maya, { expected_pence: 90000, paid_pence: 90000, expected_by: day(-12), stage: 'paid', paid_on: day(-2) });
+  const noDate = await collectedOrder(maya, { expected_pence: 90000, expected_by: null });
+  const ids = [late.id, partPaid.id, dueToday.id, paid.id, noDate.id];
+  const ours = (await c2wLines()).filter((l) => ids.includes(l.orderId));
+  assert.deepEqual(ours, [
+    { kind: 'c2w_payment_late', orderId: late.id, providerName: '[Provider]', customerName: 'Maya Patel', collectedOn: day(-20), expectedPence: 90000, expectedBy: day(-12), lateDays: 12 },
+    { kind: 'c2w_payment_late', orderId: partPaid.id, providerName: '[Provider]', customerName: '[Customer]', collectedOn: day(-15), expectedPence: 90000, expectedBy: day(-1), lateDays: 1 },
+  ], 'as drawn: “[Provider] payment is [n] days late”, a part-paid bike still late');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { todayLines: false } })).status, 200);
+  assert.ok(!(await c2wLines()).some((l) => l.kind === 'c2w_payment_late'), 'none while “On Today” is off');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { todayLines: true } })).status, 200);
+  for (const id of ids) await set(id, { stage: 'paid' });
+});
+
 test('10.1 Today: Hold longer on a “no certificate yet” line takes it away; it comes back the “No certificate after” days after the hold was lengthened', async () => {
   assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 5 } })).status, 200);
   const made = await quote();

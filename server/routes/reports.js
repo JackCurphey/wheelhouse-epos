@@ -14,6 +14,7 @@ import { workshopReport, workshopCsv } from '../lib/report-workshop.js';
 import { returningReport, returningCsv } from '../lib/report-customers.js';
 import { vatReport, vatCsv } from '../lib/report-vat.js';
 import { stockReport, stockCsv } from '../lib/report-stock.js';
+import { c2wReport, c2wCsv } from '../lib/report-c2w.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { listSaved, createSaved, renameSaved, deleteSaved, undoSaved, SavedNotFound } from '../lib/saved-reports.js';
@@ -52,6 +53,7 @@ const dates = (p) => `${p.from}-to-${p.through}`;
 // A period asked for in the address, or a 400 saying what to fix.
 const asked = (query) => ({ period: query.get('period') || 'this-week', from: query.get('from'), to: query.get('to') });
 const vatAsked = (query) => ({ ...asked(query), period: query.get('period') || 'this-vat-quarter' });
+const c2wAsked = (query) => ({ ...asked(query), period: query.get('period') || 'this-month' });
 const returningAsked = (query) => ({ ...asked(query), period: query.get('period') || 'last-12-months', months: query.get('months') });
 
 export function register(route) {
@@ -171,6 +173,38 @@ export function register(route) {
     try {
       const report = await workshopReport(asked(query), await currentShopToday());
       sendCsv(res, `workshop-${ctx.shop.slug}-${dates(report.period)}`, workshopCsv(report));
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // Cycle to Work: owed and paid: by provider, bikes collected, owed now, paid
+  // and commission (counted on the day each order is marked paid) and the late
+  // bikes. Commission is a cost, so it is behind canSeeCosts too (rp-c2w).
+  // screens: rp-c2w
+  route('GET', '/api/reports/c2w', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const today = await currentShopToday();
+      const report = await c2wReport(c2wAsked(query), today);
+      sendJson(res, 200, { ...report, today, shopLine: await shopLine(ctx) });
+    } catch (err) {
+      if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
+      throw err;
+    }
+  });
+
+  // screens: rp-c2w
+  route('GET', '/api/reports/c2w.csv', async (req, res, params, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
+    const ctx = await currentSession(req);
+    try {
+      const report = await c2wReport(c2wAsked(query), await currentShopToday());
+      sendCsv(res, `c2w-${ctx.shop.slug}-${dates(report.period)}`, c2wCsv(report));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
       throw err;

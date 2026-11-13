@@ -28,7 +28,7 @@ test('Reports opens with the date and shop, this week\'s takings so far and the 
 test('only reports that are built have a card, and no Margin tile on the strip', async () => {
   const { ui, within } = await openReports('/workshop/reports', { answers: home });
   const cards = within(await ui.findByRole('region', { name: 'Ready-made reports' }));
-  assert.deepEqual(cards.getAllByRole('link').map((a) => a.querySelector('span')?.textContent), ['Sales', 'Takings and cash-ups', 'Workshop', 'Returning customers', 'Margin and stock value', 'VAT']);
+  assert.deepEqual(cards.getAllByRole('link').map((a) => a.querySelector('span')?.textContent), ['Sales', 'Takings and cash-ups', 'Workshop', 'Returning customers', 'Margin and stock value', 'VAT', 'Cycle to Work: owed and paid']);
   assert.ok(cards.queryByText('Jobs, labour and parts, how full each mechanic was') !== null);
   for (const name of ['Discounts and refunds', 'Your reports']) {
     assert.ok(cards.queryByText(name) === null, name);

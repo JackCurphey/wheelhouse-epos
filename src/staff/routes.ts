@@ -53,6 +53,8 @@ export const ROUTES = {
   'rp-returning': '/workshop/reports/returning',
   // VAT (rp-vat): sales by VAT rate for the shop's VAT quarter; asks for the quarter the first time (rp-vat-first).
   'rp-vat': '/workshop/reports/vat',
+  // Cycle to Work: owed and paid (rp-c2w): by provider, what's owed, paid and kept as commission (cycle-to-work task 10.3).
+  'rp-c2w': '/workshop/reports/c2w',
   // A changed report (rp-changed), from "Change what's shown" on Sales or Takings and cash-ups
   // (openspec/changes/reports-your-own); its choices and period are in the address.
   'rp-changed': '/workshop/reports/changed',

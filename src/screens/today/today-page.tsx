@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
 import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
-import { longDate, orderHref, possessive } from '@/screens/c2w/c2w-bits.tsx';
+import { longDate, orderHref, possessive, pounds } from '@/screens/c2w/c2w-bits.tsx';
 import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
 import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
@@ -43,6 +43,7 @@ type Attention =
   // Cycle to Work (openspec/changes/cycle-to-work, task 10.1; server/c2w/today.js).
   | { kind: 'c2w_hold_ended'; orderId: number; customerName: string; bike: string; holdUntil: string }
   | { kind: 'c2w_no_certificate'; orderId: number; customerName: string; bike: string; quotedDays: number; holdUntil: string | null }
+  | { kind: 'c2w_payment_late'; orderId: number; providerName: string; customerName: string; collectedOn: string | null; expectedPence: number; expectedBy: string; lateDays: number }
   | { kind: 'payments_need_details'; providerName: string | null; needsDetailsBy: string | null; needsWhat: string | null }
   | { kind: 'stock_adjusted'; movementId: number; productId: number; productName: string; change: number; valuePence?: number; reason: string; note: string; byName: string | null; at: string };
 type Person = { id: number; name: string; role: string; checkedInAt?: string; dueAt?: string };
@@ -290,6 +291,15 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
               <Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.customerName)} order`} className={`${buttonVariants({ size })}${touch ? ' min-h-11' : ''}`}>Open the order</Link>
             </span>
           )} />
+      );
+    }
+    // op-today-c2w: a collected bike the provider hasn't paid for by its expected date.
+    if (i.kind === 'c2w_payment_late') {
+      return (
+        <Line key={`l${i.orderId}`} lead={warn}
+          title={`${i.providerName} payment is ${i.lateDays} ${i.lateDays === 1 ? 'day' : 'days'} late`}
+          sub={`${i.customerName}${i.collectedOn ? ` · collected ${longDate(i.collectedOn)}` : ''} · expected ${pounds(i.expectedPence)} by ${longDate(i.expectedBy)}`}
+          right={<Link to={orderHref(i.orderId)} aria-label={`Open ${possessive(i.providerName)} late payment`} className={`${buttonVariants({ size: touch ? 'default' : 'sm' })}${touch ? ' min-h-11' : ''}`}>Open the order</Link>} />
       );
     }
     // st-today-below: on a phone See them and Count them sit under the words.
