@@ -17,6 +17,7 @@ import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
 import { CancelDialog, MoreMenu } from './cancel-dialog.tsx';
+import { MarkPaidDialog, owedOf } from './mark-paid-dialog.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
@@ -54,9 +55,55 @@ function Stages({ o }: { o: Full }) {
 }
 
 type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; busy: boolean };
+type Money = { provider: Provider | undefined; lateDays: number | null; canPay: boolean; onPay: () => void; onCloseOwed: () => void };
+
+/** What the provider has sent for the order, from its payments (the extra included). */
+const received = (o: Full) => o.events.reduce((sum, e) => (e.kind === 'paid' || e.kind === 'part_paid' ? sum + Number(e.detail.paymentPence ?? e.detail.amountPence) : sum), 0);
+
+/**
+ * After collection: what the provider owes (cw-order-owed), what's still owed after
+ * part of it came (cw-order-part-paid), and Paid (cw-order-paid). Only the owner can
+ * mark a payment, so others see the boxes without the buttons (logged). A closed
+ * order isn't drawn: it says what wasn't paid and why (logged).
+ */
+function MoneyStep({ o, money }: { o: Full; money: Money }) {
+  const head = (text: string) => <h3 id="cw-next" className="m-0 text-size-17 font-bold">{text}</h3>;
+  const expected = o.expectedPence ?? 0;
+  if (o.stage === 'closed') {
+    return <Box label="cw-next"><Msg tone="warn"><strong>{`Closed with ${pounds(owedOf(o))} not paid.`}</strong>{o.closeReason ? ` ${o.closeReason}` : ''}</Msg></Box>;
+  }
+  if (o.stage === 'paid') {
+    const got = received(o) || (o.paidPence ?? 0);
+    return (
+      <Box label="cw-next">
+        {head('Paid')}
+        <Msg tone="ok"><strong>{`${pounds(got)} received from ${o.providerName}${o.paidOn ? ` on ${longDate(o.paidOn)}` : ''}`}</strong>{got === expected ? ', as expected.' : '.'}</Msg>
+      </Box>
+    );
+  }
+  if (o.paidPence) {
+    return (
+      <Box label="cw-next">
+        {head('Next: the rest of the payment')}
+        <Msg tone="warn"><strong>{`${pounds(o.paidPence)} of ${pounds(expected)} received from ${o.providerName}.`}</strong>{` ${pounds(owedOf(o))} still owed — it stays on the owed list and on Today if it’s late.`}</Msg>
+        {money.canPay ? row(<><Button variant="primary" onClick={money.onPay}>Mark the rest paid</Button><Button variant="default" onClick={money.onCloseOwed}>Close with a reason…</Button></>) : null}
+      </Box>
+    );
+  }
+  const kept = money.provider ? commission(money.provider) : null;
+  const less = o.certificatePence === null ? '' : ` — the certificate ${pounds(o.certificatePence)} less ${kept ?? pounds(o.certificatePence - expected)} commission.`;
+  return (
+    <Box label="cw-next">
+      {head('Next: the provider’s payment')}
+      <Msg><strong>{`Expected ${pounds(expected)} from ${o.providerName}${o.expectedBy ? ` by ${longDate(o.expectedBy)}` : ''}`}</strong>{less || '.'}</Msg>
+      {money.canPay ? <div><Button variant="primary" onClick={money.onPay}>Mark paid</Button></div> : null}
+      {money.lateDays === null ? null : <p className={note}>{`If it hasn’t arrived ${plural(money.lateDays, 'day', 'days')} after that, it shows on Today.`}</p>}
+    </Box>
+  );
+}
 const row = (children: ReactNode) => <div className="flex flex-wrap gap-2.5">{children}</div>;
 
-function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | undefined; remindDays: number | null; now: string; act: Act }) {
+function NextStep({ o, rule, remindDays, now, act, money }: { o: Full; rule: string | undefined; remindDays: number | null; now: string; act: Act; money: Money }) {
   const name = firstName(o.customerName);
   const head = (text: string) => <h3 id="cw-next" className="m-0 text-size-17 font-bold">{text}</h3>;
   const addCertificate = (variant: 'primary' | 'default') => <Button variant={variant} onClick={act.onCertificate}>Add the certificate</Button>;
@@ -66,6 +113,7 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
   if (o.stage === 'cancelled') {
     return <Box label="cw-next"><Msg><strong id="cw-cancelled" tabIndex={-1}>This order is cancelled.</strong></Msg></Box>;
   }
+  if (o.stage === 'paid' || o.stage === 'closed' || (o.stage === 'collected' && o.expectedPence !== null)) return <MoneyStep o={o} money={money} />;
   if (o.stage === 'ready') {
     // Hand over comes with pull request 7 (logged).
     return (
@@ -157,6 +205,8 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
  *  even with the hold the server records between them (quote, held, emailed). */
 function lines(o: Full): { at: string; by: string; text: string }[] {
   const out: { at: string; by: string; text: string }[] = [];
+  const expected = o.expectedPence ?? 0;
+  let paidSoFar = 0;
   let quoteLine: { line: { at: string; by: string; text: string }; by: string | null } | null = null;
   o.events.forEach((e) => {
     if (e.kind === 'quote_emailed' && quoteLine && quoteLine.by === e.by) {
@@ -179,7 +229,17 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
     // Not drawn (logged): Undo of Mark ready says what it did.
     else if (e.kind === 'ready_undone') text = 'undid ready to collect';
     else if (e.kind === 'cancelled') text = ['cancelled the order', e.detail.bike === 'keep' ? 'kept the bike as shop stock' : null, e.detail.notTold ? `${firstName(o.customerName)} wasn’t told: ${e.detail.notTold === 'no_phone' ? 'the shop has no phone number in Settings' : 'the message couldn’t be sent'}` : null, e.reason].filter(Boolean).join(' · ');
-    else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
+    else if (e.kind === 'part_paid') {
+      paidSoFar += Number(e.detail.amountPence);
+      text = `saved part paid: ${pounds(paidSoFar)} of ${pounds(expected)} received ${longDate(e.detail.receivedOn)} · ${pounds(expected - paidSoFar)} still owed`;
+    } else if (e.kind === 'paid') {
+      paidSoFar += Number(e.detail.amountPence);
+      text = [`marked paid: ${pounds(Number(e.detail.paymentPence ?? e.detail.amountPence))} received ${longDate(e.detail.receivedOn)}`, e.detail.reference ? `reference ${e.detail.reference}` : null, e.detail.extraPence ? `the extra ${pounds(Number(e.detail.extraPence))} is noted` : null].filter(Boolean).join(' · ');
+    } else if (e.kind === 'shortfall_closed') {
+      const got = Number(e.detail.amountPence);
+      paidSoFar += got;
+      text = [`closed it with ${pounds(Number(e.detail.shortfallPence))} not paid${got ? `: ${pounds(got)} received ${longDate(e.detail.receivedOn)}` : ''}`, e.reason].filter(Boolean).join(' · ');
+    } else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
     if (!text) return;
     const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
     out.push(line);
@@ -276,7 +336,7 @@ function OrderBody() {
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState<'applied' | 'certificate' | 'cancel' | null>(null);
+  const [open, setOpen] = useState<'applied' | 'certificate' | 'cancel' | 'paid' | 'close' | null>(null);
   const [stepping, setStepping] = useState(false);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
@@ -323,7 +383,9 @@ function OrderBody() {
     }
   }
   const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), busy: stepping };
-  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} /><History o={o} /></>;
+  const canPay = session.status === 'signed-in' && session.user.isOwner;
+  const money = { provider, lateDays: settings?.paymentLateDays ?? null, canPay, onPay: () => setOpen('paid'), onCloseOwed: () => setOpen('close') };
+  const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} money={money} /><History o={o} /></>;
   const right = <><Details o={o} provider={provider} onEmail={() => void send()} busy={busy} /><Customer o={o} /></>;
   return (
     <Page>
@@ -335,7 +397,7 @@ function OrderBody() {
         </div>
         {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} /> : null}
       </div>
-      {o.stage === 'cancelled' ? null : <Stages o={o} />}
+      {o.stage === 'cancelled' || o.stage === 'closed' ? null : <Stages o={o} />}
       <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[minmax(0,1fr)_420px]">
         <div className="flex flex-col gap-3.5">{left}</div>
         <div className="flex flex-col gap-3.5">{right}</div>
@@ -343,6 +405,7 @@ function OrderBody() {
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
       {open === 'cancel' ? <CancelDialog o={o} events={o.events} shop={shop} onClose={() => setOpen(null)} /> : null}
+      {open === 'paid' || open === 'close' ? <MarkPaidDialog o={o} today={today} closing={open === 'close'} onClose={() => setOpen(null)} onSaved={(text) => show({ text })} /> : null}
     </Page>
   );
 }
