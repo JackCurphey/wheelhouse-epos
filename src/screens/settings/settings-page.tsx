@@ -27,6 +27,7 @@ import { StockAdjustmentsSettings, useStockAdjustmentsSummary } from './stockroo
 import { CategoriesSettings, useCategoriesSummary } from './categories-settings.tsx';
 import { BikeWarrantiesSettings, useBikeWarrantiesSummary } from './bike-warranties-settings.tsx';
 import { DownloadEverything } from './your-data-settings.tsx';
+import { AccountsSoftware, useAccounts } from './accounts-software.tsx';
 import { SettingsFrame, type SettingsRoom } from './settings-frame.tsx';
 import { RowSwitch } from './row-switch.tsx';
 import { shortDay } from '@/screens/diary/rules.ts';
@@ -1077,6 +1078,7 @@ function OwnerSettings() {
   const stockAdjustments = useStockAdjustmentsSummary();
   const categories = useCategoriesSummary();
   const bikeWarranties = useBikeWarrantiesSummary();
+  const accountsSummary = useAccounts().data?.summary ?? '';
   const payingOnline = usePayingOnlineSummary();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
@@ -1167,6 +1169,8 @@ function OwnerSettings() {
         // set-data-export; Settings changes (set-data-history) waits for the activity log.
         { key: 'data', title: 'Your data', intro: 'Take a copy of everything, and see who changed what in Settings.', folds: [
           { key: 'download-everything', title: 'Download everything', summary: 'Customers, sales, stock, jobs', body: <DownloadEverything /> },
+          // Reports and accounts, part 4 (accounts-software spec): the Owner's, after Download everything.
+          { key: 'accounts', title: 'Accounts software', summary: accountsSummary, body: <AccountsSoftware /> },
         ] },
       ],
     },

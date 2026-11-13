@@ -433,3 +433,7 @@ POST /api/c2w/orders/:id/certificate
 POST /api/c2w/orders/:id/ready
 POST /api/c2w/orders/:id/ready/undo
 POST /api/c2w/orders/:id/applied
+GET /api/accounts
+POST /api/accounts/connect
+PUT /api/accounts/choices
+POST /api/accounts/disconnect
