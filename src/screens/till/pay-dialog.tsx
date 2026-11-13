@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitl
 import { printReceipt, type ReceiptJob, type ReceiptSale, type ShopDetails } from './receipt.tsx';
 import { EmailReceiptDialog, type ReceiptCustomer } from './email-receipt.tsx';
 import { asSaleItem, money, noteButtons, pence, saleTotal, type TillLine } from './rules.ts';
+import { firstName, possessive } from '@/screens/c2w/c2w-bits.tsx';
 
 /**
  * Take payment (journey 11 decisions 6 and 7): card, cash or both, then
@@ -27,7 +28,8 @@ type Step =
   | { kind: 'card'; amount: number; cashPart: number }
   | { kind: 'cash' }
   | { kind: 'split' }
-  | { kind: 'paid'; how: string; change: number; note: string | null; sale: ReceiptSale | null };
+  | { kind: 'extra' }
+  | { kind: 'paid'; how: string; change: number; note: string | null; sale: ReceiptSale | null; cash: number; card: number };
 
 declare global {
   interface Window { WH_TILL_TICK_MS?: number }
@@ -46,9 +48,19 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * paying converts the order, which charges its own saved lines, and then
  * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
  */
+/**
+ * A Cycle to Work order handed over (till.mjs till-c2w-pay, till-c2w-extra;
+ * openspec/changes/cycle-to-work task 7): the provider's certificate is the
+ * first, one-tap way to pay, and anything it doesn't cover, from the counter
+ * or a smaller certificate, is taken from the customer as a second payment.
+ * One call records both, with the order's lines added by the server.
+ */
+export type C2wPayment = { orderId: number; checks: string[]; orderTotal: number; share: number; provider: string; customer: string; certificateNumber: string; bike: string; frameNumber: string | null };
+const C2W_SUB = (provider: string) => `The certificate · owed by ${provider}, not in the drawer`;
+
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
-export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
+export function PayDialog({ lines, onClose, onNextSale, job, c2w, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; c2w?: C2wPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
@@ -63,9 +75,20 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   // A job's order is paid at the amount due, discounts taken off on the server.
-  const total = job ? job.total : saleTotal(lines);
+  // A Cycle to Work order is its own lines, added by the server, plus the counter's.
+  const total = job ? job.total : (c2w?.orderTotal ?? 0) + saleTotal(lines);
   const count = lines.reduce((n, l) => n + l.qty, 0);
-  const sub = serving ? `${serving.name} serving · ${items(count)}` : items(count);
+  const what = c2w ? `${possessive(c2w.customer)} Cycle to Work order` : items(count);
+  const sub = serving ? `${serving.name} serving · ${what}` : what;
+  // The provider pays up to the order's total; the customer pays the rest.
+  const share = c2w ? Math.min(pence(c2w.share), pence(total)) / 100 : 0;
+  const rest = c2w ? (pence(total) - pence(share)) / 100 : total;
+  const c2wHow = c2w ? `Cycle to Work · ${c2w.provider}` : '';
+  const howPaid = (cash: number, card: number, plain: string) => {
+    if (!c2w) return plain;
+    const parts = [cash > 0 ? 'cash' : null, card > 0 ? 'card' : null].filter(Boolean);
+    return parts.length ? `${c2wHow} and ${parts.join(' and ')}` : c2wHow;
+  };
 
   async function save(cash: number, card: number, tendered: number | null, how: string) {
     if (!serving) return;
@@ -84,9 +107,12 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
         const signOff = { signedOffBy: job.signedOffBy ?? null };
         sale = await apiMutate<ReceiptSale & { jobWarning?: string }>(`/api/sale-documents/${job.orderId}/convert`, { ...amounts, sellPastStock: true, ...signOff });
         note = await job.afterPaid(sale);
+      } else if (c2w) {
+        // The server adds the order's lines and the provider's payment, and checks the ticks.
+        sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), c2wOrderId: c2w.orderId, c2wChecks: c2w.checks, ...amounts, sellPastStock: true });
       } else sale = await apiMutate<ReceiptSale>('/api/sales', { items: lines.map(asSaleItem), ...amounts, sellPastStock: true });
       onAnswerSettled?.();
-      setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null });
+      setStep({ kind: 'paid', how: howPaid(cash, card, how), change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100, note, sale: sale && Array.isArray(sale.items) ? sale : null, cash: pence(cash) / 100, card: pence(card) / 100 });
     } catch (err) {
       // No answer at all: the sale may be there, so the till keeps its key. A refusal
       // says nothing was recorded, unless it's a key already used, when a sale is. Busy
@@ -109,7 +135,7 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
       else if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
-      else if (job && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      else if ((job || c2w) && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {
       setSaving(false);
@@ -139,6 +165,52 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
     title = 'Who’s serving?';
     description = 'Pick who is taking this sale.';
     body = <WhoIsServing onPick={(e) => { setServing(e); go({ kind: 'methods' }); }} />;
+  } else if (step.kind === 'methods' && c2w) {
+    // The certificate first; Card, Cash and Split take only what it leaves.
+    const certificateOnly = pence(rest) === 0;
+    body = (
+      <div className="flex flex-col gap-2.5">
+        <button type="button" disabled={saving} onClick={() => (certificateOnly ? save(0, 0, null, c2wHow) : go({ kind: 'extra' }))} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)]`}>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-lg font-bold">{`${c2wHow} · ${money(share)}`}</span>
+            <span className="text-size-13 opacity-85">{`${C2W_SUB(c2w.provider)} · certificate ${c2w.certificateNumber}`}</span>
+          </span>
+        </button>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <Button className="min-h-14" disabled={certificateOnly} onClick={() => go({ kind: 'card', amount: rest, cashPart: 0 })}>Card</Button>
+          <Button className="min-h-14" disabled={certificateOnly} onClick={() => go({ kind: 'cash' })}>Cash</Button>
+          <Button className="min-h-14" disabled={certificateOnly} onClick={() => go({ kind: 'split' })}>Split</Button>
+        </div>
+        <p className="m-0 text-size-13 text-[var(--wh-muted)]">{`Anything the certificate doesn’t cover is taken from ${firstName(c2w.customer)} as a second payment.`}</p>
+      </div>
+    );
+  } else if (step.kind === 'extra' && c2w) {
+    const counter = lines.map((l) => l.name);
+    body = (
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col">
+          <PaidRow label={c2wHow} amount={share} />
+          <span className="pb-2 pl-6 text-size-13 text-[var(--wh-muted)]">{C2W_SUB(c2w.provider)}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 rounded-[10px] border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-[18px] py-4">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-lg font-bold">{`${firstName(c2w.customer)} pays`}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{counter.length ? `${counter.join(', ')}, added at the counter` : 'What the certificate doesn’t cover'}</span>
+          </span>
+          <span className="font-mono text-size-34">{money(rest)}</span>
+        </div>
+        <button type="button" onClick={() => go({ kind: 'card', amount: rest, cashPart: 0 })} className={`${BIG} border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)]`}>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-lg font-bold">{`Card · ${money(rest)}`}</span>
+            <span className="text-size-13 opacity-85">Key it into the card machine</span>
+          </span>
+        </button>
+        <div className="grid grid-cols-3 gap-2.5">
+          <Button className="min-h-14" onClick={() => go({ kind: 'cash' })}>Cash</Button>
+        </div>
+        <div><Button variant="ghost" onClick={() => go({ kind: 'methods' })}>Back</Button></div>
+      </div>
+    );
   } else if (step.kind === 'methods') {
     body = (
       <div className="flex flex-col gap-2.5">
@@ -169,7 +241,7 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
     const cashPart = step.cashPart;
     footer = (
       <>
-        <Button variant="ghost" disabled={saving} onClick={() => go(cashPart ? { kind: 'split' } : { kind: 'methods' })}>Back</Button>
+        <Button variant="ghost" disabled={saving} onClick={() => go(cashPart ? { kind: 'split' } : c2w ? { kind: 'extra' } : { kind: 'methods' })}>Back</Button>
         <Button
           variant="primary"
           disabled={saving}
@@ -180,14 +252,14 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
       </>
     );
   } else if (step.kind === 'cash') {
-    title = `Cash · ${money(total)} to pay`;
+    title = `Cash · ${money(rest)} to pay`;
     description = 'Tap what the customer handed you, or type it';
-    body = <CashStep total={total} saving={saving} onBack={() => go({ kind: 'methods' })} onTaken={(handed) => save(total, 0, handed, `Cash · ${money(total)}`)} />;
+    body = <CashStep total={rest} saving={saving} onBack={() => go({ kind: c2w ? 'extra' : 'methods' })} onTaken={(handed) => save(rest, 0, handed, `Cash · ${money(rest)}`)} />;
   } else if (step.kind === 'split') {
-    title = `Split payment · ${money(total)}`;
+    title = `Split payment · ${money(rest)}`;
     description = 'Part in cash, the rest by card';
-    body = <SplitStep total={total} onBack={() => go({ kind: 'methods' })} onCard={(cashPart, rest) => go({ kind: 'card', amount: rest, cashPart })} />;
-  } else {
+    body = <SplitStep total={rest} onBack={() => go({ kind: 'methods' })} onCard={(cashPart, left) => go({ kind: 'card', amount: left, cashPart })} />;
+  } else if (step.kind === 'paid') {
     title = 'Paid';
     // As drawn (till-receipt-print): the sale's number after how it was paid.
     description = step.sale ? `${step.how} · Sale ${step.sale.id}` : step.how;
@@ -198,7 +270,17 @@ export function PayDialog({ lines, onClose, onNextSale, job, requestKey, onAnswe
     const receiptJob = job?.receipt && warned ? { ...job.receipt, checkedBy: null } : job?.receipt;
     // With Don't close things by themselves on, Print leaves Paid open (till-receipt-wait).
     const onPrint = paidSale ? () => { printReceipt({ sale: paidSale, shopName: shopDetails.data?.name ?? shopName, job: receiptJob, details: shopDetails.data }); if (!wait) onNextSale(); } : null;
-    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} saleId={paidSale?.id ?? null} customer={job?.customer ?? null} onPrint={onPrint} onNextSale={onNextSale} />;
+    // A hand-over shows each payment and that the bike went with the customer (till-c2w-paid).
+    let rows: PaidLine[] | undefined;
+    let collected: string | null = null;
+    if (c2w) {
+      const name = firstName(c2w.customer);
+      rows = [{ label: c2wHow, amount: share, sub: step.cash + step.card > 0 ? undefined : C2W_SUB(c2w.provider) }];
+      if (step.cash > 0) rows.push({ label: `Cash · ${c2w.customer}`, amount: step.cash });
+      if (step.card > 0) rows.push({ label: `Card · ${c2w.customer}`, amount: step.card });
+      collected = `${c2w.bike} collected${c2w.frameNumber ? `, frame ${c2w.frameNumber}` : ''}, on ${possessive(name)} bike record. ${possessive(name)} order is now Collected${paidSale ? `, with sale ${paidSale.id} in its history` : ''}.`;
+    }
+    body = <PaidStep total={total} change={step.change} note={step.note} wait={wait} saleId={paidSale?.id ?? null} customer={job?.customer ?? null} rows={rows} collected={collected} onPrint={onPrint} onNextSale={onNextSale} />;
   }
 
   return (
@@ -306,9 +388,19 @@ function SplitStep({ total, onBack, onCard }: { total: number; onBack: () => voi
 // Email (till-receipt; openspec/changes/till-email-receipt): the countdown
 // waits while its pop-up is open (2 Oct, leftover screens M1); once sent, the
 // next sale starts, or with the setting on Paid stays and says so.
-function PaidStep({ total, change, note, wait, saleId, customer, onPrint, onNextSale }: {
+type PaidLine = { label: string; amount: number; sub?: string };
+function PaidRow({ label, amount }: { label: string; amount: number }) {
+  return (
+    <span className="flex items-baseline justify-between gap-3 py-2">
+      <span className="flex items-center gap-2 text-size-15 font-semibold"><span aria-hidden="true" className="text-[var(--wh-state-ready-ink)]">✓</span>{label}</span>
+      <span className="font-mono text-base">{money(amount)}</span>
+    </span>
+  );
+}
+
+function PaidStep({ total, change, note, wait, saleId, customer, rows, collected, onPrint, onNextSale }: {
   total: number; change: number; note: string | null; wait: boolean; saleId: number | null; customer: ReceiptCustomer | null;
-  onPrint: (() => void) | null; onNextSale: () => void;
+  rows?: PaidLine[]; collected?: string | null; onPrint: (() => void) | null; onNextSale: () => void;
 }) {
   const [left, setLeft] = useState(5);
   const [emailing, setEmailing] = useState(false);
@@ -326,7 +418,18 @@ function PaidStep({ total, change, note, wait, saleId, customer, onPrint, onNext
   }, [left, counting]);
   return (
     <>
-      <div className="flex flex-col items-center gap-2 text-center">
+      {rows ? (
+        <div className="flex flex-col">
+          {rows.map((r) => (
+            <span key={r.label} className="flex flex-col">
+              <PaidRow label={r.label} amount={r.amount} />
+              {r.sub ? <span className="pb-2 pl-6 text-size-13 text-[var(--wh-muted)]">{r.sub}</span> : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {collected ? <p role="status" className="m-0 rounded-lg bg-[var(--wh-state-ready-bg)] px-3.5 py-3 text-sm text-[var(--wh-state-ready-ink)]">{collected}</p> : null}
+      <div className={rows ? 'hidden' : 'flex flex-col items-center gap-2 text-center'}>
         <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>
         <span className="font-mono text-size-30">{money(total)}</span>
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
@@ -337,6 +440,7 @@ function PaidStep({ total, change, note, wait, saleId, customer, onPrint, onNext
         <Button className="min-h-[60px]" disabled={saleId === null} onClick={() => setEmailing(true)}>Email</Button>
         <Button variant="primary" className="min-h-[60px]" onClick={onNextSale}>{wait ? 'Start next sale' : 'No receipt'}</Button>
       </div>
+      {rows && rows.length > 1 ? <p className="m-0 text-center text-size-13 text-[var(--wh-muted)]">The receipt shows both payments.</p> : null}
       {emailedTo ? <p role="status" className="m-0 text-center text-sm font-semibold">{`Receipt sent to ${emailedTo}.`}</p> : null}
       {emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">Next sale waits until the receipt is sent</p> : null}
       {wait && !emailing ? <p role="status" className="m-0 text-center text-sm text-[var(--wh-muted)]">The next sale waits until you press Start next sale.</p> : null}

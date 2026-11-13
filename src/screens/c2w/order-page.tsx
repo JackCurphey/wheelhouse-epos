@@ -16,6 +16,7 @@ import { orderHref as supplierOrderHref } from '@/screens/deliveries/deliveries-
 import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
+import { HandOverDialog } from './hand-over-dialog.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
@@ -50,7 +51,7 @@ function Stages({ o }: { o: Full }) {
   );
 }
 
-type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; busy: boolean };
+type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; onHandOver: () => void; busy: boolean };
 const row = (children: ReactNode) => <div className="flex flex-wrap gap-2.5">{children}</div>;
 
 function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | undefined; remindDays: number | null; now: string; act: Act }) {
@@ -61,11 +62,11 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
   const ordering = <p className={note}>Ordering creates the supplier order in Deliveries and orders.</p>;
   const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
   if (o.stage === 'ready') {
-    // Hand over comes with pull request 7 (logged).
     return (
       <Box label="cw-next">
         {head('Next: hand over')}
         <Msg tone="ok"><strong>Ready to collect.</strong>{` Certificate ${o.certificateNumber ?? ''}${o.held ? ` · ${o.bike} put aside` : ''}.`}</Msg>
+        {row(<Button variant="primary" onClick={act.onHandOver}>Hand over</Button>)}
       </Box>
     );
   }
@@ -269,7 +270,7 @@ function OrderBody() {
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState<'applied' | 'certificate' | null>(null);
+  const [open, setOpen] = useState<'applied' | 'certificate' | 'hand-over' | null>(null);
   const [stepping, setStepping] = useState(false);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
@@ -315,7 +316,7 @@ function OrderBody() {
       setStepping(false);
     }
   }
-  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), busy: stepping };
+  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), onHandOver: () => setOpen('hand-over'), busy: stepping };
   const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} /><History o={o} /></>;
   const right = <><Details o={o} provider={provider} onEmail={() => void send()} busy={busy} /><Customer o={o} /></>;
   return (
@@ -332,6 +333,7 @@ function OrderBody() {
       </div>
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
+      {open === 'hand-over' ? <HandOverDialog o={o} provider={provider} onClose={() => setOpen(null)} /> : null}
     </Page>
   );
 }
