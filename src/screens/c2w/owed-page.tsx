@@ -101,8 +101,10 @@ export function C2wOwedPage() {
 }
 
 // On a phone the table's rows stack (c2w.mjs owedProvider's phone list), with
-// each cell's label added by CSS so the table stays one table (logged).
-const PHONE_ROW = 'max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)] max-md:gap-x-1.5 max-md:border-b max-md:border-[var(--wh-border)] max-md:py-2';
+// each cell's label added by CSS so the table stays one table (logged). Three
+// columns, so the late badge sits right after Expected, as drawn, and Expected
+// wraps rather than pushing the badge off a narrow screen.
+const PHONE_ROW = 'max-md:grid max-md:grid-cols-[minmax(0,auto)_auto_minmax(0,1fr)] max-md:gap-x-1.5 max-md:border-b max-md:border-[var(--wh-border)] max-md:py-2';
 const PHONE_CELL = 'max-md:border-0 max-md:p-0 max-md:text-size-13';
 
 function ProviderBody() {
@@ -145,14 +147,14 @@ function ProviderBody() {
             <tbody className="max-md:block">
               {d.orders.map((b) => (
                 <tr key={b.id} className={PHONE_ROW}>
-                  <th scope="row" className={`${CELL} ${PHONE_CELL} text-left max-md:col-span-2`}>
+                  <th scope="row" className={`${CELL} ${PHONE_CELL} text-left max-md:col-span-3`}>
                     <Link to={orderHref(b.id)} className="inline-flex min-h-11 items-center font-bold text-[var(--wh-ink)] max-md:text-size-15">{b.customerName}</Link>
                   </th>
                   <td className={`${CELL} ${PHONE_CELL} max-md:before:content-['Collected_']`}>{longDate(b.collectedOn)}</td>
-                  <td className={`${CELL} ${PHONE_CELL} ${mono} max-md:before:content-['·_certificate_']`}>{b.certificateNumber ?? '—'}</td>
+                  <td className={`${CELL} ${PHONE_CELL} ${mono} max-md:col-span-2 max-md:before:content-['·_certificate_']`}>{b.certificateNumber ?? '—'}</td>
                   <td className={`${CELL} ${PHONE_CELL} text-right ${mono} max-md:text-left max-md:before:content-['Expected_']`}>{expectedLine(b)}</td>
                   <td className={`${CELL} ${PHONE_CELL}`}>{b.lateDays ? <Badge tone="amber">{`${days(b.lateDays)} late`}</Badge> : null}</td>
-                  <td className={`${CELL} ${PHONE_CELL} text-right max-md:col-span-2 max-md:pt-1.5 max-md:text-left`}>
+                  <td className={`${CELL} ${PHONE_CELL} text-right max-md:col-span-3 max-md:pt-1.5 max-md:text-left`}>
                     {owner && payable(b) ? <Button aria-label={`Mark paid: ${b.customerName} · ${p.name}`} onClick={() => setPaying(b)}>Mark paid</Button> : null}
                   </td>
                 </tr>
