@@ -54,7 +54,16 @@ const C2W_EXAMPLE = {
   'Certificate amount': '£[£]', 'Amount to pay': '£[£]', 'Link to your Cycle to Work bike': '[link]',
   'Deposit amount': '£[£]',
 };
+// The online order emails' drawing (online.mjs on-email-ready) keeps the
+// order number, the date and the shop's address as placeholders; the refund's
+// item, reason and amount have no drawing and stay open too.
+const ORDER_EXAMPLE = {
+  'Order number': '[order number]', 'Link to your order': '[link]', 'Keep until': '[date]',
+  'Shop address': '[Shop address]', Item: '[Item]', Reason: '[reason]', 'Amount refunded': '£[£]',
+};
 const EXAMPLE_FOR = {
+  order_confirmation: ORDER_EXAMPLE, order_ready: ORDER_EXAMPLE, order_still_waiting: ORDER_EXAMPLE,
+  order_item_not_supplied: ORDER_EXAMPLE, order_cancelled: ORDER_EXAMPLE, order_not_ready: ORDER_EXAMPLE,
   date_change_answered: { 'When to drop off': 'Drop your Trek Domane AL 3 off by [time], half an hour before your booking.' },
   c2w_put_aside: C2W_EXAMPLE, c2w_certificate: C2W_EXAMPLE, c2w_certificate_less: C2W_EXAMPLE,
   c2w_ready: C2W_EXAMPLE, c2w_hold_ending: C2W_EXAMPLE, c2w_released: C2W_EXAMPLE,
@@ -64,6 +73,8 @@ const EXAMPLE_FOR = {
 const asSetting = (t) => ({
   key: t.key, name: t.name, when: t.when, enabled: t.enabled, wording: t.wording, subject: t.subject,
   changed: t.changed, tapIns: t.tapIns, live: LIVE_KEYS.includes(t.key), group: t.group ?? null, partOf: t.partOf ?? null,
+  // Claude's draft wording, until Jack approves it (website-buy-online design 9).
+  draft: Boolean(t.draft),
 });
 
 // A shop's own text, or null for Wheelhouse's: blank goes back to Wheelhouse's.
@@ -192,6 +203,8 @@ export function register(route) {
     // The service reminder's fixed ending, as drawn in its preview (ac-reminder-wording).
     // And the review request's (ac-review-setting).
     const text = ['service_reminder', 'review_request'].includes(params.key) ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
-    sendJson(res, 200, { text, email: { subject: render(subject, vars), body: text } });
+    // From and To as the email frame draws them (on-email-ready): the shop's
+    // sending address is open until email is set up.
+    sendJson(res, 200, { text, email: { from: `${ctx.shop.name} <[email address]>`, to: 'maya@example.test', subject: render(subject, vars), body: text } });
   });
 }
