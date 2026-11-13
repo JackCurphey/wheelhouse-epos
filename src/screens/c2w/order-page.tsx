@@ -16,6 +16,7 @@ import { orderHref as supplierOrderHref } from '@/screens/deliveries/deliveries-
 import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
+import { HandOverDialog } from './hand-over-dialog.tsx';
 import { CancelDialog, MoreMenu } from './cancel-dialog.tsx';
 import { MarkPaidDialog, owedOf } from './mark-paid-dialog.tsx';
 
@@ -54,7 +55,7 @@ function Stages({ o }: { o: Full }) {
   );
 }
 
-type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; busy: boolean };
+type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; onHandOver: () => void; busy: boolean };
 type Money = { provider: Provider | undefined; lateDays: number | null; canPay: boolean; onPay: () => void; onCloseOwed: () => void };
 
 /** What one payment put on this order, its extra included (paymentPence is the whole payment, which may cover several bikes). */
@@ -120,11 +121,11 @@ function NextStep({ o, rule, remindDays, now, act, money }: { o: Full; rule: str
   }
   if (o.stage === 'paid' || o.stage === 'closed' || (o.stage === 'collected' && o.expectedPence !== null)) return <MoneyStep o={o} money={money} />;
   if (o.stage === 'ready') {
-    // Hand over comes with pull request 7 (logged).
     return (
       <Box label="cw-next">
         {head('Next: hand over')}
         <Msg tone="ok"><strong>Ready to collect.</strong>{` Certificate ${o.certificateNumber ?? ''}${o.held ? ` · ${o.bike} put aside` : ''}.`}</Msg>
+        {row(<Button variant="primary" onClick={act.onHandOver}>Hand over</Button>)}
       </Box>
     );
   }
@@ -342,7 +343,7 @@ function OrderBody() {
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState<'applied' | 'certificate' | 'cancel' | 'paid' | 'close' | null>(null);
+  const [open, setOpen] = useState<'applied' | 'certificate' | 'hand-over' | 'cancel' | 'paid' | 'close' | null>(null);
   const [stepping, setStepping] = useState(false);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
@@ -388,7 +389,7 @@ function OrderBody() {
       setStepping(false);
     }
   }
-  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), busy: stepping };
+  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), onHandOver: () => setOpen('hand-over'), busy: stepping };
   const canPay = session.status === 'signed-in' && session.user.isOwner;
   const money = { provider, lateDays: settings?.paymentLateDays ?? null, canPay, onPay: () => setOpen('paid'), onCloseOwed: () => setOpen('close') };
   const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} money={money} /><History o={o} /></>;
@@ -410,6 +411,7 @@ function OrderBody() {
       </div>
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
+      {open === 'hand-over' ? <HandOverDialog o={o} provider={provider} onClose={() => setOpen(null)} /> : null}
       {open === 'cancel' ? <CancelDialog o={o} events={o.events} shop={shop} onClose={() => setOpen(null)} /> : null}
       {open === 'paid' || open === 'close' ? <MarkPaidDialog o={o} today={today} closing={open === 'close'} onClose={() => setOpen(null)} onSaved={(text) => show({ text })} /> : null}
     </Page>

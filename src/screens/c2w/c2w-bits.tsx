@@ -27,10 +27,12 @@ export type C2wOrder = {
   supplier?: string | null; purchaseOrderId?: number | null; orderedFrom?: string | null;
   // When the bike put aside was let go, and whether that frame has since been sold (cw-certificate-released).
   releasedAt?: string | null; releasedSold?: boolean;
+  // What the provider pays, worked out by the server; the frame put aside; the hand-over's sale.
+  providerPaysPence?: number; frameId?: number | null; frameNumber?: string | null; saleId?: number | null;
 };
 export type C2wEvent = { kind: string; by: string | null; at: string; reason: string | null; detail: Record<string, string> };
 export type Settings = { holdDays: number | null; remindDays: number | null; quoteValidDays: number | null; orderRule: 'certificate' | 'applied' | 'deposit'; howToApply: string; paymentLateDays?: number | null };
-export type Provider = { id: number; name: string; paysInDays: number | null; accessoriesInside: boolean; commissionKind?: 'percent' | 'pounds'; commissionValue?: number | null };
+export type Provider = { id: number; name: string; paysInDays: number | null; accessoriesInside: boolean; commissionKind?: 'percent' | 'pounds'; commissionValue?: number | null; handoverChecks?: string[] };
 
 export const useC2wSettings = () => useQuery({ queryKey: ['c2w-settings'], queryFn: () => apiGet<{ settings: Settings }>('/api/c2w/settings') });
 // Retired ones too: an order keeps the provider it was quoted with.

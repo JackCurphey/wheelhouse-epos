@@ -92,9 +92,9 @@ The declined card in 7.4 (edge 6b) is the till's basket, so it is tested in 7b
 - [x] 7.2 Test: `POST /api/sales` with the order adds the "Cycle to Work · [Provider]" payment itself; a different claimed share is refused; the order must be Ready to collect; sent twice counts once
 - [x] 7.3 Test: the sale marks the frame sold, moves the order to Collected, sets the expected amount and date from the provider's terms; the provider's share isn't counted in the drawer
 - [x] 7.4 Test: accessories added at the counter are paid by the customer; a card declined for the customer's part keeps the provider's line (edge 6b)
-- [ ] 7.5 Screen test: `cw-hand-over`, `till-c2w-pick` (and empty), `till-c2w`, `till-c2w-pay`, `till-c2w-extra`, `till-c2w-paid-cert` (the paid box as drawn: "Paid" over "Cycle to Work · [Provider] · receipt [receipt number]", Jack 12 Nov), `till-c2w-paid`, and the receipt line
-- [ ] 7.6 Build to pass 7.1–7.5
-- [ ] 7.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 7.5 Screen test: `cw-hand-over`, `till-c2w-pick` (and empty), `till-c2w`, `till-c2w-pay`, `till-c2w-extra`, `till-c2w-paid-cert` (the paid box as drawn: "Paid" over "Cycle to Work · [Provider] · receipt [receipt number]", Jack 12 Nov), `till-c2w-paid`, and the receipt line (`till-c2w-pick` waits for a later piece: decided-while-building 2026-11-jack item 18)
+- [x] 7.6 Build to pass 7.1–7.5
+- [x] 7.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 8. The provider's money and cancelling (pull request 8, about 550 lines, risky: money — waiting for Jack)
 

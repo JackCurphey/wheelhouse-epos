@@ -16,6 +16,7 @@ import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '.
 import { sendEmailTo } from '../messaging/engine.js';
 import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, stopMessagesForCancel, undoReadyMessage } from '../c2w/messages.js';
 import { oldestSite } from '../lib/stock.js';
+import { handOverDue } from '../c2w/hand-over.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { nameKey } from '../lib/restock.js';
@@ -209,6 +210,22 @@ export function register(route) {
         items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row, settings.order_rule), howToApply: settings.how_to_apply,
       },
     });
+  });
+
+  // What the till asks for at hand-over, before any card is taken (till-c2w-pay):
+  // the server's own figures, with the customer's group discount, and its
+  // refusals now rather than after the card. Records nothing.
+  route('POST', '/api/c2w/orders/:id/hand-over/due', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    const items = Array.isArray(body.items) ? body.items : [];
+    const discount = Math.max(0, Number(body.discount) || 0);
+    try {
+      sendJson(res, 200, await handOverDue(Number(params.id), { items, discount, tillSite: await siteHere(req) }));
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      if (err instanceof Refused) return sendJson(res, err.status, err.body);
+      throw err;
+    }
   });
 
   // Email the quote (cw-email): queued like a receipt, five an hour for one customer.

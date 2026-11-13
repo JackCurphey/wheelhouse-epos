@@ -28,7 +28,7 @@ export function Field({ id, label, value, onChange, type = 'text', hint, max }: 
   );
 }
 
-function Tick({ checked, onChange, label, sub }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; sub?: string }) {
+export function Tick({ checked, onChange, label, sub }: { checked: boolean; onChange: (v: boolean) => void; label: ReactNode; sub?: string }) {
   return (
     <label className="flex min-h-11 cursor-pointer items-start gap-2.5">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--wh-ink)]" />

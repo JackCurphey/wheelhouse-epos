@@ -172,7 +172,7 @@ test('cw-certificate: the fields, They match, the tick ticked, and Save sends it
   const next = await nextBox(ui, within, 'Next: hand over');
   assert.deepEqual(posts('/certificate').map((c) => c.body), [{ number: '[certificate number]', amountPence: 104000, receivedOn: TODAY, ready: true }]);
   assert.ok(next.getByText(para('Ready to collect. Certificate [certificate number] · [Bike] · [Size] put aside.')));
-  assert.ok(next.queryByRole('button', { name: 'Hand over' }) === null, 'Hand over comes with pull request 7');
+  assert.ok(next.getByRole('button', { name: 'Hand over' }), 'the ready step has Hand over (pull request 7b)');
   assert.ok(ui.getByText(/added certificate \[certificate number\] · certificate £1,040.00 · quote £1,040.00 · and marked the bike ready to collect/));
 });
 
