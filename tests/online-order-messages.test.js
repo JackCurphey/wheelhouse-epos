@@ -17,7 +17,7 @@ import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { TEMPLATES, LIVE_KEYS } from '../server/messaging/templates.js';
 import { UNDO_MS, sendDueForShop } from '../server/messaging/engine.js';
-import { ORDER_KEYS, READY_WAIT_SECONDS, queueOrderMessage, undoOrderReady, orderEmailProblem } from '../server/online-orders/messages.js';
+import { ORDER_KEYS, READY_WAIT_SECONDS, queueOrderMessage, undoOrderReady, orderEmailProblem, whereToCollect } from '../server/online-orders/messages.js';
 import { orderReference } from '../server/online-orders/numbers.js';
 
 let server;
@@ -43,13 +43,13 @@ after(async () => {
 });
 
 // A paid order for Maya, to get ready, with its own email so its messages are only this test's.
-async function paidOrder({ stage = 'to_get_ready', keepUntil = null, customerId = null } = {}) {
+async function paidOrder({ stage = 'to_get_ready', keepUntil = null, customerId = null, siteId = site, card = 4500, credit = 0, paid = true } = {}) {
   numbers += 1;
   const email = `maya-${tag()}@example.test`;
   const order = await inShop(() => prepare(
-    `INSERT INTO online_orders (site_id, customer_id, name, email, phone, total_pence, card_pence, order_code, request_key_hash, number, paid_at, stage, keep_until)
-     VALUES (?, ?, 'Maya Patel', ?, '07700 900123', 4500, 4500, ?, ?, ?, now(), ?, ?) RETURNING id, number`,
-  ).get(site, customerId, email, `code-${tag()}`, `key-${tag()}`, numbers, stage, keepUntil));
+    `INSERT INTO online_orders (site_id, customer_id, name, email, phone, total_pence, card_pence, credit_pence, order_code, request_key_hash, number, paid_at, stage, keep_until)
+     VALUES (?, ?, 'Maya Patel', ?, '07700 900123', ?, ?, ?, ?, ?, ?, ${paid ? 'now()' : 'NULL'}, ?, ?) RETURNING id, number`,
+  ).get(siteId, customerId, email, card + credit, card, credit, `code-${tag()}`, `key-${tag()}`, paid ? numbers : null, stage, keepUntil));
   return { ...order, email };
 }
 const messagesFor = (order) => inShop(() => prepare(
@@ -244,4 +244,153 @@ test('3.3 a failed email stops showing once a later email to the order arrives',
   const later = await queue(order, 'order_ready');
   await inShop(() => prepare("UPDATE customer_messages SET intent_state = 'delivered', status = 'sent' WHERE id = ?").run(later.id));
   assert.equal(await inShop(() => orderEmailProblem(order.id)), null);
+});
+
+// Task 3.7: left by the reviews of pull request 3.
+
+test('3.7a an order at a second shop is ready at that shop: the business’s name and the shop’s', async () => {
+  const second = await inShop(async () => (await prepare("INSERT INTO sites (name, code) VALUES ('[Second site]', 'Z') RETURNING id").get()).id);
+  const order = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08', siteId: second });
+  await queue(order, 'order_ready');
+  const [m] = await messagesFor(order);
+  assert.match(m.body, new RegExp(`is ready at ${owner.shop.name}, \\[Second site\\]\\. It’s paid`));
+  assert.match(m.body, new RegExp(`\n\n${owner.shop.name}, \\[Second site\\]\nOpen `), 'the shop’s lines name it too');
+});
+
+test('3.7b the confirmation says what was bought, how it was paid and where to collect it', async () => {
+  const order = await paidOrder({ card: 3500, credit: 1000 });
+  await inShop(async () => {
+    const a = await prepare("INSERT INTO products (name, category, price) VALUES ('[Product]', 'Accessories', 10) RETURNING id").get();
+    const b = await prepare("INSERT INTO products (name, category, price) VALUES ('[Second product]', 'Accessories', 25) RETURNING id").get();
+    await prepare('INSERT INTO online_order_lines (order_id, product_id, qty, unit_pence) VALUES (?, ?, 2, 1000), (?, ?, 1, 2500)').run(order.id, a.id, order.id, b.id);
+  });
+  await queue(order, 'order_confirmation');
+  const [m] = await messagesFor(order);
+  assert.equal(m.body, [
+    'Hi Maya,',
+    `Thanks for your order ${orderReference(order.number)}. It’s paid, and we’ll email you when it’s ready to collect.`,
+    'You bought:\n2 × [Product]\n1 × [Second product]',
+    'You paid £10.00 store credit and £35.00 by card. Collect it from:',
+    `${owner.shop.name}\nOpen Mon to Sun 9:00 to 18:00\n[Shop address] · [shop phone]`,
+    'See your order: [link]',
+  ].join('\n\n'));
+});
+
+test('3.7b how it was paid: by card alone, or store credit alone', async () => {
+  const card = await paidOrder();
+  await queue(card, 'order_confirmation');
+  assert.match((await messagesFor(card))[0].body, /You paid £45\.00 by card\./);
+  const credit = await paidOrder({ card: 0, credit: 4500 });
+  await queue(credit, 'order_confirmation');
+  assert.match((await messagesFor(credit))[0].body, /You paid £45\.00 store credit\./);
+});
+
+test('3.7c an unpaid order cancelled has its own wording: no number gap and nothing refunded', async () => {
+  const order = await paidOrder({ stage: 'cancelled', paid: false });
+  const queued = await queue(order, 'order_cancelled', { vars: { Reason: '[reason]', 'Amount refunded': '£[£]' } });
+  assert.ok(queued.id, JSON.stringify(queued));
+  const [m] = await messagesFor(order);
+  assert.equal(m.template_key, 'order_cancelled_unpaid');
+  assert.equal(m.subject, `Your order is cancelled — ${owner.shop.name}`);
+  assert.equal(m.body, [
+    'Hi Maya,',
+    'Your order is cancelled: [reason]. Nothing was taken from your card.',
+    'See your order: [link]',
+    'Any questions? Call us on [shop phone].',
+  ].join('\n\n'));
+  assert.equal(TEMPLATES.order_cancelled_unpaid.partOf, 'order_cancelled', 'it follows Order cancelled’s switch and subject');
+});
+
+test('3.7c an unpaid cancellation isn’t sent when Order cancelled is switched off', async () => {
+  await own('/api/message-templates/order_cancelled', { method: 'PUT', body: { enabled: false } });
+  try {
+    const order = await paidOrder({ stage: 'cancelled', paid: false });
+    assert.deepEqual(await queue(order, 'order_cancelled'), { skipped: 'off' });
+  } finally {
+    await own('/api/message-templates/order_cancelled', { method: 'PUT', body: { enabled: true } });
+  }
+});
+
+test('3.7d a second confirmation or cancellation for the same order isn’t queued', async () => {
+  const order = await paidOrder();
+  assert.ok((await queue(order, 'order_confirmation')).id);
+  assert.deepEqual(await queue(order, 'order_confirmation'), { skipped: 'already' });
+  assert.ok((await queue(order, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } })).id);
+  assert.deepEqual(await queue(order, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } }), { skipped: 'already' });
+  assert.deepEqual((await messagesFor(order)).map((m) => m.template_key), ['order_confirmation', 'order_cancelled']);
+});
+
+test('3.7d a cancellation undone in its Undo time can be sent again', async () => {
+  const order = await paidOrder();
+  const first = await queue(order, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } });
+  await inShop(() => prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(first.id));
+  assert.ok((await queue(order, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } })).id);
+});
+
+test('3.7e the reason has its own full stop, and one typed with a stop gets no second', async () => {
+  for (const Reason of ['[reason]', '[reason].']) {
+    const order = await paidOrder();
+    await queue(order, 'order_cancelled', { vars: { Reason, 'Amount refunded': '£[£]' } });
+    assert.match((await messagesFor(order))[0].body, new RegExp(`Your order ${orderReference(order.number).replace(/[[\]]/g, '\\$&')} is cancelled: \\[reason\\]\\. We’ve refunded £\\[£\\] the way you paid\\.`), Reason);
+  }
+  const none = await paidOrder();
+  await queue(none, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } });
+  assert.match((await messagesFor(none))[0].body, /is cancelled\. We’ve refunded/, 'no reason: no colon');
+});
+
+test('3.7f the shop’s lines leave out what Shop details hasn’t got: no bare "Open", no leading "·"', () => {
+  const all = { name: 'North Street Cycles', hours: 'Mon to Sat 9:00 to 17:00', address: '[Shop address]', phone: '[shop phone]' };
+  assert.equal(whereToCollect(all), 'North Street Cycles\nOpen Mon to Sat 9:00 to 17:00\n[Shop address] · [shop phone]');
+  assert.equal(whereToCollect({ ...all, hours: '' }), 'North Street Cycles\n[Shop address] · [shop phone]');
+  assert.equal(whereToCollect({ ...all, address: '' }), 'North Street Cycles\nOpen Mon to Sat 9:00 to 17:00\n[shop phone]');
+  assert.equal(whereToCollect({ ...all, phone: null }), 'North Street Cycles\nOpen Mon to Sat 9:00 to 17:00\n[Shop address]');
+  assert.equal(whereToCollect({ name: 'North Street Cycles', hours: '', address: null, phone: '' }), 'North Street Cycles');
+});
+
+test('3.7f a shop with no address in Shop details: the ready email has no leading "·"', async () => {
+  await inShop(() => prepare("UPDATE shops SET address = NULL WHERE id = current_setting('app.current_shop_id')::int").run());
+  try {
+    const order = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+    await queue(order, 'order_ready');
+    const [m] = await messagesFor(order);
+    assert.ok(m.body.includes(`${owner.shop.name}\nOpen Mon to Sun 9:00 to 18:00\n[shop phone]\n\n`), m.body);
+  } finally {
+    await inShop(() => prepare("UPDATE shops SET address = '[Shop address]' WHERE id = current_setting('app.current_shop_id')::int").run());
+  }
+});
+
+test('3.7g the preview has From and To only for the online order messages', async () => {
+  const bike = await own('/api/message-templates/bike_ready/preview', { method: 'POST', body: {} });
+  assert.equal(bike.status, 200);
+  assert.equal(bike.body.email.from, undefined);
+  assert.equal(bike.body.email.to, undefined);
+  const order = await own('/api/message-templates/order_confirmation/preview', { method: 'POST', body: {} });
+  assert.equal(order.body.email.to, 'maya@example.test');
+});
+
+test('3.7g Undo of Mark ready lets go of the undone email', async () => {
+  const order = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+  await queue(order, 'order_ready');
+  await inShop(() => undoOrderReady(order.id));
+  const row = await inShop(() => prepare('SELECT ready_message_id FROM online_orders WHERE id = ?').get(order.id));
+  assert.equal(row.ready_message_id, null);
+});
+
+test('3.7g an email stuck at "unknown" shows on the order as not arrived', async () => {
+  const order = await paidOrder();
+  const { id } = await queue(order, 'order_confirmation');
+  await inShop(() => prepare("UPDATE customer_messages SET intent_state = 'unknown', status = 'unknown' WHERE id = ?").run(id));
+  assert.deepEqual(await inShop(() => orderEmailProblem(order.id)), { failed: 'order_confirmation', phone: '07700 900123' });
+});
+
+test('3.7g a second Mark ready stops the first ready email when it comes due', async () => {
+  const order = await paidOrder({ stage: 'ready', keepUntil: '2026-09-08' });
+  const first = await queue(order, 'order_ready');
+  const second = await queue(order, 'order_ready');
+  await dueNow(first.id);
+  const [a, b] = await messagesFor(order);
+  assert.equal(a.id, first.id);
+  assert.equal(a.intent_state, 'undone', 'the first went nowhere');
+  assert.equal(b.id, second.id);
+  assert.equal(b.intent_state, 'intended');
 });

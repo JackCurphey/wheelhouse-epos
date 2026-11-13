@@ -231,17 +231,19 @@ export const TEMPLATES = {
     draft: true,
     name: 'Order confirmation',
     when: 'When an online order is paid',
-    wording: 'Hi [Customer’s first name],\n\nThanks for your order [Order number]. It’s paid, and we’ll email you when it’s ready to collect from [Shop name].\n\nSee your order: [Link to your order]',
+    // What was bought, how it was paid and where to collect it (specs/messages; task 3.7b).
+    wording: 'Hi [Customer’s first name],\n\nThanks for your order [Order number]. It’s paid, and we’ll email you when it’s ready to collect.\n\nYou bought:\n[What you bought]\n\nYou paid [How you paid]. Collect it from:\n\n[Where to collect]\n\nSee your order: [Link to your order]',
     subject: 'Your order [Order number] — [Shop name]',
-    tapIns: ORDER,
+    tapIns: [...ORDER, 'What you bought', 'How you paid', 'Where to collect'],
   },
   order_ready: {
     group: 'online_orders',
     name: 'Order ready to collect',
     when: 'When an online order is ready',
-    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is ready at [Shop name]. It’s paid — just give your name or order number at the counter.\n\n[Shop name]\nOpen [Opening hours]\n[Shop address] · [Shop phone]\n\nSee your order: [Link to your order]\n\nWe’ll keep it for you until [Keep until]. Can’t make it? Call us on [Shop phone].',
+    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is ready at [Shop name]. It’s paid — just give your name or order number at the counter.\n\n[Where to collect]\n\nSee your order: [Link to your order]\n\nWe’ll keep it for you until [Keep until]. Can’t make it? Call us on [Shop phone].',
     subject: 'Your order is ready to collect',
-    tapIns: [...ORDER, 'Keep until', 'Opening hours', 'Shop address'],
+    // The shop's lines are one tap-in, leaving out what Shop details hasn't got (task 3.7f).
+    tapIns: [...ORDER, 'Keep until', 'Where to collect'],
   },
   order_still_waiting: {
     group: 'online_orders',
@@ -266,9 +268,23 @@ export const TEMPLATES = {
     draft: true,
     name: 'Order cancelled',
     when: 'When an order is cancelled, by the customer or the shop',
-    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is cancelled. [Reason] We’ve refunded [Amount refunded] the way you paid.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    wording: 'Hi [Customer’s first name],\n\nYour order [Order number] is cancelled: [Reason]. We’ve refunded [Amount refunded] the way you paid.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
     subject: 'Your order [Order number] is cancelled — [Shop name]',
     tapIns: [...ORDER, 'Reason', 'Amount refunded'],
+  },
+  // An order cancelled before it was paid (payment unsure, or never taken): no
+  // number yet and nothing to refund (task 3.7c). Order cancelled's second
+  // wording, following its switch and subject; not shown in Settings yet, as
+  // the Edit box draws a second box only for Date change answered.
+  order_cancelled_unpaid: {
+    partOf: 'order_cancelled',
+    group: 'online_orders',
+    draft: true,
+    name: 'Order cancelled',
+    when: 'When an order is cancelled before it was paid',
+    wording: 'Hi [Customer’s first name],\n\nYour order is cancelled: [Reason]. Nothing was taken from your card.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    subject: 'Your order [Order number] is cancelled — [Shop name]',
+    tapIns: [...ORDER, 'Reason'],
   },
   // UX walk-through 2 M9: the sorry email from "Not ready after all".
   order_not_ready: {
