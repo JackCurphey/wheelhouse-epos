@@ -57,7 +57,7 @@ async function catalogue(query, { light = false, containing = null } = {}) {
   return { units: unitsOf(products, groups, answers), details, sites, shop, free, categories };
 }
 
-const ONLINE = 'show_online AND active = 1 AND price > 0';
+export const ONLINE = 'show_online AND active = 1 AND price > 0';
 // The online products holding one word in any field a search looks in; with
 // them come the other sizes of their groups, so a product's price and stock
 // line count every size. A product that matches every word holds the longest
@@ -73,7 +73,7 @@ const MATCHING = `WITH hit AS (
 // How many of each product are free at each site: its frames in stock there, or
 // for a product with no frame numbers its stock figure less the Cycle to Work
 // orders holding it there (c2w/orders.js freeHere, for every product at once).
-async function freeStock(ids) {
+export async function freeStock(ids) {
   const free = new Map();
   const add = (productId, siteId, n) => free.set(`${productId}:${siteId}`, (free.get(`${productId}:${siteId}`) ?? 0) + n);
   const frames = await prepare("SELECT product_id, site_id, count(*) FILTER (WHERE state = 'in_stock')::int AS n FROM stock_frames WHERE product_id = ANY(?::int[]) GROUP BY product_id, site_id").all(ids);
@@ -230,7 +230,7 @@ function sharedDetails(u, ctx) {
 // A card's line: ready at the chosen shop, or sold out there; none with no shop chosen.
 const cardStock = (u, ctx) => (!ctx.shop ? { line: 'none' } : { line: ready(u, ctx) ? 'ready' : 'sold-out', shop: ctx.shop.name });
 // A product page's line: how many are ready, or the first other shop that has one.
-function pageStock(productId, { shop, sites, free }) {
+export function pageStock(productId, { shop, sites, free }) {
   if (!shop) return { line: 'none' };
   const qty = free(productId, shop.id);
   if (qty > 0) return { line: 'ready', shop: shop.name, qty };

@@ -52,23 +52,23 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 3.4 Screen test: `on-messages` — "Online order messages" with the six rows, Edit and On; the "on" count counts the real list; block 46 (the Email and text frame) shows the ready email as drawn
 - [x] 3.5 Build to pass 3.1–3.4
 - [x] 3.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
-- [ ] 3.7 Left by the reviews of pull request 3 (nothing sends these messages yet; fix before pull request 4 first calls `queueOrderMessage`):
-  - [ ] 3.7a Order ready to collect says "ready at [Shop name]" with the business's name and address only; with more than one shop it needs the order's own shop (`online_orders.site_id` → the site's name and address), as the spec scenario and `on-email-ready` say ("North Street Cycles, Bolton")
-  - [ ] 3.7b Order confirmation's draft wording lacks what the spec asks for: what was bought, how it was paid, where to collect it
-  - [ ] 3.7c Order cancelled for an order with no number (unpaid, "payment unsure") leaves a gap for the number and still says "We’ve refunded [Amount refunded]"; give unpaid cancellations their own wording or skip the refund sentence
-  - [ ] 3.7d Nothing stops the same order message being queued twice (a retried payment step sends two confirmations); guard in `queueOrderMessage` or in each caller
-  - [ ] 3.7e Order cancelled's wording runs `[Reason]` into "We’ve refunded" with no full stop of its own
-  - [ ] 3.7f The ready email's shop lines leave a bare "Open" or a leading "·" when the shop has no opening hours or address in Shop details
-  - [ ] 3.7g The preview route adds From and To to every message's preview, not only the online order ones; `undoOrderReady` leaves `ready_message_id` on the undone message; `orderEmailProblem` ignores a message stuck at "unknown"; the screen test for the "on" count passes without this change, and nothing tests that a second Mark ready stops the first ready email
+- [x] 3.7 Left by the reviews of pull request 3 (nothing sends these messages yet; fix before pull request 4 first calls `queueOrderMessage`):
+  - [x] 3.7a Order ready to collect says "ready at [Shop name]" with the business's name and address only; with more than one shop it needs the order's own shop (`online_orders.site_id` → the site's name and address), as the spec scenario and `on-email-ready` say ("North Street Cycles, Bolton")
+  - [x] 3.7b Order confirmation's draft wording lacks what the spec asks for: what was bought, how it was paid, where to collect it
+  - [x] 3.7c Order cancelled for an order with no number (unpaid, "payment unsure") leaves a gap for the number and still says "We’ve refunded [Amount refunded]"; give unpaid cancellations their own wording or skip the refund sentence
+  - [x] 3.7d Nothing stops the same order message being queued twice (a retried payment step sends two confirmations); guard in `queueOrderMessage` or in each caller
+  - [x] 3.7e Order cancelled's wording runs `[Reason]` into "We’ve refunded" with no full stop of its own
+  - [x] 3.7f The ready email's shop lines leave a bare "Open" or a leading "·" when the shop has no opening hours or address in Shop details
+  - [x] 3.7g The preview route adds From and To to every message's preview, not only the online order ones; `undoOrderReady` leaves `ready_message_id` on the undone message; `orderEmailProblem` ignores a message stuck at "unknown"; the screen test for the "on" count passes without this change, and nothing tests that a second Mark ready stops the first ready email
 
 ## 4. Basket and checkout — server (pull request 4, about 550 lines, risky: public routes, money and stock)
 
-- [ ] 4.1 Test: `POST /api/site/basket` prices each line from the product, never from the cookie; a tampered price is ignored; the stock line at the chosen shop; "Only 1 left at Bolton — we’ve changed it to 1" and "No longer in stock at Bolton or [Second site]" answers
-- [ ] 4.2 Test: the basket answers "not taking online orders" when buying online is off or payments aren't connected, and for a Shopify-kind website
-- [ ] 4.3 Test: `POST /api/site/checkout` checks the details and answers each box's message ("Enter your name", the email message) and the count; nothing is made
-- [ ] 4.4 Test: a signed-in customer's details and store credit come from their account, when the shop allows credit online; "covers it all" when it does; a guest gets a new customer of their own, never matched on typed details
-- [ ] 4.5 Test: checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice gives the same order; rate limited
-- [ ] 4.6 Write `server/online-orders/basket.js`, `checkout.js` and the routes to pass 4.1–4.5
+- [x] 4.1 Test: `POST /api/site/basket` prices each line from the product, never from the cookie; a tampered price is ignored; the stock line at the chosen shop; "Only 1 left at Bolton — we’ve changed it to 1" and "No longer in stock at Bolton or [Second site]" answers
+- [x] 4.2 Test: the basket answers "not taking online orders" when buying online is off or payments aren't connected, and for a Shopify-kind website
+- [x] 4.3 Test: `POST /api/site/checkout` checks the details and answers each box's message ("Enter your name", the email message) and the count; nothing is made
+- [x] 4.4 Test: a signed-in customer's details and store credit come from their account, when the shop allows credit online; "covers it all" when it does; a guest gets a new customer of their own, never matched on typed details (the guest's customer is made with the order, so it moves to 4.5)
+- [ ] 4.5 Test (waits for 5.0b–e and Jack's answer 9; until then checkout answers 501 `paying_not_built` where it would make the order): checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice gives the same order; rate limited
+- [ ] 4.6 Write `server/online-orders/basket.js`, `checkout.js` and the routes to pass 4.1–4.5 (written to pass 4.1–4.4)
 - [ ] 4.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 5. Paying — server and pretend outcomes (pull request 5, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
