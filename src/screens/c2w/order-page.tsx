@@ -16,17 +16,20 @@ import { orderHref as supplierOrderHref } from '@/screens/deliveries/deliveries-
 import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
 import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
+import { CancelDialog, MoreMenu } from './cancel-dialog.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
  * provider line from cw-more): the stages, what's next, "What's happened",
  * The order with Who pays what, and the customer. The next-step buttons and
- * the More… menu come with the pull requests that build those steps
+ * the More… menu's items come with the pull requests that build those steps
  * (openspec/changes/cycle-to-work tasks 5–8; logged).
  */
 type Full = C2wOrder & { events: C2wEvent[] };
 const STAGES = ['Quote given', 'Waiting for the certificate', 'Certificate received', 'Ready to collect', 'Collected', 'Paid by the provider'];
 // A quote given is already waiting for the certificate, as drawn (cw-order-held).
+// More… is there until the bike is collected; the money steps take over after (cw-more).
+const OPEN_STAGES = new Set(['quote', 'waiting', 'certificate', 'ready']);
 const AT: Record<string, number> = { quote: 1, waiting: 1, certificate: 2, ready: 3, collected: 4, paid: 6 };
 
 function Stages({ o }: { o: Full }) {
@@ -60,6 +63,9 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
   const orderButton = (variant: 'primary' | 'default') => <Button variant={variant} disabled={act.busy} onClick={act.onOrder}>{orderLabel(o)}</Button>;
   const ordering = <p className={note}>Ordering creates the supplier order in Deliveries and orders.</p>;
   const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
+  if (o.stage === 'cancelled') {
+    return <Box label="cw-next"><Msg><strong>This order is cancelled.</strong></Msg></Box>;
+  }
   if (o.stage === 'ready') {
     // Hand over comes with pull request 7 (logged).
     return (
@@ -172,6 +178,7 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
     else if (e.kind === 'order_undone') text = 'undid the order from the supplier';
     // Not drawn (logged): Undo of Mark ready says what it did.
     else if (e.kind === 'ready_undone') text = 'undid ready to collect';
+    else if (e.kind === 'cancelled') text = ['cancelled the order', e.detail.bike === 'keep' ? 'kept the bike as shop stock' : null, e.reason].filter(Boolean).join(' · ');
     else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
     if (!text) return;
     const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
@@ -269,7 +276,7 @@ function OrderBody() {
   const providers = useAllProviders().data?.providers;
   const { send, busy } = useEmailQuote(id);
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState<'applied' | 'certificate' | null>(null);
+  const [open, setOpen] = useState<'applied' | 'certificate' | 'cancel' | null>(null);
   const [stepping, setStepping] = useState(false);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
@@ -321,17 +328,21 @@ function OrderBody() {
   return (
     <Page>
       <Back to={ROUTES.c2w}>Cycle to Work</Back>
-      <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-size-22 font-bold md:text-size-26">{`${o.customerName} · Cycle to Work`}</h2>
-        <p className={note}>{`Quote ${o.quoteRef} · ${o.siteName && o.siteName !== shop ? `${shop}, ${o.siteName}` : shop}`}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2.5">
+        <div className="flex flex-col gap-1">
+          <h2 className="m-0 text-size-22 font-bold md:text-size-26">{`${o.customerName} · Cycle to Work`}</h2>
+          <p className={note}>{`Quote ${o.quoteRef} · ${o.siteName && o.siteName !== shop ? `${shop}, ${o.siteName}` : shop}`}</p>
+        </div>
+        {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} /> : null}
       </div>
-      <Stages o={o} />
+      {o.stage === 'cancelled' ? null : <Stages o={o} />}
       <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[minmax(0,1fr)_420px]">
         <div className="flex flex-col gap-3.5">{left}</div>
         <div className="flex flex-col gap-3.5">{right}</div>
       </div>
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
+      {open === 'cancel' ? <CancelDialog o={o} events={o.events} shop={shop} onClose={() => setOpen(null)} /> : null}
     </Page>
   );
 }
