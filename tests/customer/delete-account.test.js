@@ -33,6 +33,7 @@ const open = async ({ me = ME, history = [], ask = () => ({ status: 200, body: {
       if (pathname.endsWith('/me/delete-request/cancel')) { posts.push('cancel'); const r = cancel(); if (r.status === 200) mine = { ...mine, deletion: null }; return r; }
       if (pathname.endsWith('/me')) return { status: 200, body: mine };
       if (pathname.endsWith('/bikes')) return { status: 200, body: [] };
+      if (pathname.endsWith('/c2w-orders')) return { status: 200, body: [] };
       return { status: 200, body: history };
     },
   });
