@@ -33,6 +33,9 @@ export function makeRateLimiter(max, windowMs) {
   return {
     check(key) {
       const now = Date.now();
+      // A public route meets many addresses once each: past a size, forget
+      // the ones whose minute is over, so the map doesn't grow for ever.
+      if (hits.size > 10000) for (const [k, e] of hits) if (e.resetAt < now) hits.delete(k);
       const entry = hits.get(key);
       if (!entry || entry.resetAt < now) {
         hits.set(key, { count: 1, resetAt: now + windowMs });
