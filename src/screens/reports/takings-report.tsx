@@ -27,10 +27,17 @@ import { Figure, PERIODS } from './sales-report.tsx';
  * is, and so is the open day (?day=).
  */
 type Row =
-  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
-  | { kind: 'day'; key: string; label: string; closed: true; reopened?: boolean; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
-  | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
+  | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string; sent?: SentState }
+  | { kind: 'day'; key: string; label: string; closed: true; reopened?: boolean; sent?: SentState; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
+  | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean; sent?: SentState }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
+/** Where a day stands with the accounts software (null: it was closed before that was connected). */
+type SentState = 'sent' | 'waiting' | 'failed' | 'reopened' | 'open' | null;
+const SENT_WORDS = { sent: 'Sent', waiting: 'Waiting', failed: 'Not sent', reopened: 'Reopened', open: 'Not closed yet' } as const;
+const SENT_TONE = {
+  sent: 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]', waiting: 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]', open: 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]',
+  failed: 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]', reopened: 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]',
+} as const;
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
 type Takings = {
   period: { period: string; from: string; to: string; through: string; soFar: boolean; unit: 'day' | 'month'; label: string; against: string };
@@ -38,6 +45,8 @@ type Takings = {
   rows: Row[]; bars: SalesRow[]; empty: boolean; nothingBefore: boolean; shopLine: string; today: string;
   // A reopened day in this period: left out of every figure until it is closed again (reports-accounts-and-reopen).
   reopened?: { day: string; label: string; reason: string; reopenedByName: string } | null;
+  // Connected (or lost): the table has a Sent to [service] column.
+  accounts?: { providerName: string; status: string } | null;
 };
 
 const KEY_NOW: Record<string, string> = { 'this-week': 'Closed days this week', 'this-month': 'Closed days this month', 'last-month': 'Closed days last month' };
@@ -57,13 +66,19 @@ const DAY = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-left whitespace
 /** Close the day for a day: today's own page, or an earlier day's by its date. */
 const closeDayPath = (day: string, today: string) => (day === today ? ROUTES['eod-count'] : `${ROUTES['eod-count']}?day=${day}`);
 
-function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => void }) {
+function ClosedDays({ rows, onOpen, accounts }: { rows: Row[]; onOpen: (id: number) => void; accounts?: Takings['accounts'] }) {
+  // The Sent to [service] column, only while accounts software is connected or lost.
+  const sentCell = (r: Row) => {
+    if (!accounts) return null;
+    const sent = (r as { sent?: SentState }).sent;
+    return <td className={CELL}>{sent ? <span className={`inline-flex rounded-full px-2.5 py-0.5 text-size-13-5 font-semibold ${SENT_TONE[sent]}`}>{SENT_WORDS[sent]}</span> : '—'}</td>;
+  };
   return (
     <div className="overflow-x-auto">
       <table aria-label="Closed days" className="w-full border-collapse text-sm max-md:text-size-13">
         <thead><tr>
           <th scope="col" className={`${HEAD} text-left`}>Day</th><th scope="col" className={`${HEAD} text-right`}>Takings</th>
-          <th scope="col" className={`${HEAD} text-right`}>Cash banked</th><th scope="col" className={`${HEAD} text-right`}>Cash difference</th><th scope="col" className={`${HEAD} text-right`}>Closed by</th>
+          <th scope="col" className={`${HEAD} text-right`}>Cash banked</th><th scope="col" className={`${HEAD} text-right`}>Cash difference</th><th scope="col" className={`${HEAD} text-right`}>Closed by</th>{accounts ? <th scope="col" className={`${HEAD} text-right`}>{`Sent to ${accounts.providerName}`}</th> : null}
         </tr></thead>
         <tbody>
           {rows.map((r) => {
@@ -72,6 +87,7 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
                 <tr key={`o${r.key}`}>
                   <th scope="row" className={`${DAY} font-normal`}>{r.label}</th>
                   <td className={CELL}>{money(r.onlinePence)}{r.soFar ? ' so far' : ''}</td><td className={CELL}>—</td><td className={CELL}>—</td><td className={CELL}>Not a till</td>
+                  {sentCell(r)}
                 </tr>
               );
             }
@@ -90,6 +106,7 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
                       </span>
                     ) : 'Not closed yet'}
                   </td>
+                  {sentCell(r)}
                 </tr>
               );
             }
@@ -102,6 +119,7 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
                 <td className={CELL}>{money(r.takingsPence)}</td><td className={CELL}>{money(r.bankedPence)}</td>
                 <td className={CELL}><Difference pence={r.differencePence} /></td>
                 <td className={CELL}>{r.kind === 'day' ? (r.reopened ? `${r.closedByName} · Reopened` : r.closedByName) : `${r.closedDays} closed days`}</td>
+                {sentCell(r)}
               </tr>
             );
           })}
@@ -187,7 +205,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         <Box>
           {showGraphs ? <ReportGraph title={title} rows={report.bars} kind={p.unit === 'month' ? 'line' : 'bars'} spoken={spoken}
             keyNow={KEY_NOW[period] ?? 'Closed days'} keyBefore={period === 'last-12-months' ? 'The 12 months before' : capital(p.against.replace(/^the /, ''))} showBefore={!report.nothingBefore} /> : null}
-          <ClosedDays rows={report.rows} onOpen={onOpen} />
+          <ClosedDays rows={report.rows} onOpen={onOpen} accounts={report.accounts} />
         </Box>
       )}
       <Note>Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.</Note>
