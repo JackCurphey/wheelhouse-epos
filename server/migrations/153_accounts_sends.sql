@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS accounts_sends (
   failed_line TEXT,
   amount_pence INTEGER,
   external_id TEXT,
+  provider TEXT,
   version INTEGER NOT NULL DEFAULT 0 CHECK (version >= 0),
   summary JSONB,
   not_recorded TEXT[] NOT NULL DEFAULT '{}',
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS accounts_pretend_summaries (
   summary JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (shop_id, day),
+  UNIQUE (shop_id, provider, day),
   UNIQUE (shop_id, external_id)
 );
 

@@ -49,9 +49,10 @@ const BADGE = { sent: 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]
 const BADGE_WORDS = { sent: 'Sent', failed: 'Not sent', reopened: 'Reopened', waiting: 'Waiting', open: 'Not closed yet' } as const;
 
 /** What each day sent (rp-accounts-log): newest first, with what to do about a day that couldn't go. */
-function SentLog({ providerName }: { providerName: string }) {
+function SentLog() {
   const log = useQuery({ queryKey: LOG_KEY, queryFn: () => apiGet<{ days: LogDay[] }>('/api/accounts/log'), retry: false });
   const days = log.data?.days ?? [];
+  if (!days.length) return null; // a shop that never connected has no log
   const sub = (d: LogDay) => {
     if (d.status === 'sent') return `Sent at ${d.sentAt ? clock(d.sentAt) : ''} · ${penceText(d.amountPence ?? 0)}`;
     if (d.status === 'open' || d.status === 'reopened') return d.text ?? '';
@@ -75,7 +76,6 @@ function SentLog({ providerName }: { providerName: string }) {
         ))}
       </ul>
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">Each day goes once all that shop’s tills are closed. A day that’s reopened is corrected when it closes again.</p>
-      <span className="sr-only">{providerName}</span>
     </div>
   );
 }
@@ -94,6 +94,7 @@ export function AccountsSoftware() {
       // A day may have gone, or been held, by this change.
       void queryClient.invalidateQueries({ queryKey: LOG_KEY });
       void queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      void queryClient.invalidateQueries({ queryKey: ['reports-takings'] });
     },
     onError: (err) => setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.'),
   });
@@ -112,6 +113,7 @@ export function AccountsSoftware() {
           ))}
         </div>
         {issue}
+        <SentLog />
         <p className="m-0 text-sm text-[var(--wh-muted)]">Not using either? “Download everything” above has the same daily figures to import.</p>
       </div>
     );
@@ -119,17 +121,24 @@ export function AccountsSoftware() {
 
   const { providerName, connectedByName, connectedAt } = state.connection;
   const lost = state.status === 'lost';
-  return (
-    <div className="flex flex-col gap-2">
-      {lost ? (
+  if (lost) {
+    // rp-accounts-lost shows only the bar and the log until Reconnect.
+    return (
+      <div className="flex flex-col gap-2">
         <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
           <AlertCircle size={18} aria-hidden="true" />
           <span className="min-w-[240px] flex-1"><strong>{`${providerName} disconnected on ${state.lostOn ? longDate(state.lostOn) : ''}.`}</strong> Nothing has been sent since. Reconnect and the waiting days go across.</span>
           <Button className="min-h-11" disabled={change.isPending} onClick={() => change.mutate({ path: '/api/accounts/connect', body: { provider: state.connection!.provider } })}>{`Reconnect ${providerName}`}</Button>
         </div>
-      ) : null}
+        {issue}
+        <SentLog />
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2.5">
-        {lost ? null : <span className="rounded-full bg-[var(--wh-ok-bg)] px-2.5 py-0.5 text-size-13-5 font-semibold text-[var(--wh-status-complete-ink)]">{`Connected to ${providerName}`}</span>}
+        <span className="rounded-full bg-[var(--wh-ok-bg)] px-2.5 py-0.5 text-size-13-5 font-semibold text-[var(--wh-status-complete-ink)]">{`Connected to ${providerName}`}</span>
         <span className="text-size-13 text-[var(--wh-muted)]">{connectedByName ? `by ${connectedByName} on ${longDate(connectedAt)}` : `on ${longDate(connectedAt)}`}</span>
         <span className="grow" />
         <button type="button" onClick={() => setDisconnecting(true)} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">{`Disconnect ${providerName}`}</button>
@@ -166,7 +175,7 @@ export function AccountsSoftware() {
           })}
         </div>
       ))}
-      <SentLog providerName={providerName} />
+      <SentLog />
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">{`VAT on sales goes to one ${providerName} account for every rate. Check these choices with your accountant before the first day is sent.`}</p>
       {disconnecting ? (
         <Dialog open onOpenChange={(o) => { if (!o) setDisconnecting(false); }} aria-labelledby="dc-title" className="md:max-w-[520px]">

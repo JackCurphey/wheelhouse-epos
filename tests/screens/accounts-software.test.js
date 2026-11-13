@@ -116,7 +116,7 @@ test('Connect Xero connects, says who and when, says it is a practice, and shows
   assert.ok(region.getByRole('button', { name: 'Disconnect Xero' }) !== null);
   assert.deepEqual(posts('/api/accounts/connect'), [{ provider: 'xero' }]);
   assert.ok(region.queryByText('This is a practice connection: nothing leaves Wheelhouse until a real Xero account is set up.') !== null);
-  assert.deepEqual(region.getAllByRole('heading', { level: 4 }).map((h) => h.textContent), ['Sales go to', 'Money taken goes to', 'Everything else goes to', 'What was sent']);
+  assert.deepEqual(region.getAllByRole('heading', { level: 4 }).map((h) => h.textContent), ['Sales go to', 'Money taken goes to', 'Everything else goes to']);
   const sales = pick(region, 'Accessories');
   assert.deepEqual([...sales.options].map((o) => o.textContent), ['Choose a Xero account', '[Xero account 1]', '[Xero account 2]', '[Xero account 3]', '[Xero account 4]']);
   assert.ok(pick(region, 'Online sales (paid on the website)') !== null);
@@ -213,6 +213,22 @@ test('a lost connection says so with Reconnect, and the days wait', async () => 
   await p.findByText(/Xero disconnected on 16 September 2026\./);
   assert.ok(p.queryByText(/Nothing has been sent since\. Reconnect and the waiting days go across\./) !== null);
   assert.ok((await t.ui.findByRole('button', { name: /^Accounts software/ })).textContent.includes('Xero disconnected'));
+  // Only the bar and the log, as drawn: the waiting day is listed, and the choices and Disconnect are not.
+  const rows = p.getAllByRole('listitem').map((li) => li.textContent ?? '');
+  assert.ok(/Wed 16 Sep.*sends when Xero is reconnected.*Waiting/.test(rows[0]), rows[0]);
+  assert.ok(p.queryByRole('button', { name: 'Disconnect Xero' }) === null);
   t.fireEvent.click(p.getByRole('button', { name: 'Reconnect Xero' }));
   await t.waitFor(() => assert.deepEqual(posts('/api/accounts/connect'), [{ provider: 'xero' }]));
+  await t.waitFor(() => assert.ok(p.queryByText(/Nothing has been sent since/) === null));
+  assert.ok(p.queryByRole('button', { name: 'Disconnect Xero' }) !== null);
+});
+
+test('after a deliberate disconnect the days already sent stay in the log, under the Connect buttons', async () => {
+  const t = await open({ connected: false, log: { connected: false, providerName: 'Xero', status: 'not_connected', days: [{ ...DAYS[2] }, { ...DAYS[3] }] } });
+  await fold(t);
+  const p = await panel(t);
+  await p.findByRole('button', { name: 'Connect Xero' });
+  const rows = p.getAllByRole('listitem').map((li) => li.textContent ?? '');
+  assert.ok(/Tue 15 Sep.*Sent at \d\d:\d\d · £60\.00.*Sent/.test(rows[0]), rows[0]);
+  assert.ok(/Mon 14 Sep.*Waiting/.test(rows[1]), rows[1]);
 });

@@ -142,7 +142,7 @@ test('153 runs from empty and twice, protects each shop, and keeps one send and 
     await assert.rejects(send('2026-09-02', 'broken'), /check/i);
     const summary = (day, ext) => client.query("INSERT INTO accounts_pretend_summaries (shop_id, provider, external_id, day, version, summary) VALUES ($1, 'xero', $2, $3, 1, '{}')", [shopId, ext, day]);
     await summary('2026-09-01', 'p1');
-    await assert.rejects(summary('2026-09-01', 'p2'), /unique|duplicate/i, 'the pretend service holds one summary a day');
+    await assert.rejects(summary('2026-09-01', 'p2'), /unique|duplicate/i, 'the pretend service holds one summary a day for each service');
   } finally {
     await client.end();
   }
@@ -270,7 +270,7 @@ test('a summary that does not balance is not sent, and says so', async () => {
   await tillSale(owner, { lines: [{ product: owner.chain.id, name: 'Chain', gross: 2000, vat: 333 }], payments: [{ method: 'card', pence: 1500 }], total: 2000 });
   await closeToday(owner, FLOAT);
   const [row] = await sends(owner);
-  assert.deepEqual([row.status, row.reason], ['failed', 'The day’s lines don’t add up']);
+  assert.deepEqual([row.status, row.reason], ['failed', 'The day’s lines don’t add up: money taken £15.00, sales and VAT £20.00']);
   assert.equal((await pretendSummaries(owner)).length, 0);
 });
 
@@ -341,4 +341,76 @@ test('Takings and cash-ups says where each day went, only while accounts softwar
   assert.equal((await call(owner, '/api/reports/takings?period=this-week')).body.rows.find((r) => r.kind === 'day' && r.key === TODAY).sent, 'sent');
   await post(owner, '/api/accounts/disconnect', {});
   assert.equal((await call(owner, '/api/reports/takings?period=this-week')).body.accounts, null, 'no column without accounts software');
+});
+
+test('a service that is down leaves the day not sent, and it goes on the next try', async () => {
+  const owner = await shop();
+  await ordinaryDay(owner);
+  process.env.ACCOUNTS_PRETEND_REFUSE = 'down';
+  try { await closeToday(owner, FLOAT + 3000); } finally { delete process.env.ACCOUNTS_PRETEND_REFUSE; }
+  // The live server's own environment is unchanged, so it sent; put the day back to failed, then refuse here.
+  const close = await one(owner, 'SELECT id FROM day_closes WHERE day = ?', TODAY);
+  await one(owner, "UPDATE accounts_sends SET status = 'waiting', external_id = NULL, sent_at = NULL, version = 0 WHERE day = ? RETURNING id", TODAY);
+  await all(owner, 'DELETE FROM accounts_pretend_summaries');
+  process.env.ACCOUNTS_PRETEND_REFUSE = 'down';
+  try { await runWithShop(owner.shop.id, () => sendClosedDay(close.id)); } finally { delete process.env.ACCOUNTS_PRETEND_REFUSE; }
+  const [row] = await sends(owner);
+  assert.equal(row.status, 'failed');
+  assert.match(row.reason, /Xero didn’t take it/);
+  assert.equal((await pretendSummaries(owner)).length, 0);
+  await runWithShop(owner.shop.id, () => sendClosedDay(close.id));
+  assert.equal((await sends(owner))[0].status, 'sent');
+});
+
+test('a discount is shared across a sale\'s lines, so the lines still add up to what was paid', async () => {
+  const owner = await shop();
+  // £30.00 of lines with £5.00 off: £25.00 paid by card, VAT £5.00 on the lines.
+  await tillSale(owner, { lines: [{ product: owner.chain.id, name: 'Chain', gross: 2000, vat: 333 }, { product: owner.bottle.id, name: 'Bottle', gross: 1000, vat: 167 }], payments: [{ method: 'card', pence: 2500 }], total: 2500 });
+  await closeToday(owner, FLOAT);
+  const [held] = await pretendSummaries(owner);
+  const by = Object.fromEntries(held.summary.lines.map((l) => [l.key, l.amountPence]));
+  assert.equal(held.summary.balanced, true);
+  assert.equal(by['money:card'], 2500);
+  assert.equal(by['sales:Drivetrain'] + by['sales:Accessories'] + by['other:vat'], 2500);
+  assert.ok(by['sales:Drivetrain'] < 2000 - 333, 'the discount took something off the chain');
+});
+
+test('a product whose category is not in the categories list goes to Other sales', async () => {
+  const owner = await shop();
+  const gizmo = await one(owner, "INSERT INTO products (name, category, price) VALUES ('Gizmo', 'Mystery', 10) RETURNING id");
+  await tillSale(owner, { lines: [{ product: gizmo.id, name: 'Gizmo', gross: 1200, vat: 200 }], payments: [{ method: 'cash', pence: 1200 }] });
+  await closeToday(owner, FLOAT + 1200);
+  const by = Object.fromEntries((await pretendSummaries(owner))[0].summary.lines.map((l) => [l.key, l.amountPence]));
+  assert.equal(by['sales:Other sales'], 1000);
+});
+
+test('two sends of one day at the same moment post it once', async () => {
+  const owner = await shop();
+  assert.equal((await post(owner, '/api/accounts/disconnect', {})).status, 200);
+  await ordinaryDay(owner);
+  await closeToday(owner, FLOAT + 3000);
+  await one(owner, "UPDATE accounts_connections SET status = 'connected', disconnected_at = NULL RETURNING id");
+  const close = await one(owner, 'SELECT id FROM day_closes WHERE day = ?', TODAY);
+  await Promise.all([1, 2].map(() => runWithShop(owner.shop.id, () => sendClosedDay(close.id))));
+  assert.equal((await pretendSummaries(owner)).length, 1);
+  assert.deepEqual((await sends(owner)).map((r) => r.status), ['sent']);
+});
+
+test('a day sent to one service and corrected after the shop moved to another is posted fresh there', async () => {
+  const owner = await shop();
+  await ordinaryDay(owner);
+  const close = await closeToday(owner, FLOAT + 3000);
+  const first = (await pretendSummaries(owner))[0];
+  assert.equal((await post(owner, `/api/reports/days/${close.id}/reopen`, { reason: 'miscounted' })).status, 200);
+  assert.equal((await post(owner, '/api/accounts/disconnect', {})).status, 200);
+  assert.equal((await post(owner, '/api/accounts/connect', { provider: 'quickbooks' })).status, 200);
+  const accounts = (await call(owner, '/api/accounts')).body.accounts;
+  const lines = ['sales:Drivetrain', 'sales:Accessories', 'money:cash', 'money:card', 'other:vat'];
+  for (const line of lines) assert.equal((await call(owner, '/api/accounts/choices', { method: 'PUT', body: { line, accountId: accounts[0].id } })).status, 200);
+  await closeToday(owner, FLOAT + 3000);
+  const held = await pretendSummaries(owner);
+  const quickbooks = held.find((h) => h.provider === 'quickbooks');
+  assert.ok(quickbooks, 'QuickBooks has the day');
+  assert.notEqual(quickbooks.external_id, first.external_id);
+  assert.equal(quickbooks.version, 1);
 });

@@ -87,7 +87,7 @@ export async function buildSummary(closeId) {
   return {
     closeId, day: close.day, lines, totalPence, salesPence: grossPence - vatPence, vatPence, cashDifferencePence,
     // What the money taken must equal: the day's sales and VAT.
-    balanced: totalPence === grossPence,
+    balanced: totalPence === grossPence, imbalancePence: totalPence - grossPence,
     notRecorded: ['Refunds', 'Discounts given', ...(hasOld ? ['VAT on old-record sales'] : [])],
   };
 }
