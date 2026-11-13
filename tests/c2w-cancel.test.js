@@ -196,6 +196,40 @@ test('8.7 a Ready to collect or Certificate received still waiting to go is stop
   assert.deepEqual((await pending(sam)).map((m) => m.intent_state), ['undone']);
 });
 
+test('8.7 cancelling one order leaves a message waiting for the same customer’s other order', async () => {
+  const pending = (c) => inShop(() => prepare(
+    "SELECT template_key, intent_state FROM customer_messages WHERE customer_id = ? AND template_key IN ('c2w_ready', 'c2w_certificate', 'c2w_certificate_less') ORDER BY id",
+  ).all(c.id));
+  const maya = await newMaya();
+  const first = await quote(maya, await framedBike());
+  const second = await quote(maya, await framedBike());
+  assert.equal((await post(`/api/c2w/orders/${second.id}/certificate`, { number: '[certificate number]', amountPence: 100000, ready: true })).status, 200);
+  assert.equal((await cancel(first.id)).status, 200);
+  assert.deepEqual(await pending(maya), [{ template_key: 'c2w_ready', intent_state: 'intended' }]);
+});
+
+test('8.7 a "Your order is cancelled" that can’t be queued doesn’t stop the cancel, and is noted', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike());
+  // Only this customer's message fails, so other test files writing to the table aren't touched.
+  const fn = `force_fail_${randomUUID().replaceAll('-', '')}`;
+  await pool.query(`CREATE FUNCTION ${fn}() RETURNS trigger AS $$ BEGIN IF NEW.customer_id = ${Number(maya.id)} AND NEW.template_key = 'c2w_cancelled' THEN RAISE EXCEPTION 'forced failure'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql`);
+  await pool.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON customer_messages FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  let res;
+  try {
+    res = await cancel(made.id, { tell: true });
+  } finally {
+    await pool.query(`DROP TRIGGER ${fn} ON customer_messages`);
+    await pool.query(`DROP FUNCTION ${fn}()`);
+  }
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const o = await order(made.id);
+  assert.equal(o.stage, 'cancelled');
+  assert.equal(o.events.at(-1).detail.notTold, 'error');
+  assert.equal(o.events.at(-1).detail.told, undefined);
+  assert.deepEqual((await frames(made.productId)).map((f) => f.state), ['in_stock']);
+});
+
 test('8.5 "Send it back to [supplier]" isn’t built yet, and says so without cancelling', async () => {
   const bike = await unstockedBike();
   const made = await quote(await newMaya(), bike);
@@ -242,6 +276,7 @@ test('8.7 with no shop phone, "Your order is cancelled" isn’t sent, and the or
     assert.equal(o.stage, 'cancelled');
     assert.deepEqual(await messagesTo(maya), []);
     assert.equal(o.events.at(-1).detail.told, undefined, 'not told when nothing was sent');
+    assert.equal(o.events.at(-1).detail.notTold, 'no_phone');
   } finally {
     await inShop(() => prepare("UPDATE shops SET phone = '[Shop phone]' WHERE id = current_setting('app.current_shop_id')::int").run());
   }

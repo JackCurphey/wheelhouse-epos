@@ -14,7 +14,7 @@ import { currentMoment, isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
-import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, undoReadyMessage } from '../c2w/messages.js';
+import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, stopMessagesForCancel, undoReadyMessage } from '../c2w/messages.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
@@ -526,7 +526,7 @@ export function register(route) {
           if (row.frame_id) detail.frameId = row.frame_id;
         }
         // Messages about the bike that haven't gone yet are stopped.
-        await undoReadyMessage(id, ['c2w_ready', 'c2w_certificate', 'c2w_certificate_less']);
+        await stopMessagesForCancel(id);
         // Telling Maya never stops the cancel: a message that can't be queued is
         // noted on the line, not told (BEGIN here is a savepoint in the step's transaction).
         if (tell) {

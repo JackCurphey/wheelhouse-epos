@@ -140,15 +140,30 @@ export async function queueCertificateMessage(orderId, opts) {
 /**
  * Undo of Ready to collect: a Ready to collect still waiting for this order's
  * customer is stopped. The message isn't tied to the order, so it is found by
- * its customer; one already sent can't be stopped. Cancelling the order stops
- * the certificate's messages too (`keys`).
+ * its customer; one already sent can't be stopped.
  */
-export async function undoReadyMessage(orderId, keys = ['c2w_ready']) {
+export async function undoReadyMessage(orderId) {
   await prepare(
     `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
-     WHERE intent_state = 'intended' AND template_key = ANY(?::text[])
+     WHERE intent_state = 'intended' AND template_key = 'c2w_ready'
        AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)`,
-  ).run(keys, orderId);
+  ).run(orderId);
+}
+
+/**
+ * Cancelling an order stops its Ready to collect and Certificate received
+ * messages still waiting to go. They are found by customer, so while the
+ * customer has another open order they are left alone: the message may be that
+ * order's (review, 13 Nov).
+ */
+export async function stopMessagesForCancel(orderId) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE intent_state = 'intended' AND template_key IN ('c2w_ready', 'c2w_certificate', 'c2w_certificate_less')
+       AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)
+       AND NOT EXISTS (SELECT 1 FROM c2w_orders other WHERE other.customer_id = customer_messages.customer_id
+         AND other.id <> ? AND other.stage IN ('quote', 'waiting', 'certificate', 'ready'))`,
+  ).run(orderId, orderId);
 }
 
 /**
