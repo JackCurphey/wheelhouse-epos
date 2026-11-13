@@ -31,4 +31,4 @@ Each pull request: tests first, each watched failing for the right reason (break
 - [x] 4.2 The list in `server/shop-data-copy.js` and its line on Your data. Verify: 4.1 passes.
 - [x] 4.3 Walk the built screens against `rp-accounts-connect`, `rp-accounts-map`, `rp-accounts-missing`, `rp-accounts-log`, `rp-accounts-lost`, `rp-accounts-disconnect`, `rp-today-accounts`, `rp-reopen` and `rp-takings-reopened` on desktop, tablet and phone, and against each requirement in `specs/`; list what was met, dropped or changed.
 - [x] 4.4 `npm run lint` and `npm run full-check` pass on the final commit after merging main; a fresh self-review of the whole diff.
-- [ ] 4.5 `/opsx:archive` as the last commit of PR 4, so `openspec/specs/accounts-software`, `reports`, `close-the-day`, `today` and `your-data` describe what was built.
+- [x] 4.5 `/opsx:archive` as the last commit of PR 4, so `openspec/specs/accounts-software`, `reports`, `close-the-day`, `today` and `your-data` describe what was built.
