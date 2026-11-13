@@ -13,7 +13,7 @@ const served = (extra = {}) => ({
 });
 const rowsOf = (table) => table.getAllByRole('row').map((r) => [...r.querySelectorAll('th,td')].map((c) => c.textContent));
 
-test('Takings and cash-ups opens on This week with its six figures, compared in words', async () => {
+test('Takings and cash-ups opens on This week with its seven figures, compared in words', async () => {
   const { ui, within } = await openReports('/workshop/reports/takings', { answers: served() });
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Takings and cash-ups' }) !== null);
   assert.ok(await ui.findByText('North Street Cycles, Bolton · So far: Mon 14 – Thu 17 September, against the same days last week') !== null);
@@ -25,6 +25,11 @@ test('Takings and cash-ups opens on This week with its six figures, compared in 
   assert.ok(figure('Cash').queryByText('Up £95.00 on the same days last week') !== null);
   assert.ok(figure('Other').queryByText('£25.00') !== null);
   assert.ok(figure('Other').queryByText('Gift cards, store credit and customer accounts') !== null);
+  // Cycle to Work money, owed by the providers, between Other and Online (UX walk-through 5 H3).
+  assert.ok(figure('Cycle to Work').queryByText('£15.00') !== null);
+  assert.ok(figure('Cycle to Work').queryByText('Owed by providers, not in the drawer') !== null);
+  const names = ui.getAllByRole('group').map((g) => g.getAttribute('aria-label') ?? '');
+  assert.ok(names.indexOf('Other') + 1 === names.indexOf('Cycle to Work') && names.indexOf('Cycle to Work') + 1 === names.indexOf('Online'), names.join(' | '));
   assert.ok(figure('Online').queryByText('£55.00') !== null);
   assert.ok(figure('Online').queryByText('Paid on the website · separate from the tills') !== null);
   assert.ok(figure('Cash differences').queryByText('−£5.00') !== null);
@@ -67,7 +72,7 @@ test('a closed day opens its end-of-day report as it was saved, headed with the 
   const box = within(await ui.findByRole('dialog', { name: 'Tue 15 September' }));
   assert.ok(await box.findByText('Closed by Jack Lewis at 17:30') !== null);
   const text = box.getByRole('list').textContent;
-  for (const part of ['Takings£300.00', 'Card£150.00', 'Cash£140.00', 'Gift cards, store credit, customer accounts, other£10.00', 'Cash difference£5.00 short', 'Banked£115.00']) assert.ok(text.includes(part), part);
+  for (const part of ['Takings£300.00', 'Card£150.00', 'Cash£140.00', 'Gift cards, store credit, customer accounts, other£10.00', 'Cycle to WorkOwed by providers, not in the drawer£15.00', 'Cash difference£5.00 short', 'Banked£115.00']) assert.ok(text.includes(part), part);
   assert.ok(box.queryByText('Online money is not in this till’s takings: £25.00 on Tuesday 15 September') !== null);
   assert.ok(box.queryByRole('button', { name: 'Print' }) !== null);
   fireEvent.click(box.getByRole('button', { name: 'Close' }));

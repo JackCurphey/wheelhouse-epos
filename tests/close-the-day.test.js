@@ -191,7 +191,7 @@ test('closing the day keeps its figures: the count, the difference, the banking 
     // A normal close: nothing banked for an earlier day, no morning count for it (unclosed-day).
     earlierBankedPence: 0, carriedPence: 0, countedBy: null,
     // Takings is card + cash + other, so it always adds up (review fix 5).
-    takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, onlinePence: 4000,
+    takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, c2wPence: 0, onlinePence: 4000,
   });
   assert.equal(close.floatStart.at, (await day(owner)).floatStart.at);
   // Today now shows the close; the figures stay as they were after a later sale.
@@ -687,4 +687,22 @@ test('a bank transfer recorded today never reaches the takings, the cash or the 
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const { close } = res.body;
   assert.deepEqual([close.takingsPence, close.cardPence, close.cashPence, close.otherPence], [1300 + 3000 + 500, 1300, 3000, 500]);
+});
+
+// A Cycle to Work hand-over's provider share is the provider's to pay, not in the drawer
+// (UX walk-through 5 H3): the close keeps it as its own figure, out of Other, and still in
+// the takings, so the takings add up. A reopened day closed again works it out the same way.
+test('Cycle to Work money is its own figure at the close, not Other, and still in the takings', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { card: 120, extra: [{ tenderType: 'Cycle to Work · Cyclescheme', amount: 880 }, { tenderType: 'Gift card', amount: 5 }] });
+  const d = await day(owner);
+  const res = await post(owner, '/api/close-the-day', { countedPence: d.expectedPence, expectedPence: d.expectedPence });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const { close } = res.body;
+  assert.deepEqual([close.takingsPence, close.cardPence, close.cashPence, close.otherPence, close.c2wPence], [12000 + 88000 + 500, 12000, 0, 500, 88000]);
+  const reopened = await post(owner, `/api/reports/days/${close.id}/reopen`, { reason: 'a card payment was counted as cash' });
+  assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+  const again = await post(owner, '/api/close-the-day', { countedPence: d.expectedPence, expectedPence: d.expectedPence });
+  assert.equal(again.status, 201, JSON.stringify(again.body));
+  assert.deepEqual([again.body.close.otherPence, again.body.close.c2wPence, again.body.close.takingsPence], [500, 88000, 100500]);
 });

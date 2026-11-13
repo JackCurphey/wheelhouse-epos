@@ -20,6 +20,7 @@ import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { closeEntryNow, entryFor } from '../lib/close-entry.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { C2W_TENDER } from '../c2w/hand-over.js';
 import { isPence, MAX_PENCE } from './float-check.js';
 import { afterClose } from '../accounts/send.js';
 
@@ -55,6 +56,9 @@ async function floatStartOn(day) {
 // tenders for a Shopify order (server.js) and a deposit paid online
 // (workshop/counted-deposit.js). It has its own line on the report.
 const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
+// A Cycle to Work hand-over's provider share ("Cycle to Work · Cyclescheme", server/c2w/hand-over.js):
+// owed by the provider, not in the drawer, so a figure of its own, not Other (UX walk-through 5 H3).
+const C2W_LIKE = `${C2W_TENDER}%`;
 
 // Which sales a figure is worked from. A close counts every sale no close
 // has counted yet (Jack's answer 6): `open` is those, before the close marks
@@ -108,7 +112,7 @@ const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till
 // Till money by how it was paid, from both sales records: the old record's
 // cash and card columns and extra tenders (pounds, converted as the all_sales
 // view does), and the till record's payments (pence). Takings is card + cash
-// + other, so the report always adds up (review, 27 Oct). `after`, when
+// + other + Cycle to Work, so the report always adds up (review, 27 Oct). `after`, when
 // given, keeps only sales made after that moment, on the server's clock: a
 // till sale by when the server received it, or by the till's own clock only
 // when it was made offline (third review, 27 Oct: an online till's clock
@@ -118,10 +122,11 @@ async function takingsIn({ old, till }, after = null) {
   const t = after ? { sql: `${till.sql} AND ${TILL_AT} > ?`, args: [...till.args, after] } : till;
   const os = await prepare(
     `SELECT COALESCE(SUM(ROUND(s.cash_amount * 100)), 0)::int AS cash, COALESCE(SUM(ROUND(s.card_amount * 100)), 0)::int AS card,
-            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?)), 0)::int AS other,
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?) AND p.tender_type NOT LIKE ?), 0)::int AS other,
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type LIKE ?), 0)::int AS c2w,
             COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type = ANY(?)), 0)::int AS online
        FROM sales s WHERE ${o.sql}`
-  ).get(...o.args, ONLINE_TENDERS, ...o.args, ONLINE_TENDERS, ...o.args);
+  ).get(...o.args, ONLINE_TENDERS, C2W_LIKE, ...o.args, C2W_LIKE, ...o.args, ONLINE_TENDERS, ...o.args);
   const ts = await prepare(
     `SELECT COALESCE(SUM(p.amount_pence) FILTER (WHERE p.method = 'cash'), 0)::int AS cash,
             COALESCE(SUM(p.amount_pence) FILTER (WHERE p.method = 'card'), 0)::int AS card,
@@ -131,7 +136,7 @@ async function takingsIn({ old, till }, after = null) {
   const cash = os.cash + ts.cash;
   const card = os.card + ts.card;
   const other = os.other + ts.other;
-  return { takingsPence: card + cash + other, cashPence: cash, cardPence: card, otherPence: other, onlinePence: os.online };
+  return { takingsPence: card + cash + other + os.c2w, cashPence: cash, cardPence: card, otherPence: other, c2wPence: os.c2w, onlinePence: os.online };
 }
 
 // Cash taken out since this morning's float check (Jack's answer 9: the
@@ -290,7 +295,7 @@ export async function closeOn(day, { reopened = false } = {}) {
     earlierBankedPence: r.float_start_pence + r.drawer_cash_pence - r.paid_outs_pence - r.expected_pence,
     countedPence: r.counted_pence, differencePence: r.counted_pence - r.expected_pence, reason: r.reason,
     floatPence: r.float_pence, bankedPence: r.banked_pence, carriedPence: r.carried_pence, ...leftAndTopUp(r.counted_pence - r.carried_pence, r.float_pence),
-    takingsPence: r.takings_pence, cardPence: r.card_pence, otherPence: r.other_pence, onlinePence: r.online_pence,
+    takingsPence: r.takings_pence, cardPence: r.card_pence, otherPence: r.other_pence, c2wPence: r.c2w_pence, onlinePence: r.online_pence,
     // A day closed late: the morning count that counted it (op-close-yesterday).
     countedBy: count?.by ?? null,
     // Only Reports asks (the shape Close the day returns is unchanged).
@@ -367,8 +372,8 @@ async function closeLate(res, ctx, shopId, day, today) {
     const d = await drawer(day, late.start, counts, count.checkedAt, { missed: true });
     await prepare(
       `UPDATE day_closes SET float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
-         takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
-    ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
+         takings_pence = ?, card_pence = ?, other_pence = ?, c2w_pence = ?, online_pence = ? WHERE id = ?`
+    ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.c2wPence, t.onlinePence, made.id);
     await refreshCount(count, d.expectedPence);
     return { ok: true };
   });
@@ -426,9 +431,9 @@ export async function reopenClose(shopId, ctx, id, rawReason) {
     await prepare(
       `INSERT INTO day_close_history (day_close_id, day, closed_by, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence,
          paid_outs_pence, expected_pence, counted_pence, reason, float_pence, banked_pence, carried_pence, takings_pence, card_pence, other_pence,
-         online_pence, reopened_by, reopened_at, reopen_reason)
+         c2w_pence, online_pence, reopened_by, reopened_at, reopen_reason)
        SELECT id, day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence, paid_outs_pence, expected_pence,
-         counted_pence, reason, float_pence, banked_pence, carried_pence, takings_pence, card_pence, other_pence, online_pence, ?, now(), ?
+         counted_pence, reason, float_pence, banked_pence, carried_pence, takings_pence, card_pence, other_pence, c2w_pence, online_pence, ?, now(), ?
        FROM day_closes WHERE id = ?`
     ).run(ctx.login.id, reason, id);
     await prepare('UPDATE day_closes SET reopened_at = now(), reopened_by = ?, reopen_reason = ? WHERE id = ?').run(ctx.login.id, reason, id);
@@ -463,10 +468,10 @@ async function closeAgain(res, ctx, shopId, day, { counted, reason, shown }) {
     await prepare(
       `UPDATE day_closes SET login_id = ?, float_check_id = ?, float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?,
          paid_outs_pence = ?, expected_pence = ?, counted_pence = ?, reason = ?, float_pence = ?, banked_pence = ?,
-         takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ?, reopened_at = NULL, reopened_by = NULL, reopen_reason = NULL
+         takings_pence = ?, card_pence = ?, other_pence = ?, c2w_pence = ?, online_pence = ?, reopened_at = NULL, reopened_by = NULL, reopen_reason = NULL
        WHERE id = ?`
     ).run(ctx.login.id, start.id, d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, counted, reason, floatPence, bankedFrom(counted, floatPence),
-      t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, row.id);
+      t.takingsPence, t.cardPence, t.otherPence, t.c2wPence, t.onlinePence, row.id);
     return { ok: true };
   });
   if (!reply.ok) return sendJson(res, reply.status, reply.body);
@@ -616,8 +621,8 @@ export function register(route) {
       }
       await prepare(
         `UPDATE day_closes SET float_start_pence = ?, cash_pence = ?, drawer_cash_pence = ?, paid_outs_pence = ?, expected_pence = ?,
-           takings_pence = ?, card_pence = ?, other_pence = ?, online_pence = ? WHERE id = ?`
-      ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.onlinePence, made.id);
+           takings_pence = ?, card_pence = ?, other_pence = ?, c2w_pence = ?, online_pence = ? WHERE id = ?`
+      ).run(d.startPence, t.cashPence, d.cashPence, d.paidOutsPence, d.expectedPence, t.takingsPence, t.cardPence, t.otherPence, t.c2wPence, t.onlinePence, made.id);
       return { ok: true };
     });
     if (!reply.ok) {

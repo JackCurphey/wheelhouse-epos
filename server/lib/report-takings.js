@@ -11,7 +11,7 @@ import { providerName } from '../accounts/index.js';
 import { onlineSoFar, daysWaiting, takingsSoFarFor, reopenedOn } from '../routes/close-the-day.js';
 
 const CLOSES = `SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.closed_at, COALESCE(l.name, 'Unknown') AS closed_by_name,
-    c.takings_pence, c.card_pence, c.cash_pence, c.other_pence, c.online_pence,
+    c.takings_pence, c.card_pence, c.cash_pence, c.other_pence, c.c2w_pence, c.online_pence,
     c.counted_pence - c.expected_pence AS difference_pence, c.banked_pence
   FROM day_closes c LEFT JOIN logins l ON l.id = c.login_id
   WHERE c.reopened_at IS NULL AND c.day BETWEEN ?::date AND ?::date ORDER BY c.day`;
@@ -117,7 +117,8 @@ export async function takingsReport(choice, today) {
     before: period.before,
     figures: {
       takings: figure('takings_pence'), card: figure('card_pence'), cash: figure('cash_pence'), other: figure('other_pence'),
-      online: figure('online_pence'), cashDifference: figure('difference_pence'),
+      // Owed by the Cycle to Work providers, not in the drawer (UX walk-through 5 H3).
+      c2w: figure('c2w_pence'), online: figure('online_pence'), cashDifference: figure('difference_pence'),
     },
     rows, bars, empty: rows.length === 0, nothingBefore, firstCloseOn: first ?? null,
     accounts: conn && conn.status !== 'disconnected' ? { providerName: providerName(conn.provider), status: conn.status } : null,
