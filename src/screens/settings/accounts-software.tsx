@@ -188,8 +188,8 @@ export function AccountsSoftware() {
             <p className="m-0 text-sm text-[var(--wh-muted)]">Your account choices are kept in case you reconnect.</p>
           </DialogBody>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDisconnecting(false)}>Keep connected</Button>
-            <Button variant="danger" disabled={change.isPending} onClick={() => { change.mutate({ path: '/api/accounts/disconnect', body: {} }, { onSuccess: () => setDisconnecting(false) }); }}>Disconnect</Button>
+            <Button variant="ghost" className="min-h-11" onClick={() => setDisconnecting(false)}>Keep connected</Button>
+            <Button variant="danger" className="min-h-11" disabled={change.isPending} onClick={() => { change.mutate({ path: '/api/accounts/disconnect', body: {} }, { onSuccess: () => setDisconnecting(false) }); }}>Disconnect</Button>
           </DialogFooter>
         </Dialog>
       ) : null}

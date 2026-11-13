@@ -11,7 +11,7 @@ import { CLOSE_DAY_QUERY } from '@/screens/till/close-the-day.tsx';
  * stays off until a reason is typed. The refusals (not the latest day, already reopened) are the server's own
  * words, shown beside the box, which stays open.
  */
-const FIELD = 'w-full rounded-[7px] border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 py-[9px] text-sm aria-invalid:border-[var(--wh-danger)]';
+const FIELD = 'w-full rounded-[7px] border border-[var(--input)] bg-[var(--wh-panel)] min-h-11 px-2.5 py-[9px] text-sm aria-invalid:border-[var(--wh-danger)]';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 /** "Wed 16 September", as the drawing's title has it. */
@@ -52,8 +52,8 @@ export function ReopenDialog({ id, day, onDone, onClose }: { id: number; day: st
           <p className="m-0 text-sm text-[var(--wh-muted)]">Saved with your name and the time. The day goes back to Needs attention, and what was sent to Xero is corrected when it’s closed again.</p>
         </DialogBody>
         <DialogFooter>
-          <Button variant="ghost" disabled={reopen.isPending} onClick={onClose}>Keep it closed</Button>
-          <Button type="submit" variant="primary" aria-disabled={!ready || undefined} className={ready ? undefined : 'opacity-45'} disabled={reopen.isPending}>Reopen the day</Button>
+          <Button variant="ghost" className="min-h-11" disabled={reopen.isPending} onClick={onClose}>Keep it closed</Button>
+          <Button type="submit" variant="primary" aria-disabled={!ready || undefined} className={ready ? 'min-h-11' : 'min-h-11 opacity-45'} disabled={reopen.isPending}>Reopen the day</Button>
         </DialogFooter>
       </form>
     </Dialog>
