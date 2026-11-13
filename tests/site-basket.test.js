@@ -1,0 +1,347 @@
+// The website's basket and checkout, the server half (openspec/changes/
+// website-buy-online, tasks 4.1–4.4; design 2 and 3; drawings on-basket,
+// on-basket-changed, on-checkout, on-checkout-errors, on-checkout-credit,
+// on-checkout-credit-all). The basket is only "which and how many": every
+// price, total and stock line is worked out here. Checkout checks the details
+// and works out store credit; making the order waits for paying (task 4.5).
+import '../server/load-env.js';
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { randomUUID } from 'node:crypto';
+import { startLiveServer } from './helpers/liveServer.js';
+import { staffSignup, staffRequest } from './helpers/staff.js';
+import { deleteTestShop } from './helpers/testShop.js';
+import { connectPayments } from './helpers/payments.js';
+import { runWithShop, prepare, pool } from '../server/db.js';
+import { signupCustomer, createCustomerSession } from '../server/customer-auth.js';
+
+let server;
+let north;
+let south;
+let bolton;
+let bury;
+let visitor = 0;
+const P = {};
+const nextVisitor = () => `198.51.100.${++visitor}`;
+
+const NOT_TAKING = 'Not taking online orders right now. Ask in the shop, or call us, to buy this';
+const CHANGED = 'Something in your basket changed. Sort the lines marked below before checking out.';
+const REMOVE_FIRST = 'Remove the item that’s no longer in stock first.';
+const EMAIL_BAD = 'Check your email address — it needs an @ and a dot, like name@example.com';
+const COVERS = 'Your store credit covers the whole order — nothing to pay by card.';
+
+const inNorth = (fn) => runWithShop(north.shop.id, fn);
+const setStock = (productId, siteId, qty) => inNorth(() => prepare(
+  'INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) ON CONFLICT (shop_id, site_id, product_id) DO UPDATE SET qty = EXCLUDED.qty RETURNING shop_id'
+).run(siteId, productId, qty));
+const settings = (fields) => inNorth(async () => {
+  await prepare('INSERT INTO online_order_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
+  for (const [k, v] of Object.entries(fields)) await prepare(`UPDATE online_order_settings SET ${k} = ?`).run(v);
+});
+
+before(async () => {
+  server = await startLiveServer({ env: { TRUST_PROXY: '1' } });
+  north = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
+  south = await staffSignup(server.baseUrl, { shopName: 'South Road Bikes' });
+  await inNorth(async () => {
+    await prepare("UPDATE sites SET name = 'Bolton', code = 'B'").run();
+    bolton = (await prepare('SELECT id FROM sites').get()).id;
+    bury = (await prepare("INSERT INTO sites (name, code) VALUES ('[Second site]', 'S') RETURNING id").get()).id;
+    await prepare("INSERT INTO product_categories (name, path) VALUES ('Brakes', 'Brakes')").run();
+    const add = async (key, name, sku, price, { online = true, active = 1 } = {}) => {
+      P[key] = (await prepare(
+        "INSERT INTO products (sku, name, category, price, cost, show_online, active, updated_at) VALUES (?, ?, 'Brakes', ?, 1, ?, ?, now()) RETURNING id"
+      ).get(sku, name, price, online, active)).id;
+    };
+    await add('pads', 'Shimano brake pads', 'B05S-RX', 28);
+    await add('lever', '[Brake lever]', '[sku lever]', 40);
+    await add('cable', '[Brake cable]', '[sku cable]', 6);
+    await add('hidden', '[Not online]', '[sku hidden]', 9, { online: false });
+    await add('tube', '[Inner tube]', '[sku tube]', 7);
+  });
+  await setStock(P.pads, bolton, 5);
+  await setStock(P.lever, bolton, 1);
+  await setStock(P.lever, bury, 4);
+  await setStock(P.cable, bolton, 0);
+  await setStock(P.cable, bury, 0);
+  await setStock(P.hidden, bolton, 3);
+  await setStock(P.tube, bolton, 0);
+  await setStock(P.tube, bury, 2);
+  for (const shop of [north, south]) {
+    assert.equal((await staffRequest(server.baseUrl, shop.cookie, '/api/website')).status, 200);
+    assert.equal((await staffRequest(server.baseUrl, shop.cookie, '/api/website/turn-on', { method: 'POST' })).status, 200);
+  }
+  await connectPayments(north.shop.id);
+  await settings({ buying_online: true });
+});
+
+after(async () => {
+  for (const shop of [north, south]) if (shop) await deleteTestShop(shop.shop.id);
+  if (server) await server.stop();
+  await pool.end();
+});
+
+// A POST as the website's pages send it, from one visitor address.
+function post(shop, path, body, { cookie, from = nextVisitor() } = {}) {
+  const base = new URL(server.baseUrl);
+  const text = JSON.stringify(body);
+  return new Promise((resolve, reject) => {
+    const req = http.request({
+      hostname: base.hostname, port: base.port, path: `/store/${shop.shop.slug}/api/site${path}`, method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(text), 'x-forwarded-for': from, ...(cookie ? { cookie } : {}) },
+    }, (res) => {
+      let out = '';
+      res.on('data', (c) => { out += c; });
+      res.on('end', () => {
+        let parsed = null;
+        try { parsed = JSON.parse(out); } catch { parsed = out; }
+        resolve({ status: res.statusCode, body: parsed, headers: res.headers });
+      });
+    });
+    req.on('error', reject);
+    req.end(text);
+  });
+}
+const basket = (body, opts) => post(north, '/basket', body, opts);
+const checkout = (body, opts) => post(north, '/checkout', body, opts);
+const ok = (res) => { assert.equal(res.status, 200, JSON.stringify(res.body)); return res.body; };
+const counts = () => inNorth(async () => ({
+  orders: (await prepare('SELECT count(*)::int AS n FROM online_orders').get()).n,
+  payments: (await prepare('SELECT count(*)::int AS n FROM online_payments').get()).n,
+  customers: (await prepare('SELECT count(*)::int AS n FROM customers').get()).n,
+}));
+
+async function signedIn({ credit = 0 } = {}) {
+  const email = `maya-${randomUUID().slice(0, 8)}@example.test`;
+  const { login } = await signupCustomer({ shopSlug: north.shop.slug, email, password: 'password123', name: 'Maya Patel' });
+  await inNorth(async () => {
+    await prepare("UPDATE customers SET phone = '07700 900 142' WHERE id = ?").run(login.customer_id);
+    if (credit) await prepare("INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason) VALUES (?, ?, 'added', '[reason]')").run(login.customer_id, credit);
+  });
+  const token = await createCustomerSession(login.id);
+  return { email, customerId: login.customer_id, cookie: `wh_customer_session=${token}` };
+}
+
+const guest = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test' };
+
+// ---- 4.1 The basket is priced here -------------------------------------------
+
+test('4.1 each line is priced from the product, never from what the browser sends; the total and the stock line at the chosen shop', async () => {
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 2, pricePence: 1 }] }));
+  assert.equal(answer.taking, true);
+  assert.deepEqual(answer.shop, { id: bolton, name: 'Bolton' });
+  assert.equal(answer.lines.length, 1);
+  const [line] = answer.lines;
+  assert.equal(line.productId, P.pads);
+  assert.equal(line.name, 'Shimano brake pads');
+  assert.equal(line.code, 'B05S-RX');
+  assert.equal(line.pricePence, 2800, 'the shop’s price, not the 1p sent');
+  assert.equal(line.qty, 2);
+  assert.equal(line.linePence, 5600);
+  assert.deepEqual(line.stock, { line: 'ready', shop: 'Bolton', qty: 5 });
+  assert.equal(line.note, null);
+  assert.equal(line.gone, false);
+  assert.equal(answer.count, 2);
+  assert.equal(answer.totalPence, 5600);
+  assert.equal(answer.changed, null);
+  assert.equal(answer.blocked, null);
+});
+
+test('4.1 fewer left at the chosen shop changes the line to what is left and says so', async () => {
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.lever, qty: 2 }, { productId: P.pads, qty: 1 }] }));
+  const lever = answer.lines.find((l) => l.productId === P.lever);
+  assert.equal(lever.qty, 1);
+  assert.equal(lever.note, 'Only 1 left at Bolton — we’ve changed it to 1');
+  assert.equal(lever.gone, false);
+  assert.equal(answer.count, 2);
+  assert.equal(answer.totalPence, 4000 + 2800);
+  assert.equal(answer.changed, CHANGED);
+  assert.equal(answer.blocked, null, 'changed to what is left, so nothing more to sort');
+});
+
+test('4.1 a line in stock at no shop says so and holds checkout back', async () => {
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.cable, qty: 1 }, { productId: P.pads, qty: 1 }] }));
+  const cable = answer.lines.find((l) => l.productId === P.cable);
+  assert.equal(cable.gone, true);
+  assert.equal(cable.note, 'No longer in stock at Bolton or [Second site] — remove it to carry on');
+  assert.equal(answer.changed, CHANGED);
+  assert.equal(answer.blocked, REMOVE_FIRST);
+  assert.equal(answer.totalPence, 2800, 'a gone line counts for nothing');
+  assert.equal(answer.count, 1);
+});
+
+test('4.1 a line in stock only at the other shop says where, and holds checkout back', async () => {
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.tube, qty: 1 }] }));
+  assert.equal(answer.lines[0].gone, true);
+  assert.equal(answer.lines[0].note, 'Sold out at Bolton — in stock at our [Second site] shop');
+  assert.equal(answer.blocked, REMOVE_FIRST);
+  const there = ok(await basket({ shop: bury, lines: [{ productId: P.tube, qty: 1 }] }));
+  assert.equal(there.lines[0].gone, false);
+  assert.deepEqual(there.lines[0].stock, { line: 'ready', shop: '[Second site]', qty: 2 });
+});
+
+test('4.1 with two shops and none chosen, the basket says nothing per line and checkout asks for a shop', async () => {
+  const answer = ok(await basket({ lines: [{ productId: P.pads, qty: 1 }] }));
+  assert.equal(answer.shop, null);
+  assert.deepEqual(answer.lines[0].stock, { line: 'none' });
+  assert.equal(answer.lines[0].gone, false);
+  assert.equal(answer.blocked, null);
+  const res = await checkout({ lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey: randomUUID() });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Choose which shop to collect from');
+});
+
+test('4.1 a product taken off the website, or another shop’s, is gone and shows none of its details', async () => {
+  const theirs = await runWithShop(south.shop.id, () => prepare(
+    "INSERT INTO products (sku, name, category, price, cost, show_online, active, updated_at) VALUES ('[s]', '[South product]', 'x', 5, 1, true, 1, now()) RETURNING id"
+  ).get());
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.hidden, qty: 1 }, { productId: theirs.id, qty: 1 }] }));
+  assert.equal(answer.lines.length, 2);
+  for (const line of answer.lines) {
+    assert.equal(line.gone, true);
+    assert.equal(line.name, null);
+    assert.equal(line.pricePence, null);
+  }
+  assert.ok(!JSON.stringify(answer).includes('[Not online]') && !JSON.stringify(answer).includes('[South product]'));
+  assert.equal(answer.blocked, REMOVE_FIRST);
+});
+
+test('4.1 a basket that isn’t ids and counts is refused; the same product twice is one line', async () => {
+  for (const lines of ['x', [{ productId: 'a', qty: 1 }], [{ productId: P.pads, qty: 0 }], [{ productId: P.pads, qty: 1.5 }], Array.from({ length: 51 }, (_, i) => ({ productId: i + 1, qty: 1 }))]) {
+    const res = await basket({ shop: bolton, lines });
+    assert.equal(res.status, 400, JSON.stringify(lines).slice(0, 40));
+  }
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }, { productId: P.pads, qty: 2 }] }));
+  assert.equal(answer.lines.length, 1);
+  assert.equal(answer.lines[0].qty, 3);
+});
+
+// ---- 4.2 Not taking orders ---------------------------------------------------
+
+test('4.2 buying online off, payments not connected, or a Shopify website: not taking online orders', async () => {
+  await settings({ buying_online: false });
+  try {
+    const off = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }));
+    assert.equal(off.taking, false);
+    assert.equal(off.notTaking, NOT_TAKING);
+    const sent = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test', requestKey: randomUUID() });
+    assert.equal(sent.status, 409);
+    assert.equal(sent.body.error, NOT_TAKING);
+  } finally { await settings({ buying_online: true }); }
+
+  await connectPayments(north.shop.id, { status: 'failed' });
+  try {
+    const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }));
+    assert.equal(answer.taking, false);
+    assert.equal(answer.notTaking, NOT_TAKING);
+  } finally { await connectPayments(north.shop.id); }
+
+  await inNorth(() => prepare("UPDATE website SET kind = 'shopify'").run());
+  try {
+    const res = await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] });
+    assert.equal(res.status, 404);
+    assert.equal(res.body.error, 'This website isn’t available');
+  } finally { await inNorth(() => prepare("UPDATE website SET kind = 'wheelhouse'").run()); }
+
+  // South never connected payments.
+  const theirs = ok(await post(south, '/basket', { lines: [] }));
+  assert.equal(theirs.taking, false);
+});
+
+// ---- 4.3 Checkout checks the details -----------------------------------------
+
+test('4.3 checkout answers each box’s message and the count, and makes nothing', async () => {
+  const before = await counts();
+  const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: '  ', phone: '07700 900 142', email: 'maya@example', requestKey: randomUUID() });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Check the 2 boxes marked below.');
+  assert.deepEqual(res.body.fields, { name: 'Enter your name', email: EMAIL_BAD });
+  const one = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, phone: '', requestKey: randomUUID() });
+  assert.equal(one.status, 400);
+  assert.equal(one.body.error, 'Check the box marked below.');
+  assert.deepEqual(one.body.fields, { phone: 'Enter your phone number' });
+  assert.deepEqual(await counts(), before);
+});
+
+test('4.3 checkout prices and checks stock again: a changed basket is sent back, and nothing is made', async () => {
+  const before = await counts();
+  const res = await checkout({ shop: bolton, lines: [{ productId: P.cable, qty: 1 }], ...guest, requestKey: randomUUID() });
+  assert.equal(res.status, 409);
+  assert.equal(res.body.error, CHANGED);
+  assert.equal(res.body.basket.blocked, REMOVE_FIRST);
+  const fewer = await checkout({ shop: bolton, lines: [{ productId: P.lever, qty: 3 }], ...guest, requestKey: randomUUID() });
+  assert.equal(fewer.status, 409, 'what the customer saw is not what they would pay for');
+  assert.equal(fewer.body.basket.lines[0].qty, 1);
+  const empty = await checkout({ shop: bolton, lines: [], ...guest, requestKey: randomUUID() });
+  assert.equal(empty.status, 400);
+  const noKey = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest });
+  assert.equal(noKey.status, 400);
+  assert.deepEqual(await counts(), before);
+});
+
+test('4.3 a checkout that passes every check stops where paying would start, and makes nothing yet', async () => {
+  const before = await counts();
+  const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 2 }], ...guest, requestKey: randomUUID() });
+  assert.equal(res.status, 501, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'paying_not_built');
+  assert.equal(res.body.totalPence, 5600);
+  assert.equal(res.body.leftToPayPence, 5600);
+  assert.deepEqual(await counts(), before, 'no order, payment or customer until paying is built');
+});
+
+// ---- 4.4 A signed-in customer -------------------------------------------------
+
+test('4.4 a signed-in customer’s details and store credit come from their account', async () => {
+  await inNorth(() => prepare('INSERT INTO payment_settings (store_credit_on) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET store_credit_on = true RETURNING shop_id').run());
+  const maya = await signedIn({ credit: 1000 });
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }, { cookie: maya.cookie }));
+  assert.deepEqual(answer.you, { name: 'Maya Patel', email: maya.email, phone: '07700 900 142' });
+  assert.deepEqual(answer.credit, { availablePence: 1000, usePence: 1000, leftToPayPence: 1800, coversAll: null });
+  // Typed details are ignored for her; credit can be left unticked.
+  const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: '', email: 'x', phone: '', useCredit: true, requestKey: randomUUID() }, { cookie: maya.cookie });
+  assert.equal(res.status, 501, JSON.stringify(res.body));
+  assert.equal(res.body.creditPence, 1000);
+  assert.equal(res.body.leftToPayPence, 1800);
+  const without = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], useCredit: false, requestKey: randomUUID() }, { cookie: maya.cookie });
+  assert.equal(without.body.creditPence, 0);
+  assert.equal(without.body.leftToPayPence, 2800);
+});
+
+test('4.4 credit that covers the whole order says so, and uses only what the order needs', async () => {
+  const maya = await signedIn({ credit: 10000 });
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }, { cookie: maya.cookie }));
+  assert.deepEqual(answer.credit, { availablePence: 10000, usePence: 2800, leftToPayPence: 0, coversAll: COVERS });
+});
+
+test('4.4 no credit offered when the shop has store credit off, or off for online orders, or for another shop’s sign-in', async () => {
+  const maya = await signedIn({ credit: 1000 });
+  await settings({ store_credit_on: false });
+  try {
+    const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }, { cookie: maya.cookie }));
+    assert.equal(answer.credit, null);
+    const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], useCredit: true, requestKey: randomUUID() }, { cookie: maya.cookie });
+    assert.equal(res.body.creditPence, 0);
+  } finally { await settings({ store_credit_on: true }); }
+  await inNorth(() => prepare('UPDATE payment_settings SET store_credit_on = false').run());
+  try {
+    assert.equal(ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }, { cookie: maya.cookie })).credit, null);
+  } finally { await inNorth(() => prepare('UPDATE payment_settings SET store_credit_on = true').run()); }
+  // Her sign-in is North's: at South she is a guest.
+  const there = ok(await post(south, '/basket', { lines: [] }, { cookie: maya.cookie }));
+  assert.equal(there.you, null);
+  assert.equal(there.credit, null);
+});
+
+test('4.4 a guest has no details or credit filled in', async () => {
+  const answer = ok(await basket({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }] }));
+  assert.equal(answer.you, null);
+  assert.equal(answer.credit, null);
+});
+
+test('checkout has its own limit per visitor address', async () => {
+  const from = nextVisitor();
+  let last;
+  for (let i = 0; i < 31; i++) last = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey: randomUUID() }, { from });
+  assert.equal(last.status, 429);
+});
