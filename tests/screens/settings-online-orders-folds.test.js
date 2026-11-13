@@ -23,14 +23,16 @@ const settings = (over = {}) => ({
 });
 
 // A save answers as the server does: refused when keeping isn't longer than the reminder.
-async function openOnline(start, fold) {
+async function openOnline(start, fold, { site = {}, refuse = null } = {}) {
   let body = start;
   const t = await openScreen(`${PAGE}&fold=${fold}`, {
     answers: {
       '/api/workshop-settings': () => [200, { openingHours: WEEK }],
       '/api/shop-details': () => [200, { name: 'North Street Cycles', receiptFooter: null }],
+      '/api/website': () => [200, { kind: null, ...site }],
       '/api/online-orders-settings': (_q, method, sent) => {
         if (method !== 'PUT') return [200, body];
+        if (refuse) return refuse;
         const next = { ...body, ...sent };
         if (next.keepDays <= next.remindDays) return [400, { error: 'Keep orders for more days than the reminder.' }];
         body = next;
@@ -89,6 +91,27 @@ test('Paying online not connected has no wallet or store credit switches', async
   assert.ok(box.queryByRole('switch', { name: 'Store credit (for signed-in customers)' }) === null);
 });
 
+test('a Shopify website needing more details has no wallet or store credit switches (Shopify takes the payment)', async () => {
+  const s = settings();
+  const t = await openOnline({ ...s, payments: { ...s.payments, state: 'more', needsDetailsBy: '2026-09-20', needsWhat: 'proof of address' } }, 'paying-online', { site: { kind: 'shopify' } });
+  const box = area(t);
+  assert.ok(await box.findByRole('button', { name: 'Add the details at [payment provider]' }));
+  await t.waitFor(() => assert.ok(fold(t, 'Paying online').textContent.includes('Shopify for website orders')));
+  assert.ok(box.queryByRole('switch', { name: 'Apple Pay and Google Pay' }) === null);
+  assert.ok(box.queryByRole('switch', { name: 'Store credit (for signed-in customers)' }) === null);
+});
+
+test('a store credit switch the server refuses says so and stays as it was', async () => {
+  const t = await openOnline(settings(), 'paying-online', { refuse: [500, { error: 'boom' }] });
+  const box = area(t);
+  const credit = await box.findByRole('switch', { name: 'Store credit (for signed-in customers)' });
+  t.fireEvent.click(credit);
+  const said = await box.findByRole('alert');
+  assert.ok(said.textContent.length > 0);
+  assert.equal(box.getByRole('switch', { name: 'Store credit (for signed-in customers)' }).getAttribute('aria-checked'), 'true');
+  assert.ok(box.getByRole('switch', { name: 'Store credit (for signed-in customers)' }).disabled === false, 'stays focusable');
+});
+
 test('on-settings-pay: Not collected reads its starting days, the two boxes and the drawn explanation, and saves', async () => {
   const t = await openOnline(settings(), 'online-not-collected');
   const box = area(t);
@@ -122,6 +145,10 @@ test('a reminder that isn’t a whole number of days from 1 to 60 is refused on 
   t.fireEvent.change(remind, { target: { value: '0' } });
   t.fireEvent.blur(remind);
   assert.ok(await box.findByText('A whole number of days, 1 to 60'));
+  t.fireEvent.change(remind, { target: { value: '1e1' } });
+  assert.ok(box.queryByText('A whole number of days, 1 to 60') === null, 'typing again clears the message');
+  t.fireEvent.blur(remind);
+  assert.ok(await box.findByText('A whole number of days, 1 to 60'), '1e1 is not a whole number of days');
   assert.deepEqual(puts(), []);
 });
 

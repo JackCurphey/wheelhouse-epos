@@ -102,19 +102,22 @@ export function WebsiteSells() {
 /** online.mjs payOpen: Apple Pay and Google Pay, and store credit, each its own switch; no Gift cards (question 8). */
 function PaySwitches() {
   const d = useOnlineOrders().data;
+  // Not until the website's kind is known: Shopify's checkout takes a Shopify website's payments.
+  const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
   const save = useSaveOnline();
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<Said>(null);
-  if (!d) return null;
+  if (!d || !site.isFetched || site.data?.kind === 'shopify') return null;
   async function turn(body: { walletsOn: boolean } | { storeCreditOn: boolean }) {
+    if (busy) return;
     setBusy(true);
     setSaid(null);
     try { await save(body); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); } finally { setBusy(false); }
   }
   return (
     <div className="flex flex-col">
-      <RowSwitch label="Apple Pay and Google Pay" on={d.walletsOn} disabled={busy} onChange={(walletsOn) => void turn({ walletsOn })} />
-      <RowSwitch label="Store credit (for signed-in customers)" on={d.storeCreditOn} disabled={busy} onChange={(storeCreditOn) => void turn({ storeCreditOn })} />
+      <RowSwitch label="Apple Pay and Google Pay" on={d.walletsOn} disabled={false} onChange={(walletsOn) => void turn({ walletsOn })} />
+      <RowSwitch label="Store credit (for signed-in customers)" on={d.storeCreditOn} disabled={false} onChange={(storeCreditOn) => void turn({ storeCreditOn })} />
       <SaidLine said={said} />
     </div>
   );
@@ -131,7 +134,7 @@ function DaysBox({ label, name, min, max }: { label: string; name: 'remindDays' 
   async function leave() {
     if (typed === null) return;
     const n = Number(typed.trim());
-    if (typed.trim() === '' || !Number.isInteger(n) || n < min || n > max) { setSaid({ ok: false, text: `A whole number of days, ${min} to ${max}` }); return; }
+    if (!/^\d+$/.test(typed.trim()) || n < min || n > max) { setSaid({ ok: false, text: `A whole number of days, ${min} to ${max}` }); return; }
     if (n === stored) { setTyped(null); setSaid(null); return; }
     try {
       await save({ [name]: n });
@@ -145,7 +148,7 @@ function DaysBox({ label, name, min, max }: { label: string; name: 'remindDays' 
       <span className="flex items-center gap-2.5">
         <input id={id} inputMode="numeric" value={typed ?? (stored === null ? '' : String(stored))} disabled={!d}
           aria-invalid={said && !said.ok ? true : undefined}
-          onChange={(e) => setTyped(e.target.value)} onBlur={() => void leave()}
+          onChange={(e) => { setTyped(e.target.value); setSaid(null); }} onBlur={() => void leave()}
           className={`${field} w-[70px] text-right font-mono`} />
         <span className="text-size-15 text-[var(--wh-muted)]">days</span>
       </span>
@@ -189,7 +192,7 @@ export function ReadyShelf() {
       <label htmlFor={id} className="text-size-15 font-semibold">Shelf or spot</label>
       <input id={id} value={typed ?? stored} placeholder="[Shelf name]" maxLength={60} disabled={!d}
         aria-invalid={said && !said.ok ? true : undefined}
-        onChange={(e) => setTyped(e.target.value)} onBlur={() => void leave()} className={`${field} max-w-[360px]`} />
+        onChange={(e) => { setTyped(e.target.value); setSaid(null); }} onBlur={() => void leave()} className={`${field} max-w-[360px]`} />
       <SaidLine said={said} />
       <p className={hint}>Set once. Ready orders show “Waiting at [Shelf name]” on Online orders, and the till’s hand-over says where to fetch them from.</p>
     </div>
