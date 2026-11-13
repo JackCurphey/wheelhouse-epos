@@ -34,6 +34,7 @@ type Attention =
   | { kind: 'uncollected'; jobId: number; reference: string; customerName: string | null; bikeLabel: string | null; phone: string | null; readySince: string; reminderSentAt: string | null }
   | { kind: 'float_short'; checkId: number; day: string; shortPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
   | { kind: 'float_over'; checkId: number; day: string; overPence: number; tillCode?: string | null; countedByName: string; checkedAt: string; reason: string }
+  | { kind: 'day_not_sent'; day: string; providerName: string; closedAt: string; reason: string | null; missingLine: string | null; line: string | null }
   | { kind: 'day_reopened'; day: string; closeId: number; reason: string; reopenedByName: string; reopenedAt: string }
   | { kind: 'day_not_closed'; day: string; checkId: number; checkDay: string; countedByName: string; checkedAt: string; tillCode: string | null }
   | { kind: 'below_zero'; count: number; takeId: number | null }
@@ -350,6 +351,15 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
           title={`${dayLabel(i.day)} wasn’t closed`}
           sub={`${i.tillCode ? `Till ${i.tillCode} · ` : ''}counted with ${morning} float by ${i.countedByName} · still to bank`}
           right={<Link to={`${ROUTES['eod-count']}?day=${i.day}`} aria-label={`Close ${dayLabel(i.day)}`} className={linkButton(touch)}>Close it</Link>} />
+      );
+    }
+    // A closed day that couldn't go to the accounts software (rp-today-accounts): the account to choose.
+    if (i.kind === 'day_not_sent') {
+      return (
+        <Line key={`s${i.day}`} lead={warn}
+          title={`${dayLabel(i.day)} didn’t go to ${i.providerName}`}
+          sub={`Closed at ${clock(i.closedAt)} · ${i.reason ?? 'its lines don’t add up'}`}
+          right={<Link to={`${ROUTES.settings}?room=office&fold=accounts`} className={linkButton(touch)}>{i.missingLine ? `Choose an account for ${i.missingLine}` : 'Open Accounts software'}</Link>} />
       );
     }
     // A reopened day (reports-accounts-and-reopen): back in Needs attention until it is closed again.
