@@ -95,9 +95,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    night `.github/workflows/board.yml` adds what has merged and opens a
    pull request with it; merge it. Its hand-written parts (slices, what's
    next, what's waiting) are changed by hand when they change, in any pull
-   request. There is no daily status pull request (Jack, 11 Nov,
-   `docs/decisions/2026-11-11-speeding-up-the-build.md` point 4); until the
-   board workflow is merged, the daily one carries on. STATUS's "Start here"
+   request. The nightly status job also carries on: it folds in the bot's
+   pull request, writes the hand-written parts and STATUS, and republishes
+   the board (Jack, 13 Nov, `docs/decisions/2026-11-13-daily-status-job-stays.md`). STATUS's "Start here"
    section is changed in the pull request that takes or finishes a piece.
    Append only to your own file in `docs/decisions/decided-while-building/`.
 
