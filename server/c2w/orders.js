@@ -36,6 +36,8 @@ export const STEPS = {
   // Ordering the bike from the supplier (cw-ordered, cw-order-anyway), and its Undo.
   ordered: { from: ['quote', 'waiting', 'certificate'], to: null },
   order_undone: { from: ['quote', 'waiting', 'certificate'], to: null },
+  // Cancel the order (cw-cancel): from any stage before collection.
+  cancelled: { from: ['quote', 'waiting', 'certificate', 'ready'], to: 'cancelled' },
   // The provider's money (cw-mark-paid, cw-record-payment; server/c2w/money.js).
   paid: { from: ['collected'], to: 'paid' },
   part_paid: { from: ['collected'], to: null },

@@ -14,7 +14,7 @@ import { currentMoment, isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
-import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, undoReadyMessage } from '../c2w/messages.js';
+import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, stopMessagesForCancel, undoReadyMessage } from '../c2w/messages.js';
 import { oldestSite } from '../lib/stock.js';
 import { handOverDue } from '../c2w/hand-over.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
@@ -37,6 +37,7 @@ const HAS_BIKE = { error: 'This order already has its bike, so there’s nothing
 const NO_SUPPLIER = { error: 'This bike has no supplier in Settings › Suppliers to order it from. Set its supplier on the product first.', code: 'no_supplier' };
 const NOTHING_ON_ORDER = { error: 'Nothing is on order for this bike. Refresh to see where it is now.', code: 'not_on_order' };
 const ORDER_SENT = { error: 'The supplier order has been sent, so this can’t be undone here. Change it on the purchase order.', code: 'order_sent' };
+const RETURN_NOT_BUILT = { error: 'Sending a bike back to the supplier isn’t built yet. Keep it as shop stock, or leave the order open for now.', code: 'return_not_built' };
 const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
 // BEGIN, the change, COMMIT; a refusal rolls back.
@@ -508,6 +509,60 @@ export function register(route) {
         if (appliedOn < shopToday(tz, new Date(row.quote_given_at))) throw new ValidationError('Applied on is a date on or after the day the quote was given');
         return { applied_at: `${appliedOn}T12:00:00Z`, application_reference: reference };
       }, { detail });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Cancel the order (cw-cancel, cw-cancel-ordered; task 8.5; decision
+  // 2026-10-02-cycle-to-work-review). Anyone checked in, while no deposit is held:
+  // deposits come with pull request 11. The order stays, cancelled, with its history.
+  // A held frame goes back on sale. A bike already on a supplier order stays on it as
+  // shop stock ("Keep it as shop stock"); "Send it back to [supplier]" needs a return
+  // to start, which isn't built yet. "Tell [Customer]" sends "Your order is cancelled".
+  route('POST', '/api/c2w/orders/:id/cancel', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    const tell = body.tell === true;
+    await save(res, 200, async () => {
+      const reason = optionalWords(body.reason, 'Why', 500);
+      if (body.bike != null && body.bike !== 'keep' && body.bike !== 'return') throw new ValidationError('Choose what happens to the bike');
+      const detail = {};
+      await takeStep(id, 'cancelled', who, async (row) => {
+        if ((await loadOrder(id)).on_order) {
+          if (body.bike === 'return') throw new Refused(400, RETURN_NOT_BUILT);
+          if (body.bike !== 'keep') throw new ValidationError('Choose what happens to the bike: keep it as shop stock, or send it back');
+          const lines = await db.prepare(
+            `UPDATE purchase_order_items i SET c2w_order_id = NULL FROM purchase_orders po
+             WHERE po.id = i.purchase_order_id AND i.c2w_order_id = ? AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered
+             RETURNING i.purchase_order_id`,
+          ).all(id);
+          Object.assign(detail, { bike: 'keep', ...(lines[0] ? { purchaseOrderId: lines[0].purchase_order_id } : {}) });
+        }
+        if (row.held_at) {
+          await releaseHold(row);
+          if (row.frame_id) detail.frameId = row.frame_id;
+        }
+        // Messages about the bike that haven't gone yet are stopped.
+        await stopMessagesForCancel(id);
+        // Telling Maya never stops the cancel: a message that can't be queued is
+        // noted on the line, not told (BEGIN here is a savepoint in the step's transaction).
+        if (tell) {
+          await dbExec('BEGIN');
+          try {
+            const sent = await queueC2wMessage(id, 'c2w_cancelled', { req, loginId: who.loginId });
+            await dbExec('COMMIT');
+            if (sent.skipped) detail.notTold = sent.skipped;
+            else detail.told = true;
+          } catch (err) {
+            await dbExec('ROLLBACK').catch(() => {});
+            console.error(`Messages: "Your order is cancelled" for Cycle to Work order ${id} couldn't be queued`, err);
+            detail.notTold = 'error';
+          }
+        }
+        return { frame_id: null, held_at: null, hold_until: null };
+      }, { detail, reason });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });
