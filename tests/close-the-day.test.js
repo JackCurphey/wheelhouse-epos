@@ -705,6 +705,8 @@ test('Cycle to Work money is its own figure at the close, not Other, and still i
   // The reopened close's history keeps its Cycle to Work figure too.
   const kept = await runWithShop(owner.shop.id, () => prepare('SELECT c2w_pence, other_pence FROM day_close_history WHERE day_close_id = ?').get(close.id));
   assert.deepEqual([kept.c2w_pence, kept.other_pence], [88000, 500]);
+  // Closing it again works the figure out afresh, not from what the reopened row still holds.
+  await runWithShop(owner.shop.id, () => prepare('UPDATE day_closes SET c2w_pence = 0 WHERE id = ?').run(close.id));
   const again = await post(owner, '/api/close-the-day', { countedPence: d.expectedPence, expectedPence: d.expectedPence });
   assert.equal(again.status, 201, JSON.stringify(again.body));
   assert.deepEqual([again.body.close.otherPence, again.body.close.c2wPence, again.body.close.takingsPence], [500, 88000, 100500]);
