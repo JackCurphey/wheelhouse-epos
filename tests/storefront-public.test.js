@@ -7,7 +7,6 @@ import {
   parseStorefrontSlugCandidate,
   resolveStorefrontShop,
   getStorefrontInfo,
-  listStorefrontProducts,
   updateStorefrontSettings,
   getOrCreateStorefrontSettings,
 } from '../server/storefront.js';
@@ -140,38 +139,6 @@ test('getStorefrontInfo reports whether the website is actually enabled', async 
     });
   } finally {
     await deleteTestShop(shop.id);
-  }
-});
-
-test('listStorefrontProducts only returns show_online products for the current shop', async () => {
-  const shopA = await createTestShop();
-  const shopB = await createTestShop();
-  try {
-    await runWithShop(shopA.id, async () => {
-      await prepare(
-        "INSERT INTO products (name, price, show_online, active) SELECT 'Visible Bike', 500, true, 1"
-      ).run();
-    });
-    // Directly setting shop_id would violate RLS from outside runWithShop's context,
-    // so shopB's product is inserted the same way, under its own shop context.
-    await runWithShop(shopB.id, async () => {
-      await prepare(
-        "INSERT INTO products (name, price, show_online, active) SELECT 'Other Shop Bike', 500, true, 1"
-      ).run();
-    });
-    await runWithShop(shopA.id, async () => {
-      await prepare(
-        "INSERT INTO products (name, price, show_online, active) SELECT 'Hidden Bike', 500, false, 1"
-      ).run();
-      const products = await listStorefrontProducts();
-      assert.equal(products.length, 1);
-      assert.equal(products[0].name, 'Visible Bike');
-    });
-  } finally {
-    await runWithShop(shopA.id, () => prepare('DELETE FROM products').run());
-    await runWithShop(shopB.id, () => prepare('DELETE FROM products').run());
-    await deleteTestShop(shopA.id);
-    await deleteTestShop(shopB.id);
   }
 });
 

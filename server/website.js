@@ -4,9 +4,9 @@
 // off. Every function runs inside the request's shop (runWithShop), so
 // row-level security keeps each shop to its own row.
 //
-// The old website settings (storefront_settings) stay as they are and follow
-// what is published, so the old customer site keeps working unchanged until
-// it is replaced (design 1).
+// The old website settings (storefront_settings) only seed a new website's
+// draft. The old customer site is gone (website-browse, task 9.2), so they no
+// longer follow what is published, except the logo (copyLogoForQuote).
 import { payments } from './payments/index.js';
 import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
@@ -126,7 +126,7 @@ const lockWebsite = async () => {
   return prepare('SELECT * FROM website FOR UPDATE').get();
 };
 
-async function inTransaction(fn) {
+export async function inTransaction(fn) {
   await dbExec('BEGIN');
   try {
     const result = await fn();
@@ -301,13 +301,13 @@ export async function saveLogo(url, loginId) {
   return websiteState();
 }
 
-// The old website settings follow what is published, so the old customer
-// site and anything else reading them sees the published words.
-async function mirrorToOldSettings(content, isOn) {
+// The printed Cycle to Work quote reads the shop's logo from the old settings
+// (server/routes/c2w.js), so the published logo is still copied there. Nothing
+// else is: the old customer site that read the rest is gone (website-browse,
+// task 9.2). This goes once the quote reads the website's own logo.
+async function copyLogoForQuote(content) {
   await getOrCreateStorefrontSettings();
-  await prepare(
-    `UPDATE storefront_settings SET enabled = ?, tagline = ?, description = ?, logo_url = ?, hero_image_url = ?, updated_at = now()`
-  ).run(isOn, content.parts.about_line?.text || null, content.parts.shop_words?.text || null, content.logo || null, content.parts.big_photo?.photo || null);
+  await prepare('UPDATE storefront_settings SET logo_url = ?, updated_at = now()').run(content.logo || null);
 }
 
 async function publishLocked(website, loginId) {
@@ -320,7 +320,7 @@ async function publishLocked(website, loginId) {
   await prepare(
     'UPDATE website SET published = draft, published_at = now(), published_by = ?, live_version_id = ?, updated_at = now()'
   ).run(loginId, version.lastInsertRowid);
-  await mirrorToOldSettings(website.draft, website.is_on);
+  await copyLogoForQuote(website.draft);
 }
 
 async function cleanUpHistory() {
@@ -346,8 +346,6 @@ export async function turnOn(loginId) {
     if (website.kind === 'shopify') throw new WebsiteError(409, 'Your website is your Shopify shop');
     if (!website.published) await publishLocked(website, loginId);
     await prepare('UPDATE website SET is_on = true, updated_at = now()').run();
-    await getOrCreateStorefrontSettings();
-    await prepare('UPDATE storefront_settings SET enabled = true, updated_at = now()').run();
   });
   return websiteState();
 }
@@ -357,8 +355,6 @@ export async function turnOff() {
   await inTransaction(async () => {
     await lockWebsite();
     await prepare('UPDATE website SET is_on = false, updated_at = now()').run();
-    await getOrCreateStorefrontSettings();
-    await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
   });
   return websiteState();
 }
@@ -372,8 +368,6 @@ export async function chooseWebsiteKind(kind, alongside) {
   await inTransaction(async () => {
     await lockWebsite();
     await prepare('UPDATE website SET kind = ?, set_up_at = COALESCE(set_up_at, now()), is_on = false, updated_at = now()').run(kind);
-    await getOrCreateStorefrontSettings();
-    await prepare('UPDATE storefront_settings SET enabled = false, updated_at = now()').run();
     await alongside();
   });
 }
@@ -497,17 +491,32 @@ function checkColour(colour) {
 
 // The three steps' answers, once only (ws-start-which, -look, -products).
 // Shopify is set up by connecting it (pull request 6b).
+export const START_CHOICES = ['every', 'nothing'];
+
+// Set-up step 3's answer, at set-up and from Showing products' Change
+// (website-buy-online design 15): every product online means active ones with a
+// price (one with no price stays off until priced); nothing online means every
+// product off, inactive ones too. Every category follows, so new products follow
+// the answer, and the answer and its date are kept for the "Started with" line.
+// Runs inside the caller's transaction, website row locked.
+export async function startProducts(startWith) {
+  const every = startWith === 'every';
+  // Locked in id order first, as a sale locks its products (lockStock).
+  await prepare('SELECT id FROM products ORDER BY id FOR NO KEY UPDATE').all();
+  await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(every);
+  await prepare('UPDATE product_categories SET show_online = ?').run(every);
+  await prepare('UPDATE website SET started_with = ?, started_with_at = now(), updated_at = now()').run(startWith);
+}
+
 export async function setUp(body, loginId) {
   if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
-  if (!['every', 'nothing'].includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
+  if (!START_CHOICES.includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
   const colour = checkColour(body.mainColour);
   await getOrCreateWebsite();
   return inTransaction(async () => {
     const website = await prepare('SELECT * FROM website FOR UPDATE').get();
     if (website.kind) throw new WebsiteError(409, 'The website is already set up');
-    // Every product online: active ones with a price; one with no price stays
-    // off until priced. Nothing online: every product off, inactive ones too.
-    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
+    await startProducts(body.startWith);
     await prepare(
       `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
               draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`

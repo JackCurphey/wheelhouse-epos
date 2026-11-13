@@ -26,16 +26,20 @@ const PAGES = [
   { key: 'shops', name: 'Our shops' },
 ];
 
-// Everything a customer can see, read once per answer: a shop's catalogue is a
-// few thousand rows at most, as Stock reads it (routes/stock-list.js).
-// Suggestions need no details or descriptions (`light`).
-async function catalogue(query, { light = false } = {}) {
+// Everything a customer can see, read once per answer, as Stock reads it
+// (routes/stock-list.js).
+// Suggestions need no details or descriptions (`light`), and read only the
+// products holding one word they ask for (`containing`, see MATCHING).
+async function catalogue(query, { light = false, containing = null } = {}) {
+  const description = light ? "'' AS description" : 'description';
   const products = await prepare(
-    `SELECT id, sku, name, brand, category, price_pence, photo_url, ${light ? "'' AS description" : 'description'}, group_id, size, colour, created_at
-       FROM products WHERE show_online AND active = 1 AND price > 0 ORDER BY id`
-  ).all();
+    `${containing === null ? '' : MATCHING}SELECT id, sku, name, brand, category, price_pence, photo_url, ${description}, group_id, size, colour, created_at
+       FROM products WHERE ${ONLINE}${containing === null ? '' : ' AND (id IN (SELECT id FROM hit) OR group_id IN (SELECT group_id FROM hit))'} ORDER BY id`
+  ).all(...(containing === null ? [] : [containing]));
   const ids = products.map((p) => p.id);
-  const groups = new Map((await prepare(`SELECT id, name, category, ${light ? "'' AS description" : 'description'}, photo_url FROM product_groups`).all()).map((g) => [g.id, g]));
+  const own = containing === null ? '' : ' WHERE id = ANY(?::int[])';
+  const groups = new Map((await prepare(`SELECT id, name, category, ${description}, photo_url FROM product_groups${own}`)
+    .all(...(containing === null ? [] : [[...new Set(products.map((p) => p.group_id).filter((g) => g !== null))]]))).map((g) => [g.id, g]));
   const details = light ? new Map() : new Map((await prepare('SELECT id, category_id, name, kind, unit, choices, position FROM category_details ORDER BY position, id').all()).map((x) => [x.id, x]));
   const answers = new Map(ids.map((id) => [id, new Map()]));
   if (!light) {
@@ -52,6 +56,19 @@ async function catalogue(query, { light = false } = {}) {
   const categories = await prepare('SELECT id, name, parent_id, path FROM product_categories ORDER BY path').all();
   return { units: unitsOf(products, groups, answers), details, sites, shop, free, categories };
 }
+
+const ONLINE = 'show_online AND active = 1 AND price > 0';
+// The online products holding one word in any field a search looks in; with
+// them come the other sizes of their groups, so a product's price and stock
+// line count every size. A product that matches every word holds the longest
+// one somewhere, so nothing a search would find is missed, and `found` still
+// checks every word (task 6.5: suggestions are asked for at each key press,
+// timed against a full catalogue with scripts/dev/time-site-suggest.mjs).
+const MATCHING = `WITH hit AS (
+  SELECT p.id, p.group_id FROM products p LEFT JOIN product_groups g ON g.id = p.group_id
+   WHERE p.show_online AND p.active = 1 AND p.price > 0
+     AND strpos(lower(concat_ws(chr(10), p.name, g.name, p.brand, p.category, g.category, p.sku, p.size, p.colour)), ?) > 0
+) `;
 
 // How many of each product are free at each site: its frames in stock there, or
 // for a product with no frame numbers its stock figure less the Cycle to Work
@@ -381,7 +398,8 @@ export async function suggestAnswer({ query }) {
   const q = String(query.get('q') ?? '').trim();
   if (q.length < 2) return { products: [], repairs: [], categories: [], pages: [] };
   const words = wordsOf(q);
-  const ctx = await catalogue(query, { light: true });
+  const longest = words.reduce((a, b) => (b.length > a.length ? b : a));
+  const ctx = await catalogue(query, { light: true, containing: longest });
   const products = ctx.units.filter((u) => found(u, words)).sort(bestFor(words)).slice(0, SUGGESTED);
   return {
     products: products.map((u) => ({ id: u.id, name: u.name, code: u.group ? null : u.items[0].sku ?? null, pricePence: u.low, stock: cardStock(u, ctx) })),

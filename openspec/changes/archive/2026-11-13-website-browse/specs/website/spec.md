@@ -334,7 +334,7 @@ Collection and returns, Privacy and Contact us SHALL be pages in the shell. The 
 - **THEN** they see each shop's address, phone and email
 
 ### Requirement: The old customer site is removed once the new one is in
-Once every page above is built, the old customer site (`public-storefront/`) and its product list route SHALL be removed. The Website page SHALL stop writing the old site's settings.
+Once every page above is built, the old customer site (`public-storefront/`) and its product list route SHALL be removed. The Website page SHALL stop writing the old site's settings, except the logo, which publishing still copies for the printed Cycle to Work quote until that quote reads the website's own logo.
 
 #### Scenario: The old site is gone
 - **WHEN** a customer opens `/store/northstreet/` after this change
