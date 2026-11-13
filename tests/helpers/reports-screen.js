@@ -118,6 +118,7 @@ export const TAKINGS_WEEK = {
     card: { pence: 33000, beforePence: 23000, diffPence: 10000 },
     cash: { pence: 24500, beforePence: 15000, diffPence: 9500 },
     other: { pence: 2500, beforePence: 2000, diffPence: 500 },
+    c2w: { pence: 1500, beforePence: 500, diffPence: 1000 },
     online: { pence: 5500, beforePence: 2000, diffPence: 3500 },
     cashDifference: { pence: -500, beforePence: -200, diffPence: -300 },
   },
@@ -144,6 +145,6 @@ export const TUESDAY_CLOSE = {
     id: 30, day: '2026-09-15', closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z',
     floatStart: { pence: 15000, how: 'counted', expectedPence: 15000, byName: 'Jo Taylor', at: '2026-09-15T07:30:00Z' },
     cashPence: 14000, drawerCashPence: 14000, paidOutsPence: 0, expectedPence: 14000, countedPence: 13500, differencePence: -500, reason: '',
-    floatPence: 15000, bankedPence: 11500, leftPence: 15000, topUpPence: 1500, takingsPence: 30000, cardPence: 15000, otherPence: 1000, onlinePence: 2500, countedBy: null,
+    floatPence: 15000, bankedPence: 11500, leftPence: 15000, topUpPence: 1500, takingsPence: 30000, cardPence: 15000, otherPence: 1000, c2wPence: 1500, onlinePence: 2500, countedBy: null,
   },
 };

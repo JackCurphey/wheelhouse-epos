@@ -4,7 +4,7 @@
 // Not in ROUTE_AREAS: these are public, found from the address, never from a
 // staff session.
 import { prepare } from '../db.js';
-import { sendJson, makeRateLimiter, parseCookies } from '../lib/http.js';
+import { sendJson, makeRateLimiter, parseCookies, readJsonBody } from '../lib/http.js';
 import { clientIp } from '../proxy-trust.js';
 import { currentSession } from '../lib/session.js';
 import { shopToday } from '../clock.js';
@@ -15,6 +15,8 @@ import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames, turnOn, turnOff, WebsiteError } from '../website.js';
 import { JOIN } from '../lib/categories.js';
 import { NotFound, homeAnswer, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
+import { BasketError, basketAnswer, linesFrom } from '../online-orders/basket.js';
+import { CheckoutRefused, checkout } from '../online-orders/checkout.js';
 
 export const SITE_OFF = 'This website isn’t available';
 export const SITE_FAILED = 'Something went wrong — try again';
@@ -231,6 +233,43 @@ function trackingAnswer(tools, yes) {
   });
 }
 
+// ---- The basket and checkout (website-buy-online, design 2) ----------------
+
+// screens: on-basket, on-basket-changed, on-checkout, on-checkout-errors, on-checkout-credit, on-checkout-credit-all
+const BUYING = { '/api/site/basket': 'basket', '/api/site/checkout': 'checkout' };
+// A customer checks out once or twice; thirty an hour from one address is
+// someone trying details or baskets (decided while building, Jack's November file).
+const checkoutLimiter = makeRateLimiter(30, 60 * 60 * 1000);
+const BASKET_BYTES = 20_000;
+
+/** What a website POST needs of its body, for the dispatcher's readBodyFirst. */
+export const siteBodyNeeds = (path) => (Object.hasOwn(BUYING, path) ? { maxBody: BASKET_BYTES, answerOverflow: true } : {});
+
+async function buyingRequest(req, res, kind, shop) {
+  res.setHeader('Cache-Control', 'no-store');
+  if (kind === 'checkout' && !checkoutLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries — try again in an hour' }), true;
+  let body;
+  try { body = await readJsonBody(req, BASKET_BYTES, { answerOverflow: true }); } catch (err) {
+    if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
+    if (err.message === 'Payload too large') return sendJson(res, 413, { error: 'That basket can’t be read' }), true;
+    throw err;
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
+  try {
+    const website = await prepare('SELECT kind FROM website').get();
+    if (website?.kind === 'shopify') return sendJson(res, 404, { error: SITE_OFF }), true;
+    const answer = kind === 'checkout'
+      ? await checkout({ req, res, shop, body })
+      : (await basketAnswer({ req, res, shop, lines: linesFrom(body.lines), shopId: body.shop })).answer;
+    sendJson(res, 200, answer);
+  } catch (err) {
+    if (err instanceof BasketError) return sendJson(res, err.status, { error: err.message }), true;
+    if (err instanceof CheckoutRefused) return sendJson(res, err.status, err.body), true;
+    throw err;
+  }
+  return true;
+}
+
 // ---- The staff banner's switch (website-browse PR 8, design 5) ------------
 
 export const SITE_TURN_REFUSED = 'Only the shop’s owner can turn the website on';
@@ -240,6 +279,7 @@ const ACTIONS = { '/api/site/turn-on': 'on', '/api/site/turn-off': 'off' };
 // finds `staff` there alone). The Owner only, until roles (WP-1.1), using the
 // Website page's own code; everyone else gets what a customer would.
 async function siteActionRequest(req, res, path, shop, staff) {
+  if (req.method === 'POST' && Object.hasOwn(BUYING, path)) return buyingRequest(req, res, BUYING[path], shop);
   if (req.method !== 'POST' || !Object.hasOwn(ACTIONS, path)) return false;
   res.setHeader('Cache-Control', 'no-store');
   if (staff?.shop.id !== shop.id) return sendJson(res, 404, { error: SITE_OFF }), true;

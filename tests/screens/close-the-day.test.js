@@ -21,7 +21,7 @@ const closeFrom = (body, day) => ({
   cashPence: day.cashPence, paidOutsPence: day.paidOutsPence, expectedPence: day.expectedPence, countedPence: body.countedPence,
   differencePence: body.countedPence - day.expectedPence, reason: body.reason ?? '', floatPence: 15000,
   bankedPence: Math.max(0, body.countedPence - 15000), leftPence: 15000, topUpPence: Math.max(0, 15000 - body.countedPence),
-  takingsPence: 9400, cardPence: 2000, otherPence: 0, onlinePence: 4000,
+  takingsPence: 9400, cardPence: 2000, otherPence: 0, c2wPence: 0, onlinePence: 4000,
 });
 const CHANGED = 'The till’s figures changed while you were counting. Check the difference again.';
 
@@ -223,7 +223,7 @@ test('Close the day saves the count and shows the report, with Print', async () 
   assert.ok(report.getByText('Tuesday 1 September · closed by Jack Lewis'));
   const rows = report.getAllByRole('listitem').map(text);
   assert.deepEqual(rows, [
-    'Takings £94.00', 'Card £20.00', 'Cash £74.00', 'Gift cards, store credit, customer accounts, other £0.00',
+    'Takings £94.00', 'Card £20.00', 'Cash £74.00', 'Gift cards, store credit, customer accounts, other £0.00', 'Cycle to Work Owed by providers, not in the drawer £0.00',
     'Float at the start £150.00 · looked right · Jack Lewis at 09:02 £150.00', 'Cash difference £2.10 short', 'Banked £71.90',
   ]);
   // Online money on its own line, not in the takings (Jack's answer 7).

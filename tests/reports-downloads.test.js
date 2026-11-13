@@ -31,9 +31,9 @@ async function seedClose(shop, day, loginId, f) {
     const check = await prepare('INSERT INTO float_checks (day, login_id, expected_pence, counted_pence) VALUES (?, ?, 15000, 15000) RETURNING id').get(day, loginId);
     return (await prepare(
       `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence, paid_outs_pence, expected_pence, counted_pence,
-         float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence)
-       VALUES (?, ?, ?, ?, 15000, ?, ?, 0, ?, ?, 15000, ?, ?, ?, ?, ?) RETURNING id`
-    ).get(day, loginId, `${day}T17:30:00Z`, check.id, f.cash, f.cash, f.expected, f.counted, f.banked, f.takings, f.card, f.other, f.online)).id;
+         float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence, c2w_pence)
+       VALUES (?, ?, ?, ?, 15000, ?, ?, 0, ?, ?, 15000, ?, ?, ?, ?, ?, ?) RETURNING id`
+    ).get(day, loginId, `${day}T17:30:00Z`, check.id, f.cash, f.cash, f.expected, f.counted, f.banked, f.takings, f.card, f.other, f.online, f.c2w ?? 0)).id;
   });
 }
 
@@ -59,7 +59,7 @@ before(async () => {
   // Counting began at the first close (a sale before it isn't swept in), so there is an earlier one.
   await seedClose(owner, '2026-09-07', owner.loginId, { takings: 1000, card: 1000, cash: 0, other: 0, online: 0, expected: 0, counted: 0, banked: 0 });
   ids.mon = await seedClose(owner, '2026-09-14', owner.loginId, { takings: 20000, card: 12000, cash: 7000, other: 1000, online: 3000, expected: 7000, counted: 7000, banked: 5000 });
-  ids.tue = await seedClose(owner, '2026-09-15', evilLoginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, expected: 14000, counted: 13500, banked: 11500 });
+  ids.tue = await seedClose(owner, '2026-09-15', evilLoginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, c2w: 1500, expected: 14000, counted: 13500, banked: 11500 });
   await runWithShop(owner.shop.id, async () => {
     const site = await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get();
     const till = await prepare('INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?) RETURNING id').get(site.id, 'B1', 'Till 1', randomUUID());
@@ -133,6 +133,7 @@ test('the closed day\'s .csv is that day\'s report as saved', async () => {
   assert.ok(text.includes('Cash difference,-5.00'));
   assert.ok(text.includes('Banked,115.00'));
   assert.ok(text.includes('Online,25.00'));
+  assert.ok(text.includes('Cycle to Work,15.00'), 'Cycle to Work money has its own row (UX walk-through 5 H3)');
   assert.ok(text.includes("Closed by,'=SUM(1+1)"), 'a formula-looking name is text');
   assert.equal((await file('/api/reports/days/999999999/csv')).res.status, 404);
 });
