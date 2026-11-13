@@ -5,37 +5,78 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-## Start here (updated 11 Nov 2026)
+## Start here (updated 13 Nov 2026)
 
 Who is on what, and what's next. Change these lines in the pull request
 that takes or finishes a piece. Everything that was here before 11 Nov is in
 `ARCHIVE.md`, "Moved from STATUS on 2026-11-11 (#669)".
 
-**Jack is on:** the Settings plan (`owner-setup-till-payments-eod`): quick
-buttons on the server (#698) and in Settings, End of day (#701) and Ways to
-pay (#709) are in; quick buttons on the till waits for Mark's yes on #693,
-and the change is archived with it. `your-data-download` is in (#678).
-`finish-account` is built and archived (#657 to #666).
-Also on: WP-6.1 website management (`website-management`), built
-overnight from 12 Nov, pull requests 1 to 6b; 7 waits for WP-1.1, 8 for WP-8.1.
-Also on: WP-6.2 find the shop and browse, the customer website (`website-browse`), from 12 Nov in nine pull requests (Jack's answers: `docs/decisions/2026-11-12-website-browse-answers.md`).
-Also on: Reports part 3, your own reports (`reports-your-own`, WP-5.3), built overnight from 12 Nov in four pull requests: 1 Change what's shown and the changed Sales report, 2 saving a report (migration), 3 rename and delete, 4 Workshop's Change what's shown. Margin's measure waits for part 2's sale-line costs.
+**Jack is on:** the website and Cycle to Work. Website browse (WP-6.2,
+`website-browse`): the plan (#742), the read and product routes (#744, #745)
+and the pages (#750 to #752, #754 to #756) are in; left: timing the
+suggestions with the full test shop, removing the old website, and the
+archive. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
+order tables and settings on the server (#753, migration 154) and the six
+order messages (#758) are in; the settings screen, basket and checkout are
+next; paying, staff steps and refunds wait for Jack's answers 9 and 11
+(`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
+Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
+#707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
+the certificate, Ready to collect and ordering the bike (#723, #726, #728,
+#731, #733), the customer's page and messages (#719, #730, #738), Today and
+the header search (#725, #734), hand-over at the till and the provider's
+money on the server (#757, #762) and the customer's account (#720) are in;
+cancelling an order and the rest of the screens (#763, #767 to #772) are open.
+
+Merged 11 to 13 Nov, all Jack's apart from Mark's below: `your-data-download`
+finished and archived, with sales and refunds, workshop jobs (#668), the
+screen (#677) and the Citrus Lime left-out rows with See them (#678). Reports
+(WP-5.3): part 1 built and archived (#664, #683, #685, #689, #690, #692);
+part 2, Workshop, Returning customers, VAT and the stock half of Margin and
+stock value (#680, #694, #699, #736 migration 149, #741); part 3, your own
+reports, built and archived (#691, #724, #727 migration 146, #729, #732);
+part 4, reopen a closed day and the accounts software (#739, #760 migration
+151, #761 migration 152, #764 migration 153). Settings (WP-5.1, WP-1.3): the
+plan (#693), quick buttons (#698 migration 131, #713, #740), End of day (#701
+migration 132), the Cash card and Other ways to pay (#709 migration 140); the
+till showing quick buttons waits for Mark's yes on #693. Website management
+(WP-6.1, `website-management`): the plan (#702), publish, discard and
+History (#704), the Website page (#710), the three-step start (#711),
+tracking tools (#712), online payments setup (#714), Shopify (#715, #716,
+#743) and See them (#737); not archived, as roles wait for WP-1.1 and moving
+waits for WP-8.1. Money shows the thousands comma (#697, #717). Tests and
+the full run: time limits so `npm test` can't hang (#676), `npm run
+full-check` one run at a time, first come first served (#684, #688, #705),
+and flaky tests fixed (#672, #679, #681, #682, #686, #695, #696, #700).
+Decisions: re-run everything only when main overlaps (#687), and the
+overnight questions answered (#735). Tests that waited too little under load (#747,
+#748, #749); WP-1.5 piece 10 ticked (#759).
 
 **Jack next:**
-1. Products, stock, sizes and colours (WP-1.5): all in but piece 7, which waits for a real Citrus Lime export (piece 10 was built in #632–#635; its box is ticked 13 Nov).
-2. Paying a repair online: waits on Mark's deposit taken at the till.
-3. The text receipt and its page: waits on Mark's step C.
+1. Finish website browse, Buy online and Cycle to Work (the open pull
+   requests above).
+2. Products, stock, sizes and colours (WP-1.5): all in but piece 7, which
+   waits for a real Citrus Lime export (piece 10 was built in #632 to #635;
+   its box is ticked, #759).
+3. Paying a repair online: waits on Mark's deposit taken at the till.
+4. The text receipt and its page: waits on Mark's step C.
 
-**Mark is on:** the changes Jack agreed on #669: #670 is in; the rules,
-faster tests and the board filling itself in are next. Before that, Mark's
-last merged work was on 26 Oct.
+**Mark is on:** the changes Jack agreed on #669 are in: Sonnet by default
+with a Haiku reader and two reviewers (#670), the board filling itself in
+(#673), the rules after #669 (#674) and test files no longer waiting five
+minutes to exit (#675).
 
 **Mark next:**
 1. Sales in pence step C.
 2. A deposit taken at the till (`till-job-deposit`, waiting for Mark's yes).
 3. Roles and the settings store (WP-1.1, WP-1.2).
 
-**Waiting on Jack:** who may edit a supplier (#543); stock take, sales
+**Waiting on Jack:** Buy online questions 9 (when an online order becomes
+a sale and stock goes down) and 11 (handing over before the till's Collect
+screen), in `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`;
+defaults taken overnight for you to overrule, in the 12 and 13 Nov
+`*-defaults-taken.md` files and
+`docs/decisions/decided-while-building/2026-11-jack.md`; who may edit a supplier (#543); stock take, sales
 during a count (#562); adding a till-only person (#558); settings on a
 workshop computer (#568); ending a check-in to set up a till (#564);
 supplier imports and stock history (#566); 491 leftover test shops (#567);
@@ -47,13 +88,14 @@ real sending on, Stripe and the S700 reader, a Google account (#140).
 **Waiting on Mark:** his yes on #693 for quick buttons on the till
 (`till-page.tsx`); what would free up more work (#560): the till deposit,
 step C (an offline key for a new till, #564; PIN hashes in the offline
-copy), roles and the settings store, WP-1.5, and his open pull requests
-(#499, #511, #520). Also: `PUT /api/sale-documents/:id` can write an order
+copy), roles and the settings store, WP-1.5 (he closed #499, #511 and #520 on
+11 Nov). Also: `PUT /api/sale-documents/:id` can write an order
 back to open; read what was built on his word (#357 onward, #265); his
 opinion on replying to texts; the front page switch.
 
 **Build board:** fills itself in each night (`.github/workflows/board.yml`,
-once merged); its hand-written parts are changed by hand.
+#673); its hand-written parts, STATUS and the published copy are done by the
+daily status job (Jack, 13 Nov, `docs/decisions/2026-11-13-daily-status-job-stays.md`).
 https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by, source
 `docs/build-progress/build-board.html`.
 
