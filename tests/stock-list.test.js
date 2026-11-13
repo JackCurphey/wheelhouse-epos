@@ -105,3 +105,55 @@ test('% and _ in a search are plain characters, not wildcards', async () => {
   assert.equal((await found('50%')).includes(odd.id), true);
   assert.equal((await found('%')).includes(plain.id), false, '% matches only a percent sign');
 });
+
+// Jack's answer to Q1 (12 Nov, docs/decisions/2026-11-12-website-defaults-taken.md): the Website
+// page's See them opens Stock filtered to the products it counted (server/website.js
+// productCounts and startCounts): no photo is priced with no photo; no price is a price of 0.
+// online=1 keeps to the products switched to show on the website, as the Website page counts.
+test('show=no-photo and show=no-price list just the products the Website page counts', async () => {
+  const shown = await pads({ name: 'Website pads shown no photo' });
+  const hidden = await pads({ name: 'Website pads hidden no photo' });
+  const pictured = await pads({ name: 'Website pads with photo' });
+  const free = await pads({ name: 'Website pads no price', price: 0 });
+  await runWithShop(owner.shop.id, async () => {
+    await prepare('UPDATE products SET show_online = true WHERE id = ANY(?::int[])').run([shown.id, pictured.id, free.id]);
+    await prepare("UPDATE products SET photo_url = '/photos/[photo].jpg' WHERE id = ?").run(pictured.id);
+  });
+  const names = async (q) => {
+    const res = await staff(`/api/stock-list?search=${encodeURIComponent('Website pads')}&${q}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    return res.body.rows.map((r) => r.name).sort();
+  };
+  assert.deepEqual(await names('show=no-photo'), ['Website pads hidden no photo', 'Website pads shown no photo']);
+  assert.deepEqual(await names('show=no-photo&online=1'), ['Website pads shown no photo']);
+  assert.deepEqual(await names('show=no-price'), ['Website pads no price']);
+  assert.deepEqual(await names('show=no-price&online=1'), ['Website pads no price']);
+  assert.equal((await names('show=anything-else')).length, 4, 'an unknown show filters nothing');
+});
+
+// The review of PR #737: each product the Website page counts is one row, so the link's list is
+// as long as the count beside it, including sizes of one product, an empty photo, a product taken
+// off sale, one not shown online, and a price below zero (counted as neither).
+test('show= lists one row per counted product, with the same edges as the counts', async () => {
+  const sizeA = await pads({ name: 'Counted pads size A' });
+  const sizeB = await pads({ name: 'Counted pads size B' });
+  const blank = await pads({ name: 'Counted pads blank photo' });
+  const gone = await pads({ name: 'Counted pads off sale' });
+  const offline = await pads({ name: 'Counted pads offline free', price: 0 });
+  const below = await pads({ name: 'Counted pads below zero' });
+  await runWithShop(owner.shop.id, async () => {
+    const g = await prepare("INSERT INTO product_groups (name, category) VALUES ('Counted pads sized', '[Category]') RETURNING id").get();
+    await prepare("UPDATE products SET group_id = ?, size = CASE WHEN id = ? THEN 'S' ELSE 'M' END WHERE id = ANY(?::int[])").run(g.id, sizeA.id, [sizeA.id, sizeB.id]);
+    await prepare("UPDATE products SET photo_url = '' WHERE id = ?").run(blank.id);
+    await prepare('UPDATE products SET active = 0 WHERE id = ?').run(gone.id);
+    await prepare('UPDATE products SET price = -1 WHERE id = ?').run(below.id);
+  });
+  const rows = async (q) => {
+    const res = await staff(`/api/stock-list?search=${encodeURIComponent('Counted pads')}&${q}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    return res.body.rows.map((r) => r.id ?? `group ${r.groupId}`).sort();
+  };
+  assert.deepEqual(await rows('show=no-photo'), [sizeA.id, sizeB.id, blank.id].sort(), 'both sizes, the empty photo; not off sale or below zero');
+  assert.deepEqual(await rows('show=no-price'), [offline.id], 'a price below zero is not "no price"');
+  assert.deepEqual(await rows('show=no-price&online=1'), [], 'not shown online');
+});

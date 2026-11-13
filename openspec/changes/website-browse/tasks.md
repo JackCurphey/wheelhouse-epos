@@ -13,7 +13,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 1.7 Test: a failed read answers 503 with "Something went wrong — try again" and the server keeps running
 - [x] 1.8 Build `server/routes/site.js` with `resolveStorefrontShop`, `runWithShop`, the limiter and `// screens:` lines; mount it in `server/server.js`
 - [x] 1.9 Today's hours and the next opening worked out in the shop's time zone (the shared hours on the first shop's card only, Jack's answer 1); test it on an open day, a closed day and a closure
-- [ ] 1.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 1.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 2. Risky — products: listing, filters, sort, product, suggestions and search
 
@@ -26,7 +26,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 2.7 Test: `GET /api/site/suggest` groups products, repairs, categories and pages, starts from the second letter, and has its own limit
 - [x] 2.8 Test: `GET /api/site/search` answers repairs and pages that match and products by Best match; "bearing 30 mm" answers Bearings with inner diameter 30 mm ticked; nothing found answers empty
 - [x] 2.9 Build the queries in `server/site-products.js`, reusing Stock's detail filter and "bearing 30 mm" reading
-- [ ] 2.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 2.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 3. Risky — the website app: shell, home, Shop, not found, off, footer pages
 
