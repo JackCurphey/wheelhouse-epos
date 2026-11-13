@@ -13,7 +13,8 @@ import { creditOf } from '../lib/customer-money.js';
 import { readLines, collectingShop, priceBasket, EMPTY, CHOOSE_SHOP } from './basket.js';
 
 const KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
-const OPEN = ['waiting', 'held', 'declined'];
+// A hold a retry can carry on with: not yet answered, or a card that can be tried again.
+const REUSABLE = ['waiting', 'held', 'declined'];
 const BOXES = {
   name: 'Enter your name',
   email: 'Check your email address — it needs an @ and a dot, like name@example.com',
@@ -42,17 +43,23 @@ function checkDetails({ name, email, phone }) {
   return null;
 }
 
-// What the order is for, to tell a retry from the same key sent with something else.
-const sameRequest = (order, lines, wanted) => order.site_id === wanted.siteId && order.email === wanted.email
-  && order.name === wanted.name && (order.phone ?? '') === wanted.phone
+// What the order is for, to tell a retry from the same key sent with something
+// else: the shop and lines, and whose it is. A signed-in customer's by their
+// customer, so an account edited between tries still finds its order; a
+// guest's by what was typed.
+const sameRequest = (order, lines, wanted) => order.site_id === wanted.siteId
+  && (wanted.customerId
+    ? order.customer_id === wanted.customerId
+    : order.email === wanted.email && order.name === wanted.name && (order.phone ?? '') === wanted.phone)
   && JSON.stringify(lines) === JSON.stringify([...wanted.lines].sort((a, b) => a.productId - b.productId).map((l) => [l.productId, l.qty]));
 
 /**
  * One checkout. `login` is the signed-in customer's login (from the
  * session, already checked to be this shop's), or null for a guest.
- * Returns { status, body }.
+ * `allowed()` is the network's limit, asked only once the details pass, as a
+ * deposit's hold asks it (routes/deposit-payments.js). Returns { status, body }.
  */
-export async function checkout(body, login) {
+export async function checkout(body, login, { allowed = () => true } = {}) {
   if (typeof body.requestKey !== 'string' || !KEY_PATTERN.test(body.requestKey)) return answer(400, { error: 'Invalid request key' });
   const lines = readLines(body.lines);
   if (!lines) return answer(400, { error: 'Bad request' });
@@ -85,16 +92,16 @@ export async function checkout(body, login) {
       email: (text(me?.email) || text(body.email)).toLowerCase(),
       phone: text(me?.phone) || text(body.phone),
     };
-    const wanted = { ...details, siteId: where.site.id, lines };
+    const wanted = { ...details, customerId: me?.id ?? null, siteId: where.site.id, lines };
+    const bad = checkDetails(details);
+    if (bad || !allowed()) {
+      await dbExec('ROLLBACK');
+      return bad ?? answer(429, { error: 'Too many tries from this network - please try again later.' });
+    }
 
     // Sent before: the same order (design 3: "Pay pressed twice gives the same order").
     let order = await prepare('SELECT * FROM online_orders WHERE request_key_hash = ? FOR UPDATE').get(keyHash);
     if (!order) {
-      const bad = checkDetails(details);
-      if (bad) {
-        await dbExec('ROLLBACK');
-        return bad;
-      }
       const basket = await priceBasket(lines, where.site, where.sites);
       if (!basket.canCheckout) {
         await dbExec('ROLLBACK');
@@ -149,11 +156,17 @@ export async function checkout(body, login) {
       ).get(provider.name, order.card_pence, keyHash, order.id);
       const row = await prepare("SELECT * FROM online_payments WHERE request_key_hash = ? AND purpose = 'order' AND online_order_id = ? FOR UPDATE").get(keyHash, order.id);
       let ref = row.provider_ref;
-      if (!(ref && row.amount_pence === order.card_pence && OPEN.includes(row.status))) {
+      // A new hold only when there's none yet, or the last was let go, or an
+      // open one is for another amount (let go first, as a deposit's is).
+      // One the provider is checking, can't answer for, has taken or refunded
+      // is left exactly as it is: its reference is never overwritten.
+      const open = REUSABLE.includes(row.status);
+      if (!ref || row.status === 'released' || (open && row.amount_pence !== order.card_pence)) {
+        if (ref && open && row.status !== 'declined') await provider.release(ref);
         ({ ref } = await provider.hold({ amountPence: order.card_pence, key: `${keyHash}:${randomUUID()}` }));
         made = ref;
-        await prepare("UPDATE online_payments SET provider = ?, provider_ref = ?, status = 'waiting', updated_at = now() WHERE id = ? RETURNING id")
-          .get(provider.name, ref, row.id);
+        await prepare("UPDATE online_payments SET provider = ?, provider_ref = ?, amount_pence = ?, status = 'waiting', updated_at = now() WHERE id = ? RETURNING id")
+          .get(provider.name, ref, order.card_pence, row.id);
       }
       payment = { paymentId: row.id, provider: provider.name, ref, amountPence: order.card_pence };
     }

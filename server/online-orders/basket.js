@@ -5,7 +5,7 @@
 // the website's address names (runWithShop), so row-level security keeps it
 // to that business: another business's product or shop is never found.
 import { prepare } from '../db.js';
-import { freeHere } from '../c2w/orders.js';
+import { OPEN as C2W_OPEN } from '../c2w/orders.js';
 import { paymentsConnected } from '../payments/provider.js';
 import { payments } from '../payments/index.js';
 
@@ -53,26 +53,49 @@ export async function collectingShop(asked) {
   return site ? { site, sites } : null;
 }
 
+// How many of each product are free at each shop, in three queries for the
+// whole basket: its frames in stock there, or for a product with no frame
+// numbers its stock figure less the Cycle to Work orders holding it there.
+// The same count as freeHere (c2w/orders.js), for every line at once.
+async function freeStock(ids) {
+  const free = new Map();
+  const add = (productId, siteId, n) => free.set(`${productId}:${siteId}`, (free.get(`${productId}:${siteId}`) ?? 0) + n);
+  const frames = await prepare(
+    "SELECT product_id, site_id, count(*) FILTER (WHERE state = 'in_stock')::int AS n FROM stock_frames WHERE product_id = ANY(?::int[]) GROUP BY product_id, site_id"
+  ).all(ids);
+  const framed = new Set(frames.map((f) => f.product_id));
+  for (const f of frames) add(f.product_id, f.site_id, f.n);
+  for (const s of await prepare('SELECT product_id, site_id, qty FROM product_stock WHERE product_id = ANY(?::int[])').all(ids)) {
+    if (!framed.has(s.product_id)) add(s.product_id, s.site_id, s.qty);
+  }
+  const holds = await prepare(
+    `SELECT product_id, site_id, count(*)::int AS n FROM c2w_orders
+      WHERE product_id = ANY(?::int[]) AND held_at IS NOT NULL AND stage IN ${C2W_OPEN} GROUP BY product_id, site_id`
+  ).all(ids);
+  for (const h of holds) if (!framed.has(h.product_id)) add(h.product_id, h.site_id, -h.n);
+  return (productId, siteId) => Math.max(0, free.get(`${productId}:${siteId}`) ?? 0);
+}
+
 /**
  * Prices the lines at the collecting shop. Each line: the product's own price,
  * the stock line, and what changed — fewer left (the quantity comes down to
- * what's there) or gone (none here; it names the shops with none). Lines
- * for products not on the website any more are gone too.
+ * what's there) or gone (none here; it names the shops with none). A product
+ * not on the website (hidden, inactive or unpriced) is gone too, and is
+ * neither named nor priced, so the public basket can't list it.
  */
 export async function priceBasket(lines, site, sites) {
   const ids = lines.map((l) => l.productId);
   const products = new Map((await prepare(
-    `SELECT id, name, sku, price_pence, (show_online AND active = 1 AND price > 0) AS on_sale
-       FROM products WHERE id = ANY(?::int[])`
+    'SELECT id, name, sku, price_pence FROM products WHERE id = ANY(?::int[]) AND show_online AND active = 1 AND price > 0'
   ).all(ids)).map((p) => [p.id, p]));
+  const freeAt = await freeStock(ids);
   const priced = [];
   for (const { productId, qty } of lines) {
     const p = products.get(productId);
-    const free = p?.on_sale ? await freeHere(productId, site.id) : 0;
+    const free = p ? freeAt(productId, site.id) : 0;
     const line = { productId, name: p?.name ?? null, code: p?.sku ?? null, qty, unitPence: p ? Number(p.price_pence) : null, linePence: 0, stockLine: null, change: null, message: null };
     if (free === 0) {
-      const none = [];
-      for (const s of sites) if (s.id === site.id || !p?.on_sale || (await freeHere(productId, s.id)) === 0) none.push(s.name);
+      const none = sites.filter((s) => s.id === site.id || !p || freeAt(productId, s.id) === 0).map((s) => s.name);
       Object.assign(line, { change: 'gone', message: `No longer in stock at ${none.join(' or ')} — remove it to carry on` });
     } else {
       if (free < qty) Object.assign(line, { qty: free, change: 'fewer', message: `Only ${free} left at ${site.name} — we’ve changed it to ${free}` });

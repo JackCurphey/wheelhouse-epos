@@ -14,26 +14,28 @@ import { checkout } from '../online-orders/checkout.js';
 const BASKET = '/api/site/basket';
 const CHECKOUT = '/api/site/checkout';
 
-// Per visitor address, before any database work. The basket is asked for as a
-// page opens, so it has WP-6.2's website limit (300 a minute); a checkout
-// makes an order and a hold, so it has a booking deposit's (30 an hour,
-// routes/deposit-payments.js).
-const limiters = {
-  [BASKET]: makeRateLimiter(300, 60 * 1000),
-  [CHECKOUT]: makeRateLimiter(30, 60 * 60 * 1000),
-};
+// Per visitor address. The basket is asked for as a page opens, so it has
+// WP-6.2's website limit (300 a minute), checked before any database work. A
+// checkout makes an order and a hold, so it has a booking deposit's limit (30
+// an hour), counted as a deposit's is: only tries whose details pass
+// (routes/deposit-payments.js), so a customer's typing mistakes don't use it up.
+const basketLimiter = makeRateLimiter(300, 60 * 1000);
+const checkoutLimiter = makeRateLimiter(30, 60 * 60 * 1000);
+const PATHS = [BASKET, CHECKOUT];
 
 /** The website path asked for, /store/<slug> taken off; null when it isn't one of these. */
 export function siteOrderPath(req, pathname, slug) {
   const prefix = `/store/${slug}`;
   const path = pathname.startsWith(`${prefix}/`) ? pathname.slice(prefix.length) : pathname;
-  return req.method === 'POST' && Object.hasOwn(limiters, path) ? path : null;
+  return req.method === 'POST' && PATHS.includes(path) ? path : null;
 }
 
-/** Turns a visitor away past the limit; true when it answered. */
+const TOO_MANY = { error: 'Too many tries from this network - please try again later.' };
+
+/** Turns a visitor away past the basket's limit; true when it answered. A checkout's is counted later. */
 export function siteOrderLimited(req, res, path) {
-  if (limiters[path].check(clientIp(req))) return false;
-  sendJson(res, 429, { error: 'Too many tries from this network - please try again later.' });
+  if (path !== BASKET || basketLimiter.check(clientIp(req))) return false;
+  sendJson(res, 429, TOO_MANY);
   return true;
 }
 
@@ -65,6 +67,6 @@ export async function handleSiteOrderRequest(req, res, path, shop) {
   // The signed-in customer, only when the sign-in is this shop's.
   const ctx = await currentCustomerSession(req, res);
   const login = ctx && ctx.shop.id === shop.id ? ctx.login : null;
-  const { status, body: answer } = await checkout(body, login);
+  const { status, body: answer } = await checkout(body, login, { allowed: () => checkoutLimiter.check(clientIp(req)) });
   sendJson(res, status, answer);
 }

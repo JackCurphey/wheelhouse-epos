@@ -543,7 +543,7 @@ async function dispatch(req, res) {
   const storefrontSlug = parseStorefrontSlugCandidate(req, url);
   if (storefrontSlug) {
     // Buying online's basket and checkout (website-buy-online design 3): the
-    // visitor turned away past the limit before any database work.
+    // basket's visitor turned away past the limit before any database work.
     const orderPath = siteOrderPath(req, pathname, storefrontSlug);
     if (orderPath && siteOrderLimited(req, res, orderPath)) return;
     const storefrontShop = await resolveStorefrontShop(req, url);

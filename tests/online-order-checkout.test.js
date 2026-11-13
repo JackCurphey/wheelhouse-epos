@@ -11,7 +11,8 @@ import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, firstShopIsBolton, seedMechanic } from './helpers/staff.js';
-import { portalSignup } from './helpers/portal.js';
+import { readCookie } from './helpers/http.js';
+import { CUSTOMER_SESSION_COOKIE } from '../server/customer-auth.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { connectPayments } from './helpers/payments.js';
 
@@ -34,15 +35,15 @@ after(async () => {
 
 // A shop taking online orders: its website on, payments connected, Buying
 // online on, Bolton and (when asked) a second shop, and the brake pads.
-async function shopTakingOrders({ second = false, buying = true, connected = true, credit = true } = {}) {
+async function shopTakingOrders({ second = false, buying = true, connected = true, credit = true, creditOnline = credit, creditShop = credit } = {}) {
   const owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles' });
   shops.push(owner);
   const bolton = (await firstShopIsBolton(owner)).id;
   if (connected) await connectPayments(owner.shop.id);
   const made = await runWithShop(owner.shop.id, async () => {
     await prepare('INSERT INTO storefront_settings (enabled) VALUES (true) RETURNING id').get();
-    await prepare('INSERT INTO online_order_settings (buying_online, store_credit_on) VALUES (?, ?) RETURNING shop_id').get(buying, credit);
-    await prepare('INSERT INTO payment_settings (store_credit_on) VALUES (?) RETURNING shop_id').get(credit);
+    await prepare('INSERT INTO online_order_settings (buying_online, store_credit_on) VALUES (?, ?) RETURNING shop_id').get(buying, creditOnline);
+    await prepare('INSERT INTO payment_settings (store_credit_on) VALUES (?) RETURNING shop_id').get(creditShop);
     const other = second ? (await prepare("INSERT INTO sites (name, code) VALUES ('[Second site]', 'S') RETURNING id").get()).id : null;
     const pads = (await prepare(
       "INSERT INTO products (sku, name, category, price, stock_qty, show_online, active, updated_at) VALUES ('B05S-RX', 'Shimano brake pads', '[Category]', 28, 3, true, 1, now()) RETURNING id"
@@ -203,7 +204,13 @@ test('checkout re-prices and re-checks stock: a changed basket makes nothing', a
 // ---------- 4.4 Who is buying, and their store credit ----------
 
 async function signedInMaya(shop, creditPence) {
-  const login = await portalSignup(server.baseUrl, shop.slug, { name: 'Maya Patel', email: `maya-${randomBytes(4).toString('hex')}@example.test` });
+  // Each from its own network, under the sign-up limit (portal.js).
+  const email = `maya-${randomBytes(4).toString('hex')}@example.test`;
+  const res = await fetch(`${server.baseUrl}/api/portal/${shop.slug}/signup`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': network() }, body: JSON.stringify({ name: 'Maya Patel', email, password: 'password123' }),
+  });
+  assert.equal(res.status, 201);
+  const login = { cookie: readCookie(res, CUSTOMER_SESSION_COOKIE), email, loginId: (await res.json()).id };
   const customerId = (await inShop(shop, 'SELECT customer_id FROM customer_logins WHERE id = ?', login.loginId))[0].customer_id;
   await inShop(shop, "UPDATE customers SET phone = '07700 900 142' WHERE id = ? RETURNING id", customerId);
   if (creditPence) await inShop(shop, "INSERT INTO store_credit_entries (customer_id, change_pence, kind) VALUES (?, ?, 'added') RETURNING id", customerId, creditPence);
@@ -323,15 +330,17 @@ test('sent twice with the same key, checkout gives the same order and the same h
   assert.equal(other.body.code, 'reused_key');
 });
 
-test('checkout is rate limited per network', async () => {
+test('checkout is rate limited per network, counting only tries whose details pass', async () => {
   const shop = await shopTakingOrders();
   const from = network();
-  const junk = { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya, name: '' };
-  for (let i = 0; i < 30; i++) assert.equal((await checkout(shop, junk, { from })).status, 400, `try ${i + 1}`);
-  const r = await checkout(shop, { ...junk, name: 'Maya Patel' }, { from });
+  const body = { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya };
+  // Mistakes in the details don't use up the limit (as a deposit's hold counts only good tries).
+  for (let i = 0; i < 35; i++) assert.equal((await checkout(shop, { ...body, name: '' }, { from })).status, 400, `mistake ${i + 1}`);
+  for (let i = 0; i < 30; i++) assert.equal((await checkout(shop, body, { from })).status, 200, `try ${i + 1}`);
+  const r = await checkout(shop, body, { from });
   assert.equal(r.status, 429);
-  assert.equal(await count(shop, 'online_orders'), 0);
-  assert.equal((await checkout(shop, { ...junk, name: 'Maya Patel' })).status, 200, 'another network is not held up');
+  assert.equal(await count(shop, 'online_orders'), 1);
+  assert.equal((await checkout(shop, { ...body, requestKey: key() })).status, 200, 'another network is not held up');
 });
 
 // ---------- 4.5a A checkout key never meets a booking's ----------
@@ -382,4 +391,104 @@ test('settling deposits leaves an order’s payment alone', async () => {
   assert.equal(pay.status, 'waiting');
   const [held] = await inShop(shop, 'SELECT status FROM pretend_payments WHERE ref = ?', r.body.payment.ref);
   assert.equal(held.status, 'waiting');
+});
+
+// ---------- Review fixes (PR 4 code and risky-area reviews) ----------
+
+test('a retry never makes a new hold over a payment the provider is checking, or has taken', async () => {
+  for (const status of ['checking', 'taken']) {
+    const shop = await shopTakingOrders();
+    const body = { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya };
+    const first = await checkout(shop, body);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    await inShop(shop, "UPDATE online_payments SET status = ? WHERE purpose = 'order' RETURNING id", status);
+    const again = await checkout(shop, body);
+    assert.equal(again.status, 200, JSON.stringify(again.body));
+    assert.equal(again.body.payment.ref, first.body.payment.ref, `${status}: the same payment`);
+    assert.equal(await count(shop, 'pretend_payments'), 1, `${status}: no new hold`);
+    const [pay] = await inShop(shop, "SELECT status, provider_ref FROM online_payments WHERE purpose = 'order'");
+    assert.deepEqual(pay, { status, provider_ref: first.body.payment.ref }, `${status}: left as it was`);
+  }
+  // A hold that was let go is made again.
+  const shop = await shopTakingOrders();
+  const body = { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya };
+  const first = await checkout(shop, body);
+  await inShop(shop, "UPDATE online_payments SET status = 'released' WHERE purpose = 'order' RETURNING id");
+  const again = await checkout(shop, body);
+  assert.notEqual(again.body.payment.ref, first.body.payment.ref);
+});
+
+test('a product not on the website is never named or priced in the basket, nor in checkout’s answer', async () => {
+  for (const hide of ['UPDATE products SET show_online = false WHERE id = ? RETURNING id', 'UPDATE products SET active = 0 WHERE id = ? RETURNING id']) {
+    const shop = await shopTakingOrders();
+    await inShop(shop, hide, shop.pads);
+    const r = await basket(shop, { shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }] });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const [line] = r.body.lines;
+    assert.equal(line.change, 'gone');
+    assert.deepEqual([line.name, line.code, line.unitPence], [null, null, null], hide);
+    const c = await checkout(shop, { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya });
+    assert.equal(c.status, 409, JSON.stringify(c.body));
+    assert.deepEqual([c.body.basket.lines[0].name, c.body.basket.lines[0].code, c.body.basket.lines[0].unitPence], [null, null, null]);
+  }
+});
+
+test('quantities, line counts and names past what a form sends are refused as bad requests', async () => {
+  const shop = await shopTakingOrders();
+  const many = Array.from({ length: 51 }, (_, i) => ({ productId: 1_000_000 + i, qty: 1 }));
+  for (const lines of [[{ productId: shop.pads, qty: 0 }], [{ productId: shop.pads, qty: -5 }], [{ productId: shop.pads, qty: 1.5 }], [{ productId: shop.pads, qty: 1000 }], many]) {
+    const b = await basket(shop, { shop: shop.bolton, lines });
+    assert.equal(b.status, 400, `basket ${JSON.stringify(lines).slice(0, 60)}`);
+    const c = await checkout(shop, { requestKey: key(), shop: shop.bolton, lines, ...maya });
+    assert.equal(c.status, 400, `checkout ${JSON.stringify(lines).slice(0, 60)}`);
+  }
+  const long = await checkout(shop, { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya, name: 'M'.repeat(61) });
+  assert.equal(long.status, 400, JSON.stringify(long.body));
+  assert.equal(await count(shop, 'online_orders'), 0);
+});
+
+test('store credit needs both switches: off online only, or off for the shop only, uses none', async () => {
+  for (const off of [{ creditOnline: false }, { creditShop: false }]) {
+    const shop = await shopTakingOrders(off);
+    const me = await signedInMaya(shop, 1000);
+    const r = await checkout(shop, { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }] }, { cookie: me.cookie });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.creditPence, 0, JSON.stringify(off));
+    assert.equal(r.body.cardPence, 2800);
+  }
+});
+
+test('a signed-in customer who changes their account between tries still gets the same order', async () => {
+  const shop = await shopTakingOrders();
+  const me = await signedInMaya(shop, 0);
+  const body = { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }] };
+  const first = await checkout(shop, body, { cookie: me.cookie });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  await inShop(shop, "UPDATE customers SET name = 'Maya P', phone = '[phone]' WHERE id = ? RETURNING id", me.customerId);
+  const again = await checkout(shop, body, { cookie: me.cookie });
+  assert.equal(again.status, 200, JSON.stringify(again.body));
+  assert.equal(again.body.orderCode, first.body.orderCode);
+  // The same key from someone else is not their order.
+  const guest = await checkout(shop, { ...body, ...maya });
+  assert.equal(guest.status, 409, JSON.stringify(guest.body));
+  assert.equal(guest.body.code, 'reused_key');
+});
+
+test('stock counts frame-numbered bikes by frames in stock, and less Cycle to Work holds', async () => {
+  const shop = await shopTakingOrders();
+  const [bike] = await inShop(shop,
+    "INSERT INTO products (sku, name, category, price, stock_qty, show_online, active, updated_at) VALUES ('[Code]', '[Product]', '[Category]', 500, 2, true, 1, now()) RETURNING id");
+  await stockAt(shop, shop.bolton, bike.id, 2);
+  await inShop(shop, "INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, state) VALUES (?, ?, '[frame 1]', '[FRAME1]', 'in_stock'), (?, ?, '[frame 2]', '[FRAME2]', 'sold') RETURNING id", bike.id, shop.bolton, bike.id, shop.bolton);
+  const framed = await basket(shop, { shop: shop.bolton, lines: [{ productId: bike.id, qty: 2 }] });
+  assert.equal(framed.body.lines[0].message, 'Only 1 left at Bolton — we’ve changed it to 1');
+  // Pads: 3 on the shelf, one held for a Cycle to Work order.
+  const [customer] = await inShop(shop, "INSERT INTO customers (name, updated_at) VALUES ('[Customer]', now()) RETURNING id");
+  const [provider] = await inShop(shop, "INSERT INTO c2w_providers (name) VALUES ('[Provider]') RETURNING id");
+  await inShop(shop,
+    `INSERT INTO c2w_orders (customer_id, provider_id, site_id, product_id, quote_number, quote_given_at, valid_until, hold_wanted, accessories, total_pence, customer_code, held_at)
+     VALUES (?, ?, ?, ?, 1, now(), current_date + 30, true, '[]'::jsonb, 2800, ?, now()) RETURNING id`,
+    customer.id, provider.id, shop.bolton, shop.pads, randomBytes(32).toString('hex'));
+  const held = await basket(shop, { shop: shop.bolton, lines: [{ productId: shop.pads, qty: 3 }] });
+  assert.equal(held.body.lines[0].message, 'Only 2 left at Bolton — we’ve changed it to 2');
 });
