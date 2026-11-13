@@ -178,7 +178,10 @@ function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void
     setLines([]);
     setPaying(false);
     if (!c2w) return;
-    void queryClient.invalidateQueries({ queryKey: ['c2w-order', c2w.id] });
+    // Marked out of date, not fetched again here: the till still shows the order until the
+    // empty till draws, and the handed-over order would flash "isn't ready to hand over".
+    // The order page fetches it afresh when it next opens.
+    void queryClient.invalidateQueries({ queryKey: ['c2w-order', c2w.id], refetchType: 'none' });
     void queryClient.invalidateQueries({ queryKey: ['c2w-orders'] });
     void queryClient.invalidateQueries({ queryKey: ['c2w-count'] });
     c2w.onDone();

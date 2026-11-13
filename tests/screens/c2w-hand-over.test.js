@@ -288,10 +288,19 @@ test('a refused hand-over shows the server’s words and says no sale was record
 test('after Paid, the next sale is an empty till, not the order again', async () => {
   const t = await openTill({ tick: 5 });
   const pay = await payDialog(t);
+  // CI, 13 Nov: after Paid the till asked for the order again, and while it was still
+  // showing the order, flashed "Maya's order isn't ready to hand over".
+  let flashed = false;
+  const watch = new window.MutationObserver(() => { flashed ||= window.document.body.textContent.includes('isn’t ready to hand over'); });
+  watch.observe(window.document.body, { childList: true, subtree: true, characterData: true });
   t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
   await t.waitFor(() => assert.equal(window.location.search, ''));
   await t.waitFor(() => assert.ok(t.ui.queryByText('[Bike] · [Size]') === null));
-  assert.ok(t.ui.getByRole('button', { name: /^Take payment/ }).disabled);
+  assert.ok((await t.ui.findByRole('button', { name: /^Take payment/ })).disabled);
+  watch.disconnect();
+  assert.equal(flashed, false, 'no “isn’t ready to hand over” after Paid');
+  const afterSale = calls.slice(calls.findIndex((c) => c.method === 'POST' && c.url === '/api/sales'));
+  assert.deepEqual(afterSale.filter((c) => c.method === 'GET' && c.url === '/api/c2w/orders/9'), [], 'the till doesn’t ask for the handed-over order again');
 });
 
 // ---- The amount due comes from the server (review of pull request 7b) ----
