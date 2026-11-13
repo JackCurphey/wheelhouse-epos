@@ -42,7 +42,7 @@ export const STEPS = {
   shortfall_closed: { from: ['collected'], to: 'closed' },
 };
 // The stages an order can still be holding a bike in.
-const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
+export const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
 
 export class Refused extends Error {
   constructor(status, body) { super(body.error); this.status = status; this.body = body; }
