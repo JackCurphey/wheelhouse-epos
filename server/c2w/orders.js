@@ -38,6 +38,10 @@ export const STEPS = {
   order_undone: { from: ['quote', 'waiting', 'certificate'], to: null },
   // Cancel the order (cw-cancel): from any stage before collection.
   cancelled: { from: ['quote', 'waiting', 'certificate', 'ready'], to: 'cancelled' },
+  // The provider's money (cw-mark-paid, cw-record-payment; server/c2w/money.js).
+  paid: { from: ['collected'], to: 'paid' },
+  part_paid: { from: ['collected'], to: null },
+  shortfall_closed: { from: ['collected'], to: 'closed' },
 };
 // The stages an order can still be holding a bike in.
 const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
