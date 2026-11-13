@@ -12,6 +12,8 @@ import { WORKSHOP_JOB_SELECT } from '../workshop/jobs.js';
 import { customerConversations } from '../workshop/job-notes.js';
 import { floatsToSee } from './float-check.js';
 import { daysWaiting, reopenedOn } from './close-the-day.js';
+import { providerName } from '../accounts/index.js';
+import { accountLines } from '../accounts/lines.js';
 import { loadCapacity, currentShopTimeZone } from '../workshop/jobs.js';
 import { shopToday } from '../clock.js';
 import { toHHMM } from '../capacity.js';
@@ -45,6 +47,21 @@ async function quotesWithNoAnswer() {
 async function daysReopened() {
   const r = await reopenedOn();
   return r ? [{ kind: 'day_reopened', day: r.day, closeId: r.id, reason: r.reason, reopenedByName: r.reopenedByName, reopenedAt: r.reopenedAt }] : [];
+}
+// A closed day that couldn't go to the accounts software (reports-accounts-and-reopen, today spec): newest first,
+// with the line that has no account, until the day is sent.
+async function daysNotSent() {
+  const conn = await prepare('SELECT provider FROM accounts_connections').get();
+  if (!conn) return [];
+  const rows = await prepare(
+    `SELECT to_char(a.day, 'YYYY-MM-DD') AS day, a.reason, a.failed_line, c.closed_at FROM accounts_sends a JOIN day_closes c ON c.id = a.close_id
+      WHERE a.status = 'failed' AND c.reopened_at IS NULL ORDER BY a.day DESC`
+  ).all();
+  const labels = new Map((await accountLines()).flatMap((g) => g.lines).map((l) => [l.key, l.label]));
+  return rows.map((r) => ({
+    kind: 'day_not_sent', day: r.day, providerName: providerName(conn.provider), closedAt: iso(r.closed_at), reason: r.reason,
+    missingLine: r.failed_line ? labels.get(r.failed_line) ?? r.failed_line : null, line: r.failed_line,
+  }));
 }
 async function daysNotClosed() {
   return (await daysWaiting()).map((w) => ({
@@ -209,7 +226,7 @@ export function register(route) {
   route('GET', '/api/needs-attention', async (req, res) => {
     const ctx = await currentSession(req);
     if (!ctx?.login.is_owner) return sendJson(res, 403, { error: "Only the shop's owner sees what needs attention", code: 'owner_only' });
-    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await daysReopened()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
+    sendJson(res, 200, { items: [...(await floatsToSee()), ...(await daysNotClosed()), ...(await daysReopened()), ...(await daysNotSent()), ...(await quotesWithNoAnswer()), ...(await c2wTodayLines()), ...(await uncollectedBikes()), ...(await replies()), ...(await deleteRequests()), ...(await belowZero()), ...(await adjustmentsToSee(await canSeeCosts(req))), ...(await restockNew(ctx.login.id)), ...(await paymentsNeedDetails())] });
   });
 
   // Seen on a big stock adjustment (st-today-adjust; stock control decision

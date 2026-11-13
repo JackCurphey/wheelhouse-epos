@@ -21,6 +21,7 @@ import { closeEntryNow, entryFor } from '../lib/close-entry.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
 import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
 import { isPence, MAX_PENCE } from './float-check.js';
+import { afterClose } from '../accounts/send.js';
 
 export { entryFor };
 
@@ -375,7 +376,9 @@ async function closeLate(res, ctx, shopId, day, today) {
     if (reply.body.code === 'already_closed') reply.body.close = await closeOn(day);
     return sendJson(res, reply.status, reply.body);
   }
-  sendJson(res, 201, { close: await closeOn(day) });
+  const made = await closeOn(day);
+  await afterClose(made.id); // a day that can't be sent is still closed, and says so
+  sendJson(res, 201, { close: made });
 }
 
 // A reopened day (reports-accounts-and-reopen design 1): the close is still the one row for its day, marked
@@ -467,7 +470,9 @@ async function closeAgain(res, ctx, shopId, day, { counted, reason, shown }) {
     return { ok: true };
   });
   if (!reply.ok) return sendJson(res, reply.status, reply.body);
-  sendJson(res, 201, { close: await closeOn(day) });
+  const made = await closeOn(day);
+  await afterClose(made.id, { replace: true }); // a reopened day's earlier summary is replaced, once
+  sendJson(res, 201, { close: made });
 }
 
 export function register(route) {
@@ -619,6 +624,8 @@ export function register(route) {
       if (reply.body.code === 'already_closed') reply.body.close = await closeOn(day);
       return sendJson(res, reply.status, reply.body);
     }
-    sendJson(res, 201, { close: await closeOn(day) });
+    const made = await closeOn(day);
+    await afterClose(made.id);
+    sendJson(res, 201, { close: made });
   });
 }
