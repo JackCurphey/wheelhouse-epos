@@ -14,6 +14,7 @@ import { portalSignup } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedJobTypes } from './helpers/bookable.js';
 import { bookOnline, jobRow, dayMaker } from './helpers/linkActions.js';
+import { changeTable } from './helpers/table-change.js';
 
 let server;
 let owner;
@@ -43,7 +44,7 @@ before(async () => {
 
 after(async () => {
   if (owner) {
-    await pool.query(`DROP TRIGGER IF EXISTS fail_message_${owner.shop.id} ON customer_messages`);
+    await changeTable(pool, `DROP TRIGGER IF EXISTS fail_message_${owner.shop.id} ON customer_messages`);
     await pool.query(`DROP FUNCTION IF EXISTS fail_message_${owner.shop.id}()`);
     await deleteTestShop(owner.shop.id);
   }
@@ -59,7 +60,7 @@ test('accepting a request stands when its confirmation message can’t be queued
   });
 
   await pool.query(`CREATE OR REPLACE FUNCTION fail_message_${owner.shop.id}() RETURNS trigger AS $f$ BEGIN RAISE EXCEPTION 'test: this message cannot be queued'; END $f$ LANGUAGE plpgsql`);
-  await pool.query(`CREATE TRIGGER fail_message_${owner.shop.id} BEFORE INSERT ON customer_messages FOR EACH ROW WHEN (NEW.shop_id = ${owner.shop.id}) EXECUTE FUNCTION fail_message_${owner.shop.id}()`);
+  await changeTable(pool, `CREATE TRIGGER fail_message_${owner.shop.id} BEFORE INSERT ON customer_messages FOR EACH ROW WHEN (NEW.shop_id = ${owner.shop.id}) EXECUTE FUNCTION fail_message_${owner.shop.id}()`);
   const read = await staff(`/api/workshop-jobs/${booked.id}`);
   assert.equal(read.status, 200, JSON.stringify(read.body));
   const version = read.body.version;

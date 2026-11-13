@@ -19,6 +19,8 @@ import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { nameKey } from '../lib/restock.js';
+import { csvOf } from '../lib/csv.js';
+import { markPaid, owedByProvider, owedOrders, recordPayment } from '../c2w/money.js';
 import {
   GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
   nextFor, notInStock, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep,
@@ -545,6 +547,91 @@ export function register(route) {
         return { frame_id: null, held_at: null, hold_until: null };
       }, { detail, reason });
       return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // The provider's money (design 6 and 7; tasks 8.1–8.4). Taking money in and
+  // the owed lists are the Owner's (decision M6): the steps go through ownerOnly,
+  // the lists through canSeeCosts, which until roles land is the Owner too.
+  const COSTS_ONLY = { error: 'Only someone who can see costs can see what Cycle to Work providers owe', code: 'costs_only' };
+  const paymentFrom = (body, today) => {
+    const amountPence = body.amountPence;
+    if (!Number.isInteger(amountPence) || amountPence < 0 || amountPence > 100000000) throw new ValidationError('The amount received is a whole number of pence, 0 or more');
+    const receivedOn = body.receivedOn ?? today;
+    if (!isDay(receivedOn) || receivedOn > today) throw new ValidationError('Received on is a date, today or earlier');
+    return { amountPence, receivedOn, reference: optionalWords(body.reference, 'The provider’s reference', 60) };
+  };
+
+  // Mark paid (cw-mark-paid, cw-mark-paid-diff): one order.
+  route('POST', '/api/c2w/orders/:id/paid', async (req, res, params) => {
+    if (await ownerOnly(req, res, 'Only the shop’s owner can mark a Cycle to Work payment')) return;
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    const tz = await shopTimeZone();
+    await save(res, 200, async () => {
+      const payment = paymentFrom(body, shopToday(tz));
+      await markPaid(id, who, payment, { as: body.as ?? null, reason: optionalWords(body.reason, 'Why', 500), seen: body.owedPence });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Record a payment (cw-record-payment, cw-record-payment-more): one payment
+  // over the ticked bikes of one provider.
+  route('POST', '/api/c2w/providers/:id/payments', async (req, res, params) => {
+    if (await ownerOnly(req, res, 'Only the shop’s owner can record a Cycle to Work payment')) return;
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const providerId = Number(params.id);
+    const tz = await shopTimeZone();
+    await save(res, 200, async () => {
+      const payment = paymentFrom(body, shopToday(tz));
+      const ids = body.orderIds;
+      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200 || !ids.every((i) => Number.isInteger(i) && i > 0) || new Set(ids).size !== ids.length) {
+        throw new ValidationError('Tick the bikes this payment is for');
+      }
+      const result = await recordPayment(providerId, who, payment, ids, body.expectedPence);
+      const orders = [];
+      for (const i of ids) orders.push(serializeOrder(await loadOrder(i)));
+      return { ...result, orders };
+    });
+  });
+
+  // Owed by Cycle to Work providers (cw-owed), its CSV, and one provider's bikes (cw-owed-provider).
+  route('GET', '/api/c2w/owed', async (req, res) => {
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, COSTS_ONLY);
+    const tz = await shopTimeZone();
+    sendJson(res, 200, { ...owedByProvider(await owedOrders(tz)), today: shopToday(tz) });
+  });
+
+  route('GET', '/api/c2w/owed.csv', async (req, res) => {
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, COSTS_ONLY);
+    const tz = await shopTimeZone();
+    const { providers, total } = owedByProvider(await owedOrders(tz));
+    const pounds = (p) => (p / 100).toFixed(2);
+    res.writeHead(200, {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="cycle-to-work-owed-${shopToday(tz)}.csv"`,
+    });
+    res.end(csvOf([
+      ['Provider', 'Bikes', 'Owed', 'Late', 'Days late'],
+      ...providers.map((p) => [p.name, p.bikes, pounds(p.owedPence), pounds(p.latePence), p.lateDays ?? '']),
+      ['Total', total.bikes, pounds(total.owedPence), pounds(total.latePence), ''],
+    ]));
+  });
+
+  route('GET', '/api/c2w/providers/:id/owed', async (req, res, params) => {
+    if (!(await canSeeCosts(req))) return sendJson(res, 403, COSTS_ONLY);
+    const id = Number(params.id);
+    const p = Number.isInteger(id) ? await db.prepare('SELECT id, name, commission_kind, commission_value, pays_in_days FROM c2w_providers WHERE id = ?').get(id) : null;
+    if (!p) return notFound(res);
+    const tz = await shopTimeZone();
+    sendJson(res, 200, {
+      provider: { id: p.id, name: p.name, commissionKind: p.commission_kind, commissionValue: p.commission_value, paysInDays: p.pays_in_days },
+      orders: await owedOrders(tz, id),
+      today: shopToday(tz),
     });
   });
 }
