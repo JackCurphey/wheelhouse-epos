@@ -16,7 +16,7 @@ type Group = { key: string; title: string; lines: Line[] };
 export type AccountsState = {
   status: 'not_connected' | 'connected' | 'lost';
   summary: string;
-  connection: { provider: string; providerName: string; connectedByName: string; connectedAt: string } | null;
+  connection: { provider: string; providerName: string; connectedByName: string | null; connectedAt: string } | null;
   providers?: { id: string; name: string }[];
   practice?: boolean;
   accounts?: { id: string; name: string }[];
@@ -69,7 +69,7 @@ export function AccountsSoftware() {
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="rounded-full bg-[var(--wh-ok-bg)] px-2.5 py-0.5 text-size-13-5 font-semibold text-[var(--wh-status-complete-ink)]">{`Connected to ${providerName}`}</span>
-        <span className="text-size-13 text-[var(--wh-muted)]">{`by ${connectedByName} on ${longDate(connectedAt)}`}</span>
+        <span className="text-size-13 text-[var(--wh-muted)]">{connectedByName ? `by ${connectedByName} on ${longDate(connectedAt)}` : `on ${longDate(connectedAt)}`}</span>
         <span className="grow" />
         <button type="button" onClick={() => setDisconnecting(true)} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">{`Disconnect ${providerName}`}</button>
       </div>
@@ -93,7 +93,7 @@ export function AccountsSoftware() {
                   {!l.recorded ? <span className="text-size-13 font-normal text-[var(--wh-muted)]">Not recorded in Wheelhouse yet</span> : null}
                 </label>
                 <select
-                  id={id} value={l.accountId ?? ''} aria-invalid={missing ? true : undefined} disabled={change.isPending}
+                  id={id} value={l.accountId ?? ''} aria-invalid={missing ? true : undefined}
                   className={`${SELECT} ${missing ? 'border-2 border-[var(--wh-danger)]' : 'border-[var(--wh-input-border)]'}`}
                   onChange={(e) => change.mutate({ path: '/api/accounts/choices', method: 'PUT', body: { line: l.key, accountId: e.target.value === '' ? null : e.target.value } })}
                 >
@@ -112,12 +112,13 @@ export function AccountsSoftware() {
             <div><DialogTitle id="dc-title">{`Disconnect ${providerName}?`}</DialogTitle><DialogDescription>{`${shop}, every shop`}</DialogDescription></div>
           </DialogHeader>
           <DialogBody className="flex flex-col gap-2.5">
+            {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger)]">{problem}</p> : null}
             <p className="m-0 text-size-15 leading-normal">{`Days already sent stay in ${providerName}. Nothing more is sent until you connect again — the daily figures are still in “Download everything”.`}</p>
             <p className="m-0 text-sm text-[var(--wh-muted)]">Your account choices are kept in case you reconnect.</p>
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDisconnecting(false)}>Keep connected</Button>
-            <Button variant="danger" disabled={change.isPending} onClick={() => { change.mutate({ path: '/api/accounts/disconnect', body: {} }); setDisconnecting(false); }}>Disconnect</Button>
+            <Button variant="danger" disabled={change.isPending} onClick={() => { change.mutate({ path: '/api/accounts/disconnect', body: {} }, { onSuccess: () => setDisconnecting(false) }); }}>Disconnect</Button>
           </DialogFooter>
         </Dialog>
       ) : null}

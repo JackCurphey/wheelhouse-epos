@@ -80,10 +80,13 @@ test('152 runs from empty and twice, protects each shop, and allows one connecti
     await assert.rejects(conn('quickbooks'), /unique|duplicate/i, 'one connection a shop');
     await assert.rejects(client.query("UPDATE accounts_connections SET provider = 'sage'"), /check/i);
     await assert.rejects(client.query("UPDATE accounts_connections SET status = 'broken'"), /check/i);
-    const choice = (line, account) => client.query('INSERT INTO accounts_choices (shop_id, line_key, account_id, account_name) VALUES ($1, $2, $3, $4)', [shop, line, account, `[${account}]`]);
+    const choice = (line, account, provider = 'xero') => client.query('INSERT INTO accounts_choices (shop_id, provider, line_key, account_id, account_name) VALUES ($1, $2, $3, $4, $5)', [shop, provider, line, account, `[${account}]`]);
     await choice('money:cash', 'x1');
     await assert.rejects(choice('money:cash', 'x2'), /unique|duplicate/i, 'one account a line');
     await choice('money:card', 'x1');
+    await choice('money:cash', 'q1', 'quickbooks'); // the same line for the other service
+    await client.query('DELETE FROM logins WHERE id = $1', [login]);
+    assert.equal((await one('SELECT connected_by FROM accounts_connections')).connected_by, null, 'a person who goes does not hold the connection');
   } finally {
     await client.end();
   }
@@ -180,14 +183,51 @@ test('disconnecting sends nothing, shows Not connected and keeps the choices for
   assert.deepEqual([again.status, again.body.error], [409, 'Not connected']);
   assert.equal((await connect('xero')).status, 200, 'reconnecting');
   assert.equal(lines((await get()).body)['money:card'].accountId, keep, 'finds the choices again');
-  // A different service doesn't offer the same accounts: its choices start empty.
+  // A different service offers different accounts: it starts with its own choices, and Xero's are kept for coming back.
   await disconnect();
   assert.equal((await connect('quickbooks')).status, 200);
   assert.equal(lines((await get()).body)['money:card'].accountId, null);
+  assert.equal((await choose('money:card', (await get()).body.accounts[1].id)).status, 200);
+  await disconnect();
+  assert.equal((await connect('xero')).status, 200);
+  assert.equal(lines((await get()).body)['money:card'].accountId, keep, 'Xero\'s choice is still there');
 });
 
 test('a category added later is a line of its own, with no account chosen', async () => {
   await runWithShop(owner.shop.id, () => prepare("INSERT INTO product_categories (name, path) VALUES ('Clothing', 'Clothing')").run());
   const body = (await get()).body;
   assert.ok(body.groups[0].lines.some((l) => l.label === 'Clothing' && l.accountId === null));
+});
+
+test('another shop\'s choices never touch this one\'s, and a bad body is a 400', async () => {
+  const mine = lines((await get()).body);
+  const theirs = (await get(other)).body;
+  assert.equal(theirs.status, 'connected');
+  assert.equal((await choose('money:cash', theirs.accounts[0].id, other)).status, 200);
+  assert.equal(lines((await get()).body)['money:cash'].accountId, mine['money:cash'].accountId, 'unchanged by the other shop');
+  for (const [method, p] of [['POST', '/api/accounts/connect'], ['PUT', '/api/accounts/choices']]) {
+    const res = await fetch(`${server.baseUrl}${p}`, { method, headers: { cookie: owner.cookie, 'content-type': 'application/json' }, body: '{nope' });
+    assert.equal(res.status, 400, p);
+  }
+});
+
+test('a category named like one of the fixed lines is that line, and a very long name is left out, not a failure', async () => {
+  await runWithShop(owner.shop.id, () => prepare("INSERT INTO product_categories (name, path) VALUES ('Labour', 'Labour'), (?, ?)").run('x'.repeat(500), 'x'.repeat(500)));
+  const body = (await get()).body;
+  const labels = body.groups[0].lines.map((l) => l.label);
+  assert.equal(labels.filter((l) => l === 'Labour').length, 1);
+  assert.ok(!labels.some((l) => l.length > 300));
+});
+
+test('the pretend service makes no outside request', async () => {
+  const { pretend } = await import('../server/accounts/pretend.js');
+  const real = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('an outside request was made'); };
+  try {
+    await pretend.connect('xero');
+    assert.equal((await pretend.listAccounts('quickbooks')).length, 8);
+    await pretend.disconnect('xero');
+  } finally {
+    globalThis.fetch = real;
+  }
 });

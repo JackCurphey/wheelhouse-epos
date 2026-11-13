@@ -16,7 +16,9 @@ const ELSE = [
 ];
 
 export async function accountLines() {
-  const categories = [...(await onlyChoices()), OTHER_SALES];
+  // One line for each name: Labour (added by onlyChoices) and Other sales are lines of their own, so a shop's own
+  // category with the same name shares them; a key is capped to what the database holds.
+  const categories = [...new Set([...(await onlyChoices()), OTHER_SALES])].filter((name) => `sales:${name}`.length <= 400);
   return [
     { key: 'sales', title: 'Sales go to', lines: categories.map((name) => ({ key: `sales:${name}`, label: name, recorded: true })) },
     { key: 'money', title: 'Money taken goes to', lines: MONEY.map(([key, label]) => ({ key, label, recorded: true })) },
