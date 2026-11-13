@@ -338,6 +338,9 @@ export async function publish(loginId) {
 
 // The first Turn it on also publishes the website as it is (design 2).
 export async function turnOn(loginId) {
+  // Made first: making it commits on its own, which would end this transaction
+  // early. The staff banner can turn on a shop that has no row yet.
+  await getOrCreateWebsite();
   await inTransaction(async () => {
     const website = await lockWebsite();
     if (website.kind === 'shopify') throw new WebsiteError(409, 'Your website is your Shopify shop');
@@ -350,6 +353,7 @@ export async function turnOn(loginId) {
 }
 
 export async function turnOff() {
+  await getOrCreateWebsite();
   await inTransaction(async () => {
     await lockWebsite();
     await prepare('UPDATE website SET is_on = false, updated_at = now()').run();
