@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
@@ -14,12 +14,15 @@ import { RowSwitch } from './row-switch.tsx';
  * design 6; drawn as ws-pay-none, ws-pay-connected, ws-pay-tested,
  * ws-pay-failed and ws-pay-more in generator/website.mjs). Buying online, and
  * Paying online: the shop's own account with the payment provider, connected
- * on the provider's page. Only these two for now (defaults taken 12 Nov, 4);
- * the wallet switches wait (decided-while-building 2026-11-jack 56).
+ * on the provider's page. Buying online adds What the website sells, the
+ * wallet and store credit switches, Not collected and Where ready orders wait
+ * (openspec/changes/website-buy-online tasks 2.1–2.3; on-settings,
+ * on-settings-pay and on-settings-keep in generator/online.mjs).
  */
 type PayState = 'none' | 'failed' | 'connected' | 'tested' | 'more';
 type OnlineOrders = {
   buyingOnline: boolean;
+  sells: 'shelf'; walletsOn: boolean; storeCreditOn: boolean; remindDays: number; keepDays: number; shelfName: string | null;
   payments: {
     state: PayState; connected: boolean; providerName: string | null; connectedByName: string | null; connectedAt: string | null;
     testPaidAt: string | null; payoutLast4: string | null; payoutTiming: string | null; needsDetailsBy: string | null; needsWhat: string | null;
@@ -28,10 +31,11 @@ type OnlineOrders = {
 const KEY = ['online-orders-settings'];
 const useOnlineOrders = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<OnlineOrders>('/api/online-orders-settings') });
 /** Whether the website is the shop's Shopify shop (ws-pay-shopify): Shopify's checkout takes the website's payments. */
-const useShopifyWebsite = () => {
+const useWebsiteKind = () => {
   const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
-  return site.data?.kind === 'shopify';
+  return { known: site.isFetched, shopify: site.data?.kind === 'shopify' };
 };
+const useShopifyWebsite = () => useWebsiteKind().shopify;
 
 /** Where "Add the details" and the Website page's Taking payments row open. */
 export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-online`;
@@ -40,15 +44,163 @@ export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-onl
 export const providerText = (name: string | null, capital = false) => name ?? (capital ? '[Payment provider]' : '[payment provider]');
 const connectedNow = (s: PayState) => s === 'connected' || s === 'tested' || s === 'more';
 
-/** The Paying online fold's summary (website.mjs paySettings), without the wallets that aren't built (gap 57). */
+/** The Paying online fold's summary (settings-frame.mjs onlineFolds), store credit when it's on; no gift cards (question 8). */
 export function usePayingOnlineSummary(): string {
   const online = useOnlineOrders();
-  const shopify = useShopifyWebsite();
+  const { known, shopify } = useWebsiteKind();
   const p = online.data?.payments;
-  if (!p) return '';
+  if (!p || !known) return '';
   if (!connectedNow(p.state)) return 'Not connected';
   if (shopify) return `Shopify for website orders · ${providerText(p.providerName, true)} for repairs`;
-  return providerText(p.providerName, true);
+  return `${providerText(p.providerName, true)}${online.data?.storeCreditOn ? ' · store credit' : ''}`;
+}
+
+/** The summaries of the folds buying online adds (settings-frame.mjs onlineFolds). */
+export function useOnlineOrdersSummaries() {
+  const d = useOnlineOrders().data;
+  if (!d?.payments) return { sells: '', collect: '', shelf: '' };
+  return {
+    sells: 'Only what’s on the shelf',
+    collect: `Reminder after ${d.remindDays} ${d.remindDays === 1 ? 'day' : 'days'} · kept for ${d.keepDays} days`,
+    shelf: d.shelfName ?? 'Not set yet',
+  };
+}
+
+/** Saves the fields sent; the server answers with the whole settings. */
+function useSaveOnline() {
+  const queryClient = useQueryClient();
+  return async (body: Partial<Pick<OnlineOrders, 'walletsOn' | 'storeCreditOn' | 'remindDays' | 'keepDays' | 'shelfName'>>) => {
+    queryClient.setQueryData(KEY, await apiMutate<OnlineOrders>('/api/online-orders-settings', body, { method: 'PUT' }));
+    // Two saves can overlap (two switches pressed quickly); read again so an older answer arriving last can't stick.
+    void queryClient.invalidateQueries({ queryKey: KEY });
+  };
+}
+const couldntSave = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
+const hint = 'm-0 text-sm leading-normal text-[var(--wh-muted)]';
+const field = 'min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 text-base font-normal';
+type Said = { ok: boolean; text: string } | null;
+function SaidLine({ said }: { said: Said }) {
+  return said ? <p role={said.ok ? 'status' : 'alert'} className={`m-0 text-sm font-semibold ${said.ok ? '' : 'text-[var(--wh-danger-hover)]'}`}>{said.text}</p> : null;
+}
+
+/** online.mjs sellsOpen(0): only what's on the shelf until stock transfers and supplier times exist (question 10). */
+export function WebsiteSells() {
+  return (
+    <div className="flex flex-col gap-3">
+      <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
+        <legend className="pb-1 text-size-15 font-bold">Customers can buy</legend>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-[10px] border border-[var(--wh-ink)] p-3">
+          <input type="radio" name="online-sells" checked readOnly className="mt-0.5 size-5 shrink-0 accent-[var(--wh-ink)]" />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-size-15 font-semibold">Only what’s on the shelf</span>
+            <span className="text-sm text-[var(--wh-muted)]">At the shop they collect from. Ready the same day.</span>
+          </span>
+        </label>
+      </fieldset>
+      <p className={hint}>Stock is held for the customer as soon as they’ve paid, and checked again just before they pay.</p>
+    </div>
+  );
+}
+
+/** online.mjs payOpen: Apple Pay and Google Pay, and store credit, each its own switch; no Gift cards (question 8). */
+function PaySwitches() {
+  const d = useOnlineOrders().data;
+  // Not until the website's kind is known: Shopify's checkout takes a Shopify website's payments.
+  const site = useWebsiteKind();
+  const save = useSaveOnline();
+  const [said, setSaid] = useState<Said>(null);
+  if (!d || !site.known || site.shopify) return null;
+  // Each switch saves on its own; the switches stay usable (and focusable) while one saves.
+  async function turn(body: { walletsOn: boolean } | { storeCreditOn: boolean }) {
+    setSaid(null);
+    try { await save(body); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
+  }
+  return (
+    <div className="flex flex-col">
+      <RowSwitch label="Apple Pay and Google Pay" on={d.walletsOn} disabled={false} onChange={(walletsOn) => void turn({ walletsOn })} />
+      <RowSwitch label="Store credit (for signed-in customers)" on={d.storeCreditOn} disabled={false} onChange={(storeCreditOn) => void turn({ storeCreditOn })} />
+      <SaidLine said={said} />
+    </div>
+  );
+}
+
+// online.mjs collectOpen's two boxes: a whole number of days, saved on leaving the box.
+function DaysBox({ label, name, min, max }: { label: string; name: 'remindDays' | 'keepDays'; min: number; max: number }) {
+  const id = useId();
+  const d = useOnlineOrders().data;
+  const save = useSaveOnline();
+  const [typed, setTyped] = useState<string | null>(null);
+  const [said, setSaid] = useState<Said>(null);
+  const stored = d?.[name] ?? null;
+  async function leave() {
+    if (typed === null) return;
+    const n = Number(typed.trim());
+    if (!/^\d+$/.test(typed.trim()) || n < min || n > max) { setSaid({ ok: false, text: `A whole number of days, ${min} to ${max}` }); return; }
+    if (n === stored) { setTyped(null); setSaid(null); return; }
+    try {
+      await save({ [name]: n });
+      setTyped((now) => (now === typed ? null : now));
+      setSaid({ ok: true, text: 'Saved.' });
+    } catch (err) {
+      setTyped(null); // nothing saved: the box shows what is stored again, under the message
+      setSaid({ ok: false, text: couldntSave(err) });
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-size-15 font-semibold">{label}</label>
+      <span className="flex items-center gap-2.5">
+        <input id={id} inputMode="numeric" value={typed ?? (stored === null ? '' : String(stored))} disabled={!d}
+          aria-invalid={said && !said.ok ? true : undefined}
+          onChange={(e) => { setTyped(e.target.value); setSaid(null); }} onBlur={() => void leave()}
+          className={`${field} w-[70px] text-right font-mono`} />
+        <span className="text-size-15 text-[var(--wh-muted)]">days</span>
+      </span>
+      <SaidLine said={said} />
+    </div>
+  );
+}
+
+/** online.mjs collectOpen: the reminder (1–60 days) and how long orders are kept (2–90, longer than the reminder). */
+export function NotCollected() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <DaysBox label="Remind the customer after" name="remindDays" min={1} max={60} />
+        <DaysBox label="Keep orders for" name="keepDays" min={2} max={90} />
+      </div>
+      <p className={hint}>The “ready” email tells the customer we’ll keep it until that date. If it isn’t collected by then, it shows on Today. Staff then contact the customer, or cancel it — a refund the way it was paid, and the items back on sale.</p>
+    </div>
+  );
+}
+
+/** online.mjs shelfOpen: one named spot for ready orders, saved on leaving the box; empty clears it. */
+export function ReadyShelf() {
+  const id = useId();
+  const d = useOnlineOrders().data;
+  const save = useSaveOnline();
+  const [typed, setTyped] = useState<string | null>(null);
+  const [said, setSaid] = useState<Said>(null);
+  const stored = d?.shelfName ?? '';
+  async function leave() {
+    if (typed === null) return;
+    if (typed.trim() === stored) { setTyped(null); return; }
+    try {
+      await save({ shelfName: typed.trim() });
+      setTyped((now) => (now === typed ? null : now));
+      setSaid({ ok: true, text: 'Saved.' });
+    } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-size-15 font-semibold">Shelf or spot</label>
+      <input id={id} value={typed ?? stored} placeholder="[Shelf name]" maxLength={60} disabled={!d}
+        aria-invalid={said && !said.ok ? true : undefined}
+        onChange={(e) => { setTyped(e.target.value); setSaid(null); }} onBlur={() => void leave()} className={`${field} max-w-[360px]`} />
+      <SaidLine said={said} />
+      <p className={hint}>Set once. Ready orders show “Waiting at [Shelf name]” on Online orders, and the till’s hand-over says where to fetch them from.</p>
+    </div>
+  );
 }
 
 /** website.mjs `master`: Buying online, above the folds. */
@@ -154,6 +306,7 @@ export function PayingOnline() {
         <div><Button disabled={busy} onClick={connect}>{`Add the details at ${provider}`}</Button></div>
         {said}
         <Note tone="grey">{connectedOn}</Note>
+        <PaySwitches />
       </div>
     );
   }
@@ -180,6 +333,7 @@ export function PayingOnline() {
       ) : (
         <TestPayment busy={busy} declined={back === 'declined'} said={said} onTest={() => void go('/api/online-payments/test-payment')} />
       )}
+      <PaySwitches />
     </div>
   );
 }
