@@ -7,6 +7,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/staff/routes.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
 import { NewOrder } from './new-order.tsx';
+import { MarkPaidDialog } from './mark-paid-dialog.tsx';
 import {
   Badge, Box, Page, daysBetween, dayOf, linkClass, longDate, note, orderHref, orderLabel, orderedNote, plural, possessive, pounds, bikeLine, useC2wSettings, type C2wOrder,
 } from './c2w-bits.tsx';
@@ -61,7 +62,9 @@ function Status({ o, remindDays, now }: { o: C2wOrder; remindDays: number | null
   return <>{said}{o.next === 'order' ? <><br /><Badge tone="blue">Ready to order</Badge></> : null}</>;
 }
 
-function Row({ o, remindDays, now, onOrder, busy }: { o: C2wOrder; remindDays: number | null; now: string; onOrder: (o: C2wOrder) => void; busy: boolean }) {
+function Row({ o, remindDays, now, onOrder, onPaid, busy }: {
+  o: C2wOrder; remindDays: number | null; now: string; onOrder: (o: C2wOrder) => void; onPaid: ((o: C2wOrder) => void) | null; busy: boolean;
+}) {
   const late = o.stage === 'collected' && o.expectedBy !== null && o.expectedBy < now;
   const open = o.stage === 'collected' || o.stage === 'paid' || o.stage === 'certificate' || o.stage === 'ready';
   return (
@@ -81,7 +84,9 @@ function Row({ o, remindDays, now, onOrder, busy }: { o: C2wOrder; remindDays: n
         {o.next === 'order' && (o.stage === 'quote' || o.stage === 'waiting' || o.stage === 'certificate')
           ? <Button disabled={busy} aria-label={`Order ${possessive(o.customerName)} bike${o.supplier ? ` from ${o.supplier}` : ''}`} onClick={() => onOrder(o)}>{orderLabel(o)}</Button>
           : null}
-        {open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}
+        {o.stage === 'collected' && o.expectedPence !== null && onPaid
+          ? <Button aria-label={`Mark paid: ${o.customerName} · ${o.providerName}`} onClick={() => onPaid(o)}>Mark paid</Button>
+          : open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}
       </span>
     </li>
   );
@@ -100,7 +105,9 @@ function TopLine({ list, action }: { list: List; action: ReactNode }) {
     <div className="flex flex-wrap items-center justify-between gap-2.5">
       <p className="m-0 inline-flex flex-wrap items-center gap-x-3.5 gap-y-2 text-size-15">
         {items.filter(([n]) => n > 0).map(([, text, tone]) => <Badge key={text} tone={tone}>{text}</Badge>)}
-        {c.owedPence !== undefined ? <span className="inline-flex min-h-11 items-center font-semibold">{`Owed by providers ${pounds(c.owedPence)} · ${c.paymentLate} late`}</span> : null}
+        {c.owedPence !== undefined
+          ? <Link to={ROUTES['cw-owed']} className="inline-flex min-h-11 items-center font-semibold text-[var(--wh-ink)]">{`Owed by providers ${pounds(c.owedPence)} · ${c.paymentLate} late`}</Link>
+          : null}
       </p>
       {action}
     </div>
@@ -135,6 +142,7 @@ function ListBody() {
   const remindDays = useC2wSettings().data?.settings.remindDays ?? null;
   const [starting, setStarting] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [paying, setPaying] = useState<C2wOrder | null>(null);
   const saved = useSavedNote();
   const queryClient = useQueryClient();
   const reload = () => Promise.all([
@@ -169,7 +177,7 @@ function ListBody() {
     : owner ? <Link to={C2W_SETTINGS('c2w-providers')} className={buttonVariants({ variant: 'accent' })}>+ New Cycle to Work order</Link> : null;
   return (
     <Page>
-      <p className={note}>{`${dayName(l.today)} · ${shop}`}</p>
+      <p id="cw-list-day" tabIndex={-1} className={`${note} outline-none`}>{`${dayName(l.today)} · ${shop}`}</p>
       <TopLine list={l} action={start} />
       {groups.length === 0 ? (
         <Box label="cw-none">
@@ -182,10 +190,11 @@ function ListBody() {
           <h2 id={`cw-g-${g}`} className="m-0 text-size-17 font-bold">{`${title} · ${l.groups[g].length}`}</h2>
           {sub ? <p className={note}>{sub}</p> : null}
           <ul aria-labelledby={`cw-g-${g}`} className="m-0 list-none p-0">
-            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} now={l.today} onOrder={(x) => void order(x, 'order')} busy={ordering} />)}
+            {l.groups[g].map((o) => <Row key={o.id} o={o} remindDays={remindDays} now={l.today} onOrder={(x) => void order(x, 'order')} onPaid={owner ? setPaying : null} busy={ordering} />)}
           </ul>
         </Box>
       ))}
+      {paying ? <MarkPaidDialog o={paying} today={l.today} focusTo="cw-list-day" onClose={() => setPaying(null)} onSaved={(text) => saved.show({ text })} /> : null}
       {starting ? <NewOrder today={l.today} onClose={() => setStarting(false)} /> : null}
     </Page>
   );

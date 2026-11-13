@@ -320,6 +320,8 @@ test('8.3 The Owed list gives each provider its bikes, owed and late, with a tot
       ['[Customer]', '2026-08-20', '[certificate number]', 45000, 30000, '2026-08-27', 5],
       ['[Customer]', '2026-08-20', '[certificate number]', 30000, 30000, '2026-09-20', null],
     ]);
+    // Record a payment words the commission from what the certificate was for (cw-record-payment).
+    assert.deepEqual(one.body.orders.map((o) => o.certificatePence), [100000, 100000, 100000]);
 
     const csv = await fetch(`${server.baseUrl}/api/c2w/owed.csv`, { headers: { cookie: shop.cookie } });
     assert.equal(csv.status, 200);

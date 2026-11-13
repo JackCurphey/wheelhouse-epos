@@ -24,6 +24,11 @@ export const ROUTES = {
   // (openspec/changes/cycle-to-work group 4).
   'cw-order-held': '/workshop/c2w/:id',
   'cw-quote': '/workshop/c2w/:id/quote',
+  // What Cycle to Work providers owe (cw-owed), one provider's bikes owed (cw-owed-provider),
+  // and the same list opened from Reports (cw-owed-reports); task 8's owed screens.
+  'cw-owed': '/workshop/c2w/owed',
+  'cw-owed-provider': '/workshop/c2w/owed/:id',
+  'cw-owed-reports': '/workshop/reports/c2w-owed',
   customers: '/workshop/customers',
   messages: '/workshop/messages',
   diary: '/workshop/diary',
