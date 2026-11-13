@@ -261,3 +261,44 @@ test('the booking link gives the deposit and when it’s free to cancel until, i
     await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', { method: 'PUT', body: { depositOn: true } });
   }
 });
+
+// An online order's payment (website-buy-online, migration 154) shares the
+// table: a deposit is never found by an order payment's request key or id.
+let orderCodes = 0;
+async function makeOrderPayment(paymentId) {
+  orderCodes += 1;
+  await runWithShop(owner.shop.id, async () => {
+    // 'S' stays: a site's code must be one to three capital letters.
+    const site = (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())?.id
+      ?? (await prepare("INSERT INTO sites (name, code) VALUES ('[Site]', 'S') RETURNING id").get()).id;
+    const pay = await prepare('SELECT amount_pence FROM online_payments WHERE id = ?').get(paymentId);
+    const order = await prepare(
+      `INSERT INTO online_orders (site_id, name, email, total_pence, card_pence, order_code, request_key_hash)
+       VALUES (?, 'Maya Patel', 'maya@example.test', ?, ?, ?, ?) RETURNING id`
+    ).get(site, pay.amount_pence, pay.amount_pence, `[order code ${orderCodes}]`, `[order key ${orderCodes}]`);
+    await prepare("UPDATE online_payments SET purpose = 'order', online_order_id = ? WHERE id = ? RETURNING id").run(order.id, paymentId);
+  });
+}
+
+test('the same request key as an order’s payment: no deposit hold made or changed from it', async () => {
+  const requestKey = key();
+  const first = await hold({ serviceIds: [service], requestKey });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  await makeOrderPayment(first.body.paymentId);
+  const before = await payment(first.body.paymentId);
+  const again = await hold({ serviceIds: [service], requestKey });
+  assert.equal(again.status, 409, JSON.stringify(again.body));
+  assert.equal(again.body.paymentId, undefined);
+  assert.deepEqual(await payment(first.body.paymentId), before, 'the order’s payment is untouched');
+  assert.equal(await pretendStatus(first.body.ref), 'waiting');
+});
+
+test('an order’s payment id can’t be booked with as a deposit', async () => {
+  const p = await paid([service]);
+  await makeOrderPayment(p.paymentId);
+  const res = await book({ jobDate: nextDay(), serviceIds: [service], requestKey: p.requestKey, paymentId: p.paymentId });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal(res.body.code, 'deposit_needed');
+  assert.equal(await pretendStatus(p.ref), 'held', 'not taken');
+  assert.equal((await payment(p.paymentId)).job_id, null);
+});

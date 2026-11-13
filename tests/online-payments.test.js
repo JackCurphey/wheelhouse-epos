@@ -8,7 +8,8 @@ import '../server/load-env.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
+import { onlineOrderSettings } from '../server/routes/online-payments.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { staffLogin } from './helpers/till.js';
@@ -46,6 +47,8 @@ async function freshShop(t, name, on = server) {
   return { ...s, req, visit, linkTo };
 }
 const payments = async (shop) => ok(await shop.req('/api/online-orders-settings')).payments;
+const settings = async (shop) => ok(await shop.req('/api/online-orders-settings'));
+const put = (shop, body) => shop.req('/api/online-orders-settings', { method: 'PUT', body });
 const account = (shopId) => runWithShop(shopId, () => prepare('SELECT * FROM online_payment_account').get());
 
 // Connect [payment provider] → the provider's page → Finish (or Cancel) → back to Settings.
@@ -263,6 +266,7 @@ test('only the Owner sees or changes online payments and Buying online', async (
   const staff = await staffLogin(shop.shop.id);
   for (const [path, method, body] of [
     ['/api/online-orders-settings', 'GET'], ['/api/online-orders-settings', 'PUT', { buyingOnline: false }],
+    ['/api/online-orders-settings', 'PUT', { remindDays: 5 }],
     ['/api/online-payments/connect', 'POST'], ['/api/online-payments/test-payment', 'POST'],
   ]) {
     const res = await staffRequest(server.baseUrl, staff.cookie, path, { method, body });
@@ -272,6 +276,7 @@ test('only the Owner sees or changes online payments and Buying online', async (
     const res = await staffRequest(server.baseUrl, staff.cookie, path);
     assert.equal(res.status, 403, path);
   }
+  assert.equal((await settings(shop)).remindDays, 3, 'Not collected unchanged');
 });
 
 // ---------- 5.3 paymentsConnected is per shop ----------
@@ -348,6 +353,93 @@ test('connected, Buying online switches off and on; it reads off again if the co
   assert.equal(ok(await shop.req('/api/online-orders-settings', { method: 'PUT', body: { buyingOnline: true } })).buyingOnline, true);
   await connectPayments(shop.shop.id, { status: 'failed' });
   assert.equal(ok(await shop.req('/api/online-orders-settings')).buyingOnline, false);
+});
+
+// ---------- website-buy-online 1.4: the rest of the Online orders settings ----------
+
+const STARTING = { sells: 'shelf', walletsOn: true, storeCreditOn: true, remindDays: 3, keepDays: 7, shelfName: null };
+const theNewOnes = (body) => Object.fromEntries(Object.keys(STARTING).map((k) => [k, body[k]]));
+
+test('Online orders settings start at the shelf, wallets and store credit on, remind after 3 days and keep for 7, no shelf named', async (t) => {
+  const shop = await freshShop(t, '[Starting settings shop]');
+  const body = await settings(shop);
+  assert.deepEqual(theNewOnes(body), STARTING);
+  assert.equal(body.buyingOnline, false, 'beside WP-6.1’s');
+  assert.equal(body.payments.state, 'none');
+  assert.equal('nextOrderNumber' in body, false, 'the counter isn’t a setting');
+});
+
+test('reading the settings writes nothing once the shop’s row is there', async (t) => {
+  const shop = await freshShop(t, '[Read only settings shop]');
+  assert.equal((await settings(shop)).remindDays, 3, 'the first read makes the row');
+  const read = await runWithShop(shop.shop.id, async () => {
+    await dbExec('BEGIN');
+    try {
+      await dbExec('SET TRANSACTION READ ONLY');
+      return await onlineOrderSettings();
+    } finally {
+      await dbExec('ROLLBACK');
+    }
+  });
+  assert.equal(read.remind_days, 3);
+});
+
+test('PUT saves only the fields sent, without needing payments connected', async (t) => {
+  const shop = await freshShop(t, '[Saving settings shop]');
+  assert.deepEqual(theNewOnes(ok(await put(shop, { remindDays: 5 }))), { ...STARTING, remindDays: 5 });
+  assert.deepEqual(theNewOnes(ok(await put(shop, { walletsOn: false, storeCreditOn: false, shelfName: '  [Shelf name]  ' }))),
+    { ...STARTING, remindDays: 5, walletsOn: false, storeCreditOn: false, shelfName: '[Shelf name]' });
+  assert.deepEqual(theNewOnes(ok(await put(shop, {}))), { ...STARTING, remindDays: 5, walletsOn: false, storeCreditOn: false, shelfName: '[Shelf name]' });
+  assert.equal(ok(await put(shop, { sells: 'shelf', buyingOnline: false, keepDays: 90, remindDays: 60 })).keepDays, 90);
+  // Emptying the shelf's name goes back to none.
+  assert.equal(ok(await put(shop, { shelfName: '   ' })).shelfName, null);
+  assert.deepEqual(theNewOnes(await settings(shop)), { ...STARTING, remindDays: 60, keepDays: 90, walletsOn: false, storeCreditOn: false });
+  assert.equal((await settings(shop)).buyingOnline, false);
+});
+
+test('connected, saving a setting leaves Buying online as it was', async (t) => {
+  const shop = await freshShop(t, '[Buying stays shop]');
+  await connectThrough(shop, 'Finish');
+  assert.equal(ok(await put(shop, { keepDays: 10 })).buyingOnline, true);
+  // Switching it on while not connected still refuses everything sent with it.
+  await connectPayments(shop.shop.id, { status: 'failed' });
+  assert.equal((await put(shop, { buyingOnline: true, keepDays: 20 })).status, 409);
+  assert.equal((await settings(shop)).keepDays, 10);
+});
+
+test('reminder 1–60 days, keeping 2–90 and longer than the reminder; a refusal saves nothing', async (t) => {
+  const shop = await freshShop(t, '[Refused settings shop]');
+  const refused = async (body, words) => {
+    const res = await put(shop, body);
+    assert.equal(res.status, 400, `${JSON.stringify(body)}: ${JSON.stringify(res.body)}`);
+    if (words) assert.equal(res.body.error, words, JSON.stringify(body));
+  };
+  for (const remindDays of [0, 61, 2.5, '3', null]) await refused({ remindDays }, 'Choose from 1 to 60 days.');
+  for (const keepDays of [1, 91, '7', null]) await refused({ keepDays }, 'Choose from 2 to 90 days.');
+  await refused({ keepDays: 3 }, 'Keep orders for more days than the reminder.');
+  await refused({ remindDays: 7 }, 'Keep orders for more days than the reminder.');
+  await refused({ remindDays: 10, keepDays: 10 }, 'Keep orders for more days than the reminder.');
+  await refused({ sells: 'anywhere' });
+  await refused({ walletsOn: 'yes' });
+  await refused({ storeCreditOn: 1 });
+  await refused({ shelfName: 'x'.repeat(61) }, 'The shelf name is up to 60 characters');
+  await refused({ shelfName: 4 });
+  await refused({ walletsOn: false, shelfName: '[Shelf name]', keepDays: 2 });
+  assert.deepEqual(theNewOnes(await settings(shop)), STARTING, 'nothing saved');
+  assert.equal(ok(await put(shop, { remindDays: 6, keepDays: 8 })).keepDays, 8, 'both at once, checked together');
+  assert.equal(ok(await put(shop, { shelfName: 'x'.repeat(60) })).shelfName, 'x'.repeat(60));
+});
+
+test('two saves at once are checked one after the other, so they never break the reminder and keeping rule together', async (t) => {
+  const shop = await freshShop(t, '[Two saves shop]');
+  for (let round = 0; round < 5; round += 1) {
+    ok(await put(shop, { remindDays: 3, keepDays: 7 }));
+    // Each is fine alone against 3 and 7; together, 6 and 5 would break the rule.
+    const [a, b] = await Promise.all([put(shop, { remindDays: 6 }), put(shop, { keepDays: 5 })]);
+    assert.deepEqual([a.status, b.status].sort(), [200, 400], `round ${round}: ${JSON.stringify([a.body, b.body])}`);
+    const now = await settings(shop);
+    assert.ok(now.keepDays > now.remindDays);
+  }
 });
 
 test('the Website page’s Taking payments row reads the same state', async (t) => {

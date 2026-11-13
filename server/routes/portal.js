@@ -1748,7 +1748,7 @@ export function register(route) {
         if (replay) return replay;
       }
       if (deposit.pence !== null) {
-        const pay = await db.prepare('SELECT * FROM online_payments WHERE id = ? FOR UPDATE').get(body.paymentId);
+        const pay = await db.prepare("SELECT * FROM online_payments WHERE id = ? AND purpose = 'deposit' FOR UPDATE").get(body.paymentId);
         // This request's twin, sent at once on another day, booked while this one
         // waited for the payment: answer the booking made (review).
         if (pay?.job_id && pay.request_key_hash === requestKey.keyHash) {
