@@ -30,7 +30,7 @@ import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
 export { serializeWorkshopService } from './routes/workshop-settings.js';
-import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
+import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo } from './storefront.js';
 import { hashLinkCode } from './booking-link.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import {
@@ -249,7 +249,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
 // Deliberately NOT registered via route() into the shared routes table -
 // every route reached that way requires a signed-in staff session (see the
 // dispatcher below), but these images (product photos, shop logo, hero
-// image) need to be viewable by anonymous public-storefront visitors whose
+// image) need to be viewable by anonymous website visitors whose
 // <img> tags carry no session cookie at all. It's served from its own
 // unauthenticated branch in the dispatcher instead. Safe to leave
 // unauthenticated: the storage key is a randomBytes(24) hex token (192 bits
@@ -274,8 +274,9 @@ for (const area of ROUTE_AREAS) area.register(route);
 
 async function serveStatic(req, res, pathname, baseDir) {
   let filePath = path.join(baseDir, pathname === '/' ? 'index.html' : pathname);
-  // Prevent path traversal outside the given static directory.
-  if (!filePath.startsWith(baseDir)) {
+  // Prevent path traversal outside the given static directory. With the
+  // separator, so public-portal/ beside public/ doesn't pass (review, 13 Nov).
+  if (!filePath.startsWith(baseDir + path.sep)) {
     return notFound(res);
   }
   if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
@@ -400,9 +401,6 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   if (pathname === '/api/storefront/info' && req.method === 'GET') {
     return sendJson(res, 200, await getStorefrontInfo(shop));
   }
-  if (pathname === '/api/storefront/products' && req.method === 'GET') {
-    return sendJson(res, 200, await listStorefrontProducts());
-  }
   // On a subdomain-hosted website (<slug>.wheelhouseepos.com),
   // parseStorefrontSlugCandidate matches every path on that host, not just
   // storefront-specific ones - so requests for uploaded images and the
@@ -423,6 +421,9 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     if (bookSlug && bookSlug !== shop.slug) return notFound(res, 'Storefront not found');
     return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
+  // An address under /api/ the website doesn't have is not a page: the old
+  // website's product list included (openspec/changes/website-browse, task 9.1).
+  if (pathname.startsWith('/api/')) return notFound(res);
   const storePrefix = `/store/${shop.slug}`;
   // The website app's router reads its addresses under /store/<slug>/, so
   // the bare store path goes to the slash form, keeping the query.
@@ -553,6 +554,9 @@ async function dispatch(req, res) {
   if (storefrontSlug) {
     const sitePathname = sitePath(pathname, storefrontSlug);
     const siteApi = isSiteApi(sitePathname);
+    // No answer of the website's own may be kept by anything in between: not
+    // the 429, nor "isn't available" once the shop turns it on (review, 13 Nov).
+    if (siteApi) res.setHeader('Cache-Control', 'no-store');
     // The website's own reads turn a visitor away past the limit before any
     // database work (openspec/changes/website-browse, design 2).
     if (siteApi && siteRateLimited(req, res, sitePathname)) return;
@@ -662,7 +666,7 @@ async function dispatch(req, res) {
 
   // Deliberately handled here, before the generic /api/ branch below would
   // otherwise swallow it and demand a staff session - these images need to
-  // be fetchable by anonymous public-storefront visitors (see
+  // be fetchable by anonymous website visitors (see
   // serveUploadedImage's comment for why that's safe).
   if (pathname.startsWith('/api/uploaded-images/')) {
     try {

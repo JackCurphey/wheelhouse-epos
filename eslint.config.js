@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 
 /**
  * Flat config. Scope is the NEW React source tree only - server/ and the
- * existing vanilla-JS frontends (public/, public-portal/, public-storefront/)
+ * existing vanilla-JS frontends (public/, public-portal/)
  * stay plain JavaScript and are deliberately not linted here.
  */
 
@@ -71,7 +71,6 @@ export default tseslint.config(
       '.test-build/**',
       'public-demo/**',
       'public-portal/**',
-      'public-storefront/**',
       'server/**',
       'tests/**',
       'docker/**',
