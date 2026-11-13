@@ -96,6 +96,10 @@ test('the Cycle to Work previews fill the drawing’s placeholders', async () =>
   assert.equal(await preview('c2w_ready'), 'Hi Maya, your Cycle to Work certificate has reached us and [Bike] · [Size] is ready to collect. Quote [quote number]. See your Cycle to Work bike: [link]');
   assert.equal(await preview('c2w_certificate_less'), 'Hi Maya, your certificate for £[£] has reached us. You pay £[£] when you collect. See your Cycle to Work bike: [link]');
   assert.equal(await preview('c2w_hold_ending'), 'Hi Maya, your hold on [Bike] · [Size] ends on [date]. Quote [quote number]. See your Cycle to Work bike: [link]');
+  assert.equal(await preview('c2w_released'), 'Hi Maya, [Bike] · [Size] is no longer put aside. We’ll still get you one when your certificate comes. See your Cycle to Work bike: [link]');
+  assert.equal(await preview('c2w_cancelled'), 'Hi Maya, your Cycle to Work order, quote [quote number], is cancelled. Questions? Call [shop phone].');
+  assert.equal(await preview('c2w_cancelled_kept'), 'Hi Maya, your Cycle to Work order, quote [quote number], is cancelled. Your £[£] deposit is kept, as your quote said, because the bike was ordered in for you. Questions? Call [shop phone].');
+  assert.equal(await preview('c2w_cancelled_refunded'), 'Hi Maya, your Cycle to Work order, quote [quote number], is cancelled. Your £[£] deposit is being refunded, the way you paid it. Questions? Call [shop phone].');
 });
 
 test('a key that only exists on every object is no message', async () => {

@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { sendJson, notFound, badRequest, readRawBody, ValidationError } from './lib/http.js';
+import { sendJson, notFound, badRequest, readRawBody, ValidationError, parseCookies } from './lib/http.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import { readBodyFirst, readGates } from './lib/read-body-first.js';
 import {
@@ -23,7 +23,9 @@ import {
 } from './lib/sales.js';
 // Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
 export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
-import { currentSession, rememberSession, rememberCustomerSession } from './lib/session.js';
+import { currentSession, signedInSession, rememberSession, rememberCustomerSession } from './lib/session.js';
+import { SESSION_COOKIE } from './auth.js';
+import { SITE_OFF, SITE_FAILED, sitePath, isSiteApi, siteRateLimited, handleSiteRequest } from './routes/site.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
@@ -539,16 +541,42 @@ async function dispatch(req, res) {
     return sendJson(res, 503, withCommit({ status: 'error', error: 'Database unreachable' }));
   }
 
-  if (parseStorefrontSlugCandidate(req, url)) {
-    const storefrontShop = await resolveStorefrontShop(req, url);
-    if (!storefrontShop) {
-      return notFound(res, 'Storefront not found');
-    }
+  const storefrontSlug = parseStorefrontSlugCandidate(req, url);
+  if (storefrontSlug) {
+    const sitePathname = sitePath(pathname, storefrontSlug);
+    const siteApi = isSiteApi(sitePathname);
+    // The website's own reads turn a visitor away past the limit before any
+    // database work (openspec/changes/website-browse, design 2).
+    if (siteApi && siteRateLimited(req, res, sitePathname)) return;
+    // The shop's own staff see a switched-off website at /store/<slug>/ only,
+    // where "View website" goes; on the shop's own address they see what
+    // customers see (Jack's answer 4, 12 Nov). Looked up before runWithShop
+    // takes this request's connection, and only when there is a staff cookie.
+    // The whole branch is in one try/catch, the session lookup and the shop
+    // lookup included: a failed read of the website's own answers says
+    // "Something went wrong — try again" (design 2).
     try {
+      let staff = null;
+      const atStorePath = pathname === `/store/${storefrontSlug}` || pathname.startsWith(`/store/${storefrontSlug}/`);
+      if (atStorePath && parseCookies(req)[SESSION_COOKIE]) {
+        staff = await signedInSession(req);
+        rememberSession(req, staff);
+      }
+      const storefrontShop = await resolveStorefrontShop(req, url, staff?.shop.id);
+      if (!storefrontShop) {
+        return notFound(res, siteApi ? SITE_OFF : 'Storefront not found');
+      }
+      if (siteApi) {
+        const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff));
+        if (!answered) notFound(res, 'Unknown website route');
+        return;
+      }
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
     } catch (err) {
       console.error(err);
-      sendJson(res, 500, { error: 'Internal server error' });
+      if (res.headersSent) return;
+      if (siteApi) sendJson(res, 503, { error: SITE_FAILED });
+      else sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
   }
