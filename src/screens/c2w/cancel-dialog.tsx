@@ -79,6 +79,7 @@ export function CancelDialog({ o, events, shop, onClose }: { o: C2wOrder; events
         queryClient.invalidateQueries({ queryKey: ['c2w-count'] }),
       ]);
       onClose();
+      setTimeout(() => document.getElementById('cw-cancelled')?.focus(), 0);
     } catch (err) {
       setProblem(canSay(err) ? err.message : SAVE_FAILED);
       setBusy(false);
@@ -95,7 +96,7 @@ export function CancelDialog({ o, events, shop, onClose }: { o: C2wOrder; events
     </label>
   );
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }} aria-labelledby="cx-title" className="md:max-w-[560px]">
+    <Dialog open onOpenChange={(v) => { if (!v && !busy) onClose(); }} onCancel={(e) => { if (busy) e.preventDefault(); }} aria-labelledby="cx-title" className="md:max-w-[560px]">
       <DialogHeader>
         <DialogTitle id="cx-title">{`${name} isn’t going ahead?`}</DialogTitle>
         <p className="m-0 text-sm text-[var(--wh-muted)]">{`Quote ${o.quoteRef} · ${o.bike}`}</p>

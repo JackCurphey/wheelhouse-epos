@@ -48,7 +48,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-/** `on` answers a POST to /api/c2w/orders/9<end> with [status, body]; it may change `state`, which the page then reloads. */
+/** `on` answers a POST to /api/c2w/orders/9<end> with [status, body] (or a promise of it); it may change `state`, which the page then reloads. */
 async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
   calls = [];
   state = { order: theOrder, events };
@@ -65,7 +65,7 @@ async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
     if (p === '/api/products/21') return reply(200, BIKE);
     if (method === 'POST' && p.startsWith('/api/c2w/orders/9/')) {
       const end = p.slice('/api/c2w/orders/9'.length);
-      if (on[end]) { const [status, b] = on[end](body); return reply(status, b); }
+      if (on[end]) { const [status, b] = await on[end](body); return reply(status, b); }
       return reply(404, { error: 'Not found' });
     }
     if (p === '/api/c2w/orders/9') return reply(200, { order: { ...state.order, events: state.events }, today: TODAY });
@@ -169,4 +169,45 @@ test('cw-cancel-ordered: Send it back isn’t built yet; the server says so and 
   assert.equal((await box.findByRole('alert')).textContent, said);
   assert.deepEqual(posts('/cancel').map((c) => c.body), [{ tell: true, bike: 'return' }]);
   assert.ok(ui.getByRole('dialog', { name: 'Maya isn’t going ahead?' }));
+});
+
+test('cw-cancel: after cancelling, focus moves to “This order is cancelled.” (More… has gone)', async () => {
+  const { ui, within, fireEvent } = await open({ on: { '/cancel': cancelled } });
+  const box = within(await openCancel(ui, fireEvent));
+  fireEvent.click(box.getByRole('button', { name: 'Cancel the order' }));
+  const said = await ui.findByText('This order is cancelled.');
+  await new Promise((r) => setTimeout(r, 20));
+  assert.ok(document.activeElement === said, `focus is on ${document.activeElement?.tagName}`);
+});
+
+test('cw-cancel: while the cancel is being sent, Escape and the backdrop don’t close the popup, and a second press sends nothing', async () => {
+  let answer;
+  const { ui, fireEvent, within } = await open({ on: { '/cancel': (b) => new Promise((r) => { answer = () => r(cancelled(b)); }) } });
+  const dialog = await openCancel(ui, fireEvent);
+  const go = within(dialog).getByRole('button', { name: 'Cancel the order' });
+  fireEvent.click(go);
+  fireEvent.click(go);
+  // The browser fires "cancel" on Escape, and closes the dialog unless it's prevented.
+  const esc = new window.Event('cancel', { cancelable: true });
+  dialog.dispatchEvent(esc);
+  if (!esc.defaultPrevented) dialog.close();
+  fireEvent.mouseDown(dialog);
+  assert.ok(ui.queryByRole('dialog', { name: 'Maya isn’t going ahead?' }) !== null, 'the popup stays while sending');
+  answer();
+  await ui.findByText(para('This order is cancelled.'));
+  assert.equal(posts('/cancel').length, 1);
+});
+
+test('cw-cancel: when Maya couldn’t be told, the history line says so', async () => {
+  const notTold = (why) => (b) => { const r = cancelled(b); state.events.at(-1).detail.notTold = why; return r; };
+  const { ui, within, fireEvent } = await open({ on: { '/cancel': notTold('no_phone') } });
+  const box = within(await openCancel(ui, fireEvent));
+  fireEvent.click(box.getByRole('button', { name: 'Cancel the order' }));
+  assert.ok(await ui.findByText('cancelled the order · Maya wasn’t told: the shop has no phone number in Settings'));
+});
+
+test('cw-cancel: More… isn’t there once the bike is collected', async () => {
+  const { ui } = await open({ theOrder: order({ stage: 'collected', held: false, holdUntil: null, collectedAt: `${day(4)}T10:00:00.000Z`, next: null }) });
+  await ui.findAllByText('Maya Patel', { exact: false });
+  assert.ok(ui.queryByRole('button', { name: 'More for Maya Patel’s order' }) === null);
 });

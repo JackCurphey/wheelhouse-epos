@@ -64,7 +64,7 @@ function NextStep({ o, rule, remindDays, now, act }: { o: Full; rule: string | u
   const ordering = <p className={note}>Ordering creates the supplier order in Deliveries and orders.</p>;
   const trigger = rule === 'applied' ? 'once the customer has applied' : 'once the certificate arrives';
   if (o.stage === 'cancelled') {
-    return <Box label="cw-next"><Msg><strong>This order is cancelled.</strong></Msg></Box>;
+    return <Box label="cw-next"><Msg><strong id="cw-cancelled" tabIndex={-1}>This order is cancelled.</strong></Msg></Box>;
   }
   if (o.stage === 'ready') {
     // Hand over comes with pull request 7 (logged).
@@ -178,7 +178,7 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
     else if (e.kind === 'order_undone') text = 'undid the order from the supplier';
     // Not drawn (logged): Undo of Mark ready says what it did.
     else if (e.kind === 'ready_undone') text = 'undid ready to collect';
-    else if (e.kind === 'cancelled') text = ['cancelled the order', e.detail.bike === 'keep' ? 'kept the bike as shop stock' : null, e.reason].filter(Boolean).join(' · ');
+    else if (e.kind === 'cancelled') text = ['cancelled the order', e.detail.bike === 'keep' ? 'kept the bike as shop stock' : null, e.detail.notTold ? `${firstName(o.customerName)} wasn’t told: ${e.detail.notTold === 'no_phone' ? 'the shop has no phone number in Settings' : 'the message couldn’t be sent'}` : null, e.reason].filter(Boolean).join(' · ');
     else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
     if (!text) return;
     const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
