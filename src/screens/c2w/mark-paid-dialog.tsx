@@ -27,15 +27,9 @@ export function MarkPaidDialog({ o, today, closing = false, onClose, onSaved }: 
   // What's owed is fixed when the popup opens, so a reload can't change what the
   // owner saw; it catches up only when the server says it changed (owed_changed).
   const [owed, setOwed] = useState(() => owedOf(o));
-  const [stale, setStale] = useState(false);
+  // Someone else marked it paid or closed it meanwhile: nothing more to save here.
+  const [gone, setGone] = useState(false);
   const [amount, setAmount] = useState((owed / 100).toFixed(2));
-  const live = owedOf(o);
-  if (stale && live !== owed) {
-    // Adjusting state while rendering, as React advises over an effect.
-    setOwed(live);
-    setAmount((live / 100).toFixed(2));
-    setStale(false);
-  }
   const [on, setOn] = useState(today);
   const [reference, setReference] = useState('');
   const [why, setWhy] = useState('');
@@ -66,8 +60,13 @@ export function MarkPaidDialog({ o, today, closing = false, onClose, onSaved }: 
       onSaved(as === 'part' ? 'Saved as part paid.' : as === 'close' ? 'Closed with a reason.' : 'Marked paid.');
     } catch (err) {
       if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'owed_changed') {
-        setStale(true);
-        void queryClient.invalidateQueries({ queryKey: ['c2w-order', o.id] });
+        // The amount typed stays: it's what the remittance says came.
+        await queryClient.invalidateQueries({ queryKey: ['c2w-order', o.id] });
+        const fresh = queryClient.getQueryData<{ order: C2wOrder }>(['c2w-order', o.id])?.order;
+        if (fresh) {
+          setOwed(owedOf(fresh));
+          if (fresh.stage !== 'collected') setGone(true);
+        }
       }
       setProblem(canSay(err) ? err.message : SAVE_FAILED);
       setBusy(false);
@@ -111,7 +110,7 @@ export function MarkPaidDialog({ o, today, closing = false, onClose, onSaved }: 
         </DialogBody>
       )}
       <DialogFooter className="flex flex-wrap justify-end gap-2.5">
-        {asking ? (
+        {gone ? <Button variant="ghost" onClick={onClose}>Cancel</Button> : asking ? (
           <>
             {closing ? <Button variant="ghost" disabled={busy} onClick={onClose}>Cancel</Button>
               : <Button variant="ghost" disabled={busy} onClick={() => { setProblem(null); setAsking(false); toFocus('mp-amount'); }}>Back</Button>}

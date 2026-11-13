@@ -94,7 +94,9 @@ function MoneyStep({ o, money }: { o: Full; money: Money }) {
   }
   // The provider's rate, only while it still gives the order's own figures (logged).
   const kept = money.provider && o.certificatePence !== null && keptPence(money.provider, o.certificatePence) === o.certificatePence - expected ? commission(money.provider) : null;
-  const less = o.certificatePence === null ? '' : ` — the certificate ${pounds(o.certificatePence)} less ${kept ?? pounds(o.certificatePence - expected)} commission.`;
+  // Only someone who can see costs is sent the provider's commission (decision H3), so it's shown only to them.
+  const seesCosts = money.provider?.commissionKind !== undefined;
+  const less = o.certificatePence === null || !seesCosts ? '' : ` — the certificate ${pounds(o.certificatePence)} less ${kept ?? pounds(o.certificatePence - expected)} commission.`;
   return (
     <Box label="cw-next">
       {head('Next: the provider’s payment')}

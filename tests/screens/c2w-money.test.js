@@ -50,7 +50,7 @@ afterEach(async () => {
 });
 
 /** `paid` answers POST /api/c2w/orders/9/paid with [status, body] (or a promise of it); it may change `state`, which the page then reloads. */
-async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, paid, settings = SETTINGS } = {}) {
+async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, paid, settings = SETTINGS, providers = [PROVIDER] } = {}) {
   calls = [];
   state = { order: theOrder, events };
   globalThis.fetch = async (url, init = {}) => {
@@ -62,7 +62,7 @@ async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, pai
     if (p === '/api/auth/me') return reply(200, user);
     if (p === '/api/c2w/count') return reply(200, { count: 1 });
     if (p === '/api/c2w/settings') return reply(200, { settings });
-    if (p === '/api/c2w/providers') return reply(200, { providers: [PROVIDER] });
+    if (p === '/api/c2w/providers') return reply(200, { providers });
     if (p === '/api/products/21') return reply(200, BIKE);
     if (method === 'POST' && p === '/api/c2w/orders/9/paid' && paid) { const [status, b] = await paid(body); return reply(status, b); }
     if (method === 'POST') return reply(404, { error: 'Not found' });
@@ -115,10 +115,13 @@ test('cw-order-owed: an owner sees what the provider is expected to pay, by when
   assert.ok(ui.queryByRole('button', { name: 'More for Maya Patel’s order' }) === null);
 });
 
-test('cw-order-owed: someone who isn’t the owner sees what’s expected but no Mark paid', async () => {
-  const { ui, within } = await open({ user: JO });
+test('cw-order-owed: someone who can’t see costs sees what’s expected but not the commission, and no Mark paid', async () => {
+  // The server leaves the commission off the provider for them (c2w-settings serializeProvider); decision H3.
+  const { commissionKind, commissionValue, ...noCosts } = PROVIDER;
+  const { ui, within } = await open({ user: JO, providers: [noCosts] });
   const next = within(await ui.findByRole('region', { name: 'Next: the provider’s payment' }));
-  assert.ok(next.getByText(para(`Expected £760.00 from [Provider] by ${long(day(30))} — the certificate £800.00 less 5% commission.`)));
+  assert.ok(next.getByText(para(`Expected £760.00 from [Provider] by ${long(day(30))}.`)));
+  assert.ok(next.queryByText(/commission/) === null);
   assert.ok(next.queryByRole('button', { name: 'Mark paid' }) === null);
 });
 
@@ -346,7 +349,7 @@ test('cw-mark-paid: what’s owed is fixed while the popup is open, even if the 
   assert.deepEqual(posts().map((c) => c.body.owedPence), [76000]);
 });
 
-test('cw-mark-paid: when the server says what’s owed changed, the popup catches up and the next try uses the new figure', async () => {
+test('cw-mark-paid: when the server says what’s owed changed, the popup catches up, keeps what was typed, and the next try uses the new figure', async () => {
   let first = true;
   const { ui, within, fireEvent } = await open({
     paid: (body) => {
@@ -361,7 +364,10 @@ test('cw-mark-paid: when the server says what’s owed changed, the popup catche
   await box.findByRole('alert');
   await ui.findByRole('region', { name: 'Next: the rest of the payment' });
   await new Promise((r) => setTimeout(r, 10));
-  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '60.00');
+  // What came is from the remittance, so it stays; the difference is worked out against the new figure.
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '760.00');
+  assert.equal(box.getByRole('status').textContent, '£700.00 more than expected. The extra £700.00 is noted.');
+  typeAmount(box, fireEvent, '60.00');
   fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
   await ui.findByRole('region', { name: 'Paid' });
   assert.deepEqual(posts().map((c) => c.body.owedPence), [76000, 6000]);
@@ -373,4 +379,42 @@ test('cw-mark-paid: if more has come than is now expected, the popup starts at n
   const { ui, within, fireEvent } = await open({ theOrder: order({ paidPence: 80000 }), events: [QUOTE_EV, PART_EV] });
   const box = within(await openMarkPaid(ui, fireEvent, 'Mark the rest paid'));
   assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '0.00');
+});
+
+test('cw-mark-paid: a part payment refused because someone else saved one keeps the amount typed, still short', async () => {
+  let first = true;
+  const { ui, within, fireEvent } = await open({
+    paid: (body) => {
+      if (!first) return answer(body);
+      first = false;
+      step('part_paid', { amountPence: 10000, receivedOn: TODAY });
+      return [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }];
+    },
+  });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  typeAmount(box, fireEvent, '300.00');
+  fireEvent.click(box.getByRole('button', { name: 'Save as part paid' }));
+  await box.findByRole('alert');
+  await ui.findByRole('region', { name: 'Next: the rest of the payment' });
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '300.00');
+  assert.ok(box.getByText('£360.00 less than expected.'));
+  assert.ok(box.queryByRole('button', { name: 'Mark paid' }) === null);
+  assert.ok(box.getByRole('button', { name: 'Save as part paid' }));
+});
+
+test('cw-mark-paid: if someone else marked it paid meanwhile, the popup offers nothing more to save', async () => {
+  const { ui, within, fireEvent } = await open({
+    paid: () => {
+      step('paid', { amountPence: 76000, receivedOn: TODAY });
+      return [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }];
+    },
+  });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
+  await box.findByRole('alert');
+  await ui.findByRole('region', { name: 'Paid' });
+  await new Promise((r) => setTimeout(r, 10));
+  for (const name of ['Mark paid', 'Save as part paid', 'Close with a reason…', 'Close it']) assert.ok(box.queryByRole('button', { name }) === null, name);
+  assert.ok(box.getByRole('button', { name: 'Cancel' }));
 });
