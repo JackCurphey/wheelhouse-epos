@@ -25,7 +25,14 @@ const SHOWS = {
   // As server/website.js counts them: a price of exactly 0 (one below zero is neither).
   'no-price': (p) => Number(p.price_pence) === 0,
 };
-function showsOf(query) {
+// Showing products' See them (website-buy-online): products on sale set
+// differently from their category's Show on website switch, as the fold counts them.
+const DIFFERS = 'online-differs';
+async function showsOf(query) {
+  if (query.get('show') === DIFFERS) {
+    const shown = new Map((await db.prepare('SELECT path, show_online FROM product_categories').all()).map((c) => [c.path, c.show_online]));
+    return Object.assign((p) => Number(p.active) === 1 && priced(p) && shown.has(p.category) && shown.get(p.category) !== p.show_online, { on: true });
+  }
   const which = SHOWS[query.get('show')];
   if (!which) return Object.assign(() => true, { on: false });
   const online = query.get('online') === '1';
@@ -150,7 +157,7 @@ export function register(route) {
     const search = String(query.get('search') ?? '').trim();
     const words = await conditionsOf(search.split(/\s+/).filter(Boolean));
     const kept = await filtersOf(query);
-    const shows = showsOf(query);
+    const shows = await showsOf(query);
     const groups = new Map((await db.prepare('SELECT id, name, category FROM product_groups').all()).map((g) => [g.id, g]));
     const products = await db.prepare(`SELECT * FROM products ${all ? '' : 'WHERE active = 1'} ORDER BY category, name, id`).all();
     const singles = new Map();

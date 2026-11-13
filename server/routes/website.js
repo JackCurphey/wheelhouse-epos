@@ -14,6 +14,7 @@ import { currentSession } from '../lib/session.js';
 import {
   WebsiteError, discard, history, historyVersion, ownerNames, publish, restore, saveColour, saveLogo, savePart, saveTracking, setUp, savePartPhoto, turnOff, turnOn, websiteInUse, websiteState,
 } from '../website.js';
+import { setCategoryShown, showing, startAgain } from '../website-showing.js';
 
 // Public-storefront on/off switch plus its branding fields (tagline,
 // description, logo/hero images, theme preset) - same singleton-per-shop,
@@ -73,6 +74,20 @@ function registerWebsite(route) {
   route('POST', '/api/website/set-up', async (req, res) => {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
     await answer(res, async () => setUp(await readJsonBody(req), await loginId(req)));
+  });
+  // Settings › Online orders › Showing products: each category's switch, and
+  // Change, asking set-up step 3's question again (website-buy-online design 15).
+  route('GET', '/api/website/showing', async (req, res) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, showing);
+  });
+  route('PUT', '/api/website/categories/:id', async (req, res, params) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, async () => setCategoryShown(params.id, await readJsonBody(req)));
+  });
+  route('POST', '/api/website/start-with', async (req, res) => {
+    if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
+    await answer(res, async () => startAgain(await readJsonBody(req)));
   });
   route('PUT', '/api/website/colour', async (req, res) => {
     if (await ownerOnly(req, res, WEBSITE_REFUSED)) return;
