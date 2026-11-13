@@ -428,6 +428,7 @@ GET /api/c2w/count
 POST /api/c2w/orders
 GET /api/c2w/orders/:id
 GET /api/c2w/orders/:id/quote
+POST /api/c2w/orders/:id/hand-over/due
 POST /api/c2w/orders/:id/email-quote
 POST /api/c2w/orders/:id/hold-longer
 POST /api/c2w/orders/:id/release

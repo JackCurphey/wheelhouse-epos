@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { markSaleOpen, useHoldScreen } from '@/lib/screen-clear.ts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { Banknote } from 'lucide-react';
 import { useSession } from '@/lib/auth/use-session.ts';
 import { ROUTES } from '@/staff/routes.ts';
@@ -18,7 +18,8 @@ import { PinCheckin, ServingButton } from './pin-checkin.tsx';
 import { WorkingPills } from './workshop-computer.tsx';
 import { useTillCheckin, type ThisTillName } from '@/lib/till-checkin.ts';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
-import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
+import { asSaleItem, lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
+import { possessive, type C2wOrder } from '@/screens/c2w/c2w-bits.tsx';
 
 /**
  * The till (journey 11, piece 1; drawn by
@@ -39,6 +40,11 @@ let nextKey = 1;
 export function TillPage() {
   const [params, setParams] = useSearchParams();
   const jobId = Number(params.get('job')) || null;
+  // `?c2w=` opens a Cycle to Work order to hand over (c2w.mjs handOver), with
+  // the provider's checks ticked on the order page (openspec/changes/cycle-to-work task 7).
+  const c2wId = Number(params.get('c2w')) || null;
+  const location = useLocation();
+  const c2wChecks = (location.state as { c2wChecks?: string[] } | null)?.c2wChecks ?? [];
   const checkin = useTillCheckin();
   // A sale with something in it, or its pay box open, is never taken away:
   // not by a failed re-check, nor by the check-in ending (review, 28 Oct, item 1).
@@ -58,7 +64,9 @@ export function TillPage() {
     <>
       {serving ? <ServingButton serving={serving} givePin={givePin} lead={name} /> : name ? <div className="mb-3.5">{name}</div> : null}
       <CloseTheDayEntry />
-      {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} onOpenChange={setSaleOpen} /> : <SaleTill onOpenChange={setSaleOpen} />}
+      {jobId ? <JobTill key={jobId} jobId={jobId} onDone={() => setParams({})} onOpenChange={setSaleOpen} />
+        : c2wId ? <SaleTill key={`c2w-${c2wId}`} onOpenChange={setSaleOpen} c2w={{ id: c2wId, checks: c2wChecks, onDone: () => setParams({}) }} />
+        : <SaleTill key="sale" onOpenChange={setSaleOpen} />}
       {serving ? <FloatCheck /> : null}
     </>
   );
@@ -108,7 +116,31 @@ function useSaleOpen(open: boolean, onOpenChange: (open: boolean) => void) {
   useEffect(() => () => { onOpenChange(false); markSaleOpen(false); }, [onOpenChange]);
 }
 
-function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
+type C2wHandOver = { id: number; checks: string[]; onDone: () => void };
+type C2wDue = { totalPence: number; sharePence: number; customerPaysPence: number; groupDiscountPence: number; groupName: string };
+
+/**
+ * A Cycle to Work order at the till (till.mjs till-c2w): its bike and
+ * accessories as locked lines "on the order", above anything added at the
+ * counter, and "Bike collected when paid" on and fixed, since handing over is
+ * collecting the bike. Paying records both payments and moves the order to
+ * Collected (server/c2w/hand-over.js).
+ */
+function useC2wOrder(c2w: C2wHandOver | undefined) {
+  const order = useQuery({ queryKey: ['c2w-order', c2w?.id], queryFn: () => apiGet<{ order: C2wOrder; today: string }>(`/api/c2w/orders/${c2w?.id}`), enabled: Boolean(c2w), retry: false });
+  const o = order.data?.order;
+  const ready = Boolean(o && o.stage === 'ready' && !o.saleId);
+  const accessories = o ? o.accessories.reduce((n, a) => n + a.pricePence, 0) : 0;
+  const lines = o ? [
+    { key: 'bike', name: o.bike, sub: o.frameNumber ? `Frame ${o.frameNumber} · the one held · on the order` : 'On the order', pence: o.totalPence - accessories },
+    ...o.accessories.map((a, i) => ({ key: `acc-${i}`, name: a.name, sub: 'Accessory · on the order', pence: a.pricePence })),
+  ] : [];
+  return { query: order, o, ready, lines };
+}
+
+function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void; c2w?: C2wHandOver }) {
+  const queryClient = useQueryClient();
+  const handOver = useC2wOrder(c2w);
   const services = useQuery({ queryKey: ['workshop-services'], queryFn: () => apiGet<Service[]>('/api/workshop-services') });
   // Who's serving and today's people, for the Serving pills (serving-pills).
   const checkin = useTillCheckin().data;
@@ -126,8 +158,34 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
     setBasketHasLines(lines.length > 0);
     if (lines.length === 0 && !answerLost) setSaleKey(newRequestKey());
   }
-  useSaleOpen(lines.length > 0 || paying, onOpenChange);
-  const total = saleTotal(lines);
+  useSaleOpen(lines.length > 0 || paying || Boolean(c2w), onOpenChange);
+  // What the hand-over comes to, asked of the server before any card is taken:
+  // the customer's group discount, and a sale the server would refuse, show here
+  // (review of pull request 7b). Asked again whenever the counter's lines change.
+  const items = lines.map(asSaleItem);
+  const due = useQuery({
+    queryKey: ['c2w-due', c2w?.id, items],
+    queryFn: () => apiMutate<C2wDue>(`/api/c2w/orders/${c2w?.id}/hand-over/due`, { items }),
+    enabled: Boolean(c2w) && handOver.ready && !paying,
+    retry: false,
+  });
+  const figures = due.isSuccess && !due.isFetching ? due.data : null;
+  const total = c2w ? (figures ? figures.totalPence / 100 : (handOver.ready && handOver.o ? handOver.o.totalPence / 100 : 0) + saleTotal(lines)) : saleTotal(lines);
+  const blocked = Boolean(c2w) && (handOver.query.isError || Boolean(handOver.o && !handOver.ready));
+  const canPay = c2w ? handOver.ready && Boolean(figures) : lines.length > 0;
+  // After the hand-over, the order page and lists show it Collected; the till starts empty.
+  const nextSale = () => {
+    setLines([]);
+    setPaying(false);
+    if (!c2w) return;
+    // Marked out of date, not fetched again here: the till still shows the order until the
+    // empty till draws, and the handed-over order would flash "isn't ready to hand over".
+    // The order page fetches it afresh when it next opens.
+    void queryClient.invalidateQueries({ queryKey: ['c2w-order', c2w.id], refetchType: 'none' });
+    void queryClient.invalidateQueries({ queryKey: ['c2w-orders'] });
+    void queryClient.invalidateQueries({ queryKey: ['c2w-count'] });
+    c2w.onDone();
+  };
 
   function add(p: Picked) {
     if (p.type === 'service') {
@@ -179,11 +237,31 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
           <h2 id="sale-title" className="m-0 text-size-17 font-bold">Sale</h2>
           {lines.length ? <Button variant="ghost" size="sm" onClick={() => { setAnswerLost(false); setLines([]); }}>Clear</Button> : null}
         </div>
-        {lines.length === 0 ? (
+        {c2w && handOver.o && handOver.ready ? <span className="text-sm font-semibold">{`${handOver.o.customerName} · Cycle to Work · quote ${handOver.o.quoteRef}`}</span> : null}
+        {blocked ? (
+          <div className="flex flex-col gap-2 text-sm">
+            <p role="alert" className="m-0 font-semibold">{handOver.o ? `${possessive(handOver.o.customerName)} order isn’t ready to hand over: it’s already been handed over, or its stage has changed.` : 'Wheelhouse couldn’t load this Cycle to Work order. Try again in a moment.'}</p>
+            <div><Button variant="ghost" onClick={c2w?.onDone}>Start a new sale instead</Button></div>
+          </div>
+        ) : null}
+        {c2w && handOver.ready ? (
+          <ul aria-label="On the order" className="m-0 flex list-none flex-col p-0">
+            {handOver.lines.map((l) => (
+              <li key={l.key} className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5">
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-size-15 font-semibold">{l.name}</span>
+                  <span className="text-size-13 text-[var(--wh-muted)]">{l.sub}</span>
+                </span>
+                <span className="font-mono text-base">{money(l.pence / 100)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {lines.length === 0 ? (c2w ? null : (
           <div className="flex flex-col items-center gap-1.5 py-8 text-center text-[var(--wh-muted)]">
             <span className="text-size-15 font-semibold text-[var(--wh-ink)]">Nothing in the sale yet</span>
             <span className="text-sm">Tap a quick button, search, or scan a barcode.</span>
-          </div>
+          </div>)
         ) : (
           <ul className="m-0 flex list-none flex-col p-0">
             {lines.map((l) => {
@@ -193,7 +271,7 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
                   <div className="flex items-baseline justify-between gap-3">
                     <button type="button" onClick={() => setEditing(l)} className="flex min-h-11 flex-col items-start gap-0.5 text-left">
                       <span className="text-size-15 font-semibold">{l.name}</span>
-                      <span className="text-size-13 text-[var(--wh-muted)]">{lineSub(l)}</span>
+                      <span className="text-size-13 text-[var(--wh-muted)]">{c2w ? `${lineSub(l)} · added at the counter` : lineSub(l)}</span>
                     </button>
                     <span className="font-mono text-base">{money(lineTotal(l))}</span>
                   </div>
@@ -215,13 +293,26 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
             })}
           </ul>
         )}
+        {figures && figures.groupDiscountPence > 0 ? (
+          <div className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5 text-sm"><span>{figures.groupName}</span><span className="font-mono">{`−${money(figures.groupDiscountPence / 100)}`}</span></div>
+        ) : null}
+        {c2w && handOver.ready && due.isError ? (
+          <p role="alert" className="m-0 text-sm font-semibold">{due.error instanceof ApiError ? due.error.message : 'Wheelhouse couldn’t work out what’s due. Try again in a moment.'}</p>
+        ) : null}
+        {c2w && handOver.ready ? (
+          <button type="button" aria-pressed="true" disabled className="inline-flex min-h-11 items-center gap-1.5 self-end rounded-full border border-[var(--wh-ink)] bg-[var(--wh-ink)] px-4 text-sm font-semibold text-[var(--wh-panel)]">
+            Bike collected when paid
+          </button>
+        ) : null}
         <div className="flex items-baseline justify-between border-t border-[var(--wh-border)] pt-3">
           <span className="text-base font-bold">Total</span>
           <span className="font-mono text-size-26">{money(total)}</span>
         </div>
-        <Button variant="primary" block disabled={lines.length === 0} onClick={() => setPaying(true)}>
-          {lines.length ? `Take payment · ${money(total)}` : 'Take payment'}
-        </Button>
+        {blocked ? null : (
+          <Button variant="primary" block disabled={!canPay} onClick={() => setPaying(true)}>
+            {canPay ? `Take payment · ${money(total)}` : 'Take payment'}
+          </Button>
+        )}
       </section>
 
       {editing ? (
@@ -239,7 +330,12 @@ function SaleTill({ onOpenChange }: { onOpenChange: (open: boolean) => void }) {
           onAnswerLost={() => setAnswerLost(true)}
           onAnswerSettled={() => setAnswerLost(false)}
           onClose={() => setPaying(false)}
-          onNextSale={() => { setLines([]); setPaying(false); }}
+          onNextSale={nextSale}
+          c2w={c2w && handOver.o && figures ? {
+            orderId: c2w.id, checks: c2w.checks, total: figures.totalPence / 100, provider: handOver.o.providerName, customer: handOver.o.customerName,
+            share: figures.sharePence / 100,
+            certificateNumber: handOver.o.certificateNumber ?? '', bike: handOver.o.bike, frameNumber: handOver.o.frameNumber ?? null,
+          } : undefined}
         />
       ) : null}
     </div>
