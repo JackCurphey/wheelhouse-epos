@@ -14,7 +14,7 @@ import { currentMoment, isDay, shopToday } from '../clock.js';
 import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
-import { queueC2wMessage, queueCertificateMessage, undoReadyMessage } from '../c2w/messages.js';
+import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, undoReadyMessage } from '../c2w/messages.js';
 import { oldestSite } from '../lib/stock.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
@@ -277,6 +277,7 @@ export function register(route) {
         if (row.frame_id) detail.frameId = row.frame_id;
         return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
       }, { detail });
+      await queueReleasedMessage(id, { req, loginId: who.loginId });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });

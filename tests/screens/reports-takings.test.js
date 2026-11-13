@@ -50,7 +50,7 @@ test('the table lists each closed day newest first, today as "Not closed yet", a
   const short = table.getByText('−£5.00');
   assert.ok(short.className.includes('wh-warn-ink'));
   assert.ok(ui.queryByText('Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.') !== null);
-  assert.ok(ui.queryByText('Open a closed day for its end-of-day report.') !== null);
+  assert.ok(ui.queryByText('Open a closed day for its end-of-day report. The owner can reopen the latest closed day from there, with a reason.') !== null);
 });
 
 test('the graph is by closed day, with the same days last week behind it', async () => {

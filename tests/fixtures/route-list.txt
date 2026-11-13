@@ -387,6 +387,7 @@ POST /api/reports/saved
 PATCH /api/reports/saved/:id
 DELETE /api/reports/saved/:id
 POST /api/reports/saved/:id/undo
+POST /api/reports/days/:id/reopen
 GET /api/quick-buttons
 POST /api/quick-button-groups
 PUT /api/quick-button-groups/:id
@@ -437,3 +438,7 @@ POST /api/c2w/providers/:id/payments
 GET /api/c2w/owed
 GET /api/c2w/owed.csv
 GET /api/c2w/providers/:id/owed
+GET /api/accounts
+POST /api/accounts/connect
+PUT /api/accounts/choices
+POST /api/accounts/disconnect
