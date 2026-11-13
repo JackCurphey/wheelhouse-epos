@@ -9,7 +9,7 @@
 // Each queued message is noted on the order (an online_order_events 'message'
 // line), as customer_messages has no order column: that is how the order finds
 // an email that didn't arrive (orderEmailProblem).
-import { prepare } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 import { queueMessage, UNDO_MS } from '../messaging/engine.js';
 import { formatOpeningHours } from '../messaging/templates.js';
 import { messageLink } from '../workshop/job-messages.js';
@@ -80,11 +80,25 @@ const ONCE = ['order_confirmation', 'order_cancelled'];
  * now. `vars` adds the step's own tap-ins (Item, Reason, Amount refunded).
  * `req` gives the link's host when there's no APP_PUBLIC_URL. Returns
  * queueMessage's answer ({ id } or { skipped }). Order cancelled for an order
- * never paid goes in its own wording, with nothing refunded. Run inside the
- * caller's transaction, it holds the order's row, so two at once queue one.
+ * never paid goes in its own wording, with nothing refunded. Its own
+ * transaction (a savepoint inside the caller's) holds the order's row from the
+ * send-once check to the email's record on the order, so two at once queue one
+ * and a failure between them leaves neither (risky-area review).
  */
-export async function queueOrderMessage(orderId, key, { req = null, loginId = null, vars = {} } = {}) {
+export async function queueOrderMessage(orderId, key, options = {}) {
   if (!ORDER_KEYS.includes(key)) throw new Error(`${key} is not an online order message`);
+  await dbExec('BEGIN');
+  try {
+    const queued = await queueHoldingOrder(orderId, key, options);
+    await dbExec('COMMIT');
+    return queued;
+  } catch (err) {
+    await dbExec('ROLLBACK');
+    throw err;
+  }
+}
+
+async function queueHoldingOrder(orderId, key, { req = null, loginId = null, vars = {} }) {
   const order = await prepare(
     `SELECT o.id, o.customer_id, o.name, o.email, o.number, o.order_code, o.card_pence, o.credit_pence,
             to_char(o.keep_until, 'YYYY-MM-DD') AS keep_until, s.name AS site_name

@@ -337,6 +337,19 @@ test('3.7d a confirmation whose email failed can be sent again; one not known to
   }
 });
 
+test('3.7d two confirmations queued at the same moment send one', async () => {
+  const order = await paidOrder();
+  const both = await Promise.all([queue(order, 'order_confirmation'), queue(order, 'order_confirmation')]);
+  assert.equal(both.filter((q) => q.id).length, 1, JSON.stringify(both));
+  assert.deepEqual(both.filter((q) => !q.id), [{ skipped: 'already' }]);
+});
+
+test('3.7d an unpaid order cancelled twice sends one cancellation', async () => {
+  const order = await paidOrder({ stage: 'cancelled', paid: false });
+  assert.ok((await queue(order, 'order_cancelled')).id);
+  assert.deepEqual(await queue(order, 'order_cancelled'), { skipped: 'already' });
+});
+
 test('3.7e the reason has its own full stop, and one typed with a stop gets no second', async () => {
   for (const Reason of ['[reason]', '[reason].']) {
     const order = await paidOrder();
