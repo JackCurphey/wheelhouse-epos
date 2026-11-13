@@ -93,8 +93,12 @@ function BackToWebsite({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** ws-shopify-connect and ws-shopify-failed: from the Website page's Wheelhouse's website or Shopify row. */
-export function ShopifyConnect({ failedAddress, onBack }: { failedAddress: string | null; onBack: () => void }) {
+/**
+ * ws-shopify-connect and ws-shopify-failed: from the Website page's Wheelhouse's website or Shopify row.
+ * With the Wheelhouse website on, one line above Connect says it will be switched off (Jack's answer
+ * to Q3, 12 Nov; docs/decisions/2026-11-12-website-defaults-taken.md).
+ */
+export function ShopifyConnect({ failedAddress, siteOn, onBack }: { failedAddress: string | null; siteOn: boolean; onBack: () => void }) {
   return (
     <Page>
       <BackToWebsite onBack={onBack} />
@@ -104,6 +108,7 @@ export function ShopifyConnect({ failedAddress, onBack }: { failedAddress: strin
       </div>
       <WhatHappens />
       {failedAddress !== null ? <Note tone="bad" live>{connectFailed(failedAddress)}</Note> : null}
+      {siteOn ? <Note tone="warn">Your Wheelhouse website will be switched off when Shopify is connected.</Note> : null}
       <ConnectBox address={failedAddress ?? ''} />
     </Page>
   );
@@ -154,10 +159,11 @@ export function ShopifyPage({ state, link, onState }: { state: WebsiteState; lin
           <div className="flex min-w-0 grow flex-col gap-1">
             <h2 className="m-0 text-size-17 font-bold">Connected to your Shopify shop</h2>
             <span className="text-size-15 text-[var(--wh-muted)]">
-              {nothingSent ? `${link.address} · nothing sent yet` : `${link.address} · last sent ${when(link.lastSentAt)} · ${plural(link.products, 'product')} · sent when you press Send`}
+              {nothingSent ? `${link.address} · nothing sent yet` : `${link.address} · last sent ${when(link.lastSentAt)} · ${plural(link.products, 'product')} · sent as you change them in Wheelhouse`}
             </span>
           </div>
-          <Button variant="ghost" onClick={() => setChecking(true)}>See what will change</Button>
+          {/* Only before the first Send: after it, changes go as they're made (Jack's answer to Q2, 12 Nov). */}
+          {nothingSent ? <Button variant="ghost" onClick={() => setChecking(true)}>See what will change</Button> : null}
           {nothingSent ? null : paused
             ? <Button variant="ghost" disabled={busy} onClick={() => void post('/api/shopify/resume')}>Resume sending</Button>
             : <Button variant="ghost" disabled={busy} onClick={() => void post('/api/shopify/pause')}>Pause sending</Button>}
