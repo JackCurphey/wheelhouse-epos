@@ -436,4 +436,5 @@ POST /api/c2w/orders/:id/applied
 GET /api/accounts
 POST /api/accounts/connect
 PUT /api/accounts/choices
+GET /api/accounts/log
 POST /api/accounts/disconnect
