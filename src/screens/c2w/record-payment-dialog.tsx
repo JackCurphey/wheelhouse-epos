@@ -17,13 +17,15 @@ import { Field, SAVE_FAILED, SUB, canSay, problemLine } from './certificate-dial
  */
 export type OwedBike = {
   id: number; customerName: string; collectedOn: string; certificateNumber: string | null; certificatePence: number | null;
-  expectedPence: number; paidPence: number | null; owedPence: number; expectedBy: string | null; lateDays: number | null;
+  expectedPence: number | null; paidPence: number | null; owedPence: number; expectedBy: string | null; lateDays: number | null;
 };
 export type OwedProvider = { provider: { id: number; name: string; commissionKind: 'percent' | 'pounds' | null; commissionValue: number | null; paysInDays: number | null }; orders: OwedBike[]; today: string };
 export const owedProviderQuery = (id: number) => ({ queryKey: ['c2w-owed', id], queryFn: () => apiGet<OwedProvider>(`/api/c2w/providers/${id}/owed`) });
 const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
 const total = (bikes: OwedBike[]) => bikes.reduce((n, b) => n + b.owedPence, 0);
-export const expectedLine = (b: OwedBike) => `${pounds(b.owedPence)}${b.expectedBy ? ` by ${longDate(b.expectedBy)}` : ''}`;
+export const expectedLine = (b: OwedBike) => (b.expectedPence === null ? '—' : `${pounds(b.owedPence)}${b.expectedBy ? ` by ${longDate(b.expectedBy)}` : ''}`);
+// Nothing expected yet: the server refuses a payment for it (no_expected), so it can't be ticked (logged).
+const payable = (b: OwedBike) => b.expectedPence !== null;
 const signed = (pence: number) => (pence === 0 ? pounds(0) : pence > 0 ? `+${pounds(pence)}` : `-${pounds(-pence)}`);
 
 export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, onSaved }: {
@@ -33,17 +35,20 @@ export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, 
   // The bikes are fixed when the popup opens, so a reload can't change what the
   // owner ticked; they catch up only when the server says what's owed changed.
   const [owed, setOwed] = useState(bikes);
-  const [ticked, setTicked] = useState(() => new Set(bikes.map((b) => b.id)));
-  const [amount, setAmount] = useState((total(bikes) / 100).toFixed(2));
+  const [ticked, setTicked] = useState(() => new Set(bikes.filter(payable).map((b) => b.id)));
+  const [amount, setAmount] = useState((total(bikes.filter(payable)) / 100).toFixed(2));
   const [on, setOn] = useState(today);
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const chosen = owed.filter((b) => ticked.has(b.id));
+  const chosen = owed.filter((b) => ticked.has(b.id) && payable(b));
   const expected = total(chosen);
   const typed = amountOf(amount);
   const diff = typed === null || chosen.length === 0 ? 0 : typed - expected;
-  const commission = chosen.reduce((n, b) => n + (b.certificatePence ?? b.expectedPence) - b.expectedPence, 0);
+  // Only when every ticked bike has its certificate amount, as Mark paid does:
+  // otherwise the commission has no source and the accounts line isn't shown.
+  const commission = chosen.some((b) => b.certificatePence === null || b.expectedPence === null) ? null
+    : chosen.reduce((n, b) => n + (b.certificatePence ?? 0) - (b.expectedPence ?? 0), 0);
   const tick = (id: number, on: boolean) => setTicked((was) => {
     const now = new Set(was);
     if (on) now.add(id); else now.delete(id);
@@ -70,9 +75,12 @@ export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, 
       // Not drawn (logged): a short note says what was saved, as Mark paid does.
       onSaved(`Recorded ${pounds(typed)} from ${provider.name} for ${plural(chosen.length, 'bike', 'bikes')}.`);
     } catch (err) {
-      if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'owed_changed') {
+      const code = err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
+      if (code === 'owed_changed' || code === 'not_owed') {
         // The amount typed stays: it's what the remittance says came. Bikes no
-        // longer owed drop out; the ones still owed keep their ticks.
+        // longer owed (paid or closed elsewhere: not_owed) drop out; the ones
+        // still owed keep their ticks. The page behind catches up too.
+        void queryClient.invalidateQueries({ queryKey: ['c2w-owed'], exact: true });
         const fresh = await queryClient.fetchQuery({ ...owedProviderQuery(provider.id), staleTime: 0 }).then((r) => r.orders, () => null);
         if (fresh) setOwed(fresh);
       }
@@ -92,20 +100,21 @@ export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, 
         <p className="m-0 text-sm text-[var(--wh-muted)]">{`${provider.name} · ${plural(owed.length, 'bike', 'bikes')} owed`}</p>
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field id="rp-amount" label="Amount received" value={amount} onChange={setAmount} />
           <Field id="rp-on" label="Received on" type="date" value={on} max={today} onChange={(v) => setOn(v || today)} />
+          <Field id="rp-ref" label="Provider’s reference" value={reference} onChange={setReference} hint="Optional" />
         </div>
-        <Field id="rp-ref" label="Provider’s reference" value={reference} onChange={setReference} hint="Optional" />
         <fieldset className="m-0 flex min-w-0 flex-col gap-1 border-0 p-0">
           <legend className="mb-1 p-0 text-size-15 font-semibold">Which bikes it covers</legend>
           {owed.map((b) => (
             <div key={b.id} className="flex min-h-11 items-start gap-2.5">
-              <input id={`rp-b${b.id}`} type="checkbox" checked={ticked.has(b.id)} onChange={(e) => tick(b.id, e.target.checked)} aria-describedby={`rp-b${b.id}-sub`}
+              <input id={`rp-b${b.id}`} type="checkbox" checked={payable(b) && ticked.has(b.id)} disabled={!payable(b)} onChange={(e) => tick(b.id, e.target.checked)} aria-describedby={`rp-b${b.id}-sub`}
                 className="mt-0.5 size-5 shrink-0 accent-[var(--wh-ink)]" />
               <span className="flex flex-col gap-0.5">
-                <label htmlFor={`rp-b${b.id}`} className="cursor-pointer text-size-15 font-semibold">{b.customerName}</label>
-                <span id={`rp-b${b.id}-sub`} className={SUB}>{`Certificate ${b.certificateNumber ?? '—'} · expected ${expectedLine(b)}`}</span>
+                <label htmlFor={`rp-b${b.id}`} className={`${payable(b) ? 'cursor-pointer' : ''} text-size-15 font-semibold`}>{b.customerName}</label>
+                <span id={`rp-b${b.id}-sub`} className={SUB}>{payable(b) ? `Certificate ${b.certificateNumber ?? '—'} · expected ${expectedLine(b)}`
+                  : `Nothing is expected from ${provider.name} for this bike yet. Add what they will pay to the order first.`}</span>
               </span>
             </div>
           ))}
@@ -117,7 +126,7 @@ export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, 
         </div>
         <div role="status">{lead}</div>
         <p className={`${SUB} m-0`}>This goes in each ticked order’s history and the activity log.</p>
-        {typed === null ? null
+        {typed === null || commission === null ? null
           : <p className={`${SUB} m-0`}>{`It goes to your accounts software with that day’s figures, as “${provider.name} paid ${pounds(typed)} · commission ${pounds(commission)}”.`}</p>}
         {problemLine(problem)}
       </DialogBody>

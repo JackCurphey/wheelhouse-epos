@@ -190,7 +190,7 @@ test('cw-owed-provider: the provider’s bikes owed, oldest expected first, with
   assert.deepEqual(rows.map(rowText), [
     ['Customer', 'Collected', 'Certificate', 'Expected', 'Late', 'Action'],
     ['[Customer]', long(day(-33)), '[certificate number]', `£380.00 by ${long(day(-3))}`, '3 days late', 'Mark paid'],
-    ['Maya Patel', long(day(-20)), '[certificate number]', `£760.00 by ${long(day(10))}`, '—', 'Mark paid'],
+    ['Maya Patel', long(day(-20)), '[certificate number]', `£760.00 by ${long(day(10))}`, '', 'Mark paid'],
     ['Total', '', '', '£1,140.00', '', ''],
   ]);
   assert.equal(ui.getByRole('link', { name: 'Maya Patel' }).getAttribute('href'), '/workshop/c2w/9');
@@ -293,9 +293,39 @@ test('cw-record-payment: if what’s owed changed meanwhile, it says so, catches
     pay: () => {
       if (first) {
         first = false;
-        // Someone marked Maya's bike paid meanwhile.
-        state.orders = [LATE];
+        // Someone saved £500.00 of Maya's as part paid meanwhile: still owed, for less.
+        // (A bike paid in full elsewhere is not_owed, tested below.)
+        state.orders = [LATE, { ...MAYA, paidPence: 50000, owedPence: 26000 }];
         return [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }];
+      }
+      state.orders = [];
+      return [200, { expectedPence: 64000, receivedPence: 64000, differencePence: 0, orders: [] }];
+    },
+  });
+  const box = within(await openRecord(ui, fireEvent));
+  typeAmount(box, fireEvent, '640');
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  assert.ok(await box.findByText('What’s owed has changed since you opened this. Refresh to see what’s owed now.'));
+  await waitFor(() => assert.ok(box.getByText('Expected for the ticked bikes').parentElement.textContent.includes('£640.00')));
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '640');
+  assert.ok(box.getByRole('checkbox', { name: 'Maya Patel' }).checked);
+  assert.ok(box.getByText('[Provider] · 2 bikes owed'));
+  assert.ok(box.getByText(para('Matches the 2 ticked bikes. Saving marks each one paid. If a payment is less, the bikes it doesn’t fully cover are saved as part paid.')));
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Record a payment' }) === null));
+  assert.deepEqual(posts('/api/c2w/providers/3/payments').map((c) => [c.body.orderIds, c.body.expectedPence]), [[[10, 9], 114000], [[10, 9], 64000]]);
+});
+
+test('cw-record-payment: if a ticked bike stopped being owed meanwhile, it catches up the same way', async () => {
+  let first = true;
+  const NOT_OWED = 'Some of the ticked bikes aren’t owed by this provider any more. Refresh to see what’s owed now.';
+  const { ui, within, fireEvent, waitFor } = await open('/workshop/c2w/owed/3', {
+    pay: () => {
+      if (first) {
+        first = false;
+        // Someone marked Maya's bike paid from her order meanwhile.
+        state.orders = [LATE];
+        return [409, { error: NOT_OWED, code: 'not_owed' }];
       }
       state.orders = [];
       return [200, { expectedPence: 38000, receivedPence: 38000, differencePence: 0, orders: [] }];
@@ -304,12 +334,42 @@ test('cw-record-payment: if what’s owed changed meanwhile, it says so, catches
   const box = within(await openRecord(ui, fireEvent));
   typeAmount(box, fireEvent, '380');
   fireEvent.click(box.getByRole('button', { name: 'Save' }));
-  assert.ok(await box.findByText('What’s owed has changed since you opened this. Refresh to see what’s owed now.'));
+  assert.ok(await box.findByText(NOT_OWED));
   await waitFor(() => assert.ok(box.queryByRole('checkbox', { name: 'Maya Patel' }) === null));
   assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '380');
-  assert.ok(box.getByText('[Provider] · 1 bike owed'));
-  assert.ok(box.getByText(para('Matches the 1 ticked bike. Saving marks each one paid. If a payment is less, the bikes it doesn’t fully cover are saved as part paid.')));
   fireEvent.click(box.getByRole('button', { name: 'Save' }));
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Record a payment' }) === null));
   assert.deepEqual(posts('/api/c2w/providers/3/payments').map((c) => c.body.orderIds), [[10, 9], [10]]);
+});
+
+test('cw-record-payment: with no certificate amount on a ticked bike, there is no commission to show, so no accounts line', async () => {
+  const { ui, within, fireEvent } = await open('/workshop/c2w/owed/3', { orders: [LATE, { ...MAYA, certificatePence: null }] });
+  const box = within(await openRecord(ui, fireEvent));
+  assert.ok(box.getByText('This goes in each ticked order’s history and the activity log.'));
+  assert.ok(box.queryByText(/accounts software/) === null);
+  fireEvent.click(box.getByRole('checkbox', { name: 'Maya Patel' }));
+  assert.ok(box.getByText('It goes to your accounts software with that day’s figures, as “[Provider] paid £1,140.00 · commission £20.00”.'));
+});
+
+test('cw-record-payment: a bike with nothing expected yet shows a dash, can’t be ticked, and says why', async () => {
+  // The server refuses a payment for it (no_expected), so it starts unticked and stays out.
+  const NONE = { ...MAYA, expectedPence: null, owedPence: 0 };
+  const { ui, within, fireEvent, waitFor } = await open('/workshop/c2w/owed/3', {
+    orders: [LATE, NONE],
+    pay: () => { state.orders = [NONE]; return [200, { expectedPence: 38000, receivedPence: 38000, differencePence: 0, orders: [] }]; },
+  });
+  assert.ok(await ui.findByRole('heading', { name: '[Provider] · 2 bikes owed' }));
+  const rows = within(ui.getByRole('table')).getAllByRole('row');
+  assert.equal(rowText(rows[2])[3], '—');
+  const box = within(await openRecord(ui, fireEvent));
+  const maya = box.getByRole('checkbox', { name: 'Maya Patel' });
+  assert.ok(!maya.checked);
+  assert.ok(maya.disabled);
+  assert.ok(box.getByText('Nothing is expected from [Provider] for this bike yet. Add what they will pay to the order first.'));
+  assert.ok(box.getByText('Expected for the ticked bikes').parentElement.textContent.includes('£380.00'));
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '380.00');
+  assert.ok(box.getByText('It goes to your accounts software with that day’s figures, as “[Provider] paid £380.00 · commission £20.00”.'));
+  fireEvent.click(box.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Record a payment' }) === null));
+  assert.deepEqual(posts('/api/c2w/providers/3/payments').map((c) => c.body.orderIds), [[10]]);
 });

@@ -151,7 +151,7 @@ function ProviderBody() {
                   <td className={`${CELL} ${PHONE_CELL} max-md:before:content-['Collected_']`}>{longDate(b.collectedOn)}</td>
                   <td className={`${CELL} ${PHONE_CELL} ${mono} max-md:before:content-['·_certificate_']`}>{b.certificateNumber ?? '—'}</td>
                   <td className={`${CELL} ${PHONE_CELL} text-right ${mono} max-md:text-left max-md:before:content-['Expected_']`}>{expectedLine(b)}</td>
-                  <td className={`${CELL} ${PHONE_CELL}`}>{b.lateDays ? <Badge tone="amber">{`${days(b.lateDays)} late`}</Badge> : '—'}</td>
+                  <td className={`${CELL} ${PHONE_CELL}`}>{b.lateDays ? <Badge tone="amber">{`${days(b.lateDays)} late`}</Badge> : null}</td>
                   <td className={`${CELL} ${PHONE_CELL} text-right max-md:col-span-2 max-md:pt-1.5 max-md:text-left`}>
                     {owner ? <Button aria-label={`Mark paid: ${b.customerName} · ${p.name}`} onClick={() => setPaying(b)}>Mark paid</Button> : null}
                   </td>

@@ -62,7 +62,10 @@ export function MarkPaidDialog({ o, today, closing = false, focusTo = 'cw-next',
       // Not drawn (logged): a short note says what was saved, as the other steps do.
       onSaved(as === 'part' ? 'Saved as part paid.' : as === 'close' ? 'Closed with a reason.' : 'Marked paid.');
     } catch (err) {
-      if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'owed_changed') {
+      const code = err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
+      // owed_changed: a part payment came in meanwhile. wrong_stage: it was
+      // marked paid or closed elsewhere, so there is nothing more to save here.
+      if (code === 'owed_changed' || code === 'wrong_stage') {
         // The amount typed stays: it's what the remittance says came.
         // Fetched, not just invalidated: from the list or the Owed page nothing else is watching the order.
         const fresh = await queryClient.fetchQuery({ queryKey: ['c2w-order', o.id], staleTime: 0, queryFn: () => apiGet<{ order: C2wOrder }>(`/api/c2w/orders/${o.id}`) })
