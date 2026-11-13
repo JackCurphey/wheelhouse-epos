@@ -75,7 +75,7 @@ function ask(path, { host, cookie, from = nextVisitor() } = {}) {
       res.on('end', () => {
         let body = null;
         try { body = JSON.parse(text); } catch { body = text; }
-        resolve({ status: res.status ?? res.statusCode, body });
+        resolve({ status: res.status ?? res.statusCode, body, headers: res.headers });
       });
     });
     req.on('error', reject);
@@ -270,6 +270,8 @@ test('the rate limit turns away one visitor past the limit, and not another', as
   for (let i = 0; i < 301; i++) last = await site(north, '', { from });
   assert.equal(last.status, 429);
   assert.match(last.body.error, /too many/i);
+  // No cache in between keeps the refusal for the next visitor (review, 13 Nov).
+  assert.equal(last.headers['cache-control'], 'no-store');
   assert.equal((await site(north, '', { from: '198.51.100.8' })).status, 200);
 });
 
