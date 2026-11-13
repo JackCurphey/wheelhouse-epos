@@ -1,6 +1,6 @@
 // screens: set-data-export
 // Settings › Office › Your data › Download everything (openspec/changes/your-data-download
-// group 3; Jack's 10 Nov answers 2 and 7): the four spreadsheets the zip holds, the note
+// group 3; Jack's 10 Nov answers 2 and 7): the spreadsheets the zip holds, the note
 // and the button. Owner only on the server. The waiting and failure states aren't drawn
 // (small one 8): they follow the customer's own copy (src/screens/book/account.tsx).
 import { useEffect, useRef, useState } from 'react';
@@ -9,7 +9,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import { Check, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button.tsx';
 
-const HOLDS = ['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs'];
+const HOLDS = ['Customers', 'Daily figures', 'Sales and refunds', 'Stock', 'Workshop jobs'];
 
 /** The file's name from Content-Disposition: filename* first (it carries ’ and quotes), then filename. */
 function fileName(header: string | null): string {

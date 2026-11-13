@@ -79,7 +79,7 @@ test('Download everything is summarised, and opens to the four ticked rows, the 
   const fold = await unfold(t);
   assert.match(fold.textContent, /Customers, sales, stock, jobs/);
   const rows = t.within(await t.ui.findByRole('list', { name: 'What the download holds' })).getAllByRole('listitem').map((li) => li.textContent);
-  assert.deepEqual(rows, ['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs']);
+  assert.deepEqual(rows, ['Customers', 'Daily figures', 'Sales and refunds', 'Stock', 'Workshop jobs']);
   assert.ok(t.ui.getByText('Spreadsheets that open in Excel or Google Sheets — yours to keep, whatever happens.'));
   assert.ok(t.ui.getByRole('button', { name: 'Download everything' }));
   assert.equal(downloads, 0, 'nothing is made until the button is pressed');
@@ -137,7 +137,7 @@ test('with Citrus Lime rows left out, the list gains Left out from Citrus Lime a
   await unfold(t);
   const list = await t.ui.findByRole('list', { name: 'What the download holds' });
   await t.waitFor(() => assert.equal(t.within(list).getAllByRole('listitem').length, 5));
-  assert.deepEqual(t.within(list).getAllByRole('listitem').map((li) => li.textContent), ['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs', 'Left out from Citrus Lime · 2 rows']);
+  assert.deepEqual(t.within(list).getAllByRole('listitem').map((li) => li.textContent), ['Customers', 'Daily figures', 'Sales and refunds', 'Stock', 'Workshop jobs', 'Left out from Citrus Lime · 2 rows']);
 });
 
 test('one row left out reads 1 row', async () => {

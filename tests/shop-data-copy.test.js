@@ -75,14 +75,14 @@ after(async () => {
   await server?.stop();
 });
 
-test('the Owner gets one zip named after the shop and its day, holding the four spreadsheets', async (t) => {
+test('the Owner gets one zip named after the shop and its day, holding the five spreadsheets', async (t) => {
   const { res, body } = await download();
   assert.equal(res.status, 200, body.toString());
   assert.equal(res.headers.get('content-type'), 'application/zip');
   const name = `${owner.shop.name} data 2026-09-01.zip`;
   assert.equal(res.headers.get('content-disposition'), `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`);
   const files = filesOf(body, t);
-  assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
+  assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Daily figures.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
   for (const content of Object.values(files)) assert.ok(content.startsWith('﻿'), 'each starts with the UTF-8 mark');
 });
 
@@ -397,7 +397,7 @@ test('Left out from Citrus Lime: a fifth spreadsheet with the file, why, and Cit
   const { res, body } = await download(shop.cookie);
   assert.equal(res.status, 200, body.toString());
   const files = filesOf(body, t);
-  assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Left out from Citrus Lime.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
+  assert.deepEqual(Object.keys(files).sort(), ['Customers.csv', 'Daily figures.csv', 'Left out from Citrus Lime.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
   const csv = files['Left out from Citrus Lime.csv'];
   assert.ok(csv.startsWith('\uFEFFFile,Why,First Name,Last Name,Email,Description,Price\r\n'), csv.slice(0, 80));
   assert.deepEqual(rowsOf(csv), [
@@ -412,7 +412,7 @@ test('Left out from Citrus Lime: a fifth spreadsheet with the file, why, and Cit
   const mine = await staff('/api/settings/your-data');
   assert.deepEqual(mine.body, { leftOut: 0 });
   const own = await filesFor(t);
-  assert.deepEqual(Object.keys(own).sort(), ['Customers.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
+  assert.deepEqual(Object.keys(own).sort(), ['Customers.csv', 'Daily figures.csv', 'Sales and refunds.csv', 'Stock.csv', 'Workshop jobs.csv']);
   assert.ok(!Object.values(own).some((c) => c.includes('[Left out elsewhere]')));
 });
 
@@ -422,4 +422,84 @@ test('Left out from Citrus Lime: the count is the Owner’s only', async () => {
   assert.equal(refused.status, 403);
   const nobody = await fetch(`${server.baseUrl}/api/settings/your-data`);
   assert.equal(nobody.status, 401);
+});
+
+// Daily figures (openspec/changes/reports-accounts-and-reopen, your-data spec): one row per closed day.
+async function closedDayShop(t, days) {
+  const shop = await staffSignup(server.baseUrl, { shopName: 'Daily Cycles', ownerName: 'Jo Taylor' });
+  t.after(() => deleteTestShop(shop.shop.id));
+  await inShop(async () => {
+    await prepare("INSERT INTO product_categories (name, path) VALUES ('Drivetrain', 'Drivetrain'), ('=Sneaky', '=Sneaky')").run();
+    const chain = await prepare("INSERT INTO products (name, category, price) VALUES ('Chain', 'Drivetrain', 20) RETURNING id").get();
+    const sneaky = await prepare("INSERT INTO products (name, category, price) VALUES ('Odd', '=Sneaky', 5) RETURNING id").get();
+    const site = await prepare("UPDATE sites SET name = 'Bolton', code = 'B' RETURNING id").get();
+    await prepare("INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, 'B1', 'Till B1', 'x') RETURNING id").get(site.id);
+    const till = await prepare("SELECT id FROM tills WHERE code = 'B1'").get();
+    for (const d of days) {
+      const check = await prepare('INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, checked_at) VALUES (?::date, ?, 15000, 15000, ?) RETURNING id').get(d.day, shop.loginId, `${d.day}T06:00:00Z`);
+      const close = await prepare(
+        `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, paid_outs_pence, expected_pence, counted_pence,
+           float_pence, banked_pence, takings_pence, card_pence, other_pence) VALUES (?::date, ?, ?, ?, 15000, 0, 0, 15000, ?, 15000, 0, 0, 0, 0) RETURNING id`
+      ).get(d.day, shop.loginId, `${d.day}T17:00:00Z`, check.id, 15000 + (d.diff ?? 0));
+      if (d.reopened) await prepare("UPDATE day_closes SET reopened_at = now(), reopened_by = ?, reopen_reason = 'miscounted' WHERE id = ?").run(shop.loginId, close.id);
+      const sale = await prepare(
+        `INSERT INTO till_sales (client_id, till_id, site_id, receipt_number, made_offline, till_clock_at, total_pence, vat_pence, day_close_id)
+         VALUES (gen_random_uuid(), ?, ?, ?, false, ?, 3000, 500, ?) RETURNING id`
+      ).get(till.id, site.id, Math.floor(Math.random() * 1e6), `${d.day}T11:00:00Z`, close.id);
+      await prepare('INSERT INTO till_sale_lines (till_sale_id, product_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence) VALUES (?, ?, ?, 1, 2000, 2000, 2000, 333) RETURNING id').get(sale.id, chain.id, 'Chain');
+      await prepare('INSERT INTO till_sale_lines (till_sale_id, product_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence) VALUES (?, ?, ?, 1, 1000, 1000, 2000, 167) RETURNING id').get(sale.id, sneaky.id, 'Odd');
+      await prepare("INSERT INTO till_sale_payments (till_sale_id, method, amount_pence) VALUES (?, 'card', 1000), (?, 'cash', 2000) RETURNING id").get(sale.id, sale.id);
+      d.closeId = close.id;
+    }
+  }, shop);
+  return shop;
+}
+const daily = async (shop, t) => {
+  const { res, body } = await download(shop.cookie);
+  assert.equal(res.status, 200, body.toString());
+  return filesOf(body, t)['Daily figures.csv'];
+};
+
+test('Daily figures: a row per closed day, newest first, in plain pounds and pence, with no accounts software', async (t) => {
+  const shop = await closedDayShop(t, [{ day: '2026-08-30' }, { day: '2026-08-31', diff: -500 }]);
+  const csv = await daily(shop, t);
+  assert.ok(csv.startsWith('\uFEFFDay,Closed by,Cash (£),Card (£),Online (£),Customer accounts (£),Gift cards and store credit (£),'), csv.slice(0, 160));
+  const rows = rowsOf(csv);
+  assert.deepEqual(rows.map((r) => r.Day), ['2026-08-31', '2026-08-30']);
+  const first = rows[0];
+  assert.equal(first['Closed by'], 'Jo Taylor');
+  assert.deepEqual([first['Cash (£)'], first['Card (£)'], first['Online (£)']], ['20.00', '10.00', '0.00']);
+  assert.equal(first['Sales: Drivetrain (£)'], '16.67');
+  assert.equal(first['VAT (£)'], '5.00');
+  assert.equal(first['Cash difference (£)'], '-5.00');
+  assert.equal(rows[1]['Cash difference (£)'], '0.00');
+  assert.equal(first['Sent to accounts software'], '', 'no accounts software, nothing to say');
+});
+
+test('Daily figures: a reopened day has no row until it is closed again, and a formula-looking category is written as text', async (t) => {
+  const shop = await closedDayShop(t, [{ day: '2026-08-30' }, { day: '2026-08-31', reopened: true }]);
+  const csv = await daily(shop, t);
+  assert.deepEqual(rowsOf(csv).map((r) => r.Day), ['2026-08-30']);
+  assert.ok(csv.includes("Sales: '=Sneaky (£)") || csv.includes('"Sales: \'=Sneaky (£)"') || csv.includes("Sales: =Sneaky"), 'the heading is not read as a formula: ' + csv.slice(0, 300));
+  assert.ok(!/,=Sneaky/.test(csv.split('\r\n')[0]), 'no cell starts with =');
+});
+
+test('Daily figures: says whether each day went to the accounts software', async (t) => {
+  const shop = await closedDayShop(t, [{ day: '2026-08-29' }, { day: '2026-08-30' }, { day: '2026-08-31' }]);
+  await inShop(async () => {
+    await prepare("INSERT INTO accounts_connections (provider, status, connected_at) VALUES ('xero', 'connected', now())").run();
+    const ids = await prepare("SELECT id, to_char(day, 'YYYY-MM-DD') AS day FROM day_closes ORDER BY day").all();
+    await prepare("INSERT INTO accounts_sends (day, close_id, status) VALUES (?::date, ?, 'sent')").run('2026-08-30', ids[1].id);
+    await prepare("INSERT INTO accounts_sends (day, close_id, status) VALUES (?::date, ?, 'waiting')").run('2026-08-31', ids[2].id);
+  }, shop);
+  const rows = rowsOf(await daily(shop, t));
+  assert.deepEqual(rows.map((r) => [r.Day, r['Sent to accounts software']]), [['2026-08-31', 'Waiting'], ['2026-08-30', 'Sent'], ['2026-08-29', 'Not sent']]);
+});
+
+test("Daily figures: another shop's days never appear, and a shop with none has just the headings", async (t) => {
+  const shop = await closedDayShop(t, [{ day: '2026-08-30' }]);
+  assert.equal(rowsOf(await daily(shop, t)).length, 1);
+  const mine = await daily(owner, t);
+  assert.equal(rowsOf(mine).length, 0);
+  assert.ok(mine.startsWith('\uFEFFDay,Closed by,'));
 });

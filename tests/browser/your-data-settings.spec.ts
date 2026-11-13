@@ -31,7 +31,7 @@ for (const [size, viewport] of [['computer', { width: 1280, height: 800 }], ['ph
 
     await page.goto(`${server!.baseUrl}/workshop/settings?room=office&fold=download-everything`);
     const rows = page.getByRole('list', { name: 'What the download holds' });
-    await expect(rows.getByRole('listitem')).toHaveText(['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs']);
+    await expect(rows.getByRole('listitem')).toHaveText(['Customers', 'Daily figures', 'Sales and refunds', 'Stock', 'Workshop jobs']);
     const saving = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download everything', exact: true }).click();
     const file = await saving;

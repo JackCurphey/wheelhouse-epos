@@ -1,6 +1,6 @@
 // The shop's own copy of its data (openspec/changes/your-data-download;
 // set-data-export; Jack's 10 Nov answers): every customer, sale and refund,
-// product and workshop job, a spreadsheet each, in one zip. Runs in the
+// product and workshop job, and each closed day's figures, a spreadsheet each, in one zip. Runs in the
 // request's shop, so row-level security keeps it to that shop. Times are
 // written in the shop's time zone, formatted by the database; money in pounds
 // with two decimals, as the customer's copy (server/customer-data-copy.js).
@@ -12,6 +12,7 @@ import { currentMoment } from './clock.js';
 import { keptColumns } from './move/citrus-files.js';
 import { receiptLabel } from './till/money.js';
 import { linePence } from './workshop/quotes.js';
+import { buildSummary } from './accounts/summary.js';
 
 const WAYS = { sms: 'Text', whatsapp: 'WhatsApp', email: 'Email' };
 const YES_VIA = { booking: 'at booking', collection: 'at collection', account: 'from their account', stop_page: 'on the reminders page' };
@@ -205,6 +206,41 @@ async function jobsFile(zone) {
   ])]);
 }
 
+const MONEY_COLUMNS = [['money:cash', 'Cash (£)'], ['money:card', 'Card (£)'], ['money:online', 'Online (£)'], ['money:accounts', 'Customer accounts (£)'], ['money:gift', 'Gift cards and store credit (£)']];
+const SENT_WORDS = { sent: 'Sent', waiting: 'Waiting', failed: 'Not sent' };
+
+/**
+ * Daily figures.csv (reports-accounts-and-reopen, your-data spec): one row per closed day, newest first,
+ * worked out the way the accounts software's summary is (server/accounts/summary.js), so the two agree:
+ * the takings by how they were paid, the sales by category before VAT, the VAT, the cash difference, and
+ * whether the day went to accounts software. A reopened day has no row until it is closed again. The VAT
+ * is left empty for a day of old-record sales only (no VAT stored); the sent column is empty while no
+ * accounts software has been connected.
+ */
+async function dailyFile() {
+  const closes = await prepare(
+    `SELECT c.id, to_char(c.day, ${DAY}) AS day, COALESCE(l.name, 'Unknown') AS closed_by
+       FROM day_closes c LEFT JOIN logins l ON l.id = c.login_id
+      WHERE c.reopened_at IS NULL ORDER BY c.day DESC`
+  ).all();
+  const connected = (await prepare('SELECT 1 FROM accounts_connections').get()) !== undefined;
+  const sends = new Map((await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day, status FROM accounts_sends").all()).map((r) => [r.day, r.status]));
+  const days = [];
+  for (const c of closes) days.push({ ...c, summary: await buildSummary(c.id) });
+  const categories = [...new Set(days.flatMap((d) => d.summary.lines.filter((l) => l.group === 'sales').map((l) => l.label)))].sort();
+  const at = (summary, key) => summary.lines.find((l) => l.key === key)?.amountPence ?? 0;
+  return csvOf([
+    ['Day', 'Closed by', ...MONEY_COLUMNS.map(([, h]) => h), ...categories.map((n) => `Sales: ${n} (£)`), 'VAT (£)', 'Cash difference (£)', 'Sent to accounts software'],
+    ...days.map((d) => [
+      d.day, d.closed_by, ...MONEY_COLUMNS.map(([k]) => money(at(d.summary, k))),
+      ...categories.map((n) => money(at(d.summary, `sales:${n}`))),
+      d.summary.vatPence === 0 && d.summary.notRecorded.includes('VAT on old-record sales') ? '' : money(d.summary.vatPence),
+      money(d.summary.cashDifferencePence),
+      connected ? SENT_WORDS[sends.get(d.day)] ?? 'Not sent' : '',
+    ]),
+  ]);
+}
+
 // The Citrus Lime import's rows the owner left out (design 7; Jack's 10 Nov answer 1). Deleting a
 // customer's details deletes their own left-out rows (move/bring-customers.js forgetForMove); a
 // row only sharing their email or phone stays, with its reason (answer 3), and is listed. An
@@ -242,6 +278,7 @@ export async function shopDataCopy() {
     name: `${name} data ${day}.zip`,
     files: [
       { name: 'Customers.csv', content: await customersFile(zone) },
+      { name: 'Daily figures.csv', content: await dailyFile() },
       { name: 'Sales and refunds.csv', content: await salesFile(zone) },
       { name: 'Stock.csv', content: await stockFile() },
       { name: 'Workshop jobs.csv', content: await jobsFile(zone) },
