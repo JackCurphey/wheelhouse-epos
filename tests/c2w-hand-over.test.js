@@ -205,10 +205,13 @@ test('7.2 the sale is the order’s customer’s, whoever the till has picked', 
   assert.equal(sale.customer_id, maya.id);
 });
 
+// A site code is one to three capital letters.
+const letters = () => Array.from({ length: 3 }, () => String.fromCharCode(65 + Math.floor(Math.random() * 26))).join('');
+
 test('7.2 a bike held at another of the shop’s sites is handed over there, not at this till', async () => {
   const o = await readyOrder();
   await inShop(async () => {
-    const elsewhere = (await prepare(`INSERT INTO sites (name, code) VALUES ('[Other site]', 'O${tag().slice(0, 3)}') RETURNING id`).get()).id;
+    const elsewhere = (await prepare(`INSERT INTO sites (name, code) VALUES ('[Other site]', ?) RETURNING id`).get(letters())).id;
     await prepare('UPDATE c2w_orders SET site_id = ? WHERE id = ? RETURNING id').get(elsewhere, o.id);
     await prepare('UPDATE stock_frames SET site_id = ? WHERE id = ? RETURNING id').get(elsewhere, o.frameId);
   });

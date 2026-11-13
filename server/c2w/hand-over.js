@@ -10,6 +10,7 @@
 import { prepare } from '../db.js';
 import { ValidationError } from '../lib/http.js';
 import { computeOrderTotals, loadDocumentLine, poundsToPence } from '../lib/sales.js';
+import { oldestSite } from '../lib/stock.js';
 import { bikeSoldTo } from '../lib/bike-warranty.js';
 import { ORDER_SELECT, NOT_HELD, Refused, WRONG_STAGE, addDays, addEvent, providerPays, quoteItems, shopDay } from './orders.js';
 
@@ -56,9 +57,10 @@ function expectedPence(sharePence, terms) {
  * Before the sale, in its transaction: locks the order, checks it is at Ready to
  * collect, and returns the sale's customer, lines and payments, with `finish`
  * to run once the sale is made. Throws Refused (404, 409 wrong_stage, 400
- * c2w_share) or ValidationError, with nothing changed.
+ * c2w_share, 409 c2w_other_site) or ValidationError, with nothing changed.
+ * `tillSite` is the till's own site (null when it has none set).
  */
-export async function startHandOver(orderId, { items, payments, discount, checks }) {
+export async function startHandOver(orderId, { items, payments, discount, checks, tillSite = null }) {
   const locked = await prepare('SELECT id, stage FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
   if (!locked) throw new Refused(404, { error: 'Not found' });
   if (locked.stage !== 'ready') throw new Refused(409, WRONG_STAGE);
@@ -66,14 +68,24 @@ export async function startHandOver(orderId, { items, payments, discount, checks
   const terms = await prepare('SELECT commission_kind, commission_value, pays_in_days, handover_note FROM c2w_providers WHERE id = ?').get(row.provider_id);
   const ticked = readChecks(checks, terms.handover_note);
 
+  // The bike leaves stock at the till's site, so it is handed over at the shop
+  // that holds it (default taken overnight 12 Nov; Jack can overrule).
+  const heldAt = row.site_id ?? (row.frame_id ? (await prepare('SELECT site_id FROM stock_frames WHERE id = ?').get(row.frame_id))?.site_id ?? null : null);
+  if (heldAt !== null && heldAt !== (tillSite ?? await oldestSite())) {
+    const site = row.site_name ?? (await prepare('SELECT name FROM sites WHERE id = ?').get(heldAt))?.name ?? 'another shop';
+    throw new Refused(409, { error: `${row.bike_name ?? 'The bike'} is held at ${site}. Hand it over at that shop’s till.`, code: 'c2w_other_site' });
+  }
+
   // The order's lines first, at the prices quoted, then the counter's.
   const lines = [...quoteItems(row).map((it) => ({ productId: it.productId, qty: 1, unitPrice: it.pricePence / 100 })), ...items];
   const loaded = [];
   for (const it of lines) loaded.push(await loadDocumentLine(it, { checkStock: false }));
-  // The provider pays up to the certificate, and never more than the sale comes
-  // to, as a discount (or the customer's group discount) can bring it lower.
+  // The provider pays up to the certificate, and never more than the order's
+  // part of the sale comes to: a discount (or the customer's group discount) can
+  // bring it lower, and what the customer adds at the counter is theirs to pay.
   const { total } = await computeOrderTotals({ items: loaded, discount, customerId: row.customer_id });
-  const sharePence = Math.min(providerPays(row), poundsToPence(total));
+  const counterPence = loaded.slice(lines.length - items.length).reduce((sum, l) => sum + l.lineTotalPence, 0);
+  const sharePence = Math.max(0, Math.min(providerPays(row), poundsToPence(total) - counterPence));
   const tender = `${C2W_TENDER}${row.provider_name}`;
   const claimed = payments.filter(isC2w);
   if (claimed.length > 1 || claimed.some((p) => String(p.tenderType).trim() !== tender || poundsToPence(p.amount) !== sharePence)) {

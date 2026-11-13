@@ -277,7 +277,7 @@ export function register(route) {
         }
       }
       const handOver = c2wOrderId === null ? null
-        : await startHandOver(c2wOrderId, { items, payments, discount, checks: body.c2wChecks });
+        : await startHandOver(c2wOrderId, { items, payments, discount, checks: body.c2wChecks, tillSite: await siteHere(req) });
       if (handOver) ({ customerId, items, payments } = handOver);
       saleId = await createSale(
         { movedBy: await saleMovedBy(req), customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
