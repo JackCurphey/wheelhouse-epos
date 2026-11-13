@@ -4399,9 +4399,9 @@ function renderAuthScreen() {
 // The staff app always uses one Wheelhouse look (Fjell from 27 Sep 2026,
 // docs/decisions/2026-09-27-fjell-theme.md; Soft sand since) - shops no longer
 // recolour it. These presets are offered only for the shop's public website:
-// the Storefront panel's Theme menu (Edit Shop > Office) saves the key, and
-// public-storefront/storefront.js holds the matching colours. Kept in step
-// by hand until the Release 2 website theme system replaces both.
+// the Storefront panel's Theme menu (Edit Shop > Office) saves the key. The old
+// public website that used them was removed with website-browse (task 9.2);
+// the new website takes its colour from the Website page instead.
 const THEME_PRESETS = {
   forest: { name: 'Forest Green', topbar: '#164f42', accent: '#1f6f5c', modalBg: '#DDF7DF' },
   ocean: { name: 'Ocean Blue', topbar: '#1a3f66', accent: '#2f5f96', modalBg: '#DCEBFA' },

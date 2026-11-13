@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { mkdir, writeFile, rm, rmdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import '../server/load-env.js';
@@ -107,4 +107,16 @@ test('a missing file under /dist/assets/ falls back to index.html and is not cac
   await res.arrayBuffer();
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
+});
+
+// "public-portal" starts with "public", so a check on the folder name alone
+// let an encoded ../ out of public/ into the folders beside it (review, 13 Nov).
+const PORTAL_LINE = readFileSync(path.join(ROOT, 'public-portal', 'portal.js'), 'utf8').split('\n').find((l) => l.trim().length > 30);
+test('an encoded ../ cannot reach a folder whose name starts with public', async () => {
+  for (const sneaky of ['/..%2Fpublic-portal%2Fportal.js', '/dist/..%2F..%2Fpublic-portal%2Fportal.js']) {
+    const res = await fetch(`${baseUrl}${sneaky}`);
+    const body = await res.text();
+    assert.ok(!body.includes(PORTAL_LINE), `${sneaky} served the portal's own script`);
+    assert.equal(res.status, 404, sneaky);
+  }
 });

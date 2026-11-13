@@ -8,6 +8,7 @@ import { colourName, colourProblem, coloursFromPixels, hexOf, type Swatch } from
 import { ProductCounts } from './website-page.tsx';
 import { ConnectBox, WhatHappens, connectFailed } from './website-shopify.tsx';
 import type { WebsiteState } from './website-types.ts';
+import { Option, START_QUESTION, StartOptions } from './website-start-question.tsx';
 
 const CHARCOAL: Swatch = { hex: hexOf('2A2822'), name: 'Soft sand charcoal' };
 const failed = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t do that. Try again.');
@@ -97,13 +98,12 @@ export function WebsiteStart({ state, onState, failedAddress = null }: { state: 
     );
   }
   return (
-    <Steps moved={moved} n={3} title="Start with every product online, or nothing?" sub="Either way, every category and product has its own “Show on website” switch afterwards." problem={problem}
+    <Steps moved={moved} n={3} title={START_QUESTION.title} sub={START_QUESTION.sub} problem={problem}
       back={<Button variant="ghost" onClick={() => go(2)}>Back</Button>}
       next={<Button variant="accent" disabled={busy} onClick={() => void makeIt()}>Make my website</Button>}>
       <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
         <legend className="sr-only">Start with</legend>
-        <Option name="Every product online" group="start" checked={startWith === 'every'} onChoose={() => setStartWith('every')}>Everything with a price shows. Switch off what you don’t want online.</Option>
-        <Option name="Nothing online" group="start" checked={startWith === 'nothing'} onChoose={() => setStartWith('nothing')}>Add categories and products as you go.</Option>
+        <StartOptions startWith={startWith} onChoose={setStartWith} />
       </fieldset>
       {state.startCounts ? (
         <div className="flex flex-col gap-0.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-2.5">
@@ -140,19 +140,6 @@ function Steps({ moved, n, title, sub, problem, back, next, children }: {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">{back}{next}</div>
       </div>
     </Page>
-  );
-}
-
-/** website.mjs `option`: a radio card, its border darker when chosen. */
-function Option({ name, group, checked, onChoose, children }: { name: string; group: string; checked: boolean; onChoose: () => void; children: ReactNode }) {
-  return (
-    <label className={`flex cursor-pointer items-start gap-3 rounded-[10px] bg-[var(--wh-panel)] p-4 ${checked ? 'border-2 border-[var(--wh-ink)]' : 'border border-[var(--wh-border)]'}`}>
-      <input type="radio" name={group} checked={checked} onChange={onChoose} className="mt-0.5 size-[22px] accent-[var(--wh-ink)]" />
-      <span className="flex flex-col gap-1">
-        <span className="text-base font-bold">{name}</span>
-        <span className="text-sm leading-[1.45] text-[var(--wh-muted)]">{children}</span>
-      </span>
-    </label>
   );
 }
 

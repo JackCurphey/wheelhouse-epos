@@ -1,12 +1,14 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
+import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { ROUTES } from '@/staff/routes.ts';
 import { dayText } from '@/screens/customers/privacy-requests.tsx';
 import { londonDay } from '@/screens/diary/when.ts';
 import { Note } from '@/screens/website/website-tracking.tsx';
+import { START_QUESTION, StartOptions } from '@/screens/website/website-start-question.tsx';
 import { RowSwitch } from './row-switch.tsx';
 
 /**
@@ -33,9 +35,11 @@ const useOnlineOrders = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<On
 /** Whether the website is the shop's Shopify shop (ws-pay-shopify): Shopify's checkout takes the website's payments. */
 const useWebsiteKind = () => {
   const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
-  return { known: site.isFetched, shopify: site.data?.kind === 'shopify' };
+  return { known: site.isFetched, shopify: site.data?.kind === 'shopify', wheelhouse: site.data?.kind === 'wheelhouse' };
 };
 const useShopifyWebsite = () => useWebsiteKind().shopify;
+/** Whether the website is Wheelhouse's own, set up: only then does Showing products show (server/website-showing.js). */
+export const useWheelhouseWebsite = () => useWebsiteKind().wheelhouse;
 
 /** Where "Add the details" and the Website page's Taking payments row open. */
 export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-online`;
@@ -99,6 +103,99 @@ export function WebsiteSells() {
       </fieldset>
       <p className={hint}>Stock is held for the customer as soon as they’ve paid, and checked again just before they pay.</p>
     </div>
+  );
+}
+
+type StartWith = 'every' | 'nothing';
+type Showing = { startedWith: StartWith | null; startedAt: string | null; categories: { id: number; path: string; showOnline: boolean }[]; differentCount: number };
+const SHOWING = ['website-showing'];
+
+/**
+ * online.mjs showOpen (on-settings-show; website-buy-online task 2.5, design 15):
+ * how the website started, with Change; a switch on each category, which sets
+ * every product in it and in the categories inside it; how many products are
+ * set differently, with See them (Stock, filtered to them); and the note.
+ */
+export function ShowingProducts() {
+  const queryClient = useQueryClient();
+  const showing = useQuery({ queryKey: SHOWING, queryFn: () => apiGet<Showing>('/api/website/showing') });
+  const [said, setSaid] = useState<Said>(null);
+  const [changing, setChanging] = useState(false);
+  const d = showing.data;
+  if (showing.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the categories. Try again in a moment.</p>;
+  if (!d) return null;
+  // Both set products' own switches too, so Stock's list and product pages read again.
+  const saved = (next: Showing) => {
+    queryClient.setQueryData(SHOWING, next);
+    void queryClient.invalidateQueries({ queryKey: SHOWING });
+    void queryClient.invalidateQueries({ queryKey: ['stock'] });
+    void queryClient.invalidateQueries({ queryKey: ['product'] });
+    void queryClient.invalidateQueries({ queryKey: ['website'] });
+  };
+  async function turn(id: number, showOnline: boolean) {
+    setSaid(null);
+    try { saved(await apiMutate<Showing>(`/api/website/categories/${id}`, { showOnline }, { method: 'PUT' })); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
+  }
+  const started = d.startedWith && d.startedAt
+    ? `Started with ${d.startedWith === 'every' ? 'every product' : 'nothing'} online on ${dayText(londonDay(d.startedAt))}.` : null;
+  return (
+    <div className="flex flex-col gap-1">
+      {started && d.startedWith ? (
+        <p className="m-0 flex flex-wrap items-center gap-x-3 text-size-15">
+          <span>{started}</span>
+          <button type="button" aria-label="Change what your website started with" onClick={() => setChanging(true)}
+            className="min-h-11 border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Change</button>
+        </p>
+      ) : null}
+      <div className="flex flex-col">
+        {d.categories.map((c) => <RowSwitch key={c.id} label={c.path} on={c.showOnline} disabled={false} onChange={(on) => void turn(c.id, on)} />)}
+      </div>
+      <SaidLine said={said} />
+      {d.differentCount > 0 ? (
+        <p className="m-0 flex flex-wrap items-center gap-x-3 text-sm">
+          <span>{`${d.differentCount} ${d.differentCount === 1 ? 'product is' : 'products are'} set differently from their category.`}</span>
+          <Link to={`${ROUTES.stock}?show=online-differs`} aria-label="See the products set differently from their category, in Stock"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link>
+        </p>
+      ) : null}
+      {/* A website set up before the start was kept leaves new products off (server/lib/categories.js categoryShows). */}
+      <p className={hint}>{`${d.startedWith ? 'New products follow their category. ' : ''}Each product’s page in Stock has its own “Show on website” switch.`}</p>
+      {changing && d.startedWith ? (
+        <StartAgain was={d.startedWith} onClose={() => setChanging(false)}
+          onSaved={(next) => { saved(next); setChanging(false); }} />
+      ) : null}
+    </div>
+  );
+}
+
+/** Change: set-up step 3's question again (UX walk-through 4 M7), the answer given before chosen. */
+function StartAgain({ was, onClose, onSaved }: { was: StartWith; onClose: () => void; onSaved: (next: Showing) => void }) {
+  const titleId = useId();
+  const [startWith, setStartWith] = useState<StartWith>(was);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  async function save() {
+    setBusy(true);
+    setProblem(null);
+    try { onSaved(await apiMutate<Showing>('/api/website/start-with', { startWith }, { method: 'POST' })); } catch (err) { setProblem(couldntSave(err)); setBusy(false); }
+  }
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }} aria-labelledby={titleId} className="md:max-w-[560px]">
+      <DialogHeader><DialogTitle id={titleId}>{START_QUESTION.title}</DialogTitle></DialogHeader>
+      <DialogBody className="flex flex-col gap-2.5">
+        <p className={hint}>{START_QUESTION.sub}</p>
+        <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
+          <legend className="sr-only">Start with</legend>
+          <StartOptions startWith={startWith} onChoose={setStartWith} group="start-again" />
+        </fieldset>
+        <p className={hint}>Saving sets every category and product again, including any set differently on their own page.</p>
+        {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={busy} onClick={() => void save()}>Save</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 

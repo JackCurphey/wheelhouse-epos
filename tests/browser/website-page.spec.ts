@@ -47,7 +47,8 @@ test('the Owner turns the website on, then publishes a saved change', async ({ p
   await changes.getByRole('button', { name: 'Publish' }).click();
   await expect(page.getByRole('main').getByRole('status')).toContainText('Published — customers see it now');
   await expect(changes).toHaveCount(0);
-  // What customers see now carries the change (the old settings follow what is published).
-  const live = await staffRequest(server!.baseUrl, owner.cookie, '/api/storefront-settings');
-  expect(live.body.tagline).toBe('[About line]');
+  // What customers see now carries the change.
+  const live = await fetch(`${server!.baseUrl}/api/storefront/info?storefrontSlug=${owner.shop.slug}`);
+  expect(live.status).toBe(200);
+  expect((await live.json()).tagline).toBe('[About line]');
 });

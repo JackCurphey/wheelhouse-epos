@@ -39,6 +39,9 @@ PUT /api/website/parts/:key
 POST /api/website/parts/:key/photo
 POST /api/website/logo
 POST /api/website/set-up
+GET /api/website/showing
+PUT /api/website/categories/:id
+POST /api/website/start-with
 PUT /api/website/colour
 PUT /api/website/tracking/:tool
 POST /api/website/publish
