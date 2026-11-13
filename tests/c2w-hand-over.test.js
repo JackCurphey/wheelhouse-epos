@@ -223,6 +223,33 @@ test('7.2 a bike held at another of the shop’s sites is handed over there, not
   assert.equal((await order(o.id)).stage, 'ready');
 });
 
+test('7.2 a frame held for a different order is refused, and nothing changes', async () => {
+  const o = await readyOrder();
+  const other = await readyOrder();
+  await inShop(async () => prepare('UPDATE stock_frames SET c2w_order_id = ? WHERE id = ? RETURNING id').get(other.id, o.frameId));
+  const before = await salesCount();
+  const res = await sell({ c2wOrderId: o.id, cardAmount: 240 });
+  assert.deepEqual([res.status, res.body.code], [409, 'not_held']);
+  assert.equal(await salesCount(), before);
+  assert.equal((await order(o.id)).stage, 'ready');
+});
+
+test('7.2 at a till in the other site, the bike held there is handed over', async () => {
+  const o = await readyOrder();
+  const elsewhere = await inShop(async () => {
+    const id = (await prepare(`INSERT INTO sites (name, code) VALUES ('[Other site]', ?) RETURNING id`).get(letters())).id;
+    await prepare('UPDATE c2w_orders SET site_id = ? WHERE id = ? RETURNING id').get(id, o.id);
+    await prepare('UPDATE stock_frames SET site_id = ? WHERE id = ? RETURNING id').get(id, o.frameId);
+    return id;
+  });
+  const made = await fetch(`${server.baseUrl}/api/till-setup`, { method: 'POST', headers: { cookie: owner.cookie, 'content-type': 'application/json' }, body: JSON.stringify({ siteId: elsewhere, number: 8 }) });
+  assert.equal(made.status, 201, await made.text());
+  const tillCookie = [owner.cookie, ...made.headers.getSetCookie().map((l) => l.split(';')[0])].join('; ');
+  const res = await staffRequest(server.baseUrl, tillCookie, '/api/sales', { method: 'POST', body: { cashierId, sellPastStock: true, requestKey: randomUUID(), items: [], c2wOrderId: o.id, cardAmount: 240 } });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await order(o.id)).stage, 'collected');
+});
+
 // ---------- 7.4 ----------
 
 test('7.4 anything Maya adds at the counter goes on the same sale, for her to pay', async () => {
