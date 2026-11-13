@@ -50,7 +50,7 @@ afterEach(async () => {
 });
 
 /** `paid` answers POST /api/c2w/orders/9/paid with [status, body] (or a promise of it); it may change `state`, which the page then reloads. */
-async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, paid } = {}) {
+async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, paid, settings = SETTINGS } = {}) {
   calls = [];
   state = { order: theOrder, events };
   globalThis.fetch = async (url, init = {}) => {
@@ -61,7 +61,7 @@ async function open({ theOrder = order(), events = [QUOTE_EV], user = OWNER, pai
     const p = new URL(url, 'http://localhost').pathname;
     if (p === '/api/auth/me') return reply(200, user);
     if (p === '/api/c2w/count') return reply(200, { count: 1 });
-    if (p === '/api/c2w/settings') return reply(200, { settings: SETTINGS });
+    if (p === '/api/c2w/settings') return reply(200, { settings });
     if (p === '/api/c2w/providers') return reply(200, { providers: [PROVIDER] });
     if (p === '/api/products/21') return reply(200, BIKE);
     if (method === 'POST' && p === '/api/c2w/orders/9/paid' && paid) { const [status, b] = await paid(body); return reply(status, b); }
@@ -243,6 +243,7 @@ test('cw-mark-paid: while saving the popup can’t be closed; what the server sa
   fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(box.getByRole('button', { name: 'Cancel' }).disabled, true);
+  assert.equal(box.getByRole('button', { name: 'Mark paid' }).disabled, true);
   const esc = new window.Event('cancel', { cancelable: true });
   dialog.dispatchEvent(esc);
   assert.equal(esc.defaultPrevented, true);
@@ -250,4 +251,119 @@ test('cw-mark-paid: while saving the popup can’t be closed; what the server sa
   assert.equal((await box.findByRole('alert')).textContent, 'What’s owed has changed since you opened this. Refresh to see what’s owed now.');
   assert.ok(ui.getByRole('dialog', { name: 'Mark paid' }));
   assert.equal(box.getByRole('button', { name: 'Cancel' }).disabled, false);
+});
+
+test('cw-order-owed: when the order’s figures don’t match the provider’s rate now, the commission is given in pounds', async () => {
+  // Expected £740.00 against an £800.00 certificate is £60.00 kept, not the provider's 5% today.
+  const { ui, within } = await open({ theOrder: order({ expectedPence: 74000 }) });
+  const next = within(await ui.findByRole('region', { name: 'Next: the provider’s payment' }));
+  assert.ok(next.getByText(para(`Expected £740.00 from [Provider] by ${long(day(30))} — the certificate £800.00 less £60.00 commission.`)));
+});
+
+test('cw-order-owed: with no late-payment days set, there’s no Today note', async () => {
+  const { ui, within } = await open({ settings: { ...SETTINGS, paymentLateDays: null } });
+  const next = within(await ui.findByRole('region', { name: 'Next: the provider’s payment' }));
+  assert.ok(next.queryByText(/shows on Today/) === null);
+});
+
+test('cw-order-part-paid: someone who isn’t the owner sees what’s still owed but no buttons', async () => {
+  const { ui, within } = await open({ user: JO, theOrder: order({ paidPence: 70000 }), events: [QUOTE_EV, PART_EV] });
+  const next = within(await ui.findByRole('region', { name: 'Next: the rest of the payment' }));
+  assert.ok(next.queryByRole('button') === null);
+});
+
+test('cw-order-paid: a payment covering several bikes shows only what went on this order', async () => {
+  const paidEv = { kind: 'paid', by: 'Jack Lewis', at: `${TODAY}T12:00:00.000Z`, reason: null, detail: { amountPence: 76000, paymentPence: 228000, receivedOn: TODAY, paymentId: 4 } };
+  const { ui, within } = await open({ theOrder: order({ stage: 'paid', paidPence: 76000, paidOn: TODAY, next: null }), events: [QUOTE_EV, paidEv] });
+  const next = within(await ui.findByRole('region', { name: 'Paid' }));
+  assert.ok(next.getByText(para(`£760.00 received from [Provider] on ${long(TODAY)}, as expected.`)));
+  assert.ok(await ui.findByText(`marked paid: £760.00 received ${long(TODAY)}`));
+});
+
+test('cw-mark-paid: clearing Received on puts back today, so the date saved is the one shown', async () => {
+  const { ui, within, fireEvent } = await open();
+  const box = within(await openMarkPaid(ui, fireEvent));
+  const on = box.getByLabelText('Received on');
+  fireEvent.change(on, { target: { value: '' } });
+  assert.equal(on.value, TODAY);
+});
+
+test('cw-mark-paid: the difference message is announced as it changes', async () => {
+  const { ui, within, fireEvent } = await open();
+  const box = within(await openMarkPaid(ui, fireEvent));
+  const status = box.getByRole('status');
+  assert.equal(status.textContent, 'Matches what was expected.');
+  typeAmount(box, fireEvent, '700.00');
+  assert.equal(status.textContent, '£60.00 less than expected. Save it as part paid and keep chasing the rest, or close it with a reason.');
+});
+
+test('cw-mark-paid: nothing received can be closed with a reason, not saved as part paid', async () => {
+  const { ui, within, fireEvent } = await open({ paid: answer });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  typeAmount(box, fireEvent, '0');
+  assert.ok(box.queryByRole('button', { name: 'Save as part paid' }) === null);
+  fireEvent.click(box.getByRole('button', { name: 'Close with a reason…' }));
+  const why = box.getByRole('textbox', { name: 'Why?' });
+  assert.ok(document.activeElement === why);
+  fireEvent.change(why, { target: { value: '[reason]' } });
+  fireEvent.click(box.getByRole('button', { name: 'Close it' }));
+  const closed = await ui.findByRole('region', { name: 'Closed with £760.00 not paid.' });
+  assert.ok(closed);
+  assert.deepEqual(posts().map((c) => c.body), [{ amountPence: 0, receivedOn: TODAY, as: 'close', reason: '[reason]', owedPence: 76000 }]);
+});
+
+test('cw-mark-paid: after saving, a note says so and focus moves to the new box', async () => {
+  const { ui, within, fireEvent } = await open({ paid: answer });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
+  await ui.findByRole('region', { name: 'Paid' });
+  assert.ok(await ui.findByText('Marked paid.'));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(document.activeElement?.textContent, 'Paid');
+});
+
+test('cw-mark-paid: Back from the reason step returns to the amount', async () => {
+  const { ui, within, fireEvent } = await open();
+  const box = within(await openMarkPaid(ui, fireEvent));
+  typeAmount(box, fireEvent, '700.00');
+  fireEvent.click(box.getByRole('button', { name: 'Close with a reason…' }));
+  fireEvent.click(box.getByRole('button', { name: 'Back' }));
+  await new Promise((r) => setTimeout(r, 10));
+  const amount = box.getByRole('textbox', { name: 'Amount received' });
+  assert.equal(amount.value, '700.00');
+  assert.ok(document.activeElement === amount);
+});
+
+test('cw-mark-paid: what’s owed is fixed while the popup is open, even if the page reloads', async () => {
+  const { ui, within, fireEvent } = await open({ paid: () => [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }] });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  step('part_paid', { amountPence: 70000, receivedOn: TODAY }); // recorded on another computer
+  await shell.queryClient.invalidateQueries({ queryKey: ['c2w-order', 9] });
+  await ui.findByRole('region', { name: 'Next: the rest of the payment' });
+  assert.ok(box.getByText('Matches what was expected.'));
+  fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
+  await box.findByRole('alert');
+  assert.deepEqual(posts().map((c) => c.body.owedPence), [76000]);
+});
+
+test('cw-mark-paid: when the server says what’s owed changed, the popup catches up and the next try uses the new figure', async () => {
+  let first = true;
+  const { ui, within, fireEvent } = await open({
+    paid: (body) => {
+      if (!first) return answer(body);
+      first = false;
+      step('part_paid', { amountPence: 70000, receivedOn: TODAY }); // someone else saved part paid meanwhile
+      return [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }];
+    },
+  });
+  const box = within(await openMarkPaid(ui, fireEvent));
+  fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
+  await box.findByRole('alert');
+  await ui.findByRole('region', { name: 'Next: the rest of the payment' });
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '60.00');
+  fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
+  await ui.findByRole('region', { name: 'Paid' });
+  assert.deepEqual(posts().map((c) => c.body.owedPence), [76000, 6000]);
+  assert.equal(posts()[1].body.amountPence, 6000);
 });

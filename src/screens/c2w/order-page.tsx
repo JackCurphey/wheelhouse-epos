@@ -57,8 +57,10 @@ function Stages({ o }: { o: Full }) {
 type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; busy: boolean };
 type Money = { provider: Provider | undefined; lateDays: number | null; canPay: boolean; onPay: () => void; onCloseOwed: () => void };
 
-/** What the provider has sent for the order, from its payments (the extra included). */
-const received = (o: Full) => o.events.reduce((sum, e) => (e.kind === 'paid' || e.kind === 'part_paid' ? sum + Number(e.detail.paymentPence ?? e.detail.amountPence) : sum), 0);
+/** What one payment put on this order, its extra included (paymentPence is the whole payment, which may cover several bikes). */
+const putOn = (e: { detail: Record<string, unknown> }) => Number(e.detail.amountPence) + Number(e.detail.extraPence ?? 0);
+/** What the provider has sent for the order, from its payments. */
+const received = (o: Full) => o.events.reduce((sum, e) => (e.kind === 'paid' || e.kind === 'part_paid' ? sum + putOn(e) : sum), 0);
 
 /**
  * After collection: what the provider owes (cw-order-owed), what's still owed after
@@ -67,10 +69,10 @@ const received = (o: Full) => o.events.reduce((sum, e) => (e.kind === 'paid' || 
  * order isn't drawn: it says what wasn't paid and why (logged).
  */
 function MoneyStep({ o, money }: { o: Full; money: Money }) {
-  const head = (text: string) => <h3 id="cw-next" className="m-0 text-size-17 font-bold">{text}</h3>;
+  const head = (text: string) => <h3 id="cw-next" tabIndex={-1} className="m-0 text-size-17 font-bold">{text}</h3>;
   const expected = o.expectedPence ?? 0;
   if (o.stage === 'closed') {
-    return <Box label="cw-next"><Msg tone="warn"><strong>{`Closed with ${pounds(owedOf(o))} not paid.`}</strong>{o.closeReason ? ` ${o.closeReason}` : ''}</Msg></Box>;
+    return <Box label="cw-next"><Msg tone="warn"><strong id="cw-next" tabIndex={-1}>{`Closed with ${pounds(owedOf(o))} not paid.`}</strong>{o.closeReason ? ` ${o.closeReason}` : ''}</Msg></Box>;
   }
   if (o.stage === 'paid') {
     const got = received(o) || (o.paidPence ?? 0);
@@ -90,7 +92,8 @@ function MoneyStep({ o, money }: { o: Full; money: Money }) {
       </Box>
     );
   }
-  const kept = money.provider ? commission(money.provider) : null;
+  // The provider's rate, only while it still gives the order's own figures (logged).
+  const kept = money.provider && o.certificatePence !== null && keptPence(money.provider, o.certificatePence) === o.certificatePence - expected ? commission(money.provider) : null;
   const less = o.certificatePence === null ? '' : ` — the certificate ${pounds(o.certificatePence)} less ${kept ?? pounds(o.certificatePence - expected)} commission.`;
   return (
     <Box label="cw-next">
@@ -105,7 +108,7 @@ const row = (children: ReactNode) => <div className="flex flex-wrap gap-2.5">{ch
 
 function NextStep({ o, rule, remindDays, now, act, money }: { o: Full; rule: string | undefined; remindDays: number | null; now: string; act: Act; money: Money }) {
   const name = firstName(o.customerName);
-  const head = (text: string) => <h3 id="cw-next" className="m-0 text-size-17 font-bold">{text}</h3>;
+  const head = (text: string) => <h3 id="cw-next" tabIndex={-1} className="m-0 text-size-17 font-bold">{text}</h3>;
   const addCertificate = (variant: 'primary' | 'default') => <Button variant={variant} onClick={act.onCertificate}>Add the certificate</Button>;
   const orderButton = (variant: 'primary' | 'default') => <Button variant={variant} disabled={act.busy} onClick={act.onOrder}>{orderLabel(o)}</Button>;
   const ordering = <p className={note}>Ordering creates the supplier order in Deliveries and orders.</p>;
@@ -234,7 +237,7 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
       text = `saved part paid: ${pounds(paidSoFar)} of ${pounds(expected)} received ${longDate(e.detail.receivedOn)} · ${pounds(expected - paidSoFar)} still owed`;
     } else if (e.kind === 'paid') {
       paidSoFar += Number(e.detail.amountPence);
-      text = [`marked paid: ${pounds(Number(e.detail.paymentPence ?? e.detail.amountPence))} received ${longDate(e.detail.receivedOn)}`, e.detail.reference ? `reference ${e.detail.reference}` : null, e.detail.extraPence ? `the extra ${pounds(Number(e.detail.extraPence))} is noted` : null].filter(Boolean).join(' · ');
+      text = [`marked paid: ${pounds(putOn(e))} received ${longDate(e.detail.receivedOn)}`, e.detail.reference ? `reference ${e.detail.reference}` : null, e.detail.extraPence ? `the extra ${pounds(Number(e.detail.extraPence))} is noted` : null].filter(Boolean).join(' · ');
     } else if (e.kind === 'shortfall_closed') {
       const got = Number(e.detail.amountPence);
       paidSoFar += got;
@@ -265,6 +268,7 @@ function History({ o }: { o: Full }) {
   );
 }
 
+const keptPence = (p: Provider, certificate: number) => (p.commissionValue == null ? null : p.commissionKind === 'percent' ? Math.round((certificate * p.commissionValue) / 10000) : p.commissionValue);
 const commission = (p: Provider) => (p.commissionKind === undefined || p.commissionValue == null ? null : p.commissionKind === 'percent' ? `${p.commissionValue / 100}%` : pounds(p.commissionValue));
 
 function Details({ o, provider, onEmail, busy }: { o: Full; provider: Provider | undefined; onEmail: () => void; busy: boolean }) {
