@@ -7,13 +7,18 @@
 // months, their closed days added up (answer 9).
 import { prepare } from '../db.js';
 import { periodFor, addDays } from './report-periods.js';
-import { onlineSoFar, daysWaiting, takingsSoFarFor } from '../routes/close-the-day.js';
+import { providerName } from '../accounts/index.js';
+import { onlineSoFar, daysWaiting, takingsSoFarFor, reopenedOn } from '../routes/close-the-day.js';
 
 const CLOSES = `SELECT c.id, to_char(c.day, 'YYYY-MM-DD') AS day, c.closed_at, COALESCE(l.name, 'Unknown') AS closed_by_name,
     c.takings_pence, c.card_pence, c.cash_pence, c.other_pence, c.online_pence,
     c.counted_pence - c.expected_pence AS difference_pence, c.banked_pence
   FROM day_closes c LEFT JOIN logins l ON l.id = c.login_id
-  WHERE c.day BETWEEN ?::date AND ?::date ORDER BY c.day`;
+  WHERE c.reopened_at IS NULL AND c.day BETWEEN ?::date AND ?::date ORDER BY c.day`;
+
+const DAY3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const reopenedLabel = (iso) => `${DAY3[new Date(`${iso}T00:00:00Z`).getUTCDay()]} ${Number(iso.slice(8))} ${MON3[Number(iso.slice(5, 7)) - 1]}`;
 
 const sum = (list, k) => list.reduce((n, c) => n + c[k], 0);
 
@@ -35,7 +40,7 @@ export async function takingsReport(choice, today) {
   const beforeTo = todayOpen && period.before.to > period.before.from ? addDays(period.before.to, -1) : period.before.to;
   period = { ...period, before: { from: period.before.from, to: beforeTo } };
   const before = await prepare(CLOSES).all(period.before.from, period.before.to);
-  const { first } = await prepare("SELECT to_char(min(day), 'YYYY-MM-DD') AS first FROM day_closes").get();
+  const { first } = await prepare("SELECT to_char(min(day), 'YYYY-MM-DD') AS first FROM day_closes WHERE reopened_at IS NULL").get();
   const nothingBefore = !first || first >= period.from;
 
   const keyOf = (c) => (unit === 'month' ? c.day.slice(0, 7) : c.day);
@@ -49,6 +54,14 @@ export async function takingsReport(choice, today) {
 
   // Days nobody closed that were counted with a later morning's float: Close the day can still close them.
   const waiting = new Set((await daysWaiting()).map((w) => w.for_day));
+  // The reopened day, if it falls in this period.
+  const reopenedAny = await reopenedOn();
+  const reopened = reopenedAny && reopenedAny.day >= period.from && reopenedAny.day <= period.through ? reopenedAny : null;
+  const reopenedRow = reopened && unit === 'day' ? (await prepare(CLOSES.replace('c.reopened_at IS NULL', 'c.reopened_at IS NOT NULL')).all(reopened.day, reopened.day))[0] : null;
+  // Where accounts software is connected (or was lost), each day says whether it went (reports-accounts-and-reopen).
+  const conn = await prepare('SELECT provider, status FROM accounts_connections').get();
+  const sendBy = new Map((await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day, status FROM accounts_sends").all()).map((r) => [r.day, r.status]));
+  const sentOf = (day, { reopened = false, open = false } = {}) => (reopened ? 'reopened' : open ? 'open' : sendBy.get(day) ?? null);
   const rows = [];
   for (const b of [...buckets].reverse()) {
     if (b.notReached) continue;
@@ -66,13 +79,21 @@ export async function takingsReport(choice, today) {
     if (c) {
       rows.push({
         kind: 'day', key: b.key, label: b.label, closed: true, closeId: c.id, takingsPence: c.takings_pence, bankedPence: c.banked_pence,
-        differencePence: c.difference_pence, closedByName: c.closed_by_name, closedAt: c.closed_at,
+        differencePence: c.difference_pence, closedByName: c.closed_by_name, closedAt: c.closed_at, sent: sentOf(b.key),
       });
-      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: c.online_pence });
+      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: c.online_pence, sent: sentOf(b.key) });
+    } else if (reopenedRow?.day === b.key) {
+      // A reopened day (reports-accounts-and-reopen; Jack, 12 Nov): its row keeps the figures it was closed with and opens
+      // its report, and its Online row stays; only the headline figures, the graph and the months leave it out.
+      rows.push({
+        kind: 'day', key: b.key, label: b.label, closed: true, reopened: true, closeId: reopenedRow.id, takingsPence: reopenedRow.takings_pence,
+        bankedPence: reopenedRow.banked_pence, differencePence: reopenedRow.difference_pence, closedByName: reopenedRow.closed_by_name, closedAt: reopenedRow.closed_at, sent: 'reopened',
+      });
+      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: reopenedRow.online_pence, sent: 'reopened' });
     } else if (b.key === today) {
-      rows.push({ kind: 'day', key: b.key, label: b.label, closed: false });
+      rows.push({ kind: 'day', key: b.key, label: b.label, closed: false, sent: sentOf(b.key, { open: true }) });
       // Today's online money so far, as drawn ("[£] so far"): not yet in any close.
-      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: await onlineSoFar(today), soFar: true });
+      rows.push({ kind: 'online', key: b.key, label: `${b.label} · Online`, onlinePence: await onlineSoFar(today), soFar: true, sent: sentOf(b.key, { open: true }) });
     } else if (waiting.has(b.key)) {
       // A past day nobody closed (Jack, 11 Nov): its own row, "Not closed", with its takings so far and where to close it.
       rows.push({ kind: 'day', key: b.key, label: b.label, closed: false, past: true, takingsPence: await takingsSoFarFor(b.key), closeDay: b.key });
@@ -99,5 +120,7 @@ export async function takingsReport(choice, today) {
       online: figure('online_pence'), cashDifference: figure('difference_pence'),
     },
     rows, bars, empty: rows.length === 0, nothingBefore, firstCloseOn: first ?? null,
+    accounts: conn && conn.status !== 'disconnected' ? { providerName: providerName(conn.provider), status: conn.status } : null,
+    reopened: reopened ? { day: reopened.day, label: reopenedLabel(reopened.day), reason: reopened.reason, reopenedByName: reopened.reopenedByName } : null,
   };
 }

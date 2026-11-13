@@ -179,3 +179,101 @@ test('tonight, the cash banked for an earlier day comes off what the till expect
   const rows = text(await region.findByRole('group', { name: 'How the till worked out what it expected' }));
   assert.ok(rows.includes('minus cash banked for an earlier day £69.00'), rows);
 });
+
+// A reopened day (reports-accounts-and-reopen): back in Today's Needs attention with Close it, and closed
+// again from a new count of the cash.
+const REOPENED_LINE = { kind: 'day_reopened', day: MON, closeId: 9, reason: 'miscounted', reopenedByName: 'Jack Lewis', reopenedAt: NOW };
+const REOPENED_DAY = {
+  day: MON, floatPence: 15000, floatStart: START, cashPence: 7900, paidOutsPence: 0, expectedPence: 22900, earlierBankedPence: 0, paidOuts: [], countFirst: true,
+  reopened: { id: 9, day: MON, reason: 'miscounted', reopenedByName: 'Jack Lewis', reopenedAt: NOW }, close: null,
+};
+
+test('Today: a reopened day with who reopened it and why, and Close it', async () => {
+  const t = await open('/workshop/today', { items: [REOPENED_LINE] });
+  const title = await t.ui.findByText('Monday 31 August was reopened');
+  const line = title.closest('li');
+  assert.ok(/Reopened by Jack Lewis at \d\d:\d\d · “miscounted”/.test(text(line)), text(line));
+  const close = t.within(line).getByRole('link', { name: 'Close Monday 31 August' });
+  assert.equal(close.textContent, 'Close it');
+  assert.equal(close.getAttribute('href'), `/workshop/till/close?day=${MON}`);
+  assert.ok(t.ui.queryByText(/messages? needs? a reply/) === null, 'it is its own line, not Messages');
+});
+
+test('Today: today reopened has Close it to Close the day itself', async () => {
+  const t = await open('/workshop/today', { items: [{ ...REOPENED_LINE, day: TODAY }] });
+  await t.ui.findByText(/was reopened$/);
+  assert.equal(t.ui.getByRole('link', { name: /^Close / }).getAttribute('href'), '/workshop/till/close');
+});
+
+test('a reopened earlier day: count the cash again, see the difference, and close it again', async () => {
+  const t = await open(`/workshop/till/close?day=${MON}`, { late: REOPENED_DAY });
+  assert.ok(await t.ui.findByRole('heading', { level: 2, name: 'Close the day' }));
+  assert.ok(t.ui.getByText('Monday 31 August'));
+  const words = text(t.ui.getByRole('region', { name: 'Close the day again' }));
+  assert.ok(words.includes('Monday 31 August was reopened by Jack Lewis: “miscounted”. Count the cash to close it again.'), words);
+  assert.ok(words.includes('Float at the start £150.00'), words);
+  assert.ok(words.includes('Cash sales £79.00'), words);
+  const again = t.ui.getByRole('button', { name: 'Close the day again' });
+  assert.equal(again.getAttribute('aria-disabled'), 'true', 'a count first');
+  t.fireEvent.change(t.ui.getByLabelText('Cash counted, total'), { target: { value: '231.00' } });
+  const diff = text(t.ui.getByRole('region', { name: 'Close the day again' }));
+  assert.ok(diff.includes('Should have £229.00 Counted £231.00 Difference £2.00 over'), diff);
+  t.fireEvent.change(t.ui.getByLabelText('Why is it out? (optional)'), { target: { value: 'two pound coins found' } });
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Close the day again' }));
+  await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day'), [{ day: MON, countedPence: 23100, expectedPence: 22900, reason: 'two pound coins found' }]));
+  await t.waitFor(() => assert.equal(window.location.pathname, '/workshop/reports/takings'));
+});
+
+const closeUi = async (t) => { const { cleanup } = await import('@testing-library/react'); cleanup(); t.ui.unmount?.(); };
+
+test('Close the day today, reopened, says so and counts the cash again; an earlier day reopened is closed first', async () => {
+  const reopenedToday = { ...TONIGHT, reopened: { id: 9, day: TODAY, reason: 'miscounted', reopenedByName: 'Jack Lewis', reopenedAt: NOW } };
+  const t = await open('/workshop/till/close', { tonight: reopenedToday });
+  assert.ok(await t.ui.findByText('Today was reopened by Jack Lewis: “miscounted”. Count the cash again to close it.'));
+  await closeUi(t);
+  const earlier = { ...TONIGHT, reopened: REOPENED_DAY.reopened };
+  const t2 = await open('/workshop/till/close', { tonight: earlier, late: REOPENED_DAY });
+  assert.ok(await t2.ui.findByRole('region', { name: 'Close the day again' }), 'the reopened earlier day comes first');
+});
+
+test('closing the reopened day again when the till\'s figures changed reads them again and keeps the form usable', async () => {
+  const t = await open(`/workshop/till/close?day=${MON}`, { late: REOPENED_DAY });
+  await t.ui.findByRole('region', { name: 'Close the day again' });
+  let first = true;
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = new URL(url, 'http://localhost');
+    if (u.pathname === '/api/close-the-day' && init.method === 'POST' && first) {
+      first = false;
+      server.late = { ...server.late, expectedPence: 23400 };
+      return { status: 409, ok: false, json: async () => ({ error: 'The till’s figures changed while you were counting. Check the difference again.', code: 'expected_changed', expectedPence: 23400 }) };
+    }
+    return real(url, init);
+  };
+  t.fireEvent.change(t.ui.getByLabelText('Cash counted, total'), { target: { value: '229.00' } });
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Close the day again' }));
+  await t.ui.findByText('The till’s figures changed while you were counting. Check the difference again.');
+  await t.waitFor(() => assert.ok(text(t.ui.getByRole('region', { name: 'Close the day again' })).includes('Should have £234.00 Counted £229.00 Difference £5.00 short')));
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Close the day again' }));
+  await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day').at(-1), { day: MON, countedPence: 22900, expectedPence: 23400 }));
+});
+
+test('a reason typed before a recount that came out right is not sent', async () => {
+  const t = await open(`/workshop/till/close?day=${MON}`, { late: REOPENED_DAY });
+  await t.ui.findByRole('region', { name: 'Close the day again' });
+  t.fireEvent.change(t.ui.getByLabelText('Cash counted, total'), { target: { value: '231.00' } });
+  t.fireEvent.change(t.ui.getByLabelText('Why is it out? (optional)'), { target: { value: 'two pound coins found' } });
+  t.fireEvent.change(t.ui.getByLabelText('Cash counted, total'), { target: { value: '229.00' } });
+  t.fireEvent.click(t.ui.getByRole('button', { name: 'Close the day again' }));
+  await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day'), [{ day: MON, countedPence: 22900, expectedPence: 22900 }]));
+});
+
+test('Today: a day that did not go to the accounts software, with the account to choose, and it links to the fold', async () => {
+  const line = { kind: 'day_not_sent', day: MON, providerName: 'Xero', closedAt: NOW, reason: 'Accessories has no Xero account chosen', missingLine: 'Accessories', line: 'sales:Accessories' };
+  const t = await open('/workshop/today', { items: [line] });
+  const title = await t.ui.findByText('Monday 31 August didn’t go to Xero');
+  const li = title.closest('li');
+  assert.ok(/Closed at \d\d:\d\d · Accessories has no Xero account chosen/.test(text(li)), text(li));
+  const choose = t.within(li).getByRole('link', { name: 'Choose an account for Accessories' });
+  assert.equal(choose.getAttribute('href'), '/workshop/settings?room=office&fold=accounts');
+});
