@@ -11,7 +11,7 @@ An owner's accountant today gets figures out of Wheelhouse by hand. Reports and 
 ### Reopen this day (rp-reopen, rp-takings-reopened)
 
 - A closed day's report (`rp-day`, built in part 1) gains **Reopen this day**. It asks "Why are you reopening it? (needed)", saved with the person's name and the time, and says the day goes back to Needs attention and that what was sent to the accounts software is corrected when it closes again (`reopenDialog`, `reports.mjs`). Owner only until roles (WP-1.1).
-- A reopened day's figures are **left out of every report until it closes again**, and each report says so (audit H2): Takings and cash-ups shows "Wed 16 Sep is reopened — its figures are left out until it's closed again" with a "Close the day" button (`rp-takings-reopened`), and the Closed days' figures stop adding it.
+- A reopened day's **row keeps the figures it was closed with** (marked Reopened, its report can still be opened, its Online row stays), while the **headline figures, the graph and the months leave it out until it closes again**, and the report says so (audit H2; Jack, 12 Nov, following the drawing): Takings and cash-ups shows "Wed 16 Sep is reopened — its figures are left out until it's closed again" with a "Close the day" button (`rp-takings-reopened`).
 - The reopened day returns to Today's Needs attention with "Close it", like a day nobody closed (`openspec/specs/today`, "A day nobody closed goes to Needs attention with Close it").
 - Closing it again makes a new close for that day. The first close is kept as history, not deleted. Only the latest closed day can be reopened, and the new close counts only that day's own sales; a sale saved after the first close stays for the next close (Jack's answers 4 and 1, 12 Nov).
 

@@ -12,6 +12,7 @@ import { dayLabel, todayIso } from '@/screens/diary/rules.ts';
 import { clock } from '@/screens/diary/when.ts';
 import { NoteCoinCounter } from './note-coin-counter.tsx';
 import { FloatCheck } from './float-check.tsx';
+import { ReopenedDay, type ReopenedDayData } from './close-reopened-day.tsx';
 import { printPaper } from './receipt.tsx';
 
 /**
@@ -38,6 +39,8 @@ export type Day = {
   day: string; floatPence: number | null; floatStart: FloatStart | null; cashPence: number; paidOutsPence: number;
   expectedPence: number | null; paidOuts: PaidOut[]; entry: { show: boolean; closesAt: string | null }; close: Close | null;
   countFirst?: boolean;
+  // The reopened day, if there is one (reports-accounts-and-reopen): today's own, or an earlier day that is closed again first.
+  reopened?: { id: number; day: string; reason: string; reopenedByName: string; reopenedAt: string } | null;
   // Cash banked since this morning for a day nobody closed, and the oldest such day still waiting.
   earlierBankedPence?: number; earlierDay?: string | null;
 };
@@ -46,6 +49,8 @@ type LateDay = {
   day: string; floatPence: number | null; countedBy: CountedBy; close: Close | null;
   paidOuts?: PaidOut[]; bankPence?: number; topUpPence?: number;
 };
+// A reopened earlier day (reports-accounts-and-reopen): the same answer without a morning count, with `reopened`.
+type EarlierAnswer = LateDay | (ReopenedDayData & { close: null });
 export const CLOSE_DAY_QUERY = ['close-the-day'];
 const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 
@@ -84,6 +89,8 @@ export function CloseTheDayPage() {
   // A day nobody closed is closed first, so its sales stay its own
   // (unclosed-day design 7; the float check's "first" pattern).
   if (d.earlierDay && !d.close) return <EarlierDay day={d.earlierDay} />;
+  // A reopened earlier day is closed again first, so it stays the latest close.
+  if (d.reopened && d.reopened.day < d.day) return <EarlierDay day={d.reopened.day} />;
   const close = d.close;
   const head = (
     <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -91,6 +98,10 @@ export function CloseTheDayPage() {
       <span className="text-sm text-[var(--wh-muted)]">{dayLabel(d.day)}</span>
     </div>
   );
+  // Today, reopened: counted again below, from the sales its close already counted.
+  const reopenedNote = d.reopened && d.reopened.day === d.day && !d.close
+    ? <Note>{`Today was reopened by ${d.reopened.reopenedByName}: “${d.reopened.reason}”. Count the cash again to close it.`}</Note>
+    : null;
   if (d.floatPence === null) {
     return (
       <Page>{head}<Note>Set the shop’s float in Settings › Front desk › End of day first: Close the day leaves it in the drawer and banks the rest.</Note></Page>
@@ -157,6 +168,7 @@ export function CloseTheDayPage() {
   return (
     <Page>
       {head}
+      {reopenedNote}
       <Step n={1} title="Count the cash" tone={result !== null ? 'done' : 'todo'} status={countStatus} open={open === 1} onToggle={() => toggle(1)}>
         {result === null || expected === null || diff === null || d.floatStart === null ? (
           <>
@@ -284,7 +296,7 @@ function EarlierDay({ day }: { day: string }) {
   const key = [...CLOSE_DAY_QUERY, day];
   const fromToday = useSearchParams()[0].get('day') !== null;
   const navigate = useNavigate();
-  const late = useQuery({ queryKey: key, queryFn: () => apiGet<LateDay>(`/api/close-the-day?day=${encodeURIComponent(day)}`), retry: false });
+  const late = useQuery({ queryKey: key, queryFn: () => apiGet<EarlierAnswer>(`/api/close-the-day?day=${encodeURIComponent(day)}`), retry: false });
   const [open, setOpen] = useState<number | null>(2);
   const [bagged, setBagged] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -297,6 +309,7 @@ function EarlierDay({ day }: { day: string }) {
     return <p role="alert" className="m-0 text-sm">{gone ? 'That day isn’t waiting to be closed.' : 'Wheelhouse couldn’t load the day. Try again in a moment.'}</p>;
   }
   if (!d) return null;
+  if ('reopened' in d) return <ReopenedDay data={d} />;
   const label = dayLabel(day);
   const weekday = label.split(' ')[0];
   const by = d.countedBy;
