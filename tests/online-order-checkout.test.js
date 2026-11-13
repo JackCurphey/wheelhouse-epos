@@ -504,6 +504,10 @@ test('at /store/<slug>/, the basket answers customers; a switched-off website ta
   assert.equal(b.status, 200, JSON.stringify(b.body));
   assert.equal(b.body.totalPence, 2800);
   await inShop(shop, 'UPDATE storefront_settings SET enabled = false RETURNING id');
+  // The staff cookie does get past resolveStorefrontShop: the same shop's read previews.
+  const read = await fetch(`${server.baseUrl}/store/${shop.slug}/api/site`, { headers: { Cookie: shop.owner.cookie, 'X-Forwarded-For': network() } });
+  assert.equal(read.status, 200, await read.clone().text());
+  assert.equal((await read.json()).preview, true);
   const c = await post('/api/site/checkout', { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya }, shop.owner.cookie);
   assert.equal(c.status, 404, JSON.stringify(c.body));
   assert.equal(c.body.error, 'This website isn’t available');
