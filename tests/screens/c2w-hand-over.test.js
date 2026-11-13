@@ -148,6 +148,16 @@ test('cw-order-ready: the ready step has Hand over, which opens the popup as dra
   assert.ok(ui.queryByRole('dialog') === null);
 });
 
+test('the handOver popup: the provider’s share is the server’s, with Maya’s group discount off (risky-area review of pull request 7b)', async () => {
+  const { ui, within, fireEvent } = await open('/workshop/c2w/9', { group: { name: '[Group]', percent: 10 } });
+  fireEvent.click(await ui.findByRole('button', { name: 'Hand over' }));
+  const dialog = within(await ui.findByRole('dialog', { name: 'Hand over to Maya Patel' }));
+  await dialog.findAllByText('£954.00');
+  assert.equal(dialog.getAllByText('£954.00').length, 2, 'the total after the group discount and the provider’s share');
+  assert.ok(dialog.queryByText('£1,060.00') === null);
+  assert.ok(dialog.getByText('£0.00'));
+});
+
 test('the handOver popup: a provider with no checks shows no checks group', async () => {
   PROVIDER.handoverChecks = [];
   try {
@@ -275,6 +285,18 @@ test('till-c2w-extra: a certificate for less than the order leaves Maya the diff
   assert.ok(pay.getByText('Cycle to Work · [Provider] and cash · Sale 601'));
 });
 
+test('till-c2w-extra: cash handed over for more than Maya owes shows the change to give on Paid (review of pull request 7b)', async () => {
+  const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }) });
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\] · £1,000\.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Cash' }));
+  t.fireEvent.change(await pay.findByLabelText('Or type the amount'), { target: { value: '100' } });
+  t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  const change = pay.getByText('Change to give £40.00');
+  assert.ok(change.closest('.hidden') === null, 'the change line is visible, not inside a hidden block');
+});
+
 test('a refused hand-over shows the server’s words and says no sale was recorded', async () => {
   const onSale = () => [409, { error: 'This order isn’t at that stage any more. Reload to see where it is.', code: 'wrong_stage' }];
   const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }), onSale });
@@ -365,7 +387,10 @@ test('a server fault during a hand-over says the sale may have saved, not that n
   t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: /^Card · £60\.00/ }));
   t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
-  assert.equal((await pay.findByRole('alert')).textContent, 'Something went wrong in Wheelhouse, so this sale may have saved. Check Maya Patel’s order before taking payment again: if it’s Collected, don’t take the card payment again.');
+  // Most server faults roll the sale back, so the order may well still be Ready:
+  // say how to finish without taking the card twice (risky-area review of pull request 7b).
+  assert.equal((await pay.findByRole('alert')).textContent, 'Something went wrong in Wheelhouse, so this sale may have saved. Check Maya Patel’s order before taking payment again: if it’s Collected, don’t take the card payment again; if it’s still Ready to collect, press Card approved again without taking the card again.');
+  assert.ok(pay.getByRole('button', { name: 'Card approved' }), 'Card approved is still there to press again');
 });
 
 test('Paid keeps its figures when the order is fetched again as Collected', async () => {
@@ -374,12 +399,14 @@ test('Paid keeps its figures when the order is fetched again as Collected', asyn
   t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
   assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
   const shown = pay.getAllByText('£1,060.00').length;
+  assert.ok(pay.getByText(/order is now Collected/));
   const before = calls.filter((c) => c.url === '/api/c2w/orders/9').length;
   await shell.queryClient.invalidateQueries({ queryKey: ['c2w-order', 9] });
   await t.waitFor(() => assert.ok(calls.filter((c) => c.url === '/api/c2w/orders/9').length > before));
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(pay.getByRole('heading', { name: 'Paid' }));
   assert.equal(pay.getAllByText('£1,060.00').length, shown, 'the provider’s share and the total are still shown');
+  assert.ok(pay.getByText(/order is now Collected/), 'the hand-over’s own Paid, not a plain sale’s');
 });
 
 test('after Paid, the order, the lists and the count are fetched again', async () => {

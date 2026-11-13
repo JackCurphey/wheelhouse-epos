@@ -44,11 +44,6 @@ const parse = (raw: string) => {
 const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[18px] py-3.5 text-left';
 
 /**
- * A workshop job's order (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md):
- * paying converts the order, which charges its own saved lines, and then
- * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
- */
-/**
  * A Cycle to Work order handed over (till.mjs till-c2w-pay, till-c2w-extra;
  * openspec/changes/cycle-to-work task 7): the provider's certificate is the
  * first, one-tap way to pay, and anything it doesn't cover, from the counter
@@ -58,6 +53,11 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
 export type C2wPayment = { orderId: number; checks: string[]; total: number; share: number; provider: string; customer: string; certificateNumber: string; bike: string; frameNumber: string | null };
 const C2W_SUB = (provider: string) => `The certificate · owed by ${provider}, not in the drawer`;
 
+/**
+ * A workshop job's order (Jack, 18 Oct, docs/decisions/2026-10-18-till-job-payment.md):
+ * paying converts the order, which charges its own saved lines, and then
+ * `afterPaid` runs (recording the bike as collected), its note shown on Paid.
+ */
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
 export function PayDialog({ lines, onClose, onNextSale, job, c2w: c2wNow, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; c2w?: C2wPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
@@ -139,8 +139,10 @@ export function PayDialog({ lines, onClose, onNextSale, job, c2w: c2wNow, reques
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
       else if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
-      // A server fault says neither way, so the hand-over may have gone through.
-      else if (c2w && err instanceof ApiError && err.status >= 500) setError(`Something went wrong in Wheelhouse, so this sale may have saved. Check ${possessive(c2w.customer)} order before taking payment again${card > 0 ? ': if it’s Collected, don’t take the card payment again.' : '.'}`);
+      // A server fault says neither way, so the hand-over may have gone through. Most
+      // roll the sale back, leaving the order Ready: pressing Card approved again sends
+      // the same request key, without the card taken twice (risky-area review of 7b).
+      else if (c2w && err instanceof ApiError && err.status >= 500) setError(`Something went wrong in Wheelhouse, so this sale may have saved. Check ${possessive(c2w.customer)} order before taking payment again${card > 0 ? ': if it’s Collected, don’t take the card payment again; if it’s still Ready to collect, press Card approved again without taking the card again.' : '.'}`);
       else if ((job || c2w) && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {
@@ -435,9 +437,10 @@ function PaidStep({ total, change, note, wait, saleId, customer, rows, collected
         </div>
       ) : null}
       {collected ? <p role="status" className="m-0 rounded-lg bg-[var(--wh-state-ready-bg)] px-3.5 py-3 text-sm text-[var(--wh-state-ready-ink)]">{collected}</p> : null}
-      <div className={rows ? 'hidden' : 'flex flex-col items-center gap-2 text-center'}>
-        <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>
-        <span className="font-mono text-size-30">{money(total)}</span>
+      {/* A hand-over's rows stand in for the tick and total; the change and any note still show (review of pull request 7b). */}
+      <div className="flex flex-col items-center gap-2 text-center">
+        {rows ? null : <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--wh-state-ready-bg)] text-3xl text-[var(--wh-state-ready-ink)]">✓</span>}
+        {rows ? null : <span className="font-mono text-size-30">{money(total)}</span>}
         {change > 0 ? <span className="text-lg font-bold">{`Change to give ${money(change)}`}</span> : null}
         {note ? <span role="status" className="rounded-md bg-[var(--wh-warn-bg)] px-3 py-2 text-sm font-semibold text-[var(--wh-warn-ink)]">{note}</span> : null}
       </div>

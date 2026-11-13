@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
+import { apiMutate } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { ROUTES } from '@/staff/routes.ts';
@@ -18,7 +20,18 @@ export function HandOverDialog({ o, provider, onClose }: { o: C2wOrder; provider
   const checks = provider?.handoverChecks ?? [];
   const [ticked, setTicked] = useState<string[]>([]);
   const name = firstName(o.customerName);
-  const providerPays = o.providerPaysPence ?? o.certificatePence ?? o.totalPence;
+  // The server's figures, as the till will take them: the customer's group discount
+  // off, and the provider's share no more than what's left (risky-area review of 7b).
+  // The order's own figures stand in until they come.
+  const due = useQuery({
+    queryKey: ['c2w-due', o.id, []],
+    queryFn: () => apiMutate<{ totalPence: number; sharePence: number; customerPaysPence: number }>(`/api/c2w/orders/${o.id}/hand-over/due`, { items: [] }),
+    retry: false,
+  });
+  const figures = typeof due.data?.sharePence === 'number' ? due.data : null;
+  const total = figures ? figures.totalPence : o.totalPence;
+  const providerPays = figures ? figures.sharePence : o.providerPaysPence ?? o.certificatePence ?? o.totalPence;
+  const customerPays = figures ? figures.customerPaysPence : Math.max(0, o.totalPence - providerPays);
   const toTill = () => navigate(`${ROUTES.till}?c2w=${o.id}`, { state: { c2wChecks: checks.filter((c) => ticked.includes(c)) } });
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }} aria-labelledby="ho-title" className="md:max-w-[560px]">
@@ -36,9 +49,9 @@ export function HandOverDialog({ o, provider, onClose }: { o: C2wOrder; provider
           </fieldset>
         ) : null}
         <div className="rounded-xl border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-1.5 md:px-[18px]">
-          <Kv k="Order total"><span className={mono}>{pounds(o.totalPence)}</span></Kv>
+          <Kv k="Order total"><span className={mono}>{pounds(total)}</span></Kv>
           <Kv k={`${o.providerName} pays (the certificate)`}><span className={mono}>{pounds(providerPays)}</span></Kv>
-          <Kv k={`${name} pays at collection`} strong><span className={mono}>{pounds(Math.max(0, o.totalPence - providerPays))}</span></Kv>
+          <Kv k={`${name} pays at collection`} strong><span className={mono}>{pounds(customerPays)}</span></Kv>
         </div>
         <p className={note}>{`“Hand over at the till” opens the till with ${name}’s order in the basket: the bike, with its held frame number, and the order’s accessories, marked “on the order”. “Cycle to Work · ${o.providerName}” is the first way to pay. Anything ${name} adds at the counter goes on the same sale, for ${name} to pay. The ticked checks go in the order’s history.`}</p>
       </DialogBody>
