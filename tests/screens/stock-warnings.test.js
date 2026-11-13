@@ -183,6 +183,26 @@ test('Stock opened from See them has Below zero picked and lists only those', as
   assert.ok(t.ui.queryByText('Shimano brake pads') === null);
 });
 
+// Jack's answer to Q1 (12 Nov, docs/decisions/2026-11-12-website-defaults-taken.md): the Website
+// page's See them opens Stock filtered to those products, with a line and Show all; no new pills.
+const listAsked = () => calls.filter((c) => new URL(c.url, 'http://localhost').pathname === '/api/stock-list').map((c) => new URL(c.url, 'http://localhost').searchParams);
+test('Stock opened from the Website page’s See them: filtered, with the line and Show all, and no new pills', async () => {
+  const t = await open('/workshop/stock?show=no-photo&online=1');
+  const line = await t.ui.findByText('Showing products with no photo');
+  await t.waitFor(() => assert.ok(listAsked().some((q) => q.get('show') === 'no-photo' && q.get('online') === '1')));
+  assert.equal(t.ui.getByRole('button', { name: 'All' }).getAttribute('aria-pressed'), 'true');
+  assert.ok(t.ui.queryByRole('button', { name: /No photo/ }) === null, 'no new pill');
+  t.fireEvent.click(t.within(line.closest('p')).getByRole('button', { name: 'Show all' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByText('Showing products with no photo') === null));
+  await t.waitFor(() => assert.ok(listAsked().at(-1).get('show') === null));
+});
+
+test('Stock opened from See them for products with no price says so', async () => {
+  const t = await open('/workshop/stock?show=no-price');
+  assert.ok(await t.ui.findByText('Showing products with no price'));
+  await t.waitFor(() => assert.ok(listAsked().some((q) => q.get('show') === 'no-price' && q.get('online') === null)));
+});
+
 test('Today: no value sent (the Owner’s till with Jo checked in): the line shows, with no money', async () => {
   const { valuePence: _v, ...noValue } = ADJUSTED;
   void _v;

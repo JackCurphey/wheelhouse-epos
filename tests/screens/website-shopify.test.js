@@ -5,7 +5,7 @@
 // The answers are in the shapes server/routes/shopify-link.js sends.
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { openWebsite, closeWebsite, calls, NOT_SET_UP, OFF_NEVER, HISTORY } from '../helpers/website-screen.js';
+import { openWebsite, closeWebsite, calls, NOT_SET_UP, OFF_NEVER, ON_CLEAN, HISTORY } from '../helpers/website-screen.js';
 
 afterEach(closeWebsite);
 const PAGE = '/workshop/website';
@@ -94,6 +94,25 @@ test('ws-shopify-connect: from the Website page’s Wheelhouse’s website or Sh
   assert.ok(await ui.findByRole('heading', { name: 'Your website is off' }));
 });
 
+// Jack's answer to Q3 (12 Nov, docs/decisions/2026-11-12-website-defaults-taken.md): one line
+// above Connect, only when the website is live.
+const SWITCHED_OFF = 'Your Wheelhouse website will be switched off when Shopify is connected.';
+test('ws-shopify-connect with the website on: one line above Connect says the Wheelhouse website will be switched off', async () => {
+  const { ui, fireEvent } = await open(ON_CLEAN);
+  fireEvent.click(await ui.findByRole('button', { name: /^Wheelhouse’s website or Shopify/ }));
+  assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connect your Shopify shop' }));
+  const line = ui.getByText(SWITCHED_OFF);
+  const connect = ui.getByRole('button', { name: 'Connect' });
+  assert.ok(line.compareDocumentPosition(connect) & Node.DOCUMENT_POSITION_FOLLOWING, 'the line sits above Connect');
+});
+
+test('ws-shopify-connect with the website off has no switched-off line', async () => {
+  const { ui, fireEvent } = await open(OFF_NEVER);
+  fireEvent.click(await ui.findByRole('button', { name: /^Wheelhouse’s website or Shopify/ }));
+  assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connect your Shopify shop' }));
+  assert.ok(ui.queryByText(SWITCHED_OFF) === null);
+});
+
 test('ws-shopify-failed: back from Shopify on a set-up website, the connect page says it couldn’t connect', async () => {
   const { ui } = await open(OFF_NEVER, `${PAGE}?shopify=failed&address=${encodeURIComponent(ADDRESS)}`);
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connect your Shopify shop' }));
@@ -147,7 +166,9 @@ test('ws-shopify-sending: the progress bar and how many are sent, then the conne
 test('ws-shopify-on: the connected page, its rows and note, Open Shopify, and Pause then Resume sending', async () => {
   const { ui, fireEvent, within } = await open(SHOPIFY({ ...SENT }));
   assert.ok(await ui.findByRole('heading', { level: 2, name: 'Connected to your Shopify shop' }));
-  assert.ok(ui.getByText(`${ADDRESS} · last sent 17 Sept, 10:12 · 212 products · sent when you press Send`));
+  // Changes go as they're made (Jack's answer to Q2, 12 Nov), so the drawn line, and no way back to Send once sent.
+  assert.ok(ui.getByText(`${ADDRESS} · last sent 17 Sept, 10:12 · 212 products · sent as you change them in Wheelhouse`));
+  assert.ok(ui.queryByRole('button', { name: 'See what will change' }) === null, 'not drawn on the connected page');
   const shop = ui.getByRole('link', { name: 'Open Shopify' });
   assert.equal(shop.getAttribute('href'), `https://${ADDRESS}/admin`);
   assert.equal(shop.getAttribute('target'), '_blank');
