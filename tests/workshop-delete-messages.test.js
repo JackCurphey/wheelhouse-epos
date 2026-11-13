@@ -13,6 +13,7 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { changeTable } from './helpers/table-change.js';
 
 let server;
 let owner;
@@ -136,7 +137,7 @@ test('a quote answered while its job is deleted waits its turn: neither gets a s
   const db = await admin();
   const fn = `slow_quote_line_${owner.shop.id}`;
   await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.document_id = ${job.orderId} THEN PERFORM pg_sleep(1.5); END IF; RETURN NEW; END $$`);
-  await db.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON sale_document_items FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(db, `CREATE TRIGGER ${fn} BEFORE INSERT ON sale_document_items FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const answer = staff(`/api/quotes/${quote.body.id}/answer`, { method: 'POST', body: { via: 'phone', decisions: [{ lineId: line.id, decision: 'approved' }] } });
     await new Promise((r) => setTimeout(r, 600));
@@ -149,7 +150,7 @@ test('a quote answered while its job is deleted waits its turn: neither gets a s
     const order = await inShop(() => prepare('SELECT workshop_job_id FROM sale_documents WHERE id = ?').get(job.orderId));
     assert.equal(order.workshop_job_id, null, 'the order is kept, unlinked');
   } finally {
-    await db.query(`DROP TRIGGER ${fn} ON sale_document_items`);
+    await changeTable(db, `DROP TRIGGER ${fn} ON sale_document_items`);
     await db.query(`DROP FUNCTION ${fn}()`);
     await db.end();
   }
@@ -171,7 +172,7 @@ test('a quote answered while its job is being deleted is refused as not found on
   const db = await admin();
   const fn = `slow_unlink_${owner.shop.id}`;
   await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF OLD.id = ${job.orderId} AND NEW.workshop_job_id IS NULL THEN PERFORM pg_sleep(1.5); END IF; RETURN NEW; END $$`);
-  await db.query(`CREATE TRIGGER ${fn} BEFORE UPDATE ON sale_documents FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(db, `CREATE TRIGGER ${fn} BEFORE UPDATE ON sale_documents FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const del = staff(`/api/workshop-jobs/${job.id}`, { method: 'DELETE' });
     await new Promise((r) => setTimeout(r, 600));
@@ -182,7 +183,7 @@ test('a quote answered while its job is being deleted is refused as not found on
     const items = await inShop(() => prepare('SELECT name FROM sale_document_items WHERE document_id = ?').all(job.orderId));
     assert.deepEqual(items, [], 'nothing was added to the order');
   } finally {
-    await db.query(`DROP TRIGGER ${fn} ON sale_documents`);
+    await changeTable(db, `DROP TRIGGER ${fn} ON sale_documents`);
     await db.query(`DROP FUNCTION ${fn}()`);
     await db.end();
   }

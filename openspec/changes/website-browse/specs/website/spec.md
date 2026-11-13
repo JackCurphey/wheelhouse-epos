@@ -179,7 +179,7 @@ A product with sizes or colours SHALL ask "Colour: choose one" and "Size: choose
 
 #### Scenario: A size in stock at the other shop (wb-product-size-other)
 - **WHEN** they choose M in [Colour 1], which Bolton doesn't have but the other shop does
-- **THEN** M is shown struck through and the page says "M isn’t in stock at Bolton in [Colour 1] — it’s in stock at our [Second site] shop", with the struck size read out as " — not in stock at Bolton"
+- **THEN** M, struck through until it is chosen, shows chosen with the thick border, and the page says "M isn’t in stock at Bolton in [Colour 1] — it’s in stock at our [Second site] shop", with M read out as " — not in stock at Bolton"
 
 #### Scenario: Sold out at the chosen shop (wb-product-held)
 - **WHEN** nothing is left at Bolton, including when the last one is held for a Cycle to Work order

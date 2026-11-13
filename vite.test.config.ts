@@ -17,7 +17,7 @@ import { fileURLToPath, URL } from 'node:url';
 // Everything but the browser entries, which mount into a page and import CSS.
 // Filtered here rather than with globSync's `exclude`, whose array form is
 // newer than the Node 22 CI runs.
-const BROWSER_ENTRIES = new Set(['src/staff/main.tsx', 'src/customer/main.tsx']);
+const BROWSER_ENTRIES = new Set(['src/staff/main.tsx', 'src/customer/main.tsx', 'src/website/main.tsx']);
 const input = globSync('src/**/*.{ts,tsx}').filter(
   (file) => !file.endsWith('.d.ts') && !BROWSER_ENTRIES.has(file),
 );
