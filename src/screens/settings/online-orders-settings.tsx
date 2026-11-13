@@ -130,6 +130,7 @@ export function ShowingProducts() {
     void queryClient.invalidateQueries({ queryKey: SHOWING });
     void queryClient.invalidateQueries({ queryKey: ['stock'] });
     void queryClient.invalidateQueries({ queryKey: ['product'] });
+    void queryClient.invalidateQueries({ queryKey: ['website'] });
   };
   async function turn(id: number, showOnline: boolean) {
     setSaid(null);

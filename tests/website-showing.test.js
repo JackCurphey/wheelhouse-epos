@@ -12,6 +12,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { pool, runWithShop, prepare } from '../server/db.js';
+import { encryptSecret } from '../server/shopify.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -222,6 +223,21 @@ test('a Shopify website’s products aren’t switched here: Shopify isn’t tol
   ok(await req(`/api/website/categories/${categoryId(state, 'Bearings')}`, { method: 'PUT', body: { showOnline: false } }), 409);
   ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'nothing' } }), 409);
   assert.equal((await switches(shop.id))['[bearing 1]'], true);
+});
+
+test('a shop still on the old Shopify connection isn’t switched here either, and its new products stay off', async (t) => {
+  const { shop, req } = await freshShop(t, '[Old Shopify connection shop]');
+  await addProducts(req);
+  await setUp(req);
+  await runWithShop(shop.id, () => prepare(
+    `INSERT INTO shopify_connections (shop_id, shop_domain, access_token, storefront_api_token, webhook_secret, location_id, status)
+     VALUES (?, ?, ?, ?, ?, '1', 'connected')`
+  ).run(shop.id, `showing-${shop.id}.fake-shopify.invalid`, encryptSecret('fake'), encryptSecret('fake'), encryptSecret('fake')));
+  const state = await showing(req);
+  ok(await req(`/api/website/categories/${categoryId(state, 'Bearings')}`, { method: 'PUT', body: { showOnline: false } }), 409);
+  ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'nothing' } }), 409);
+  assert.equal((await switches(shop.id))['[bearing 1]'], true);
+  assert.equal((await addOne(req, '[after connection]', 'Bearings')).showOnline, false, 'Shopify gets nothing it wasn’t sent');
 });
 
 test('only the Owner reads or changes Showing products', async (t) => {

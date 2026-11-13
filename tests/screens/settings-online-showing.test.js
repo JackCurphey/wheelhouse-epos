@@ -65,10 +65,14 @@ test('on-settings-show: the start line, a switch on each category, the count wit
 test('a category’s switch saves, and the categories inside it follow', async () => {
   const t = await openShowing(showing({ categories: showing().categories.map((c) => ({ ...c, showOnline: true })) }));
   const box = area(t);
-  t.fireEvent.click(await box.findByRole('switch', { name: 'Drivetrain' }));
+  const reads = () => calls.filter((c) => c.path === '/api/website').length;
+  await box.findByRole('switch', { name: 'Drivetrain' });
+  const before = reads();
+  t.fireEvent.click(box.getByRole('switch', { name: 'Drivetrain' }));
   await t.waitFor(() => assert.deepEqual(sent('/api/website/categories/2'), [{ showOnline: false }]));
   await t.waitFor(() => assert.equal(box.getByRole('switch', { name: 'Drivetrain › Derailleurs' }).getAttribute('aria-checked'), 'false'));
   assert.equal(box.getByRole('switch', { name: 'Bearings' }).getAttribute('aria-checked'), 'true');
+  await t.waitFor(() => assert.ok(reads() > before, 'the website read again'));
 });
 
 test('none set differently, or a website set up before the start was kept, says nothing about either', async () => {
@@ -92,6 +96,7 @@ test('a Shopify website, or none set up yet, has no Showing products fold', asyn
     const t = await openShowing(showing(), { kind });
     await t.ui.findByRole('button', { name: /^What the website sells/ });
     await t.waitFor(() => assert.ok(calls.some((c) => c.path === '/api/website')));
+    await new Promise((done) => { setTimeout(done, 100); }); // its answer applied
     assert.ok(t.ui.queryByRole('button', { name: /^Showing products/ }) === null, String(kind));
     await closeWebsite();
   }

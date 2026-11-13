@@ -7,20 +7,21 @@
 // own rule for products. Every function runs inside the request's shop
 // (runWithShop), so row-level security keeps each shop to its own rows.
 //
-// Only for Wheelhouse's own website, once set up: set-up sets every switch
-// again, and a Shopify website hears about a product going off only from that
+// Only for Wheelhouse's own website, once set up, and not while the shop is still
+// on the old Shopify connection: set-up sets every switch again, and Shopify hears about a product going off only from that
 // product's own page in Stock (unpublishProductFromShopify), not from a switch
 // that sets many at once.
 import { prepare } from './db.js';
 import { getOrCreateWebsite, inTransaction, START_CHOICES, startProducts, WebsiteError } from './website.js';
-import { JOIN } from './lib/categories.js';
+import { JOIN, OLD_SHOPIFY } from './lib/categories.js';
 import { limitLockWait } from './lib/stock.js';
 
 // The website row locked, in the caller's transaction, refused unless it is
 // Wheelhouse's own website, set up.
 async function lockWheelhouseWebsite() {
   const website = await prepare('SELECT kind FROM website FOR UPDATE').get();
-  if (website?.kind === 'shopify') throw new WebsiteError(409, 'Switch a Shopify website’s products on each product’s page in Stock');
+  const { old } = await prepare(`SELECT ${OLD_SHOPIFY} AS old`).get();
+  if (website?.kind === 'shopify' || old) throw new WebsiteError(409, 'Switch a Shopify website’s products on each product’s page in Stock');
   if (website?.kind !== 'wheelhouse') throw new WebsiteError(409, 'Set up the website first');
 }
 
@@ -56,16 +57,19 @@ export async function setCategoryShown(id, body) {
     await lockWheelhouseWebsite();
     // NO KEY UPDATE, not UPDATE: held against a rename, but not against a product
     // save holding its own row and this category with KEY SHARE (categoryFor),
-    // which would otherwise wait on each other.
+    // which would otherwise wait on each other. A new product or sub-category
+    // reads it FOR SHARE (categoryShows, SHOWS_LIKE_PARENT), so it can't slip
+    // through as it was before this switch.
     const category = await prepare('SELECT path FROM product_categories WHERE id = ? FOR NO KEY UPDATE').get(categoryId);
     if (!category) throw new WebsiteError(404, 'There is no such category');
     const inside = `${category.path}${JOIN}`;
     const within = '(path = ? OR left(path, length(?)) = ?)';
     await prepare(`UPDATE product_categories SET show_online = ? WHERE ${within}`).run(body.showOnline, category.path, inside, inside);
-    await prepare(
-      `UPDATE products SET show_online = ?
-       WHERE show_online <> ? AND (category = ? OR left(category, length(?)) = ?)`
-    ).run(body.showOnline, body.showOnline, category.path, inside, inside);
+    // Locked in id order first, as a sale locks its products (lockStock), so the
+    // two wait on each other rather than deadlock.
+    const products = `show_online <> ? AND (category = ? OR left(category, length(?)) = ?)`;
+    await prepare(`SELECT id FROM products WHERE ${products} ORDER BY id FOR NO KEY UPDATE`).all(body.showOnline, category.path, inside, inside);
+    await prepare(`UPDATE products SET show_online = ? WHERE ${products}`).run(body.showOnline, body.showOnline, category.path, inside, inside);
   });
   return showing();
 }
@@ -75,6 +79,7 @@ export async function startAgain(body) {
   if (!START_CHOICES.includes(body?.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
   await getOrCreateWebsite();
   await inTransaction(async () => {
+    await limitLockWait();
     await lockWheelhouseWebsite();
     await startProducts(body.startWith);
   });

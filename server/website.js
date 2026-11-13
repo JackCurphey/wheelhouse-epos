@@ -501,6 +501,8 @@ export const START_CHOICES = ['every', 'nothing'];
 // Runs inside the caller's transaction, website row locked.
 export async function startProducts(startWith) {
   const every = startWith === 'every';
+  // Locked in id order first, as a sale locks its products (lockStock).
+  await prepare('SELECT id FROM products ORDER BY id FOR NO KEY UPDATE').all();
   await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(every);
   await prepare('UPDATE product_categories SET show_online = ?').run(every);
   await prepare('UPDATE website SET started_with = ?, started_with_at = now(), updated_at = now()').run(startWith);

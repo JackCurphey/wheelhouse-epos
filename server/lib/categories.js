@@ -24,8 +24,10 @@ export function tidyCategory(text) {
 // one shows unless the website started with nothing online (openspec/changes/
 // website-buy-online, Showing products: new products follow their category).
 // Takes the parent's id as its one parameter; Stock › Categories uses it too.
+// The parent is read FOR SHARE, so a switch on it at the same moment finishes
+// first (and this follows it) or waits until this is saved.
 export const SHOWS_LIKE_PARENT = `COALESCE(
-  (SELECT show_online FROM product_categories WHERE id = ?),
+  (SELECT show_online FROM product_categories WHERE id = ? FOR SHARE),
   (SELECT started_with IS DISTINCT FROM 'nothing' FROM website),
   true)`;
 
@@ -55,14 +57,20 @@ export async function categoryFor(text) {
   return path;
 }
 
+// True while the shop is still on the old Shopify connection (server/shopify.js),
+// whose products are sent to Shopify one at a time from their own page in Stock.
+export const OLD_SHOPIFY = "EXISTS (SELECT 1 FROM shopify_connections WHERE status <> 'not_connected')";
+
 // A new product with no switch of its own follows its category, on Wheelhouse's
 // own website once set up with a start answer. Otherwise (no website yet, a
-// Shopify website, or one set up before the answer was kept), and with no
-// category (Uncategorised), it stays off until switched on, as before.
+// Shopify website or the old Shopify connection, or one set up before the answer
+// was kept), and with no category (Uncategorised), it stays off until switched
+// on, as before. The category is read FOR SHARE, so a switch on it at the same
+// moment finishes first (and this follows it) or waits until this is saved.
 export async function categoryShows(path) {
   const row = await prepare(
-    `SELECT c.show_online AND w.kind = 'wheelhouse' AND w.started_with IS NOT NULL AS shows
-     FROM product_categories c CROSS JOIN website w WHERE c.path = ?`
+    `SELECT c.show_online AND w.kind = 'wheelhouse' AND w.started_with IS NOT NULL AND NOT ${OLD_SHOPIFY} AS shows
+     FROM product_categories c CROSS JOIN website w WHERE c.path = ? FOR SHARE OF c`
   ).get(path);
   return row?.shows === true;
 }
