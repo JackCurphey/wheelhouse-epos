@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
+import { AlertCircle } from 'lucide-react';
+import { penceText } from '@/lib/money.ts';
+import { shortDay } from '@/screens/diary/rules.ts';
+import { clock } from '@/screens/diary/when.ts';
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 
 /**
@@ -22,7 +26,15 @@ export type AccountsState = {
   accounts?: { id: string; name: string }[];
   groups?: Group[];
   missing?: number;
+  lostOn?: string | null;
+  needLook?: number;
 };
+type LogDay = {
+  day: string; closeId: number | null; closedAt: string | null; amountPence: number | null; sentAt: string | null;
+  status: 'sent' | 'waiting' | 'failed' | 'open' | 'reopened'; reason: string | null; line: string | null; missingLine: string | null; text: string | null;
+  notRecorded?: string[];
+};
+export const LOG_KEY = ['accounts-log'];
 export const ACCOUNTS_KEY = ['accounts'];
 
 const longDate = (iso: string) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }).format(new Date(iso));
@@ -33,6 +45,41 @@ export function useAccounts() {
   return useQuery({ queryKey: ACCOUNTS_KEY, queryFn: () => apiGet<AccountsState>('/api/accounts'), retry: false });
 }
 
+const BADGE = { sent: 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]', failed: 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]', reopened: 'bg-[var(--wh-warn-bg)] text-[var(--wh-warn-ink)]', waiting: 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]', open: 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]' } as const;
+const BADGE_WORDS = { sent: 'Sent', failed: 'Not sent', reopened: 'Reopened', waiting: 'Waiting', open: 'Not closed yet' } as const;
+
+/** What each day sent (rp-accounts-log): newest first, with what to do about a day that couldn't go. */
+function SentLog({ providerName }: { providerName: string }) {
+  const log = useQuery({ queryKey: LOG_KEY, queryFn: () => apiGet<{ days: LogDay[] }>('/api/accounts/log'), retry: false });
+  const days = log.data?.days ?? [];
+  const sub = (d: LogDay) => {
+    if (d.status === 'sent') return `Sent at ${d.sentAt ? clock(d.sentAt) : ''} · ${penceText(d.amountPence ?? 0)}`;
+    if (d.status === 'open' || d.status === 'reopened') return d.text ?? '';
+    return `Closed at ${d.closedAt ? clock(d.closedAt) : ''} · ${d.text ?? ''}`;
+  };
+  return (
+    <div className="flex flex-col">
+      <h4 className="m-0 mt-3 text-sm font-bold">What was sent</h4>
+      <ul aria-label="What was sent" className="m-0 flex list-none flex-col p-0">
+        {days.map((d) => (
+          <li key={d.day} className="flex min-h-[52px] flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-1.5 first:border-t-0">
+            <span className="flex min-w-[240px] flex-1 flex-col gap-0.5">
+              <span className="text-size-15 font-semibold">{shortDay(d.day)}</span>
+              <span className={`text-size-13 ${d.status === 'failed' ? 'text-[var(--wh-warn-ink)]' : 'text-[var(--wh-muted)]'}`}>{sub(d)}</span>
+              {d.status === 'sent' && d.notRecorded?.length ? <span className="text-size-13 text-[var(--wh-muted)]">{`Not recorded in Wheelhouse yet: ${d.notRecorded.join(', ')}`}</span> : null}
+            </span>
+            {d.status === 'failed' && d.missingLine ? (
+              <Button className="min-h-11" onClick={() => { const el = document.getElementById(`acct-${d.line}`); el?.scrollIntoView?.({ block: 'center' }); el?.focus(); }}>{`Choose an account for ${d.missingLine}`}</Button>
+            ) : <span className={`rounded-full px-2.5 py-0.5 text-size-13-5 font-semibold ${BADGE[d.status]}`}>{BADGE_WORDS[d.status]}</span>}
+          </li>
+        ))}
+      </ul>
+      <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">Each day goes once all that shop’s tills are closed. A day that’s reopened is corrected when it closes again.</p>
+      <span className="sr-only">{providerName}</span>
+    </div>
+  );
+}
+
 export function AccountsSoftware() {
   const queryClient = useQueryClient();
   const accounts = useAccounts();
@@ -41,7 +88,13 @@ export function AccountsSoftware() {
   const shop = useQuery({ queryKey: ['shop-details'], queryFn: () => apiGet<{ name: string }>('/api/shop-details') }).data?.name ?? 'Your shop';
   const change = useMutation({
     mutationFn: ({ path, body, method }: { path: string; body: unknown; method?: 'POST' | 'PUT' }) => apiMutate<AccountsState>(path, body, { method: method ?? 'POST' }),
-    onSuccess: (next) => { setProblem(null); queryClient.setQueryData(ACCOUNTS_KEY, next); },
+    onSuccess: (next) => {
+      setProblem(null);
+      queryClient.setQueryData(ACCOUNTS_KEY, next);
+      // A day may have gone, or been held, by this change.
+      void queryClient.invalidateQueries({ queryKey: LOG_KEY });
+      void queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+    },
     onError: (err) => setProblem(serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.'),
   });
   const state = accounts.data;
@@ -65,10 +118,18 @@ export function AccountsSoftware() {
   }
 
   const { providerName, connectedByName, connectedAt } = state.connection;
+  const lost = state.status === 'lost';
   return (
     <div className="flex flex-col gap-2">
+      {lost ? (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+          <AlertCircle size={18} aria-hidden="true" />
+          <span className="min-w-[240px] flex-1"><strong>{`${providerName} disconnected on ${state.lostOn ? longDate(state.lostOn) : ''}.`}</strong> Nothing has been sent since. Reconnect and the waiting days go across.</span>
+          <Button className="min-h-11" disabled={change.isPending} onClick={() => change.mutate({ path: '/api/accounts/connect', body: { provider: state.connection!.provider } })}>{`Reconnect ${providerName}`}</Button>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2.5">
-        <span className="rounded-full bg-[var(--wh-ok-bg)] px-2.5 py-0.5 text-size-13-5 font-semibold text-[var(--wh-status-complete-ink)]">{`Connected to ${providerName}`}</span>
+        {lost ? null : <span className="rounded-full bg-[var(--wh-ok-bg)] px-2.5 py-0.5 text-size-13-5 font-semibold text-[var(--wh-status-complete-ink)]">{`Connected to ${providerName}`}</span>}
         <span className="text-size-13 text-[var(--wh-muted)]">{connectedByName ? `by ${connectedByName} on ${longDate(connectedAt)}` : `on ${longDate(connectedAt)}`}</span>
         <span className="grow" />
         <button type="button" onClick={() => setDisconnecting(true)} className="inline-flex min-h-11 items-center border-0 bg-transparent px-1 text-sm font-semibold text-[var(--wh-ink)] underline">{`Disconnect ${providerName}`}</button>
@@ -105,6 +166,7 @@ export function AccountsSoftware() {
           })}
         </div>
       ))}
+      <SentLog providerName={providerName} />
       <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">{`VAT on sales goes to one ${providerName} account for every rate. Check these choices with your accountant before the first day is sent.`}</p>
       {disconnecting ? (
         <Dialog open onOpenChange={(o) => { if (!o) setDisconnecting(false); }} aria-labelledby="dc-title" className="md:max-w-[520px]">

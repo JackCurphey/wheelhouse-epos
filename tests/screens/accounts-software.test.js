@@ -29,21 +29,21 @@ const GROUPS = [
 ];
 
 // A tiny accounts server: it keeps what was connected and chosen, so what the fold shows after each change is true.
-function fakeAccounts() {
-  let connected = false;
+function fakeAccounts(extra = {}) {
+  let connected = Boolean(extra.connected);
   const chosen = new Map();
   const state = () => {
     if (!connected) return { status: 'not_connected', connection: null, providers: [{ id: 'xero', name: 'Xero' }, { id: 'quickbooks', name: 'QuickBooks' }], summary: 'Not connected' };
     const groups = GROUPS.map((g) => ({ key: g.key, title: g.title, lines: g.lines.map(([key, label, recorded]) => ({ key, label, recorded, accountId: chosen.get(key)?.id ?? null, accountName: chosen.get(key)?.name ?? null })) }));
     const missing = groups.flatMap((g) => g.lines).filter((l) => l.recorded && !l.accountId).length;
     return {
-      status: 'connected', practice: true, accounts: ACCOUNTS, groups, missing,
+      status: extra.lost ? 'lost' : 'connected', lostOn: extra.lost ? '2026-09-16T10:00:00Z' : null, needLook: extra.needLook ?? 0, practice: true, accounts: ACCOUNTS, groups, missing,
       connection: { provider: 'xero', providerName: 'Xero', connectedByName: 'Jack Lewis', connectedAt: '2026-09-15T10:00:00Z' },
-      summary: `Connected to Xero${missing ? ` · ${missing} ${missing === 1 ? 'account' : 'accounts'} to choose` : ''}`,
+      summary: extra.lost ? 'Xero disconnected' : `Connected to Xero${missing ? ` · ${missing} ${missing === 1 ? 'account' : 'accounts'} to choose` : ''}${extra.needLook ? ` · ${extra.needLook} day needs a look` : ''}`,
     };
   };
   return (method, path, body) => {
-    if (path === '/api/accounts/connect') { connected = true; return state(); }
+    if (path === '/api/accounts/connect') { connected = true; extra.lost = false; return state(); }
     if (path === '/api/accounts/disconnect') { connected = false; return state(); }
     if (path === '/api/accounts/choices') {
       if (body.accountId === null) chosen.delete(body.line); else chosen.set(body.line, ACCOUNTS.find((a) => a.id === body.accountId));
@@ -53,9 +53,9 @@ function fakeAccounts() {
   };
 }
 
-async function open() {
+async function open(extra = {}) {
   calls = [];
-  const accounts = fakeAccounts();
+  const accounts = fakeAccounts(extra);
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(url, 'http://localhost');
     const method = init.method ?? 'GET';
@@ -65,6 +65,7 @@ async function open() {
     if (u.pathname === '/api/auth/me') return json(200, OWNER);
     if (u.pathname === '/api/shop-details') return json(200, DETAILS);
     if (u.pathname === '/api/settings/your-data') return json(200, { leftOut: 0 });
+    if (u.pathname === '/api/accounts/log') return json(200, extra.log ?? { connected: true, providerName: 'Xero', status: 'connected', days: [] });
     if (u.pathname.startsWith('/api/accounts')) return json(200, accounts(method, u.pathname, body));
     return json(200, []);
   };
@@ -115,7 +116,7 @@ test('Connect Xero connects, says who and when, says it is a practice, and shows
   assert.ok(region.getByRole('button', { name: 'Disconnect Xero' }) !== null);
   assert.deepEqual(posts('/api/accounts/connect'), [{ provider: 'xero' }]);
   assert.ok(region.queryByText('This is a practice connection: nothing leaves Wheelhouse until a real Xero account is set up.') !== null);
-  assert.deepEqual(region.getAllByRole('heading', { level: 4 }).map((h) => h.textContent), ['Sales go to', 'Money taken goes to', 'Everything else goes to']);
+  assert.deepEqual(region.getAllByRole('heading', { level: 4 }).map((h) => h.textContent), ['Sales go to', 'Money taken goes to', 'Everything else goes to', 'What was sent']);
   const sales = pick(region, 'Accessories');
   assert.deepEqual([...sales.options].map((o) => o.textContent), ['Choose a Xero account', '[Xero account 1]', '[Xero account 2]', '[Xero account 3]', '[Xero account 4]']);
   assert.ok(pick(region, 'Online sales (paid on the website)') !== null);
@@ -173,4 +174,45 @@ test('Disconnect Xero asks first, keeps the choices, and Keep connected leaves i
   await t.waitFor(() => assert.equal(posts('/api/accounts/disconnect').length, 1));
   assert.ok(await t.ui.findByRole('button', { name: 'Connect Xero' }));
   assert.ok((await t.ui.findByRole('button', { name: /^Accounts software/ })).textContent.includes('Not connected'));
+});
+
+const DAYS = [
+  { day: '2026-09-17', closeId: null, closedAt: null, amountPence: null, sentAt: null, status: 'open', reason: null, line: null, missingLine: null, notRecorded: [], text: 'Not closed yet' },
+  { day: '2026-09-16', closeId: 31, closedAt: '2026-09-16T16:30:00Z', amountPence: null, sentAt: null, status: 'failed', reason: 'Accessories has no Xero account chosen', line: 'sales:Accessories', missingLine: 'Accessories', notRecorded: [], text: 'Accessories has no Xero account chosen' },
+  { day: '2026-09-15', closeId: 30, closedAt: '2026-09-15T16:30:00Z', amountPence: 6000, sentAt: '2026-09-15T16:31:00Z', status: 'sent', reason: null, line: null, missingLine: null, notRecorded: ['Refunds', 'Discounts given'], text: null },
+  { day: '2026-09-14', closeId: 29, closedAt: '2026-09-14T16:30:00Z', amountPence: 4000, sentAt: null, status: 'waiting', reason: null, line: null, missingLine: null, notRecorded: [], text: 'sends when Xero is reconnected' },
+  { day: '2026-09-13', closeId: 28, closedAt: '2026-09-13T16:30:00Z', amountPence: 2000, sentAt: '2026-09-13T16:31:00Z', status: 'reopened', reason: null, line: null, missingLine: null, notRecorded: [], text: 'Reopened: sent again when it is closed' },
+];
+
+test('what was sent: each day newest first with its state, the missing account to choose, and the note', async () => {
+  const t = await open({ connected: true, needLook: 1, log: { connected: true, providerName: 'Xero', status: 'connected', days: DAYS } });
+  await fold(t);
+  const p = await panel(t);
+  const header = await t.ui.findByRole('button', { name: /^Accounts software/ });
+  assert.ok(header.textContent.includes('1 day needs a look'), header.textContent);
+  const list = await p.findByRole('list', { name: 'What was sent' });
+  const rows = [...list.querySelectorAll(':scope > li')].map((li) => li.textContent);
+  assert.equal(rows.length, 5);
+  assert.ok(rows[0].includes('Thu 17 Sep') && rows[0].includes('Not closed yet'), rows[0]);
+  assert.ok(/Wed 16 Sep.*Closed at \d\d:\d\d · Accessories has no Xero account chosen.*Choose an account for Accessories/.test(rows[1]), rows[1]);
+  assert.ok(/Tue 15 Sep.*Sent at \d\d:\d\d · £60\.00.*Sent/.test(rows[2]), rows[2]);
+  assert.ok(rows[2].includes('Not recorded in Wheelhouse yet: Refunds, Discounts given'), 'what is not recorded is said on the day (Jack\'s answer 2)');
+  assert.ok(/Mon 14 Sep.*Closed at \d\d:\d\d · sends when Xero is reconnected.*Waiting/.test(rows[3]), rows[3]);
+  assert.ok(rows[4].includes('Reopened'), rows[4]);
+  assert.ok(p.queryByText('Each day goes once all that shop’s tills are closed. A day that’s reopened is corrected when it closes again.') !== null);
+  // The button takes the person to the choice that is missing.
+  t.fireEvent.click(p.getByRole('button', { name: 'Choose an account for Accessories' }));
+  assert.equal(document.activeElement, pick(p, 'Accessories'));
+});
+
+test('a lost connection says so with Reconnect, and the days wait', async () => {
+  const days = [{ ...DAYS[3], day: '2026-09-16' }, { ...DAYS[2] }];
+  const t = await open({ connected: true, lost: true, log: { connected: true, providerName: 'Xero', status: 'lost', days } });
+  await fold(t);
+  const p = await panel(t);
+  await p.findByText(/Xero disconnected on 16 September 2026\./);
+  assert.ok(p.queryByText(/Nothing has been sent since\. Reconnect and the waiting days go across\./) !== null);
+  assert.ok((await t.ui.findByRole('button', { name: /^Accounts software/ })).textContent.includes('Xero disconnected'));
+  t.fireEvent.click(p.getByRole('button', { name: 'Reconnect Xero' }));
+  await t.waitFor(() => assert.deepEqual(posts('/api/accounts/connect'), [{ provider: 'xero' }]));
 });
