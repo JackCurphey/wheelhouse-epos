@@ -195,10 +195,10 @@ test('publish makes the draft live and keeps History; nothing to publish is refu
   const info = await (await customerInfo()).json();
   assert.equal(info.headline, '[New headline]');
   assert.equal(info.heroImageUrl, newPhoto);
-  // The old customer site's own fields follow what is published.
-  const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled, hero_image_url FROM storefront_settings').get());
-  assert.equal(old.enabled, true);
-  assert.equal(old.hero_image_url, newPhoto);
+  // The old website is gone (website-browse, task 9.2), so its settings no
+  // longer follow what is published: they stay as the shop left them.
+  const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled, tagline, hero_image_url, logo_url FROM storefront_settings').get());
+  assert.deepEqual({ ...old }, { enabled: false, tagline: '[Tagline]', hero_image_url: '/uploads/hero.jpg', logo_url: '/uploads/logo.png' });
   const history = ok(await own('/api/website/history')).versions;
   assert.equal(history.length, 2);
   assert.equal(history[0].current, true);
@@ -245,8 +245,6 @@ test('History keeps 90 days, and never removes what customers see now', async ()
 test('turn off hides the website and keeps what is published; turn on shows it again', async () => {
   ok(await own('/api/website/turn-off', { method: 'POST' }));
   assert.equal((await customerInfo()).status, 404);
-  const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
-  assert.equal(old.enabled, false);
   // The old settings switch no longer decides once the new Website page is in use.
   // The old Settings route and uploads are refused, so they can neither turn
   // it back on nor change words that the next publish would overwrite.
@@ -257,6 +255,9 @@ test('turn off hides the website and keeps what is published; turn on shows it a
   const state = ok(await own('/api/website/turn-on', { method: 'POST' }));
   assert.equal(state.isOn, true);
   assert.equal((await (await customerInfo()).json()).headline, '[New headline]');
+  // Turning it on and off leaves the old switch as it was (task 9.2).
+  const old = await runWithShop(owner.shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
+  assert.equal(old.enabled, false);
 });
 
 test('the customer site never sees the draft', async () => {
@@ -330,12 +331,19 @@ test('a new photo clears its description and decoration tick; a part with no pho
 });
 
 test('a new logo goes in the draft and is listed under Every page', async (t) => {
-  const { req, info } = await freshShop(t, '[Logo shop]');
+  const { shop, req, info } = await freshShop(t, '[Logo shop]');
   ok(await req('/api/website/turn-on', { method: 'POST' }));
   const state = ok(await req('/api/website/logo', { method: 'POST', body: PNG }));
   assert.match(state.logo, /^\/api\/uploaded-images\//);
   assert.deepEqual(state.changes, [{ page: 'Every page', parts: ['Logo'] }]);
   assert.equal((await (await info()).json()).logoUrl, null);
+  // The printed Cycle to Work quote still reads the logo from the old
+  // settings (server/routes/c2w.js), so a published logo is the one thing
+  // still copied there, until the quote reads the website's own.
+  ok(await req('/api/website/publish', { method: 'POST' }));
+  const old = await runWithShop(shop.id, () => prepare('SELECT enabled, logo_url FROM storefront_settings').get());
+  assert.equal(old.logo_url, state.logo);
+  assert.equal(old.enabled, false);
 });
 
 test('publishing while the website is off keeps it off', async (t) => {
@@ -347,10 +355,10 @@ test('publishing while the website is off keeps it off', async (t) => {
   assert.equal(state.isOn, false);
   assert.deepEqual(state.changes, []);
   assert.equal((await info()).status, 404);
-  const old = await runWithShop(shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
-  assert.equal(old.enabled, false);
   ok(await req('/api/website/turn-on', { method: 'POST' }));
   assert.equal((await (await info()).json()).headline, '[Published while off]');
+  const old = await runWithShop(shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
+  assert.equal(old?.enabled ?? false, false);
 });
 
 test('turning on a website published before shows what was published, not the unpublished changes', async (t) => {
@@ -454,16 +462,17 @@ test('the page says who published last and how long History keeps changes; View 
 
 test('a product at £0 stays off the customer site until it is priced, as the page says', async (t) => {
   const { shop, req } = await freshShop(t, '[Unpriced shop]');
-  await runWithShop(shop.id, async () => {
+  const parts = await runWithShop(shop.id, async () => {
     const add = prepare("INSERT INTO products (sku, name, category, price, cost, stock_qty, show_online, updated_at) VALUES (?, ?, 'Parts', ?, 0, 0, true, now())");
     await add.run('[sku no price]', '[No price yet]', 0);
     await add.run('[sku priced]', '[Priced]', 5);
+    return (await prepare("INSERT INTO product_categories (name, path) VALUES ('Parts', 'Parts')").run()).lastInsertRowid;
   });
   ok(await req('/api/website/turn-on', { method: 'POST' }));
-  const res = await fetch(`${server.baseUrl}/api/storefront/products?storefrontSlug=${shop.slug}`);
+  // Asked of the new website's product list: the old one is gone (website-browse, task 9.1).
+  const res = await fetch(`${server.baseUrl}/store/${shop.slug}/api/site/products?category=${parts}`);
   assert.equal(res.status, 200);
-  const body = await res.json();
-  const names = (Array.isArray(body) ? body : body.products).map((p) => p.name);
+  const names = (await res.json()).products.map((p) => p.name);
   assert.deepEqual(names, ['[Priced]']);
 });
 

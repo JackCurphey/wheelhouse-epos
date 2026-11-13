@@ -119,3 +119,17 @@ test('a switched-off or unknown shop’s own address still loads the website app
     assert.match(script.type, /javascript/, host);
   }
 });
+
+// The old website is gone (task 9.1): its product list answers 404 on the
+// shop's own address, as any address under /api/ the website doesn't have,
+// and isn't the website page. The new website is at the store path.
+test('the old website’s product list answers 404, and the store path serves the new website', async () => {
+  const host = `${on.shop.slug}.${STOREFRONT_BASE_DOMAIN}`;
+  for (const path of ['/api/storefront/products', '/api/no-such-thing']) {
+    const answer = await onHost(host, path);
+    assert.equal(answer.status, 404, path);
+    assert.match(answer.type, /application\/json/, path);
+    assert.ok(!answer.body.includes('wh-site-root'), `${path} got the website page`);
+  }
+  await websitePage(`/store/${on.shop.slug}/`);
+});

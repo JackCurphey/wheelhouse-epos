@@ -414,6 +414,14 @@ test('suggestions start from the second letter and group products, repairs, cate
   }
 });
 
+// Suggestions read only the products a search could find, and every size of
+// one with sizes (task 6.5): "s[colour" is in the part codes of the small
+// sizes only, yet the jersey's line still counts its medium, ready at Bury.
+test('a suggested product with sizes counts every size, not only the sizes that matched', async () => {
+  const found = ok(await site(north, '/suggest', { q: 's[colour', shop: ids.bury })).products;
+  assert.deepEqual(found, [{ id: ids.sRed, name: '[Jersey]', code: null, pricePence: 3000, stock: { line: 'ready', shop: 'Bury' } }]);
+});
+
 test('suggestions have their own limit, apart from the rest of the website', async () => {
   const from = '198.51.100.9';
   let last;
@@ -464,9 +472,9 @@ test('a long search reads only its first eight words, so it costs no more than a
   const q = `brake pads ${'shimano '.repeat(6)}[nothing like it]`;
   assert.deepEqual(names(ok(await site(north, '/search', { q }))), ['Shimano brake pads B05S-RX']);
   assert.deepEqual(ok(await site(north, '/suggest', { q })).products.map((p) => p.name), ['Shimano brake pads B05S-RX']);
-  // And a word is no longer than a hundred letters in all.
-  const long = ok(await site(north, '/search', { q: `brake${'e'.repeat(200)}` }));
-  assert.equal(long.total, 0);
+  // And only the first hundred letters count: a word after them is not read.
+  const cut = `brake pads${' '.repeat(90)}[nothing like it]`;
+  assert.deepEqual(names(ok(await site(north, '/search', { q: cut }))), ['Shimano brake pads B05S-RX']);
   const many = 'a '.repeat(5000);
   const started = Date.now();
   assert.equal((await site(north, '/suggest', { q: many })).status, 200);

@@ -73,7 +73,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 6.2 Screen test: wb-search-no-suggestions
 - [x] 6.3 Screen tests: wb-category-search-results ("Results for “brake”", "Repairs for “brake”", Best match first), wb-category-search-measure and wb-category-search-none
 - [x] 6.4 Build the search box and the results page (reusing group 4's list and filters)
-- [ ] 6.5 Measure suggestions with the full seed; note the time in the pull request
+- [x] 6.5 Measure suggestions with the full seed; note the time in the pull request (no full seed exists: timed against 2,000–30,000 placeholder products with `scripts/dev/time-site-suggest.mjs`; decided-while-building 2026-11-jack, 13 Nov)
 - [x] 6.6 Browser test: searching from the shell on a phone and a computer
 - [x] 6.7 Self-review (`reviewer`), full check, merge
 
@@ -100,8 +100,32 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 9. Risky — remove the old site and archive
 
-- [ ] 9.1 Test: `/api/storefront/products` answers 404, and `/store/<slug>/` serves the new website
-- [ ] 9.2 Remove `public-storefront/` and `listStorefrontProducts`, and stop the Website page writing `storefront_settings` (old-app removal, rule 5)
-- [ ] 9.3 Check that every journey 1 screen and the four `site` screens have at least one test (build plan line 131)
-- [ ] 9.4 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check
-- [ ] 9.5 `/opsx:archive website-browse` as the last commit, then merge
+- [x] 9.1 Test: `/api/storefront/products` answers 404, and `/store/<slug>/` serves the new website
+- [x] 9.2 Remove `public-storefront/` and `listStorefrontProducts`, and stop the Website page writing `storefront_settings` (old-app removal, rule 5)
+  - Done 13 Nov. The old site's files and its two tests are deleted, with its Dockerfile line and lint exception; any other `/api/` address on a shop's own address answers 404. The Website page no longer writes the old settings, except the published logo, which the printed Cycle to Work quote still reads (`docs/decisions/decided-while-building/2026-11-jack.md`, 13 Nov).
+- [x] 9.3 Check that every journey 1 screen and the four `site` screens have at least one test (build plan line 131)
+  - Checked 13 Nov: all 37 journey 1 screens and `site`, `site-menu`, `site-ocean`, `site-ocean-menu` have a test naming them, in `tests/screens/site-*.test.js` (wb-cookies-saved inside the wb-cookies-banner test).
+- [x] 9.4 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check (#774; nothing serious; follow-ups below)
+- [x] 9.5 `/opsx:archive website-browse` as the last commit, then merge
+
+## Follow-ups found in review (not done in this change)
+
+Logged for Jack or a later piece; none blocks this change.
+
+- Point the Cycle to Work quote at the website's published logo, then stop copying the logo to the old settings (`server/website.js` copyLogoForQuote).
+- A trigram index for big catalogues' search (needs a migration).
+- An empty `q=` asks for everything; the page never sends one, but the route could refuse it.
+- The Postgres `lower()` and the browser's `toLocaleLowerCase()` can disagree on rare letters.
+- A chosen measurement can override the chosen category in the product list (`server/site-products.js`).
+- Choice filters sort with capitals before small letters (`server/site-products.js`).
+- Category counts read `products.category`, a product with sizes `product_groups.category` (`server/routes/site.js`).
+- The product page's cache is keyed by the address's id, so a size and its product are fetched twice (`src/website/site-query.ts`).
+- The Google Analytics loader adds the script but no `gtag('config')` call (`src/website/tracking.ts`).
+- Uploaded images check their folder without a trailing separator (`server/server.js` serveUploadedImage), as static files did before this change.
+- Escape can close the Which shop box and the menu in one press (`src/website/shell.tsx`).
+- Cancel in Choose cookies doesn't put focus back on the banner (`src/website/cookies.tsx`).
+- For Jack (design): the chip's spoken name doesn't start with its visible words "Collecting from Bolton" (WCAG 2.5.3; the words are the drawing's).
+- For Jack (design): on a phone the cookie banner covers the footer until it is answered.
+- For WP-6.3: the basket's "0 items" is fixed text until Buy online is built.
+- The booking app on a shop's own address (`<slug>.<base domain>/book`) can't reach `/api/portal/...`: those calls land in the website's handler (a JSON 404 now, the website page before this change). Send `/api/portal/` on to its own handler next to `/book` (public routes: a risky area).
+- The old on/off switch (`storefront_settings.enabled`) is no longer kept in step with the website's; it only matters if a website row were ever deleted. Set it to off once, or stop reading it as a fallback.
