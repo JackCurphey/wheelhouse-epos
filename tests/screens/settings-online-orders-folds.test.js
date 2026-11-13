@@ -136,6 +136,7 @@ test('Keep orders for fewer days than the reminder is refused with the server’
   const said = await box.findByText('Keep orders for more days than the reminder.');
   assert.ok(said.closest('[role="alert"]'));
   assert.ok(fold(t, 'Not collected').textContent.includes('kept for 7 days'), 'nothing saved');
+  assert.equal(keep.value, '7', 'the box shows what is stored again, not the refused number');
 });
 
 test('a reminder that isn’t a whole number of days from 1 to 60 is refused on the screen, and not sent', async () => {

@@ -31,10 +31,11 @@ type OnlineOrders = {
 const KEY = ['online-orders-settings'];
 const useOnlineOrders = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<OnlineOrders>('/api/online-orders-settings') });
 /** Whether the website is the shop's Shopify shop (ws-pay-shopify): Shopify's checkout takes the website's payments. */
-const useShopifyWebsite = () => {
+const useWebsiteKind = () => {
   const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
-  return site.data?.kind === 'shopify';
+  return { known: site.isFetched, shopify: site.data?.kind === 'shopify' };
 };
+const useShopifyWebsite = () => useWebsiteKind().shopify;
 
 /** Where "Add the details" and the Website page's Taking payments row open. */
 export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-online`;
@@ -46,9 +47,9 @@ const connectedNow = (s: PayState) => s === 'connected' || s === 'tested' || s =
 /** The Paying online fold's summary (settings-frame.mjs onlineFolds), store credit when it's on; no gift cards (question 8). */
 export function usePayingOnlineSummary(): string {
   const online = useOnlineOrders();
-  const shopify = useShopifyWebsite();
+  const { known, shopify } = useWebsiteKind();
   const p = online.data?.payments;
-  if (!p) return '';
+  if (!p || !known) return '';
   if (!connectedNow(p.state)) return 'Not connected';
   if (shopify) return `Shopify for website orders · ${providerText(p.providerName, true)} for repairs`;
   return `${providerText(p.providerName, true)}${online.data?.storeCreditOn ? ' · store credit' : ''}`;
@@ -70,6 +71,8 @@ function useSaveOnline() {
   const queryClient = useQueryClient();
   return async (body: Partial<Pick<OnlineOrders, 'walletsOn' | 'storeCreditOn' | 'remindDays' | 'keepDays' | 'shelfName'>>) => {
     queryClient.setQueryData(KEY, await apiMutate<OnlineOrders>('/api/online-orders-settings', body, { method: 'PUT' }));
+    // Two saves can overlap (two switches pressed quickly); read again so an older answer arriving last can't stick.
+    void queryClient.invalidateQueries({ queryKey: KEY });
   };
 }
 const couldntSave = (err: unknown) => (serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.');
@@ -103,16 +106,14 @@ export function WebsiteSells() {
 function PaySwitches() {
   const d = useOnlineOrders().data;
   // Not until the website's kind is known: Shopify's checkout takes a Shopify website's payments.
-  const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
+  const site = useWebsiteKind();
   const save = useSaveOnline();
-  const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<Said>(null);
-  if (!d || !site.isFetched || site.data?.kind === 'shopify') return null;
+  if (!d || !site.known || site.shopify) return null;
+  // Each switch saves on its own; the switches stay usable (and focusable) while one saves.
   async function turn(body: { walletsOn: boolean } | { storeCreditOn: boolean }) {
-    if (busy) return;
-    setBusy(true);
     setSaid(null);
-    try { await save(body); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); } finally { setBusy(false); }
+    try { await save(body); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
   }
   return (
     <div className="flex flex-col">
@@ -140,7 +141,10 @@ function DaysBox({ label, name, min, max }: { label: string; name: 'remindDays' 
       await save({ [name]: n });
       setTyped((now) => (now === typed ? null : now));
       setSaid({ ok: true, text: 'Saved.' });
-    } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
+    } catch (err) {
+      setTyped(null); // nothing saved: the box shows what is stored again, under the message
+      setSaid({ ok: false, text: couldntSave(err) });
+    }
   }
   return (
     <div className="flex flex-col gap-1.5">
