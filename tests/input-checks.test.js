@@ -14,6 +14,7 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { changeTable } from './helpers/table-change.js';
 
 let server;
 let owner;
@@ -91,12 +92,12 @@ async function finishWhileMechanicGoes(what) {
   try {
     await db.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
       BEGIN ${change}; RETURN NEW; END $$`);
-    await db.query(`CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW
+    await changeTable(db, `CREATE TRIGGER ${fn} BEFORE UPDATE OF work_state ON workshop_jobs FOR EACH ROW
       WHEN (NEW.id = ${job.id} AND NEW.work_state = 'complete') EXECUTE FUNCTION ${fn}()`);
     const res = await staff(`/api/workshop-jobs/${job.id}/finish`, { method: 'POST', body: { version: job.version, signedOffBy: signer } });
     return { job, res };
   } finally {
-    await db.query(`DROP TRIGGER IF EXISTS ${fn} ON workshop_jobs`);
+    await changeTable(db, `DROP TRIGGER IF EXISTS ${fn} ON workshop_jobs`);
     await db.query(`DROP FUNCTION IF EXISTS ${fn}()`);
     await db.end();
   }

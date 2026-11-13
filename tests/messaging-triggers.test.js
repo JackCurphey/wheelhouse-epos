@@ -14,6 +14,7 @@ import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { formatOpeningHours } from '../server/messaging/templates.js';
 import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
+import { changeTable } from './helpers/table-change.js';
 // The admin address on this test database, as the other tests find it: from
 // ADMIN_DATABASE_URL or the superuser password in .env (it crashed without the first).
 const adminDatabaseUrl = () => { const u = new URL(adminUrlFrom(process.env)); u.pathname = new URL(process.env.DATABASE_URL).pathname; return u.href; };
@@ -222,7 +223,7 @@ test('a quote whose message cannot be queued is still sent, and staff are told n
   await admin.connect();
   const fn = `refuse_message_${job.id}_${owner.shop.id}`;
   await admin.query(`CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.job_id = ${job.id} THEN RAISE EXCEPTION 'refused for this test'; END IF; RETURN NEW; END $$`);
-  await admin.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON customer_messages FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(admin, `CREATE TRIGGER ${fn} BEFORE INSERT ON customer_messages FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const sent = await staff(`/api/quotes/${quote.body.id}/send`, { method: 'POST' });
     assert.equal(sent.status, 200, JSON.stringify(sent.body));
@@ -231,7 +232,7 @@ test('a quote whose message cannot be queued is still sent, and staff are told n
     assert.match(sent.body.message.reason, /could not be queued/);
     assert.equal(await linkWorks(sent.body.link), true, 'staff still get a link to hand over');
   } finally {
-    await admin.query(`DROP TRIGGER ${fn} ON customer_messages`);
+    await changeTable(admin, `DROP TRIGGER ${fn} ON customer_messages`);
     await admin.query(`DROP FUNCTION ${fn}()`);
     await admin.end();
   }

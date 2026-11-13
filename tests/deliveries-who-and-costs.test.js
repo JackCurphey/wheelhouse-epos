@@ -11,6 +11,7 @@ import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { changeTable } from './helpers/table-change.js';
 
 let server;
 const shops = [];
@@ -351,7 +352,7 @@ test('a failure after the stock update takes everything back: stock, order, hist
   // one, fails, so other test files writing to the table aren't touched.
   const fn = `force_fail_${randomUUID().replaceAll('-', '')}`;
   await pool.query(`CREATE FUNCTION ${fn}() RETURNS trigger AS $$ BEGIN IF NEW.note = '${marker}' THEN RAISE EXCEPTION 'forced failure'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql`);
-  await pool.query(`CREATE TRIGGER ${fn} BEFORE INSERT ON delivery_problems FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+  await changeTable(pool, `CREATE TRIGGER ${fn} BEFORE INSERT ON delivery_problems FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
   try {
     const res = await post(owner.cookie, '/api/deliveries/receive', {
       supplierId: owner.supplierId,
@@ -360,7 +361,7 @@ test('a failure after the stock update takes everything back: stock, order, hist
     });
     assert.equal(res.status, 500, JSON.stringify(res.body));
   } finally {
-    await pool.query(`DROP TRIGGER ${fn} ON delivery_problems`);
+    await changeTable(pool, `DROP TRIGGER ${fn} ON delivery_problems`);
     await pool.query(`DROP FUNCTION ${fn}()`);
   }
   assert.equal(await stockOf(owner, thing.id), 0);

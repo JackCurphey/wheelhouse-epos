@@ -17,6 +17,7 @@ import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 import { createSale } from '../server/server.js';
 import { createTeamMember } from '../server/team.js';
+import { changeTable } from './helpers/table-change.js';
 
 // Every test restores the env var itself, but a throw mid-test must not leak
 // "transaction" mode into the next test in this file (node:test runs the
@@ -256,7 +257,7 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
     // connection makes a second run wait until this one has dropped it.
     probeLock = await pool.connect();
     await probeLock.query("SELECT pg_advisory_lock(hashtext('tmp_sale_rollback_probe'))");
-    await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS tmp_sale_rollback_probe');
+    await changeTable(pool, 'ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS tmp_sale_rollback_probe');
     await pool.query(
       'ALTER TABLE stock_movements ADD CONSTRAINT tmp_sale_rollback_probe CHECK (change_qty <> -424242) NOT VALID'
     );
@@ -308,7 +309,7 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
         });
       });
     } finally {
-      await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT tmp_sale_rollback_probe');
+      await changeTable(pool, 'ALTER TABLE stock_movements DROP CONSTRAINT tmp_sale_rollback_probe');
     }
   } finally {
     // As in run-migrations.js: a failed unlock must not hide the test's own
