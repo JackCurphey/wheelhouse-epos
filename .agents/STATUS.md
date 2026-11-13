@@ -26,7 +26,7 @@ the certificate, Ready to collect and ordering the bike (#723, #726, #728,
 #731, #733), the customer's page and messages (#719, #730, #738), Today and
 the header search (#725, #734), hand-over at the till and the provider's
 money on the server (#757, #762) and the customer's account (#720) are in;
-cancelling an order (#763, #767) is open.
+cancelling an order and the rest of the screens (#763, #767 to #772) are open.
 
 Merged 11 to 13 Nov, all Jack's apart from Mark's below: `your-data-download`
 finished and archived, with sales and refunds, workshop jobs (#668), the
@@ -88,8 +88,8 @@ real sending on, Stripe and the S700 reader, a Google account (#140).
 **Waiting on Mark:** his yes on #693 for quick buttons on the till
 (`till-page.tsx`); what would free up more work (#560): the till deposit,
 step C (an offline key for a new till, #564; PIN hashes in the offline
-copy), roles and the settings store, WP-1.5, and his open pull requests
-(#499, #511, #520). Also: `PUT /api/sale-documents/:id` can write an order
+copy), roles and the settings store, WP-1.5 (he closed #499, #511 and #520 on
+11 Nov). Also: `PUT /api/sale-documents/:id` can write an order
 back to open; read what was built on his word (#357 onward, #265); his
 opinion on replying to texts; the front page switch.
 

@@ -312,7 +312,7 @@ const BOARD = {
       Jack: [
         { what: 'Website browse', detail: 'WP-6.2, website-browse: the routes and pages are in (#744, #745, #750 to #752, #754 to #756); left: timing the suggestions, removing the old website, and the archive' },
         { what: 'Buy online and click and collect', detail: 'WP-6.3, website-buy-online, planned in #746; the order tables and settings (#753) and the six messages (#758) are in; the settings screen, basket and checkout are next; paying, staff steps and refunds wait for your answers 9 and 11' },
-        { what: 'Cycle to Work', detail: 'WP-7.1, cycle-to-work: most of it is in (#703 to #762, with the customer\'s account #720); open: cancelling an order (#763, #767)' },
+        { what: 'Cycle to Work', detail: 'WP-7.1, cycle-to-work: most of it is in (#703 to #762, with the customer\'s account #720); open: cancelling an order (#763, #767), the provider\'s money and what providers owe on screen (#768, #769), the hand-over at the till (#771), late payments (#770) and Cycle to Work at close of day (#772)' },
         { what: 'Products, stock, sizes and colours', detail: 'WP-1.5, ten pieces; nine in; linking the Citrus Lime import\'s sizes waits for a real export. Roles and the settings store stay Mark\'s' },
         { what: 'Paying a repair online', detail: 'After Mark\'s till deposit is merged (your 26 Oct answer 9): "Paid online" with no cashier, Pay hidden while the till has it open' },
         { what: 'The text receipt and its page', detail: 'Waits for Mark\'s step C (your 26 Oct answer)' },
@@ -337,7 +337,7 @@ const BOARD = {
     ],
     waitingOnMark: [
       { what: 'Your yes on quick buttons on the till', detail: 'Settings › Front desk › Till has them (#713); the till showing them waits for your yes on the settings plan.', links: [693] },
-      { what: 'What would free up more work', detail: 'Your yes on the till deposit, step C, roles and the settings store, WP-1.5, and your open pull requests. No activity from you since 26 Oct.', links: [560] },
+      { what: 'What would free up more work', detail: 'Your yes on the till deposit, step C, roles and the settings store, WP-1.5, and your yes on #693 for quick buttons on the till.', links: [560] },
       { what: 'Step C: an offline key for a new till', detail: 'A till set up in the new app (#564) has no offline key yet; step C needs an Owner route to issue one.' },
       { what: 'Step C: PIN hashes offline', detail: 'The till\'s offline copy (server/till/snapshot.js) carries every cashier\'s PIN hash; logged in decided-while-building.md (28 Oct, 6a) for step C\'s design.' },
       { what: 'Your yes on the till deposit', detail: 'till-job-deposit, written and waiting for your yes; paying a repair online (slice A) is built after it.' },
@@ -350,7 +350,7 @@ const BOARD = {
   },
   updated: '13 Nov 2026',
   lead: 'Slice A is nearly done: step C and the till deposit are Mark\'s. Slice B is mostly in (PINs, check-in, float check, close the day, Who\'s in, till setup, the shared workshop computer with trust PIN and the pills, the Tills list); roles and the settings store are left, and they\'re Mark\'s. Slice C\'s stock take, stock warnings, deliveries with the restock list, and products with sizes, colours and their pages are in, and the Citrus Lime import\'s first half, apart from its list of left-out rows and a real help inbox. Customers can now download a copy of their data and ask to delete their account. Customers\' store credit, pay-later accounts and bike warranties are in, apart from the till\'s half. The customer\'s account is finished: receipts, a reminder\'s booking link, editing their details and email, and the shop\'s privacy notice. The Owner\'s Download everything is finished, with See them for the Citrus Lime import\'s left-out rows. Most reports are in, with your own reports, reopening a closed day and the accounts software (pretend for now). Website management is in apart from roles and moving, Cycle to Work is most of the way, browsing the website is in apart from removing the old one, and Buy online is being built.',
-  sub: 'Merged 3 to 13 Nov: #594 to #764; Jack\'s apart from Mark\'s #670, #673 to #675. Open: Jack\'s website, Buy online and Cycle to Work pull requests; Mark\'s #499 (the replan, accepted as is), #511 (the component registry) and #520; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
+  sub: 'Merged 3 to 13 Nov: #594 to #764; Jack\'s apart from Mark\'s #670, #673 to #675. Open: Jack\'s Cycle to Work pull requests (#763, #767 to #772) and #238 (a diary layout review); Mark closed #499, #511 and #520 on 11 Nov; #560 lists what waits on Mark. CI runs once a day, and by hand on risky pull requests (#557).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
