@@ -387,6 +387,7 @@ POST /api/reports/saved
 PATCH /api/reports/saved/:id
 DELETE /api/reports/saved/:id
 POST /api/reports/saved/:id/undo
+POST /api/reports/days/:id/reopen
 GET /api/quick-buttons
 POST /api/quick-button-groups
 PUT /api/quick-button-groups/:id
@@ -433,3 +434,7 @@ POST /api/c2w/orders/:id/ready
 POST /api/c2w/orders/:id/ready/undo
 POST /api/c2w/orders/:id/applied
 POST /api/c2w/orders/:id/cancel
+GET /api/accounts
+POST /api/accounts/connect
+PUT /api/accounts/choices
+POST /api/accounts/disconnect

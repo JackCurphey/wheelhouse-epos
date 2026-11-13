@@ -102,7 +102,8 @@ test('step 3: every product or nothing, the counts with See them, and Make my we
   assert.ok(ui.getByText('With every product online'));
   const counts = within(ui.getByRole('list', { name: 'Your products online' }));
   assert.ok(counts.getByText('212 products go online'));
-  assert.ok(counts.getByRole('link', { name: 'See the products with no photo, in Stock' }));
+  // Step 3 counts every product ("Every product online"), so See them isn't kept to those shown online (Q1).
+  assert.equal(counts.getByRole('link', { name: 'See the products with no photo, in Stock' }).getAttribute('href'), '/workshop/stock?show=no-photo');
   assert.ok(counts.getByRole('link', { name: 'See the products with no price, in Stock' }));
   assert.ok(ui.getByText('Your website stays off until you turn it on.'));
   fireEvent.click(ui.getByRole('button', { name: 'Make my website' }));

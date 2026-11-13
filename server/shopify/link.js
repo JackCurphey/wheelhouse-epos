@@ -51,7 +51,7 @@ export async function productsToSend(ids = null) {
 }
 
 // Each Wheelhouse product against Shopify's: matched on Wheelhouse's id, then SKU.
-function compare(ours, theirs) {
+export function compare(ours, theirs) {
   const byId = new Map(theirs.filter((p) => p.wheelhouseId != null).map((p) => [String(p.wheelhouseId), p]));
   const bySku = new Map(theirs.filter((p) => p.sku).map((p) => [p.sku, p]));
   const matched = new Set();
@@ -93,7 +93,7 @@ export async function preview() {
   };
 }
 
-const noPriceProblem = (p) => ({ productId: p.wheelhouseId, sku: p.sku, name: p.title, kind: 'no_price', reason: PROBLEM_WORDS.no_price });
+export const noPriceProblem = (p) => ({ productId: p.wheelhouseId, sku: p.sku, name: p.title, kind: 'no_price', reason: PROBLEM_WORDS.no_price });
 
 /** Send [n] products, and Try sending again: queues what changes for the background job. */
 export async function startSending() {
@@ -140,11 +140,14 @@ export async function saveLink(provider, address, loginId) {
        sent_count = 0, problems = '[]', last_sent_at = NULL, product_count = 0, updated_at = now()
      RETURNING shop_id`
   ).run(provider, address, loginId);
+  // A new link starts from Send, so nothing queued for an earlier one carries over.
+  await prepare('DELETE FROM shopify_changed RETURNING product_id').run();
 }
 
 /** Using Wheelhouse's website instead (ws-shopify-switch): nothing more is sent. */
 export async function stopLink() {
   await prepare("UPDATE shopify_link SET state = 'stopped', to_send = '{}', updated_at = now() RETURNING shop_id").run();
+  await prepare('DELETE FROM shopify_changed RETURNING product_id').run();
 }
 
 /** After a send finishes: how many of the shop's products are in Shopify. */

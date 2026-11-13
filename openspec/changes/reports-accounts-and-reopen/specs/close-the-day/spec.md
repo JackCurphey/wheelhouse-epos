@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: A closed day can be reopened, and closed again
-The Owner SHALL be able to reopen the latest closed day with a reason. The first close SHALL be kept as it was saved, a reopened day SHALL not count as closed anywhere, and the sales it counted SHALL stay with it. Closing it again SHALL make a new close for that day from a new count, work its figures out from the sales it counted, clear the reopening and keep the first close as history. A day SHALL be reopened only while it is the latest closed day.
+The Owner SHALL be able to reopen the latest closed day with a reason. The first close SHALL be kept as it was saved, a reopened day SHALL not count as closed for closing it, Today or the totals, and the sales it counted SHALL stay with it. Closing it again SHALL make a new close for that day from a new count, work its figures out from the sales it counted, clear the reopening and keep the first close as history. A day SHALL be reopened only while it is the latest closed day.
 
 #### Scenario: reopened and closed again
 - **WHEN** Wednesday is reopened, then closed again with a count £5.00 higher
