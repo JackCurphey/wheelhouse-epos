@@ -20,7 +20,7 @@ type As = null | 'paid' | 'part' | 'close';
 export const owedOf = (o: C2wOrder) => Math.max(0, (o.expectedPence ?? 0) - (o.paidPence ?? 0));
 /** Nothing received: allowed only for closing it (amountOf refuses 0). */
 const isNothing = (typed: string) => /^\s*£?\s*0+(\.0{1,2})?\s*$/.test(typed);
-const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
+export const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
 
 export function MarkPaidDialog({ o, today, closing = false, focusTo = 'cw-next', onClose, onSaved }: {
   o: C2wOrder; today: string; closing?: boolean; focusTo?: string; onClose: () => void; onSaved: (text: string) => void;

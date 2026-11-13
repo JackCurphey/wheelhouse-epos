@@ -6,6 +6,7 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/c
 import { AMOUNT_WORDS, amountOf } from '@/screens/customers/credit-dialog.tsx';
 import { Kv, Msg, longDate, plural, pounds } from './c2w-bits.tsx';
 import { Field, SAVE_FAILED, SUB, canSay, problemLine } from './certificate-dialog.tsx';
+import { toFocus } from './mark-paid-dialog.tsx';
 
 /**
  * Record a payment: one remittance from a provider that covers several bikes
@@ -21,11 +22,11 @@ export type OwedBike = {
 };
 export type OwedProvider = { provider: { id: number; name: string; commissionKind: 'percent' | 'pounds' | null; commissionValue: number | null; paysInDays: number | null }; orders: OwedBike[]; today: string };
 export const owedProviderQuery = (id: number) => ({ queryKey: ['c2w-owed', id], queryFn: () => apiGet<OwedProvider>(`/api/c2w/providers/${id}/owed`) });
-const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
 const total = (bikes: OwedBike[]) => bikes.reduce((n, b) => n + b.owedPence, 0);
 export const expectedLine = (b: OwedBike) => (b.expectedPence === null ? '—' : `${pounds(b.owedPence)}${b.expectedBy ? ` by ${longDate(b.expectedBy)}` : ''}`);
-// Nothing expected yet: the server refuses a payment for it (no_expected), so it can't be ticked (logged).
-const payable = (b: OwedBike) => b.expectedPence !== null;
+// Nothing expected yet: the server refuses a payment for it (no_expected), so it can't be ticked,
+// and Mark paid waits too, as on the order page (logged).
+export const payable =(b: OwedBike) => b.expectedPence !== null;
 const signed = (pence: number) => (pence === 0 ? pounds(0) : pence > 0 ? `+${pounds(pence)}` : `-${pounds(-pence)}`);
 
 export function RecordPaymentDialog({ provider, bikes, today, focusTo, onClose, onSaved }: {

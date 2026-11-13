@@ -8,7 +8,7 @@ import { ROUTES } from '@/staff/routes.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
 import { Back, Badge, Box, Page, longDate, note, orderHref, plural, pounds, type C2wOrder } from './c2w-bits.tsx';
 import { MarkPaidDialog } from './mark-paid-dialog.tsx';
-import { RecordPaymentDialog, expectedLine, owedProviderQuery, type OwedBike, type OwedProvider } from './record-payment-dialog.tsx';
+import { RecordPaymentDialog, expectedLine, owedProviderQuery, payable, type OwedBike, type OwedProvider } from './record-payment-dialog.tsx';
 
 /**
  * What Cycle to Work providers owe (c2w.mjs owedPage, owedProvider; cw-owed,
@@ -129,7 +129,7 @@ function ProviderBody() {
           <h2 id="cw-owed-h" tabIndex={-1} className="m-0 text-xl font-bold outline-none">{`${p.name} · ${plural(d.orders.length, 'bike', 'bikes')} owed`}</h2>
           <p className={note}>{terms}</p>
         </div>
-        {owner && d.orders.length > 0 ? <Button onClick={() => setRecording(true)}>Record a payment</Button> : null}
+        {owner && d.orders.some(payable) ? <Button onClick={() => setRecording(true)}>Record a payment</Button> : null}
       </div>
       <Box>
         {d.orders.length === 0 ? <p className="m-0 text-size-15">{`Nothing is owed by ${p.name} just now.`}</p> : (
@@ -153,7 +153,7 @@ function ProviderBody() {
                   <td className={`${CELL} ${PHONE_CELL} text-right ${mono} max-md:text-left max-md:before:content-['Expected_']`}>{expectedLine(b)}</td>
                   <td className={`${CELL} ${PHONE_CELL}`}>{b.lateDays ? <Badge tone="amber">{`${days(b.lateDays)} late`}</Badge> : null}</td>
                   <td className={`${CELL} ${PHONE_CELL} text-right max-md:col-span-2 max-md:pt-1.5 max-md:text-left`}>
-                    {owner ? <Button aria-label={`Mark paid: ${b.customerName} · ${p.name}`} onClick={() => setPaying(b)}>Mark paid</Button> : null}
+                    {owner && payable(b) ? <Button aria-label={`Mark paid: ${b.customerName} · ${p.name}`} onClick={() => setPaying(b)}>Mark paid</Button> : null}
                   </td>
                 </tr>
               ))}

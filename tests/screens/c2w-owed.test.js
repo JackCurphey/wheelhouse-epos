@@ -361,6 +361,9 @@ test('cw-record-payment: a bike with nothing expected yet shows a dash, can’t 
   assert.ok(await ui.findByRole('heading', { name: '[Provider] · 2 bikes owed' }));
   const rows = within(ui.getByRole('table')).getAllByRole('row');
   assert.equal(rowText(rows[2])[3], '—');
+  // Mark paid waits for an expected amount, as on the order page.
+  assert.ok(ui.queryByRole('button', { name: 'Mark paid: Maya Patel · [Provider]' }) === null);
+  assert.ok(ui.getByRole('button', { name: 'Mark paid: [Customer] · [Provider]' }));
   const box = within(await openRecord(ui, fireEvent));
   const maya = box.getByRole('checkbox', { name: 'Maya Patel' });
   assert.ok(!maya.checked);
@@ -372,4 +375,19 @@ test('cw-record-payment: a bike with nothing expected yet shows a dash, can’t 
   fireEvent.click(box.getByRole('button', { name: 'Save' }));
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Record a payment' }) === null));
   assert.deepEqual(posts('/api/c2w/providers/3/payments').map((c) => c.body.orderIds), [[10]]);
+});
+
+test('cw-owed-provider: with nothing expected on any bike yet, there is no Record a payment', async () => {
+  const { ui } = await open('/workshop/c2w/owed/3', { orders: [{ ...MAYA, expectedPence: null, owedPence: 0 }] });
+  assert.ok(await ui.findByRole('heading', { name: '[Provider] · 1 bike owed' }));
+  assert.ok(ui.queryByRole('button', { name: 'Record a payment' }) === null);
+});
+
+test('cw-list-owner: a collected order with nothing expected yet keeps Open instead of Mark paid', async () => {
+  const list = LIST();
+  list.groups.collected = [listOrder(LATE), { ...listOrder(MAYA), expectedPence: null }];
+  const { ui } = await open('/workshop/c2w', { list });
+  assert.ok(await ui.findByRole('button', { name: 'Mark paid: [Customer] · [Provider]' }));
+  assert.ok(ui.queryByRole('button', { name: 'Mark paid: Maya Patel · [Provider]' }) === null);
+  assert.equal(ui.getAllByRole('link', { name: 'Open Maya Patel’s order' }).length, 2, 'the name and the row’s Open link');
 });

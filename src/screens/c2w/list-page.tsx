@@ -84,7 +84,7 @@ function Row({ o, remindDays, now, onOrder, onPaid, busy }: {
         {o.next === 'order' && (o.stage === 'quote' || o.stage === 'waiting' || o.stage === 'certificate')
           ? <Button disabled={busy} aria-label={`Order ${possessive(o.customerName)} bike${o.supplier ? ` from ${o.supplier}` : ''}`} onClick={() => onOrder(o)}>{orderLabel(o)}</Button>
           : null}
-        {o.stage === 'collected' && onPaid
+        {o.stage === 'collected' && o.expectedPence !== null && onPaid
           ? <Button aria-label={`Mark paid: ${o.customerName} · ${o.providerName}`} onClick={() => onPaid(o)}>Mark paid</Button>
           : open ? <Link to={orderHref(o.id)} aria-label={`Open ${possessive(o.customerName)} ${late ? 'late ' : o.stage === 'paid' ? 'paid ' : ''}order`} className={linkClass}>Open</Link> : null}
       </span>
