@@ -15,7 +15,7 @@ that takes or finishes a piece. Everything that was here before 11 Nov is in
 `website-browse`): the plan (#742), the read and product routes (#744, #745)
 and the pages (#750 to #752, #754 to #756) are in; timing the suggestions,
 removing the old website and the archive are in the last pull request
-(PRNUM); the follow-ups found in review are listed at the end of its
+(#774); the follow-ups found in review are listed at the end of its
 `tasks.md`. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
 order tables and settings on the server (#753, migration 154) and the six
 order messages (#758) are in; the settings screen, basket and checkout are

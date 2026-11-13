@@ -105,8 +105,8 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
   - Done 13 Nov. The old site's files and its two tests are deleted, with its Dockerfile line and lint exception; any other `/api/` address on a shop's own address answers 404. The Website page no longer writes the old settings, except the published logo, which the printed Cycle to Work quote still reads (`docs/decisions/decided-while-building/2026-11-jack.md`, 13 Nov).
 - [x] 9.3 Check that every journey 1 screen and the four `site` screens have at least one test (build plan line 131)
   - Checked 13 Nov: all 37 journey 1 screens and `site`, `site-menu`, `site-ocean`, `site-ocean-menu` have a test naming them, in `tests/screens/site-*.test.js` (wb-cookies-saved inside the wb-cookies-banner test).
-- [ ] 9.4 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check
-- [ ] 9.5 `/opsx:archive website-browse` as the last commit, then merge
+- [x] 9.4 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check (#774; nothing serious; follow-ups below)
+- [x] 9.5 `/opsx:archive website-browse` as the last commit, then merge
 
 ## Follow-ups found in review (not done in this change)
 
