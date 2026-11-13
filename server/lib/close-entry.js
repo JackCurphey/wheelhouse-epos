@@ -25,6 +25,6 @@ export async function closeEntryNow() {
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const shop = await prepare("SELECT close_entry_minutes FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
   const weekday = new Date(`${now.date}T12:00:00Z`).getUTCDay();
-  const closed = !!(await prepare('SELECT 1 FROM day_closes WHERE day = ?').get(now.date));
+  const closed = !!(await prepare('SELECT 1 FROM day_closes WHERE day = ? AND reopened_at IS NULL').get(now.date));
   return { day: now.date, entry: entryFor(effectiveHours(toCapacitySettings(settings), weekday), now.minutes, closed, shop.close_entry_minutes) };
 }

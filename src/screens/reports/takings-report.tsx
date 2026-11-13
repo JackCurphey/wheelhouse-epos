@@ -11,6 +11,9 @@ import { Box, BackToReports, DownloadButton, Note, Page, PeriodChips, Refusal } 
 import { compareWords, differenceText, money, type SalesRow } from './reports-format.ts';
 import { ReportGraph, graphWords } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
+import { ReopenDialog } from './reopen-dialog.tsx';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 import { ChangeWhatsShown } from './change-panel.tsx';
 import { Figure, PERIODS } from './sales-report.tsx';
 
@@ -25,7 +28,7 @@ import { Figure, PERIODS } from './sales-report.tsx';
  */
 type Row =
   | { kind: 'day'; key: string; label: string; closed: false; past?: boolean; takingsPence?: number; closeDay?: string }
-  | { kind: 'day'; key: string; label: string; closed: true; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
+  | { kind: 'day'; key: string; label: string; closed: true; reopened?: boolean; closeId: number; takingsPence: number; bankedPence: number; differencePence: number; closedByName: string; closedAt: string }
   | { kind: 'online'; key: string; label: string; onlinePence: number; soFar?: boolean }
   | { kind: 'month'; key: string; label: string; closed: true; closedDays: number; takingsPence: number; bankedPence: number; differencePence: number };
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
@@ -33,6 +36,8 @@ type Takings = {
   period: { period: string; from: string; to: string; through: string; soFar: boolean; unit: 'day' | 'month'; label: string; against: string };
   figures: { takings: Figures; card: Figures; cash: Figures; other: Figures; online: Figures; cashDifference: Figures };
   rows: Row[]; bars: SalesRow[]; empty: boolean; nothingBefore: boolean; shopLine: string; today: string;
+  // A reopened day in this period: left out of every figure until it is closed again (reports-accounts-and-reopen).
+  reopened?: { day: string; label: string; reason: string; reopenedByName: string } | null;
 };
 
 const KEY_NOW: Record<string, string> = { 'this-week': 'Closed days this week', 'this-month': 'Closed days this month', 'last-month': 'Closed days last month' };
@@ -48,6 +53,9 @@ const CELL = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-right max-md:p
 const HEAD = 'border-b-2 border-[var(--wh-border)] px-2 py-2 text-size-13-5 font-semibold max-md:whitespace-normal max-md:px-1';
 // A row's day: left-aligned and kept on one line, so a phone's table scrolls sideways rather than breaking the date.
 const DAY = 'border-b border-[var(--wh-border)] px-2 py-2.5 text-left whitespace-nowrap max-md:px-1 max-md:text-size-13';
+
+/** Close the day for a day: today's own page, or an earlier day's by its date. */
+const closeDayPath = (day: string, today: string) => (day === today ? ROUTES['eod-count'] : `${ROUTES['eod-count']}?day=${day}`);
 
 function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => void }) {
   return (
@@ -93,7 +101,7 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
                 <th scope="row" className={DAY}>{open}</th>
                 <td className={CELL}>{money(r.takingsPence)}</td><td className={CELL}>{money(r.bankedPence)}</td>
                 <td className={CELL}><Difference pence={r.differencePence} /></td>
-                <td className={CELL}>{r.kind === 'day' ? r.closedByName : `${r.closedDays} closed days`}</td>
+                <td className={CELL}>{r.kind === 'day' ? (r.reopened ? `${r.closedByName} · Reopened` : r.closedByName) : `${r.closedDays} closed days`}</td>
               </tr>
             );
           })}
@@ -104,11 +112,13 @@ function ClosedDays({ rows, onOpen }: { rows: Row[]; onOpen: (id: number) => voi
 }
 
 function DayReport({ id, onClose }: { id: number; onClose: () => void }) {
-  const day = useQuery({ queryKey: ['reports-day', id], queryFn: () => apiGet<{ close: Close }>(`/api/reports/days/${id}`), retry: false });
+  const [reopening, setReopening] = useState(false);
+  const day = useQuery({ queryKey: ['reports-day', id], queryFn: () => apiGet<{ close: Close & { reopened?: { reason: string; byName: string; at: string } | null }; canReopen?: boolean }>(`/api/reports/days/${id}`), retry: false });
   if (day.isError) return <Refusal error={day.error} />;
   if (!day.data) return null;
-  const { close } = day.data;
-  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}`} onDay actions={<DownloadButton path={`/api/reports/days/${id}/csv`} />} />;
+  const { close, canReopen } = day.data;
+  if (reopening) return <ReopenDialog id={id} day={close.day} onClose={() => setReopening(false)} onDone={() => { setReopening(false); onClose(); }} />;
+  return <Report close={close} onClose={onClose} title={dayLabel(close.day).replace(/^(\w{3})\w*/, '$1')} sub={`Closed by ${close.closedByName} at ${clock(close.closedAt)}${close.reopened ? ` · reopened by ${close.reopened.byName}: “${close.reopened.reason}”` : ''}`} onDay actions={<span className="flex flex-wrap items-center gap-2">{canReopen ? <Button variant="default" className="min-h-11" onClick={() => setReopening(true)}>Reopen this day</Button> : null}<DownloadButton path={`/api/reports/days/${id}/csv`} /></span>} />;
 }
 
 export function TakingsReportPage() {
@@ -156,6 +166,13 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
   const spoken = graphWords({ title, rows: report.bars, unitWord: p.unit === 'month' ? 'month' : 'day', diffPence: f.takings.diffPence, against: p.against });
   return (
     <>
+      {report.reopened ? (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg bg-[var(--wh-warn-bg)] px-3.5 py-2.5 text-size-15 leading-snug text-[var(--wh-warn-ink)]">
+          <AlertCircle size={18} aria-hidden="true" />
+          <span className="min-w-[260px] flex-1">{`${report.reopened.label} is reopened — its figures are left out until it’s closed again`}</span>
+          <Link to={closeDayPath(report.reopened.day, report.today)} className="inline-flex min-h-11 items-center rounded-md border border-[var(--wh-ink)] bg-[var(--wh-panel)] px-3.5 text-sm font-semibold text-[var(--wh-ink)] no-underline">Close the day</Link>
+        </div>
+      ) : null}
       <div className="grid grid-cols-3 gap-2.5 max-md:grid-cols-2">
         <Figure name="Closed days’ takings" value={money(f.takings.pence)} words={words(f.takings)} />
         <Figure name="Card" value={money(f.card.pence)} words={words(f.card)} />
@@ -174,7 +191,7 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         </Box>
       )}
       <Note>Online is what customers paid on the website, from your payment provider. It’s separate from the tills: no till counts it, and it’s in no till’s close.</Note>
-      <Note>Open a closed day for its end-of-day report.</Note>
+      <Note>Open a closed day for its end-of-day report. The owner can reopen the latest closed day from there, with a reason.</Note>
     </>
   );
 }
