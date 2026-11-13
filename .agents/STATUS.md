@@ -12,16 +12,21 @@ that takes or finishes a piece. Everything that was here before 11 Nov is in
 `ARCHIVE.md`, "Moved from STATUS on 2026-11-11 (#669)".
 
 **Jack is on:** the website and Cycle to Work. Website browse (WP-6.2,
-`website-browse`): the plan (#742) and the read routes (#744) are in; pull
-requests 2 to 8 are open (#745, #750 to #752, #754 to #756). Buy online
-(WP-6.3, `website-buy-online`): the plan (#746) is in; #753 and #758 are open;
-paying, staff steps and refunds wait for Jack's answers 9 and 11
+`website-browse`): the plan (#742), the read and product routes (#744, #745)
+and the pages (#750 to #752, #754 to #756) are in; left: timing the
+suggestions with the full test shop, removing the old website, and the
+archive. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
+order tables and settings on the server (#753, migration 154) and the six
+order messages (#758) are in; the settings screen, basket and checkout are
+next; paying, staff steps and refunds wait for Jack's answers 9 and 11
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
 the certificate, Ready to collect and ordering the bike (#723, #726, #728,
 #731, #733), the customer's page and messages (#719, #730, #738), Today and
-the header search (#725, #734) are in; #720, #757, #762 and #763 are open.
+the header search (#725, #734), hand-over at the till and the provider's
+money on the server (#757, #762) and the customer's account (#720) are in;
+cancelling an order (#763, #767) is open.
 
 Merged 11 to 13 Nov, all Jack's apart from Mark's below: `your-data-download`
 finished and archived, with sales and refunds, workshop jobs (#668), the
@@ -44,7 +49,8 @@ the full run: time limits so `npm test` can't hang (#676), `npm run
 full-check` one run at a time, first come first served (#684, #688, #705),
 and flaky tests fixed (#672, #679, #681, #682, #686, #695, #696, #700).
 Decisions: re-run everything only when main overlaps (#687), and the
-overnight questions answered (#735).
+overnight questions answered (#735). Tests that waited too little under load (#747,
+#748, #749); WP-1.5 piece 10 ticked (#759).
 
 **Jack next:**
 1. Finish website browse, Buy online and Cycle to Work (the open pull
