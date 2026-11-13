@@ -51,7 +51,15 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 3.3 Test: a message that couldn't reach the customer is visible on the order, for "Email didn’t arrive · [phone]"
 - [x] 3.4 Screen test: `on-messages` — "Online order messages" with the six rows, Edit and On; the "on" count counts the real list; block 46 (the Email and text frame) shows the ready email as drawn
 - [x] 3.5 Build to pass 3.1–3.4
-- [ ] 3.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 3.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [ ] 3.7 Left by the reviews of pull request 3 (nothing sends these messages yet; fix before pull request 4 first calls `queueOrderMessage`):
+  - [ ] 3.7a Order ready to collect says "ready at [Shop name]" with the business's name and address only; with more than one shop it needs the order's own shop (`online_orders.site_id` → the site's name and address), as the spec scenario and `on-email-ready` say ("North Street Cycles, Bolton")
+  - [ ] 3.7b Order confirmation's draft wording lacks what the spec asks for: what was bought, how it was paid, where to collect it
+  - [ ] 3.7c Order cancelled for an order with no number (unpaid, "payment unsure") leaves a gap for the number and still says "We’ve refunded [Amount refunded]"; give unpaid cancellations their own wording or skip the refund sentence
+  - [ ] 3.7d Nothing stops the same order message being queued twice (a retried payment step sends two confirmations); guard in `queueOrderMessage` or in each caller
+  - [ ] 3.7e Order cancelled's wording runs `[Reason]` into "We’ve refunded" with no full stop of its own
+  - [ ] 3.7f The ready email's shop lines leave a bare "Open" or a leading "·" when the shop has no opening hours or address in Shop details
+  - [ ] 3.7g The preview route adds From and To to every message's preview, not only the online order ones; `undoOrderReady` leaves `ready_message_id` on the undone message; `orderEmailProblem` ignores a message stuck at "unknown"; the screen test for the "on" count passes without this change, and nothing tests that a second Mark ready stops the first ready email
 
 ## 4. Basket and checkout — server (pull request 4, about 550 lines, risky: public routes, money and stock)
 
