@@ -40,6 +40,7 @@ export function dayCsv(close) {
     ['Card', pounds(close.cardPence)],
     ['Cash', pounds(close.cashPence)],
     ['Gift cards, store credit, customer accounts, other', pounds(close.otherPence)],
+    ['Cycle to Work', pounds(close.c2wPence)],
     ['Float at the start', pounds(close.floatStart.pence)],
     ['Cash difference', pounds(close.differencePence)],
     ['Banked', pounds(close.bankedPence)],

@@ -82,6 +82,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(report).toContainText('Tuesday 1 September · closed by Jack Lewis');
     await expect(report.getByRole('listitem')).toHaveText([
       'Takings£74.00', 'Card£0.00', 'Cash£74.00', 'Gift cards, store credit, customer accounts, other£0.00',
+      'Cycle to WorkOwed by providers, not in the drawer£0.00',
       /^Float at the start£150\.00 · looked right · Jack Lewis at \d\d:\d\d£150\.00$/, 'Cash difference£5.00 over', 'Banked£74.00',
     ]);
     await expect(report).toContainText('Online money is not in this till’s takings: £0.00 today');

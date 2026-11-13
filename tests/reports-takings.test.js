@@ -28,9 +28,9 @@ async function close(shop, day, loginId, f) {
     const check = await prepare('INSERT INTO float_checks (day, login_id, expected_pence, counted_pence) VALUES (?, ?, 15000, 15000) RETURNING id').get(day, loginId);
     return (await prepare(
       `INSERT INTO day_closes (day, login_id, closed_at, float_check_id, float_start_pence, cash_pence, drawer_cash_pence, paid_outs_pence, expected_pence, counted_pence,
-         float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence)
-       VALUES (?, ?, ?, ?, 15000, ?, ?, 0, ?, ?, 15000, ?, ?, ?, ?, ?) RETURNING id`
-    ).get(day, loginId, `${day}T17:30:00Z`, check.id, f.cash, f.cash, f.expected, f.counted, f.banked, f.takings, f.card, f.other, f.online)).id;
+         float_pence, banked_pence, takings_pence, card_pence, other_pence, online_pence, c2w_pence)
+       VALUES (?, ?, ?, ?, 15000, ?, ?, 0, ?, ?, 15000, ?, ?, ?, ?, ?, ?) RETURNING id`
+    ).get(day, loginId, `${day}T17:30:00Z`, check.id, f.cash, f.cash, f.expected, f.counted, f.banked, f.takings, f.card, f.other, f.online, f.c2w ?? 0)).id;
   });
 }
 
@@ -46,7 +46,7 @@ before(async () => {
 
   // This week: Monday (Jo, exact), Tuesday (Jack, £5.00 short), Wednesday (Jo, exact).
   ids.mon = await close(owner, '2026-09-14', joLoginId, { takings: 20000, card: 12000, cash: 7000, other: 1000, online: 3000, expected: 7000, counted: 7000, banked: 5000 });
-  ids.tue = await close(owner, '2026-09-15', owner.loginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, expected: 14000, counted: 13500, banked: 11500 });
+  ids.tue = await close(owner, '2026-09-15', owner.loginId, { takings: 30000, card: 15000, cash: 14000, other: 1000, online: 2500, c2w: 1500, expected: 14000, counted: 13500, banked: 11500 });
   ids.wed = await close(owner, '2026-09-16', joLoginId, { takings: 10000, card: 6000, cash: 3500, other: 500, online: 0, expected: 3500, counted: 3500, banked: 2500 });
   // The same days last week (Mon 7, Tue 8, Thu 10), and the Friday after them.
   // Online money taken today, not yet in any close: £12.50 paid through Shopify.
@@ -66,7 +66,7 @@ before(async () => {
     await prepare("INSERT INTO sales (created_at, subtotal, total, payment_method, cash_amount) VALUES ('2026-09-09T10:00:00Z', 15, 15, 'Cash', 15)").run();
   });
   await close(owner, '2026-09-07', joLoginId, { takings: 15000, card: 9000, cash: 5000, other: 1000, online: 2000, expected: 5000, counted: 5000, banked: 3000 });
-  await close(owner, '2026-09-08', joLoginId, { takings: 25000, card: 14000, cash: 10000, other: 1000, online: 0, expected: 10000, counted: 9800, banked: 8000 });
+  await close(owner, '2026-09-08', joLoginId, { takings: 25000, card: 14000, cash: 10000, other: 1000, online: 0, c2w: 500, expected: 10000, counted: 9800, banked: 8000 });
   await close(owner, '2026-09-10', joLoginId, { takings: 5000, card: 3000, cash: 1500, other: 500, online: 100, expected: 1500, counted: 1500, banked: 500 });
   await close(owner, '2026-09-11', joLoginId, { takings: 99900, card: 99900, cash: 0, other: 0, online: 0, expected: 0, counted: 0, banked: 0 });
   // Another shop, the same day.
@@ -131,6 +131,8 @@ test('the headline figures add up the closes and compare with the same closed da
   assert.deepEqual(figures.cash, { pence: 24500, beforePence: 15000, diffPence: 9500 });
   assert.deepEqual(figures.other, { pence: 2500, beforePence: 2000, diffPence: 500 });
   assert.deepEqual(figures.online, { pence: 5500, beforePence: 2000, diffPence: 3500 });
+  // Cycle to Work money is a figure of its own: owed by the providers, not in the drawer (UX walk-through 5 H3).
+  assert.deepEqual(figures.c2w, { pence: 1500, beforePence: 500, diffPence: 1000 });
   assert.deepEqual(figures.cashDifference, { pence: -500, beforePence: -200, diffPence: -300 });
 });
 
@@ -189,8 +191,8 @@ test('GET /api/reports/days/:id gives the close as saved, and 404 for another sh
   const res = await as(owner)(`/api/reports/days/${ids.tue}`);
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const c = res.body.close;
-  assert.deepEqual([c.day, c.closedByName, c.takingsPence, c.cardPence, c.cashPence, c.otherPence, c.onlinePence, c.differencePence, c.bankedPence],
-    ['2026-09-15', 'Jack Lewis', 30000, 15000, 14000, 1000, 2500, -500, 11500]);
+  assert.deepEqual([c.day, c.closedByName, c.takingsPence, c.cardPence, c.cashPence, c.otherPence, c.c2wPence, c.onlinePence, c.differencePence, c.bankedPence],
+    ['2026-09-15', 'Jack Lewis', 30000, 15000, 14000, 1000, 1500, 2500, -500, 11500]);
   assert.ok(c.closedAt);
   assert.equal((await as(owner)(`/api/reports/days/${ids.theirs}`)).status, 404);
   assert.equal((await as(owner)('/api/reports/days/999999999')).status, 404);

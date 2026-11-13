@@ -23,7 +23,7 @@ const TONIGHT = { day: TODAY, floatPence: 15000, floatStart: { ...START, at: NOW
 const lateClose = (late) => ({
   id: 9, day: MON, closedByName: 'Jack Lewis', closedAt: NOW, floatStart: START, cashPence: 7900, drawerCashPence: 7900, paidOutsPence: late.paidOutsPence,
   expectedPence: late.expectedPence, earlierBankedPence: 0, countedPence: 21900, differencePence: 21900 - late.expectedPence, reason: '', floatPence: 15000,
-  bankedPence: 6900, carriedPence: 0, leftPence: 15000, topUpPence: 0, takingsPence: 7900, cardPence: 0, otherPence: 0, onlinePence: 0, countedBy: COUNTED_BY,
+  bankedPence: 6900, carriedPence: 0, leftPence: 15000, topUpPence: 0, takingsPence: 7900, cardPence: 0, otherPence: 0, c2wPence: 0, onlinePence: 0, countedBy: COUNTED_BY,
 });
 const NOT_CLOSED = { kind: 'day_not_closed', day: MON, checkId: 12, checkDay: TODAY, countedByName: 'Jo Taylor', checkedAt: NOW, tillCode: 'B1' };
 const SHORT = { kind: 'float_short', checkId: 12, day: TODAY, shortPence: 1000, tillCode: 'B1', countedByName: 'Jo Taylor', checkedAt: NOW, reason: '' };
