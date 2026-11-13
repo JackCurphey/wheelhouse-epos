@@ -26,7 +26,7 @@ A completed Cycle to Work sale SHALL mark the held frame sold, move the order to
 
 #### Scenario: The paid box for a certificate-only sale
 - **WHEN** the provider pays the whole order
-- **THEN** the paid box says it is paid by Cycle to Work · [Provider], with nothing from the customer (the exact wording waits for Jack: the 3 Oct decision's one line or the drawing's two)
+- **THEN** the paid box shows the title "Paid" with "Cycle to Work · [Provider] · receipt [receipt number]" under it, with nothing from the customer (Jack, 12 Nov)
 
 #### Scenario: The customer paid a difference
 - **WHEN** the customer paid the rest by card
