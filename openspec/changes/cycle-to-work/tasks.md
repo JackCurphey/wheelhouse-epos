@@ -98,10 +98,10 @@ The declined card in 7.4 (edge 6b) is the till's basket, so it is tested in 7b
 
 ## 8. The provider's money and cancelling (pull request 8, about 550 lines, risky: money — waiting for Jack)
 
-- [ ] 8.1 Test: Mark paid equal to expected moves to Paid by the provider; a difference offers Close with a reason and Save as part paid; Mark the rest paid
-- [ ] 8.2 Test: Record a payment over several ticked bikes; the Expected, Received and Difference rows
-- [ ] 8.3 Test: the Owed lists, late payments, Download as spreadsheet
-- [ ] 8.4 Test: the money steps are refused for non-Owners and logged with who and why
+- [x] 8.1 Test: Mark paid equal to expected moves to Paid by the provider; a difference offers Close with a reason and Save as part paid; Mark the rest paid
+- [x] 8.2 Test: Record a payment over several ticked bikes; the Expected, Received and Difference rows
+- [x] 8.3 Test: the Owed lists, late payments, Download as spreadsheet
+- [x] 8.4 Test: the money steps are refused for non-Owners and logged with who and why
 - [ ] 8.5 Test: cancelling frees the frame and keeps the order; Staff can cancel with no deposit
 - [ ] 8.6 Screen test: `cw-order-owed`, `-part-paid`, `-paid`, `cw-mark-paid`, `-diff`, `cw-record-payment`, `-more`, `cw-owed`, `cw-owed-reports`, `cw-owed-provider`, `cw-cancel`, `cw-cancel-ordered`
 - [ ] 8.7 Build to pass 8.1–8.6. When Cancel turns on "Your order is cancelled" (found in PR 9e's review): fill `Shop phone` and `Deposit amount`, send it with no link (`queueC2wMessage` refuses one without a link today), let Settings › Messages edit both deposit wordings (it shows one `partOf` wording), and check switching it off stops all three
