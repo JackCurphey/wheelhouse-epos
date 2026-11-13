@@ -126,7 +126,7 @@ const lockWebsite = async () => {
   return prepare('SELECT * FROM website FOR UPDATE').get();
 };
 
-async function inTransaction(fn) {
+export async function inTransaction(fn) {
   await dbExec('BEGIN');
   try {
     const result = await fn();
@@ -491,17 +491,32 @@ function checkColour(colour) {
 
 // The three steps' answers, once only (ws-start-which, -look, -products).
 // Shopify is set up by connecting it (pull request 6b).
+export const START_CHOICES = ['every', 'nothing'];
+
+// Set-up step 3's answer, at set-up and from Showing products' Change
+// (website-buy-online design 15): every product online means active ones with a
+// price (one with no price stays off until priced); nothing online means every
+// product off, inactive ones too. Every category follows, so new products follow
+// the answer, and the answer and its date are kept for the "Started with" line.
+// Runs inside the caller's transaction, website row locked.
+export async function startProducts(startWith) {
+  const every = startWith === 'every';
+  // Locked in id order first, as a sale locks its products (lockStock).
+  await prepare('SELECT id FROM products ORDER BY id FOR NO KEY UPDATE').all();
+  await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(every);
+  await prepare('UPDATE product_categories SET show_online = ?').run(every);
+  await prepare('UPDATE website SET started_with = ?, started_with_at = now(), updated_at = now()').run(startWith);
+}
+
 export async function setUp(body, loginId) {
   if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
-  if (!['every', 'nothing'].includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
+  if (!START_CHOICES.includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
   const colour = checkColour(body.mainColour);
   await getOrCreateWebsite();
   return inTransaction(async () => {
     const website = await prepare('SELECT * FROM website FOR UPDATE').get();
     if (website.kind) throw new WebsiteError(409, 'The website is already set up');
-    // Every product online: active ones with a price; one with no price stays
-    // off until priced. Nothing online: every product off, inactive ones too.
-    await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(body.startWith === 'every');
+    await startProducts(body.startWith);
     await prepare(
       `UPDATE website SET kind = 'wheelhouse', set_up_at = now(), draft = jsonb_set(draft, '{main_colour}', to_jsonb(?::text)),
               draft_saved_by = ?, draft_saved_at = now(), updated_at = now()`

@@ -203,6 +203,15 @@ test('Stock opened from See them for products with no price says so', async () =
   await t.waitFor(() => assert.ok(listAsked().some((q) => q.get('show') === 'no-price' && q.get('online') === null)));
 });
 
+// Settings › Online orders › Showing products' See them (on-settings-show; website-buy-online task 2.5).
+test('Stock opened from Showing products’ See them lists the products set differently from their category', async () => {
+  const t = await open('/workshop/stock?show=online-differs');
+  const line = await t.ui.findByText('Showing products set differently from their category');
+  await t.waitFor(() => assert.ok(listAsked().some((q) => q.get('show') === 'online-differs')));
+  t.fireEvent.click(t.within(line.closest('p')).getByRole('button', { name: 'Show all' }));
+  await t.waitFor(() => assert.ok(listAsked().at(-1).get('show') === null));
+});
+
 test('Today: no value sent (the Owner’s till with Jo checked in): the line shows, with no money', async () => {
   const { valuePence: _v, ...noValue } = ADJUSTED;
   void _v;

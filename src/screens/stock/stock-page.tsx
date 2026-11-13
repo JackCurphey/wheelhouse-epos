@@ -75,7 +75,8 @@ export function StockPage() {
   // The Website page's See them opens Stock filtered to the products it counted, with a line
   // and Show all, and no new pills (Jack's answer to Q1, 12 Nov; docs/decisions/2026-11-12-website-defaults-taken.md).
   const showParam = params.get('show');
-  const website = showParam === 'no-photo' || showParam === 'no-price' ? showParam : null;
+  // Settings › Online orders › Showing products' See them opens it the same way (on-settings-show).
+  const website = showParam === 'no-photo' || showParam === 'no-price' || showParam === 'online-differs' ? showParam : null;
   const websiteOnly = website ? [['show', website], ...(params.get('online') === '1' ? [['online', '1']] : [])] : [];
   const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: 'name', up: true });
   const [all, setAll] = useState(false);
@@ -164,7 +165,7 @@ export function StockPage() {
       <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}{picker.pill}</div>
       {website ? (
         <p className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm text-[var(--wh-ink)]">
-          <span>{`Showing products with ${website === 'no-photo' ? 'no photo' : 'no price'}`}</span>
+          <span>{website === 'online-differs' ? 'Showing products set differently from their category' : `Showing products with ${website === 'no-photo' ? 'no photo' : 'no price'}`}</span>
           <span aria-hidden="true">·</span>
           <button type="button" onClick={() => { setParams({}, { replace: true }); setAll(false); }} className="inline-flex min-h-11 items-center font-semibold underline">Show all</button>
         </p>
