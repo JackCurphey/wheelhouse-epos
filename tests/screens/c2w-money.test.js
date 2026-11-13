@@ -367,3 +367,10 @@ test('cw-mark-paid: when the server says what’s owed changed, the popup catche
   assert.deepEqual(posts().map((c) => c.body.owedPence), [76000, 6000]);
   assert.equal(posts()[1].body.amountPence, 6000);
 });
+
+test('cw-mark-paid: if more has come than is now expected, the popup starts at nothing owed, never below', async () => {
+  // As the server's owedOf: what's owed never goes below £0.00.
+  const { ui, within, fireEvent } = await open({ theOrder: order({ paidPence: 80000 }), events: [QUOTE_EV, PART_EV] });
+  const box = within(await openMarkPaid(ui, fireEvent, 'Mark the rest paid'));
+  assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '0.00');
+});
