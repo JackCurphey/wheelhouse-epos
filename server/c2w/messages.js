@@ -151,6 +151,22 @@ export async function undoReadyMessage(orderId) {
 }
 
 /**
+ * Cancelling an order stops its Ready to collect and Certificate received
+ * messages still waiting to go. They are found by customer, so while the
+ * customer has another open order they are left alone: the message may be that
+ * order's (review, 13 Nov).
+ */
+export async function stopMessagesForCancel(orderId) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE intent_state = 'intended' AND template_key IN ('c2w_ready', 'c2w_certificate', 'c2w_certificate_less')
+       AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)
+       AND NOT EXISTS (SELECT 1 FROM c2w_orders other WHERE other.customer_id = customer_messages.customer_id
+         AND other.id <> ? AND other.stage IN ('quote', 'waiting', 'certificate', 'ready'))`,
+  ).run(orderId, orderId);
+}
+
+/**
  * "Your hold ends on [date]": for each bike put aside before the certificate whose
  * hold ends within the shop's reminder days (and hasn't ended), once for that
  * date. Releasing the bike or the certificate clears hold_until, so neither is reminded. The order's line records it. Inside runWithShop, not throttled.

@@ -1,10 +1,11 @@
 // Online payments set up by the Owner, and the Online orders settings
-// (openspec/changes/website-management design 6; drawings ws-pay-*). The shop
+// (openspec/changes/website-management design 6; drawings ws-pay-*; the rest
+// of the settings from openspec/changes/website-buy-online design 1). The shop
 // connects its own account through the payments adapter: Wheelhouse sends the
 // Owner to the provider's page and takes them back. Owner only, until roles
 // are built (server/lib/owner-only.js).
-import { prepare } from '../db.js';
-import { badRequest, notFound, readJsonBody, sendJson } from '../lib/http.js';
+import { dbExec, prepare } from '../db.js';
+import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { currentSession } from '../lib/session.js';
 import { endTrip, html, peekTrip, redirect, startTrip } from '../lib/trips.js';
@@ -15,13 +16,35 @@ const SETTINGS_PAGE = '/workshop/settings?room=front-desk&fold=paying-online';
 const NOT_CONNECTED = { error: 'Connect online payments first.', code: 'payments_not_connected' };
 const TEST_PENCE = 100;
 
+// The shop's row, made if missing, with the starting values (migration 154);
+// locked for a save.
+async function loadSettings(lock = false) {
+  // RETURNING its own key: this table has no id for db.js to return.
+  await prepare('INSERT INTO online_order_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
+  return prepare(`SELECT * FROM online_order_settings${lock ? ' FOR UPDATE' : ''}`).get();
+}
+
+/** The shop's settings: read, and the row made only when it isn't there yet. */
+export async function onlineOrderSettings() {
+  return (await prepare('SELECT * FROM online_order_settings').get()) ?? loadSettings();
+}
+
 async function settingsBody() {
   const provider = payments();
   const account = await paymentAccount();
-  const stored = await prepare('SELECT buying_online FROM online_order_settings').get();
+  const stored = await onlineOrderSettings();
   const by = account?.connected_by ? await prepare('SELECT name FROM logins WHERE id = ?').get(account.connected_by) : null;
   return {
-    buyingOnline: !!stored?.buying_online && isConnected(account),
+    buyingOnline: !!stored.buying_online && isConnected(account),
+    // What the website sells: only what's on the shelf for now (question 10).
+    sells: stored.sells,
+    walletsOn: stored.wallets_on,
+    storeCreditOn: stored.store_credit_on,
+    // Not collected: as the bikes' days (workshop-settings.js), 1–60 and 2–90.
+    remindDays: stored.remind_days,
+    keepDays: stored.keep_days,
+    // Where ready orders wait: none until the Owner names it.
+    shelfName: stored.shelf_name,
     payments: {
       state: paymentsState(account),
       // False once a more-details date has passed: payments have stopped, so no Buying online switch.
@@ -36,6 +59,63 @@ async function settingsBody() {
       needsWhat: account?.needs_what ?? null,
     },
   };
+}
+
+// Each reader takes the body's field if sent: undefined means "keep".
+function yesNo(v, label) {
+  if (v === undefined) return undefined;
+  if (typeof v !== 'boolean') throw new ValidationError(label);
+  return v;
+}
+function wholeDays(v, min, max) {
+  if (v === undefined) return undefined;
+  if (!Number.isInteger(v) || v < min || v > max) throw new ValidationError(`Choose from ${min} to ${max} days.`);
+  return v;
+}
+// Empty words clear the name.
+function shelfName(v) {
+  if (v === undefined) return undefined;
+  if (typeof v !== 'string') throw new ValidationError('The shelf name is words');
+  const s = v.trim();
+  if (s.length > 60) throw new ValidationError('The shelf name is up to 60 characters');
+  return s || null;
+}
+
+class Refused extends Error {
+  constructor(status, body) { super(body.error); this.status = status; this.body = body; }
+}
+
+// Saves the fields sent, the rest as they are, under the row's lock so two
+// saves at once are checked one after the other (as c2w-settings.js).
+async function saveSettings(body) {
+  await dbExec('BEGIN');
+  try {
+    const current = await loadSettings(true);
+    const fields = {
+      buying_online: yesNo(body.buyingOnline, 'Say whether Buying online is on'),
+      sells: body.sells === undefined ? undefined : body.sells,
+      wallets_on: yesNo(body.walletsOn, 'Say whether Apple Pay and Google Pay are on'),
+      store_credit_on: yesNo(body.storeCreditOn, 'Say whether store credit is on'),
+      remind_days: wholeDays(body.remindDays, 1, 60),
+      keep_days: wholeDays(body.keepDays, 2, 90),
+      shelf_name: shelfName(body.shelfName),
+    };
+    // Only what's on the shelf until stock transfers and supplier times exist.
+    if (fields.sells !== undefined && fields.sells !== 'shelf') throw new ValidationError('Choose what the website sells');
+    if ((fields.keep_days ?? current.keep_days) <= (fields.remind_days ?? current.remind_days)) {
+      throw new ValidationError('Keep orders for more days than the reminder.');
+    }
+    if (fields.buying_online && !isConnected(await paymentAccount())) throw new Refused(409, NOT_CONNECTED);
+    const sent = Object.entries(fields).filter(([, v]) => v !== undefined);
+    if (sent.length) {
+      await prepare(`UPDATE online_order_settings SET ${sent.map(([k]) => `${k} = ?`).join(', ')}, updated_at = now() RETURNING shop_id`)
+        .run(...sent.map(([, v]) => v));
+    }
+    await dbExec('COMMIT');
+  } catch (err) {
+    await dbExec('ROLLBACK').catch(() => {});
+    throw err;
+  }
 }
 
 const setBuyingOnline = (on) => prepare(
@@ -61,9 +141,14 @@ export function register(route) {
   route('PUT', '/api/online-orders-settings', async (req, res) => {
     if (await ownerOnly(req, res)) return;
     const body = (await readJsonBody(req)) ?? {};
-    if (typeof body.buyingOnline !== 'boolean') return badRequest(res, 'Say whether Buying online is on');
-    if (body.buyingOnline && !isConnected(await paymentAccount())) return sendJson(res, 409, NOT_CONNECTED);
-    await setBuyingOnline(body.buyingOnline);
+    if (typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Send the settings to change');
+    try {
+      await saveSettings(body);
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      if (err instanceof Refused) return sendJson(res, err.status, err.body);
+      throw err;
+    }
     sendJson(res, 200, await settingsBody());
   });
 
