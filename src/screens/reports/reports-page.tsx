@@ -26,6 +26,7 @@ const CARDS: { name: string; line: string; to: string }[] = [
   { name: 'Returning customers', line: 'Who comes back, and who hasn’t been in for a while', to: ROUTES['rp-returning'] },
   { name: 'Margin and stock value', line: 'What you made on what you sold, what’s on the shelves, and stock written off', to: ROUTES['rp-margin'] },
   { name: 'VAT', line: 'VAT by rate for your VAT quarter, for your accountant', to: ROUTES['rp-vat'] },
+  { name: 'Cycle to Work: owed and paid', line: 'What each provider owes, has paid, and kept as commission', to: ROUTES['rp-c2w'] },
 ];
 
 /**

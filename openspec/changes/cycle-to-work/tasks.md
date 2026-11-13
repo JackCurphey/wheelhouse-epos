@@ -127,12 +127,13 @@ cancelled", its three drawn wordings, sent by pull request 8's Cancel).
 
 - [ ] 10.1 Test: the Today source gives the hold and late-payment lines, Owner only, and only when "On Today" is on
 - [ ] 10.2 Test: header search finds orders by name and quote number; the customer page lists their orders
-- [ ] 10.3 Test: the `rp-c2w` report — tiles and the by-provider table, counted on the day marked paid
+- [x] 10.3 Test: the `rp-c2w` report — tiles and the by-provider table, counted on the day marked paid
 - [ ] 10.4 Screen test: `cw-today`, `cw-today-held`, `op-today-c2w`, `cs-search-c2w`, `cs-page-c2w`, `-collected`, `rp-c2w`; the Takings report counts Cycle to Work money in
 - [ ] 10.5 Build to pass 10.1–10.4
 - [ ] 10.6 Self-review with `reviewer`; full check
 - Pull request 10a (`claude/c2w-10a-today-search`) built part of 10.1, 10.2 and 10.4: Today's "hold ended — choose" line with Hold longer and Release the bike (`op-today-c2w`, `cw-today-held`), the header search (`cs-search-c2w`) and the orders on the customer's page (`cs-page-c2w`, `-collected`), logged in `docs/decisions/decided-while-building/2026-11-jack.md`. Still to do: the no-certificate line (`cw-today`, after pull request 6), the late-payment line, 10.3 `rp-c2w` and Takings (pull requests 7 and 8), on `cs-page-c2w-collected` the sale number and the bike in her Bikes (after the hand over, pull request 8), and on `cw-today-held` the note's Undo and “She’s sent ‘Your bike is put aside’” (they wait for a step that undoes Hold longer and for pull request 9). At archive, the header search's spec gains “certificate number” among what it finds. So the boxes stay unticked.
 - Pull request 10b (`claude/c2w-10b-today-no-certificate`) built more of 10.1 and 10.4: Today's "no certificate yet" line (`cw-today`) with Hold longer while a bike is held and Open the order, by the list's "No certificate after" rule, logged in `docs/decisions/decided-while-building/2026-11-jack.md` under "Today's 'no certificate yet' line". The late-payment line, `rp-c2w` and Takings still wait for pull requests 7 and 8, so the boxes stay unticked.
+- Pull request 10c (`claude/c2w-10c-late-report`) built 10.3 and the `rp-c2w` part of 10.4: the "Cycle to Work: owed and paid" report (server, screen, its card on Reports, its download and a browser spec), logged in `docs/decisions/decided-while-building/2026-11-jack.md` under "Cycle to Work on Today and in Reports". Its "Change what's shown" is not built (no Cycle to Work base in changed reports yet). Still to do in 10.4: the Takings report's "Cycle to Work" figure and its "Owed by providers, not in the drawer" row (`generator/reports.mjs`, the Takings stats and `ZROWS`), so 10.4 stays unticked.
 
 ## 11. Deposits (pull request 11, about 450 lines, risky: money — waits for Mark's till deposit for orders)
 
