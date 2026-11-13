@@ -22,6 +22,8 @@ import { refundOwed } from '../payments/refund.js';
 import { work } from '../workshop/state-machines.js';
 import { applyEvent } from '../workshop/transitions.js';
 import { signOffMechanic, recordSignOff } from '../workshop/sign-off.js';
+import { claimsC2w, readOrderId, SHARE_REFUSED, startHandOver } from '../c2w/hand-over.js';
+import { Refused } from '../c2w/orders.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -229,11 +231,20 @@ export function register(route) {
     // no longer active (openspec/changes/sale-request-key, design 2).
     const repeat = key.value && await firstSaleOf(key.value);
     if (repeat) return answerRepeat(res, repeat);
-    const items = Array.isArray(body.items) ? body.items : [];
-    if (items.length === 0) return badRequest(res, 'Sale must include at least one item');
+    let items = Array.isArray(body.items) ? body.items : [];
+    // A Cycle to Work hand-over (openspec/changes/cycle-to-work design 5): the
+    // server puts the order's lines and the provider's share on the sale, so
+    // `items` holds only what was added at the counter, and may be empty.
+    let c2wOrderId = null;
+    if (body.c2wOrderId !== undefined && body.c2wOrderId !== null) {
+      try { c2wOrderId = readOrderId(body.c2wOrderId); } catch (err) { return badRequest(res, err.message); }
+    }
+    if (items.length === 0 && c2wOrderId === null) return badRequest(res, 'Sale must include at least one item');
     const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
     const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
-    const payments = Array.isArray(body.payments) ? body.payments : [];
+    let payments = Array.isArray(body.payments) ? body.payments : [];
+    // Only a hand-over takes a Cycle to Work payment, worked out by the server.
+    if (c2wOrderId === null && claimsC2w(payments)) return sendJson(res, 400, SHARE_REFUSED);
     const discount = Math.max(0, Number(body.discount) || 0);
     const cashTendered = body.cashTendered !== undefined && body.cashTendered !== null && body.cashTendered !== ''
       ? Number(body.cashTendered)
@@ -241,7 +252,7 @@ export function register(route) {
     const note = (body.note || '').trim();
 
     let customerId = null;
-    if (body.customerId !== undefined && body.customerId !== null && body.customerId !== '') {
+    if (c2wOrderId === null && body.customerId !== undefined && body.customerId !== null && body.customerId !== '') {
       customerId = Number(body.customerId);
       const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
       if (!customer) return badRequest(res, 'Customer not found or inactive');
@@ -265,15 +276,20 @@ export function register(route) {
           return answerRepeat(res, queued);
         }
       }
+      const handOver = c2wOrderId === null ? null
+        : await startHandOver(c2wOrderId, { items, payments, discount, checks: body.c2wChecks, tillSite: await siteHere(req) });
+      if (handOver) ({ customerId, items, payments } = handOver);
       saleId = await createSale(
         { movedBy: await saleMovedBy(req), customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
         { deferShopifyPushesTo: shopifyPushes }
       );
+      if (handOver) await handOver.finish(saleId, cashierResolved.cashierId);
       await keepRequestKey(saleId, key.value);
       await db.exec('COMMIT');
     } catch (err) {
       await db.exec('ROLLBACK').catch(() => {});
       if (err instanceof ValidationError) return badRequest(res, err.message);
+      if (err instanceof Refused) return sendJson(res, err.status, err.body);
       throw err;
     }
 
@@ -669,6 +685,8 @@ export function register(route) {
     // (till-online-deposit design 3).
     const payments = (Array.isArray(body.payments) ? body.payments : [])
       .filter((p) => String(p?.tenderType ?? '').trim() !== DEPOSIT_TENDER);
+    // Nor is a Cycle to Work share, which only a hand-over takes (cycle-to-work design 5).
+    if (claimsC2w(payments)) return sendJson(res, 400, SHARE_REFUSED);
     const cashTendered =
       body.cashTendered !== undefined && body.cashTendered !== null && body.cashTendered !== ''
         ? Number(body.cashTendered)

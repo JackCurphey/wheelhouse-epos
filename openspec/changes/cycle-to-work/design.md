@@ -111,14 +111,21 @@ available number subtracts held orders (default taken 12 Nov, `docs/decisions/20
 
 Built on today's sales path, as Mark's till deposit plan does. The till
 opens the order (`till-c2w-pick`), which loads the basket from the order.
-On `POST /api/sales` with `c2w_order_id`, the server, inside the sale's
-transaction and with the order row locked:
+On `POST /api/sales` with `c2wOrderId`, the server, inside the sale's
+transaction and with the order row locked (`server/c2w/hand-over.js`):
 - checks the order is at "Ready to collect";
-- works out the provider's share from the certificate and the
-  difference choice;
+- puts the order's bike and accessories on the sale at their quoted
+  prices, ahead of the sale's `items`, which hold only what was added at
+  the counter (so they may be empty), and the order's customer;
+- works out the provider's share: the certificate, up to the whole order
+  (`providerPays`), and never more than the sale comes to once a discount
+  is taken off;
 - adds the payment line `Cycle to Work · [Provider]` itself, like
   `DEPOSIT_TENDER` in `server/workshop/counted-deposit.js`, refusing a
-  sale that claims a different share;
+  sale that claims a different share (`c2w_share`), and refusing that
+  payment on any other sale or order;
+- takes the ticked checks (`c2wChecks`), each one of the provider's lines
+  from Settings, into the event; none ticked is allowed;
 - marks the frame sold, moves the order to Collected, sets `sale_id`,
   `collected_at`, `expected_pence` and `expected_by`, and adds the event.
 
@@ -164,11 +171,10 @@ decision names are built now; the other two are added only if Jack says so.
 ### 10. The paid box
 
 `till.mjs` draws the title "Paid" with the line "Cycle to Work ·
-[Provider] · receipt [receipt number]". The 3 Oct change says the
-certificate-only paid box reads "Paid · Cycle to Work · [Provider]". The
-drawing and the decision differ, so the wording waits for Jack (`docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md`,
-item 4). Pull request 7, the hand-over at the till, waits for him anyway:
-money taken at the till is his to approve.
+[Provider] · receipt [receipt number]". The 3 Oct change said the
+certificate-only paid box reads "Paid · Cycle to Work · [Provider]". Jack
+chose the drawing on 12 Nov (`docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md`,
+item 4), and pull request 7 goes ahead under the risky-area rules.
 
 ## Decided while building (to log in your own month file)
 
@@ -215,6 +221,5 @@ money taken at the till is his to approve.
 
 Defaults taken and questions still open are in `docs/decisions/2026-11-12-cycle-to-work-defaults-taken.md`:
 deposits wait for Mark's till deposit (default); a bike without frame
-numbers is held as a count (default); the paid box wording and the two
-extra messages wait for Jack, since each would go against a recorded
-decision.
+numbers is held as a count (default). Jack answered the paid box wording
+and the two extra messages on 12 Nov: both as drawn.
