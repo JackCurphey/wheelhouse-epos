@@ -41,7 +41,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 3.9 Basket and Add to basket open the basket path's "can't take orders online yet" message until WP-6.3 (written line 1); log it in this month's decided-while-building file
 - [x] 3.10 Build `src/website/` (shell, home, Shop, not found, off, footer pages)
 - [x] 3.11 Browser test: the home page on a phone and a computer
-- [ ] 3.12 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 3.12 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 4. Category pages with filters
 
@@ -53,7 +53,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 4.6 Screen test: the phone Filter panel's "Show [n] products" applies only when pressed
 - [x] 4.7 Build the category page, the filters `aside` and the phone panel
 - [x] 4.8 Browser test: filtering a category on a phone and a computer
-- [ ] 4.9 Self-review (`reviewer`), full check, merge
+- [x] 4.9 Self-review (`reviewer`), full check, merge
 
 ## 5. The product page
 
@@ -65,7 +65,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 5.6 Screen test: a product that isn't online shows wb-not-found
 - [x] 5.7 Build the product page and the photo viewer
 - [x] 5.8 Browser test: choosing a colour and size on a phone
-- [ ] 5.9 Self-review (`reviewer`), full check, merge
+- [x] 5.9 Self-review (`reviewer`), full check, merge
 
 ## 6. Search
 
@@ -75,7 +75,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 6.4 Build the search box and the results page (reusing group 4's list and filters)
 - [ ] 6.5 Measure suggestions with the full seed; note the time in the pull request
 - [x] 6.6 Browser test: searching from the shell on a phone and a computer
-- [ ] 6.7 Self-review (`reviewer`), full check, merge
+- [x] 6.7 Self-review (`reviewer`), full check, merge
 
 ## 7. Risky — the chosen shop, Our shops and the shop page
 
@@ -84,7 +84,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 7.3 Screen tests: wb-shops (cards, today's hours, Book a repair here with the shop, Directions "(opens your maps app)") and wb-shop-page (today in bold, closures, Collect from here)
 - [x] 7.4 Screen tests: wb-shop-collect (the drawn sentence, the chip changes) and wb-find-us (one shop, no Collect from here)
 - [x] 7.5 Build the chip, the Which shop box, Our shops and the shop page
-- [ ] 7.6 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 7.6 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 8. Risky — cookies and the staff banner
 
