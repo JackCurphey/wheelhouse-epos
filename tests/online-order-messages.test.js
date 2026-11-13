@@ -327,6 +327,16 @@ test('3.7d a cancellation undone in its Undo time can be sent again', async () =
   assert.ok((await queue(order, 'order_cancelled', { vars: { 'Amount refunded': '£[£]' } })).id);
 });
 
+test('3.7d a confirmation whose email failed can be sent again; one not known to have gone can’t', async () => {
+  for (const [state, again] of [['failed', true], ['unknown', false]]) {
+    const order = await paidOrder();
+    const first = await queue(order, 'order_confirmation');
+    await inShop(() => prepare('UPDATE customer_messages SET intent_state = ?, status = ? WHERE id = ?').run(state, state, first.id));
+    const second = await queue(order, 'order_confirmation');
+    assert.equal(Boolean(second.id), again, state);
+  }
+});
+
 test('3.7e the reason has its own full stop, and one typed with a stop gets no second', async () => {
   for (const Reason of ['[reason]', '[reason].']) {
     const order = await paidOrder();

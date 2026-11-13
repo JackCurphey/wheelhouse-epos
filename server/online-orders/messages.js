@@ -71,7 +71,8 @@ function howPaid(order) {
 }
 
 // Sent once an order: a second (a retried step) is skipped while the first
-// stands. One undone in its Undo time doesn't count.
+// stands. One undone in its Undo time, or one that failed, doesn’t count; one
+// not known to have gone ("unknown") does, as the customer may have it.
 const ONCE = ['order_confirmation', 'order_cancelled'];
 
 /**
@@ -95,7 +96,7 @@ export async function queueOrderMessage(orderId, key, { req = null, loginId = nu
   if (ONCE.includes(family)) {
     const earlier = await prepare(
       `SELECT 1 FROM online_order_events e JOIN customer_messages m ON m.id = (e.detail->>'messageId')::int
-       WHERE e.order_id = ? AND e.kind = 'message' AND e.detail->>'key' IN (?, ?) AND m.intent_state <> 'undone'`,
+       WHERE e.order_id = ? AND e.kind = 'message' AND e.detail->>'key' IN (?, ?) AND m.intent_state NOT IN ('undone', 'failed')`,
     ).get(orderId, family, `${family}_unpaid`);
     if (earlier) return { skipped: 'already' };
   }
