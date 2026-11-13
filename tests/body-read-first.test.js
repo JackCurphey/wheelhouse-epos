@@ -212,6 +212,7 @@ live('the deadline is at every door with no sign-in, and for a till and for staf
     'staff accounts': { path: '/api/auth/login' },
     'a customer signing in': { path: `/api/portal/${owner.shop.slug}/login` },
     'the shop\'s website': { path: `/api/portal/${owner.shop.slug}/booking-links/nope/cancel` },
+    'the website\'s basket': { path: `/store/${owner.shop.slug}/api/site/basket` },
     'a Shopify webhook': { path: `/webhooks/shopify/${owner.shop.id}/orders` },
     'a till': { path: `/api/till/${owner.shop.slug}/sync`, headers: { Authorization: `Bearer ${till.token}` } },
     'signed-in staff': { path: '/api/customers', headers: { Cookie: owner.cookie } },

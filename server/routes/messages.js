@@ -60,10 +60,11 @@ const C2W_EXAMPLE = {
 const ORDER_EXAMPLE = {
   'Order number': '[order number]', 'Link to your order': '[link]', 'Keep until': '[date]',
   'Shop address': '[Shop address]', Item: '[Item]', Reason: '[reason]', 'Amount refunded': '£[£]',
+  'What you bought': '[n] × [Product]', 'How you paid': '£[£] by card',
 };
 const EXAMPLE_FOR = {
   order_confirmation: ORDER_EXAMPLE, order_ready: ORDER_EXAMPLE, order_still_waiting: ORDER_EXAMPLE,
-  order_item_not_supplied: ORDER_EXAMPLE, order_cancelled: ORDER_EXAMPLE, order_not_ready: ORDER_EXAMPLE,
+  order_item_not_supplied: ORDER_EXAMPLE, order_cancelled: ORDER_EXAMPLE, order_cancelled_unpaid: ORDER_EXAMPLE, order_not_ready: ORDER_EXAMPLE,
   date_change_answered: { 'When to drop off': 'Drop your Trek Domane AL 3 off by [time], half an hour before your booking.' },
   c2w_put_aside: C2W_EXAMPLE, c2w_certificate: C2W_EXAMPLE, c2w_certificate_less: C2W_EXAMPLE,
   c2w_ready: C2W_EXAMPLE, c2w_hold_ending: C2W_EXAMPLE, c2w_released: C2W_EXAMPLE,
@@ -199,12 +200,19 @@ export function register(route) {
     } catch (err) {
       return badRequest(res, err.message);
     }
-    const vars = { ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name };
+    const order = TEMPLATES[params.key].group === 'online_orders';
+    const vars = {
+      ...EXAMPLE, ...EXAMPLE_FOR[params.key], 'Shop name': ctx.shop.name,
+      // The shop's lines as on-email-ready draws them.
+      ...(order ? { 'Where to collect': `${ctx.shop.name}\nOpen [opening hours]\n[Shop address] · [shop phone]` } : {}),
+    };
     // The service reminder's fixed ending, as drawn in its preview (ac-reminder-wording).
     // And the review request's (ac-review-setting).
     const text = ['service_reminder', 'review_request'].includes(params.key) ? `${render(wording, vars)} ${STOP_LINE}` : render(wording, vars);
-    // From and To as the email frame draws them (on-email-ready): the shop's
-    // sending address is open until email is set up.
-    sendJson(res, 200, { text, email: { from: `${ctx.shop.name} <[email address]>`, to: 'maya@example.test', subject: render(subject, vars), body: text } });
+    // From and To as the email frame draws them (on-email-ready), for the online
+    // order messages only, which are emailed: the shop's sending address is open
+    // until email is set up.
+    const fromTo = order ? { from: `${ctx.shop.name} <[email address]>`, to: 'maya@example.test' } : {};
+    sendJson(res, 200, { text, email: { ...fromTo, subject: render(subject, vars), body: text } });
   });
 }
