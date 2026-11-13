@@ -15,6 +15,7 @@ import { lineText, warrantyState, type BikeWarranty } from '@/lib/warranty-words
 import { NOT_FOUND, ReceiptDialog, type ReceiptRef } from './receipt-dialog.tsx';
 import { DetailsDialog } from './details-dialog.tsx';
 import { usePrivacyNotice } from './privacy-query.ts';
+import { useC2wOrders, type C2wOrder } from './c2w-query.ts';
 
 /**
  * The customer's account (openspec/changes/customer-account-screens; drawn as
@@ -41,6 +42,9 @@ import { usePrivacyNotice } from './privacy-query.ts';
  * receipt until step C gives those sales numbers (Jack, 9 Nov, answer 1).
  * Your data ends with "Privacy notice" once the shop has added one
  * (finish-account design 7; Jack, 9 Nov, answer 2).
+ * Her Cycle to Work orders (ac-account-c2w, -collected; cycle-to-work PR 9d):
+ * an open one first under Now, opening its page by her sign-in; a collected
+ * one under Earlier, opening its receipt in place of its till sale's row.
  */
 // An open request to delete the account: the shop's days it was asked and will be done by.
 type Deletion = { askedOn: string; finishBy: string };
@@ -103,6 +107,7 @@ export function AccountScreen() {
   const me = useQuery({ queryKey: ['account', shopSlug, 'me'], queryFn: () => apiGet<Me>(`${base}/me`), ...opts });
   const bikes = useQuery({ queryKey: ['account', shopSlug, 'bikes'], queryFn: () => apiGet<Bike[]>(`${base}/bikes`), ...opts });
   const history = useQuery({ queryKey: ['account', shopSlug, 'history'], queryFn: () => apiGet<Item[]>(`${base}/history`), ...opts });
+  const c2w = useC2wOrders(shopSlug);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [leaving, setLeaving] = React.useState(false);
@@ -126,11 +131,12 @@ export function AccountScreen() {
   }, [setSearch]);
   const notFound = React.useCallback(() => { setMissing(true); showReceipt(null); }, [showReceipt]);
 
-  if ([me, bikes, history].some((q) => signedOut(q.error)) || copy.state === 'signed-out') {
+  if ([me, bikes, history, c2w].some((q) => signedOut(q.error)) || copy.state === 'signed-out') {
     // Back to the same address after signing in, a receipt's included.
     return <Navigate replace to={`${home}/sign-in?from=${encodeURIComponent(`${home}/account${search.size ? `?${search}` : ''}`)}`} />;
   }
-  if (me.isPending || bikes.isPending || history.isPending) return <BookFrame title="Loading…">{null}</BookFrame>;
+  // Cycle to Work rows that fail to load leave the rest of the account showing.
+  if (me.isPending || bikes.isPending || history.isPending || c2w.isPending) return <BookFrame title="Loading…">{null}</BookFrame>;
   if (!me.data || !bikes.data || !history.data) {
     return (
       <BookFrame title="We couldn’t load your account">
@@ -196,7 +202,7 @@ export function AccountScreen() {
       <div className="grid items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="lg:col-start-1 lg:row-start-1">{bikesCard}</div>
         <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
-          <HistoryCard items={items} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} onReceipt={(of) => { setMissing(false); showReceipt(of); }} />
+          <HistoryCard items={items} orders={c2w.data ?? []} shopSlug={shopSlug} shopName={me.data.shopName} bookLink={bookLink} onReceipt={(of) => { setMissing(false); showReceipt(of); }} />
           <div className="order-last lg:order-none"><YourDataCard copy={copy} deletion={deletion} onAsk={() => { setCancelled(false); setAsking(true); }} onCancel={() => void cancelRequest()} cancelling={cancelling} /></div>
         </div>
         <div className="flex flex-col gap-4 lg:col-start-1 lg:row-start-2">
@@ -635,7 +641,7 @@ function ContactBox({ me, shopSlug, onClose }: { me: Me; shopSlug: string; onClo
 
 type Filter = 'Everything' | 'Repairs' | 'Purchases';
 
-function HistoryCard({ items, shopSlug, shopName, bookLink, onReceipt }: { items: Item[]; shopSlug: string; shopName: string; bookLink: React.ReactNode; onReceipt: (of: ReceiptRef) => void }) {
+function HistoryCard({ items, orders, shopSlug, shopName, bookLink, onReceipt }: { items: Item[]; orders: C2wOrder[]; shopSlug: string; shopName: string; bookLink: React.ReactNode; onReceipt: (of: ReceiptRef) => void }) {
   const idBase = React.useId();
   const [filter, setFilter] = React.useState<Filter>('Everything');
   const [more, setMore] = React.useState(false);
@@ -646,7 +652,14 @@ function HistoryCard({ items, shopSlug, shopName, bookLink, onReceipt }: { items
       ))}
     </div>
   );
-  if (!items.length) {
+  // Cycle to Work, as drawn: an open order under Everything only; a collected
+  // one as a purchase, standing in for the till sale it was collected with.
+  // (With no time it was collected, it goes last.) A cancelled order isn't drawn on the account, so it's left out.
+  const open = orders.filter((o) => o.stage !== 'collected' && o.state !== 'cancelled');
+  const collected: C2wDone[] = orders.filter((o) => o.stage === 'collected').map((o) => ({ kind: 'c2w', order: o, at: o.collectedAt ?? '' }));
+  const sales = new Set(collected.map((c) => c.order.saleId).filter((s) => s !== null));
+  const rows: Row[] = [...items.filter((i) => !(i.kind === 'purchase' && i.source === 'till' && sales.has(i.id))), ...collected];
+  if (!rows.length && !open.length) {
     return (
       <Card id={`${idBase}-history`} title="History" aside={pills}>
         <div className="flex flex-col items-center gap-3 px-3 py-9 text-center">
@@ -657,18 +670,23 @@ function HistoryCard({ items, shopSlug, shopName, bookLink, onReceipt }: { items
     );
   }
   // The conversation shows under Everything only, as drawn.
-  const shown = items.filter((i) => filter === 'Everything' || (i.kind !== 'messages' && (filter === 'Repairs') === (i.kind === 'repair')));
-  const newest = (a: Item, b: Item) => b.at.localeCompare(a.at);
-  const row = (i: Item) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} />
-    : i.kind === 'messages' ? <MessagesRow key="m" m={i} shopSlug={shopSlug} shopName={shopName} /> : <PurchaseRow key={`p${i.source}${i.id}`} p={i} onReceipt={onReceipt} />);
-  const now = shown.filter(isNow).sort(newest);
-  const earlier = shown.filter((i) => !isNow(i)).sort(newest);
+  const shown = rows.filter((i) => filter === 'Everything' || (i.kind !== 'messages' && (filter === 'Repairs') === (i.kind === 'repair')));
+  const newest = (a: Row, b: Row) => b.at.localeCompare(a.at);
+  const row = (i: Row) => (i.kind === 'repair' ? <RepairRow key={`r${i.jobId}`} r={i} shopSlug={shopSlug} />
+    : i.kind === 'messages' ? <MessagesRow key="m" m={i} shopSlug={shopSlug} shopName={shopName} />
+      : i.kind === 'c2w' ? <C2wRow key={`c${i.order.id}`} o={i.order} shopSlug={shopSlug} onReceipt={onReceipt} />
+        : <PurchaseRow key={`p${i.source}${i.id}`} p={i} onReceipt={onReceipt} />);
+  const now = [
+    ...(filter === 'Everything' ? open.map((o) => <C2wRow key={`c${o.id}`} o={o} shopSlug={shopSlug} onReceipt={onReceipt} />) : []),
+    ...shown.filter((i) => i.kind !== 'c2w' && isNow(i)).sort(newest).map(row),
+  ];
+  const earlier = shown.filter((i) => i.kind === 'c2w' || !isNow(i)).sort(newest);
   const earlierShown = more ? earlier : earlier.slice(0, EARLIER_SHOWN);
   const sub = (t: string) => <h3 className="m-0 pt-3 pb-1 text-size-13 font-bold text-[var(--wh-muted)]">{t}</h3>;
   return (
     <Card id={`${idBase}-history`} title="History" aside={pills}>
       <div className="flex flex-col">
-        {now.length ? <>{sub('Now')}{now.map(row)}</> : null}
+        {now.length ? <>{sub('Now')}{now}</> : null}
         {/* Not drawn: with nothing earlier yet, no heading over nothing. */}
         {earlier.length ? sub('Earlier, newest first') : null}
         {earlierShown.map(row)}
@@ -677,6 +695,45 @@ function HistoryCard({ items, shopSlug, shopName, bookLink, onReceipt }: { items
         <div><button type="button" onClick={() => setMore(true)} className="min-h-11 cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-[var(--wh-ink)] underline">Show more</button></div>
       ) : null}
     </Card>
+  );
+}
+
+// A collected Cycle to Work order in the history, by the day it was collected.
+type C2wDone = { kind: 'c2w'; order: C2wOrder; at: string };
+type Row = Item | C2wDone;
+
+// ac-account-c2w's row: the bike and its stage; the quote, and the hold while
+// it lasts; what she pays at collection once it's known; Put aside while held.
+// Collected (-collected): the day, and its receipt when there's a till sale.
+function C2wRow({ o, shopSlug, onReceipt }: { o: C2wOrder; shopSlug: string; onReceipt: (of: ReceiptRef) => void }) {
+  const done = o.stage === 'collected';
+  const stage = o.stageIndex !== null ? o.stages[o.stageIndex] : '';
+  const under = done
+    ? [`Quote ${o.quoteRef}`, o.collectedAt && `collected ${shortDate(londonDate(o.collectedAt))}`, o.saleId !== null && 'receipt']
+    : [`Quote ${o.quoteRef}`, o.state === 'held' && o.holdUntil && `put aside until ${shortDate(o.holdUntil)}`];
+  const inner = (
+    <>
+      <span className={kindClass}>Cycle to Work</span>
+      <span className="flex min-w-0 grow flex-col gap-0.5">
+        <span className="text-size-15 font-semibold">{`${o.bike} · ${stage}`}</span>
+        <span className="text-size-15 text-[var(--wh-muted)]"><span className="sm:hidden">Cycle to Work · </span>{under.filter(Boolean).join(' · ')}</span>
+        {!done && o.customerPaysPence !== null
+          ? <span className="text-sm">What you pay at collection: <strong className="font-[family-name:var(--wh-font-mono)]">{pounds(o.customerPaysPence)}</strong></span>
+          : null}
+      </span>
+      {!done && o.state === 'held'
+        ? <span className="shrink-0 rounded-full bg-[var(--wh-status-pending-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--wh-status-pending-ink)]">Put aside</span>
+        : null}
+    </>
+  );
+  const arrow = <span aria-hidden="true" className="text-[var(--wh-muted)]">›</span>;
+  if (!done) return <Link to={`/book/${shopSlug}/account/cycle-to-work/${o.id}`} className={rowClass}>{inner}{arrow}</Link>;
+  if (o.saleId === null) return <div className={rowClass}>{inner}</div>;
+  const sale = o.saleId;
+  return (
+    <button type="button" onClick={() => onReceipt({ source: 'till', id: sale })} className={cn(rowClass, 'w-full cursor-pointer border-x-0 border-b-0 bg-transparent px-0 text-left font-[inherit]')}>
+      {inner}{arrow}
+    </button>
   );
 }
 

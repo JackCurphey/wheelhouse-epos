@@ -80,3 +80,8 @@ export const PRIVACY_ROUTE = '/book/:shopSlug/privacy';
  * same address.
  */
 export const C2W_ROUTE = '/book/:shopSlug/cycle-to-work/:code';
+/**
+ * The same Cycle to Work order page, by the customer's sign-in, from her
+ * account's history (ac-account-c2w; cycle-to-work PR 9d).
+ */
+export const C2W_ACCOUNT_ROUTE = '/book/:shopSlug/account/cycle-to-work/:id';
