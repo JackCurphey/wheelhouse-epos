@@ -25,16 +25,24 @@ const baseFor = (req) => process.env.APP_PUBLIC_URL || (req ? `${isHttpsRequest(
 export async function queueC2wMessage(orderId, key, { req = null, loginId = null } = {}) {
   const r = await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId);
   if (!r) return { skipped: 'no_order' };
-  const shop = await prepare("SELECT name, slug FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
+  const shop = await prepare("SELECT name, slug, phone FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
   // One size of a bike with sizes is named with its size, as drawn ("[Bike] · [Size]", cw-texts-*).
   const size = (await prepare('SELECT size FROM products WHERE id = ?').get(r.product_id))?.size;
   const base = baseFor(req);
   // A new put-aside gives the new date: one still in its minute gives way to it
   // (Hold longer pressed twice sends one message, not two).
   if (key === 'c2w_put_aside') await stopWaiting(r.customer_id, 'c2w_put_aside');
-  const link = await messageLink(async () => (base ? `${base}${c2wLinkPath(shop.slug, r.customer_code)}` : null));
+  // "Your order is cancelled" is drawn with the shop's phone instead of a link
+  // (cw-texts-cancelled), so it can't go without one.
+  const cancelled = key.startsWith('c2w_cancelled');
+  const phone = (shop.phone ?? '').trim();
+  if (cancelled && !phone) {
+    console.error(`Messages: the shop has no phone number, so Cycle to Work order ${orderId}'s ${key} message wasn't sent`);
+    return { skipped: 'no_phone' };
+  }
+  const link = cancelled ? null : await messageLink(async () => (base ? `${base}${c2wLinkPath(shop.slug, r.customer_code)}` : null));
   // Never a message without its link, and never a booking-in stopped for one.
-  if (link === null) {
+  if (!cancelled && link === null) {
     console.error(`Messages: no APP_PUBLIC_URL, so Cycle to Work order ${orderId}'s ${key} message wasn't sent`);
     return { skipped: 'no_link' };
   }
@@ -43,7 +51,7 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
     Bike: size ? `${r.bike_name} · ${size}` : r.bike_name,
     'Hold until': r.hold_until_day ? longDate(r.hold_until_day) : '',
     'Quote number': quoteRef(r.quote_number),
-    'Link to your Cycle to Work bike': link,
+    ...(cancelled ? { 'Shop phone': phone } : { 'Link to your Cycle to Work bike': link }),
     'Shop name': shop.name,
     'Certificate amount': r.certificate_pence === null ? '' : pounds(r.certificate_pence),
     'Amount to pay': r.certificate_pence === null ? '' : pounds(r.total_pence - providerPays(r)),
@@ -140,6 +148,22 @@ export async function undoReadyMessage(orderId) {
      WHERE intent_state = 'intended' AND template_key = 'c2w_ready'
        AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)`,
   ).run(orderId);
+}
+
+/**
+ * Cancelling an order stops its Ready to collect and Certificate received
+ * messages still waiting to go. They are found by customer, so while the
+ * customer has another open order they are left alone: the message may be that
+ * order's (review, 13 Nov).
+ */
+export async function stopMessagesForCancel(orderId) {
+  await prepare(
+    `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
+     WHERE intent_state = 'intended' AND template_key IN ('c2w_ready', 'c2w_certificate', 'c2w_certificate_less')
+       AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)
+       AND NOT EXISTS (SELECT 1 FROM c2w_orders other WHERE other.customer_id = customer_messages.customer_id
+         AND other.id <> ? AND other.stage IN ('quote', 'waiting', 'certificate', 'ready'))`,
+  ).run(orderId, orderId);
 }
 
 /**
