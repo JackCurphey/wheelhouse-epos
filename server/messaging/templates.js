@@ -264,8 +264,9 @@ export const TEMPLATES = {
 // message joined 26 Oct (openspec/changes/ask-the-shop-server).
 export const LIVE_KEYS = ['quote_to_approve', 'quote_reminder', 'work_within_limit', 'your_answers', 'shop_reply', 'message_reply', 'bike_ready', 'bike_still_waiting', 'request_received', 'booking_confirmed', 'time_offered', 'request_declined', 'date_change_answered', 'date_change_declined', 'booking_cancelled', 'service_reminder', 'review_request',
   // Cycle to Work's (openspec/changes/cycle-to-work design 9). "Your order is
-  // cancelled" joins when cancelling is built (pull request 8).
-  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending', 'c2w_released'];
+  // cancelled" joined with cancelling (pull request 8b); its two deposit wordings
+  // join with deposits (pull request 11).
+  'c2w_put_aside', 'c2w_certificate', 'c2w_certificate_less', 'c2w_ready', 'c2w_hold_ending', 'c2w_released', 'c2w_cancelled'];
 
 /**
  * Fills each [Tap-in] from `vars`; one with nothing to fill is left out and
