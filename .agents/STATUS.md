@@ -13,9 +13,10 @@ that takes or finishes a piece. Everything that was here before 11 Nov is in
 
 **Jack is on:** the website and Cycle to Work. Website browse (WP-6.2,
 `website-browse`): the plan (#742), the read and product routes (#744, #745)
-and the pages (#750 to #752, #754 to #756) are in; left: timing the
-suggestions with the full test shop, removing the old website, and the
-archive. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
+and the pages (#750 to #752, #754 to #756) are in; timing the suggestions,
+removing the old website and the archive are in the last pull request
+(PRNUM); the follow-ups found in review are listed at the end of its
+`tasks.md`. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
 order tables and settings on the server (#753, migration 154) and the six
 order messages (#758) are in; the settings screen, basket and checkout are
 next; paying, staff steps and refunds wait for Jack's answers 9 and 11
