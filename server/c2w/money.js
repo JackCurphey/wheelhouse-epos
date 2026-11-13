@@ -97,6 +97,8 @@ export async function recordPayment(providerId, who, payment, orderIds, seen) {
   const expectedPence = rows.reduce((s, r) => s + owedOf(r), 0);
   if (!Number.isInteger(seen)) throw new Refused(400, { error: 'What’s owed is missing. Refresh and try again.' });
   if (expectedPence !== seen) throw new Refused(409, OWED_CHANGED);
+  // A payment of nothing would save nothing and look saved (review, 13 Nov).
+  if (payment.amountPence === 0) throw new Refused(400, { error: 'Enter the amount received' });
   let extraPence = Math.max(0, payment.amountPence - expectedPence);
   const paymentId = payment.amountPence > 0 ? await newPayment(providerId, payment) : null;
   let left = payment.amountPence;

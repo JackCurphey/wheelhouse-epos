@@ -187,6 +187,29 @@ test('8.2 A payment that is less saves the bikes it does not fully cover as part
   assert.equal((await lastEvent(newer)).kind, 'part_paid');
 });
 
+test('8.2 a bike the payment doesn’t reach is left as it was', async () => {
+  const first = await collected({ expected: 50000, at: '2026-08-01T10:00:00Z' });
+  const second = await collected({ expected: 50000, at: '2026-08-02T10:00:00Z' });
+  const third = await collected({ expected: 50000, at: '2026-08-03T10:00:00Z' });
+  const res = await record({ amountPence: 50000, orderIds: [third, second, first] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal((await order(first)).stage, 'paid');
+  for (const id of [second, third]) {
+    const o = await order(id);
+    assert.deepEqual([o.stage, o.paidPence ?? 0], ['collected', 0]);
+    assert.ok(!o.events.some((e) => e.kind === 'part_paid' || e.kind === 'paid'), JSON.stringify(o.events.at(-1)));
+    assert.deepEqual(await paymentsOf(id), []);
+  }
+});
+
+test('8.2 a payment of nothing is refused, and nothing changes', async () => {
+  const a = await collected({ expected: 90000 });
+  const res = await record({ amountPence: 0, orderIds: [a] });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal((await order(a)).stage, 'collected');
+  assert.deepEqual(await paymentsOf(a), []);
+});
+
 test('8.2 A payment that is more marks each paid and notes the extra on the payment', async () => {
   const a = await collected({ expected: 90000 });
   const res = await record({ amountPence: 92000, orderIds: [a] });
