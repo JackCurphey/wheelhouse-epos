@@ -11,6 +11,6 @@ Each is its own OpenSpec change and pull request of 250 to 600 changed lines, re
 - [ ] 7. `citrus-import-sizes`: re-read a file's Matrix Lookup Code and link the per-code products into groups, moving no stock. *Keeps:* "the file can be read again then". Depends on what a real file's size and colour columns turn out to be: only made-up files have been read so far. **Waits** (Jack, 6 Nov, `docs/decisions/2026-11-04-answers.md` answer 11): until he has seen a real export with the Matrix Dimension columns; the product screens (pieces 8 to 10) come first, and Citrus Lime products stay one product per size until then.
 - [x] 8. `categories-screens` (WP-2.1): `st-categories`, `st-category-edit`. *Keeps:* "left out until WP-1.5".
 - [x] 9. `stock-list-categories-sizes` (WP-2.1): the Category pill, detail columns and filters (`st-filter-bearings`, `st-search-measure`), "[n] sizes · [n] colours", `st-search-size`.
-- [ ] 10. `product-page-sizes` (WP-2.1): `st-product-sizes`, Edit, `rs-add-product` redrawn with details; "Cost went up? Change it" on a delivery.
+- [x] 10. `product-page-sizes` (WP-2.1): `st-product-sizes`, Edit, `rs-add-product` redrawn with details; "Cost went up? Change it" on a delivery. Built in #632–#635 and archived as `archive/2026-11-08-product-page-sizes`; ticked 13 Nov.
 
 Long pieces may split again where they pass 600 lines. Change prices in bulk, transfers and the restock list stay with their own work packages; they start from this.

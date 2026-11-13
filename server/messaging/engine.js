@@ -62,11 +62,19 @@ export async function undoJobMessages(jobId) {
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
-export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false, ending = null, at = null }) {
+export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false, ending = null, at = null, email = undefined }) {
   const template = await templateFor(key);
   if (!template.enabled) return { skipped: 'off' };
-  const c = await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId);
-  const how = c && channelFor(c);
+  // `email`: always this address, not the customer's chosen way, and the
+  // customer may be none (an online order's messages go to the order's
+  // address, website-buy-online design, decided while planning 18).
+  let how;
+  if (email !== undefined) {
+    how = email ? { channel: 'email', to: email } : null;
+  } else {
+    const c = await prepare('SELECT phone, email, update_channel FROM customers WHERE id = ?').get(customerId);
+    how = c && channelFor(c);
+  }
   if (!how) return { skipped: 'no_contact' };
   // A fixed ending goes after the shop's wording, so it can't be taken off
   // (the service reminder's "Stop these").
@@ -265,7 +273,10 @@ export async function sendDueForShop(shopId) {
       // No longer put aside: only while it is still let go.
       const c2wGone = ['c2w_put_aside', 'c2w_hold_ending', 'c2w_released'].includes(m.template_key)
         && !(await (await import('../c2w/messages.js')).c2wStillNeeded(m));
-      if (c2wGone || (stillNeeded && !(await stillNeeded(m.job_id)))) {
+      // An online order's ready email: only while that order is still ready (risky-area review).
+      const orderGone = m.template_key === 'order_ready'
+        && !(await (await import('../online-orders/messages.js')).orderReadyStillNeeded(m.id));
+      if (c2wGone || orderGone || (stillNeeded && !(await stillNeeded(m.job_id)))) {
         await prepare("UPDATE customer_messages SET intent_state = 'undone', status = 'undone' WHERE id = ?").run(m.id);
         continue;
       }

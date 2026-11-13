@@ -22,7 +22,7 @@ Also on: WP-6.2 find the shop and browse, the customer website (`website-browse`
 Also on: Reports part 3, your own reports (`reports-your-own`, WP-5.3), built overnight from 12 Nov in four pull requests: 1 Change what's shown and the changed Sales report, 2 saving a report (migration), 3 rename and delete, 4 Workshop's Change what's shown. Margin's measure waits for part 2's sale-line costs.
 
 **Jack next:**
-1. Products, stock, sizes and colours (WP-1.5): nine of ten pieces in.
+1. Products, stock, sizes and colours (WP-1.5): all in but piece 7, which waits for a real Citrus Lime export (piece 10 was built in #632–#635; its box is ticked 13 Nov).
 2. Paying a repair online: waits on Mark's deposit taken at the till.
 3. The text receipt and its page: waits on Mark's step C.
 
