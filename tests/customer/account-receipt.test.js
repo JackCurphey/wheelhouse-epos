@@ -39,6 +39,7 @@ const server = ({ me = ME, history = [BUY, OLD_BUY, PAST], email = () => ({ stat
   if (pathname.includes('/receipts/')) return { status: 404, body: { error: 'We can’t find that receipt' } };
   if (pathname.endsWith('/me')) return { status: 200, body: me };
   if (pathname.endsWith('/bikes')) return { status: 200, body: [] };
+  if (pathname.endsWith('/c2w-orders')) return { status: 200, body: [] };
   return { status: 200, body: history };
 };
 const open = async (opts, url = '/book/north/account') => {

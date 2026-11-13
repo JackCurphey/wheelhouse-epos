@@ -41,6 +41,7 @@ const accountServer = ({ me = ME, bikes = BIKES, history = [NOW, BUY, OLD_BUY, P
     return { status: 201, body: made };
   }
   if (pathname.endsWith('/bikes')) return { status: 200, body: bikes };
+  if (pathname.endsWith('/c2w-orders')) return { status: 200, body: [] };
   return { status: 200, body: history };
 };
 const open = async (opts, media) => {
