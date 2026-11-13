@@ -38,7 +38,7 @@ export const STEPS = {
   order_undone: { from: ['quote', 'waiting', 'certificate'], to: null },
 };
 // The stages an order can still be holding a bike in.
-const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
+export const OPEN = "('quote', 'waiting', 'certificate', 'ready')";
 
 export class Refused extends Error {
   constructor(status, body) { super(body.error); this.status = status; this.body = body; }
