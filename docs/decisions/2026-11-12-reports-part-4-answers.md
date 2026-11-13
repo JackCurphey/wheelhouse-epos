@@ -25,3 +25,9 @@ The question: a day's online money is "separate from the tills" and "goes to Xer
 The question: only the latest closed day, any closed day with later ones left as they are, or any closed day with later ones worked out again.
 
 **The answer: option 1.** Only the latest closed day can be reopened, because later days' expected cash and carried amounts start from what an earlier close banked and left.
+
+## 5. The reopened day's row on Takings and cash-ups
+
+The question (from the build, 12 Nov): the drawing (`rp-takings-reopened`) keeps a reopened day's row with the figures it was closed with, lets its report be opened and keeps its Online row, but the spec said a reopened day's figures are left out of every report. The first build followed the spec: dashes in the row, no report, no Online row.
+
+**The answer: option 1, follow the drawing.** While a day is reopened its row keeps the day's old figures (marked Reopened), its report can still be opened, and its Online row stays. The headline figures, the graph and the monthly totals still leave the reopened day out, and the bar says so, as drawn. Three other points stand as built: no till in the popup and report titles, closing it again goes to the day's report, and cash from a sale made after the first close stays for the next close. Passed on by the Front desk session on 12 Nov.
