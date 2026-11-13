@@ -38,7 +38,7 @@ for (const sheet of ['public/tokens.css', 'src/styles/theme.css']) {
 }
 
 test('no page, stylesheet or script asks Google for fonts', () => {
-  const files = globSync('{public,public-portal,public-storefront,src}/**/*.{html,css,js,ts,tsx}')
+  const files = globSync('{public,public-portal,src}/**/*.{html,css,js,ts,tsx}')
     .filter((f) => !f.startsWith('public/dist/'));
   const offenders = files.filter((f) => /fonts\.(googleapis|gstatic)\.com/.test(readFileSync(f, 'utf8')));
   assert.deepEqual(offenders, []);

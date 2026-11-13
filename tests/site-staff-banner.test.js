@@ -110,9 +110,9 @@ test('Turn it on at the store path publishes the first time and switches on, wit
   assert.equal(row.is_on, true);
   assert.equal(row.published.parts.headline.text, draftHeadline);
   assert.ok(row.live_version_id != null, 'a version was made, as the Website page’s publish does');
-  // The old switch moves with it, as the Website page's Turn it on does.
+  // The old switch stays as it was: the old website is gone (website-browse, task 9.2).
   const old = await runWithShop(north.shop.id, () => prepare('SELECT enabled FROM storefront_settings').get());
-  assert.equal(old.enabled, true);
+  assert.equal(old?.enabled ?? false, false);
   // Customers see it now.
   assert.equal((await site(north)).status, 200);
 
@@ -188,6 +188,8 @@ test('a customer, and staff of another shop, get only wb-off: the 404 page and a
       const answer = await site(north, '', { cookie });
       assert.equal(answer.status, 404);
       assert.deepEqual(answer.body, OFF);
+      // Nothing in between keeps "isn't available" once it is turned on (review, 13 Nov).
+      assert.equal(answer.headers['cache-control'], 'no-store');
     }
     // This shop's Owner gets the page and the preview answer.
     assert.equal((await ask(`/store/${north.shop.slug}/`, { cookie: north.cookie })).status, 200);

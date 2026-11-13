@@ -28,10 +28,8 @@
    difference it has not been told about. Change a value in both, then run
    `npm test`.
 
-   Shops no longer recolour the staff app. Their colour scheme (THEME_PRESETS)
-   reaches only the public website (public-storefront), which has its own
-   stylesheet. --accent, --accent-dark and --modal-bg are still mapped through
-   `@theme inline` below, so a utility emits var(--accent) at the point of use
+   Shops no longer recolour the staff app. --accent, --accent-dark and
+   --modal-bg are still mapped through `@theme inline` below, so a utility emits var(--accent) at the point of use
    and anything that sets the variable at runtime (a future per-shop theme for
    customer pages) still wins without a rebuild.
    ------------------------------------------------------------------------ */
