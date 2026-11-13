@@ -694,7 +694,7 @@ test('a bank transfer recorded today never reaches the takings, the cash or the 
 // the takings, so the takings add up. A reopened day closed again works it out the same way.
 test('Cycle to Work money is its own figure at the close, not Other, and still in the takings', async () => {
   const owner = await shop();
-  await oldSale(owner, '2026-09-01T10:00:00Z', { card: 120, extra: [{ tenderType: 'Cycle to Work · Cyclescheme', amount: 880 }, { tenderType: 'Gift card', amount: 5 }] });
+  await oldSale(owner, '2026-09-01T10:00:00Z', { card: 120, extra: [{ tenderType: 'Cycle to Work · Cyclescheme', amount: 800 }, { tenderType: 'cycle to work · cyclescheme', amount: 80 }, { tenderType: 'Gift card', amount: 5 }] });
   const d = await day(owner);
   const res = await post(owner, '/api/close-the-day', { countedPence: d.expectedPence, expectedPence: d.expectedPence });
   assert.equal(res.status, 201, JSON.stringify(res.body));
@@ -702,6 +702,9 @@ test('Cycle to Work money is its own figure at the close, not Other, and still i
   assert.deepEqual([close.takingsPence, close.cardPence, close.cashPence, close.otherPence, close.c2wPence], [12000 + 88000 + 500, 12000, 0, 500, 88000]);
   const reopened = await post(owner, `/api/reports/days/${close.id}/reopen`, { reason: 'a card payment was counted as cash' });
   assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+  // The reopened close's history keeps its Cycle to Work figure too.
+  const kept = await runWithShop(owner.shop.id, () => prepare('SELECT c2w_pence, other_pence FROM day_close_history WHERE day_close_id = ?').get(close.id));
+  assert.deepEqual([kept.c2w_pence, kept.other_pence], [88000, 500]);
   const again = await post(owner, '/api/close-the-day', { countedPence: d.expectedPence, expectedPence: d.expectedPence });
   assert.equal(again.status, 201, JSON.stringify(again.body));
   assert.deepEqual([again.body.close.otherPence, again.body.close.c2wPence, again.body.close.takingsPence], [500, 88000, 100500]);

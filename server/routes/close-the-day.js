@@ -58,6 +58,7 @@ async function floatStartOn(day) {
 const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
 // A Cycle to Work hand-over's provider share ("Cycle to Work · Cyclescheme", server/c2w/hand-over.js):
 // owed by the provider, not in the drawer, so a figure of its own, not Other (UX walk-through 5 H3).
+// Matched without case, like moneyBucket (decided-while-building 2026-11-jack, hand-over item 11).
 const C2W_LIKE = `${C2W_TENDER}%`;
 
 // Which sales a figure is worked from. A close counts every sale no close
@@ -122,8 +123,8 @@ async function takingsIn({ old, till }, after = null) {
   const t = after ? { sql: `${till.sql} AND ${TILL_AT} > ?`, args: [...till.args, after] } : till;
   const os = await prepare(
     `SELECT COALESCE(SUM(ROUND(s.cash_amount * 100)), 0)::int AS cash, COALESCE(SUM(ROUND(s.card_amount * 100)), 0)::int AS card,
-            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?) AND p.tender_type NOT LIKE ?), 0)::int AS other,
-            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type LIKE ?), 0)::int AS c2w,
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type <> ALL(?) AND p.tender_type NOT ILIKE ?), 0)::int AS other,
+            COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type ILIKE ?), 0)::int AS c2w,
             COALESCE((SELECT SUM(ROUND(p.amount * 100)) FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE ${o.sql} AND p.tender_type = ANY(?)), 0)::int AS online
        FROM sales s WHERE ${o.sql}`
   ).get(...o.args, ONLINE_TENDERS, C2W_LIKE, ...o.args, C2W_LIKE, ...o.args, ONLINE_TENDERS, ...o.args);
