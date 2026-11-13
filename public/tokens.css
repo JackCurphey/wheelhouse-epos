@@ -5,10 +5,8 @@
  *
  * The public website (shop subdomains) is deliberately NOT included, and
  * the no-raw-hex gates in tests/design-tokens.test.js deliberately do not
- * cover storefront.css. Decided 2 September 2026: website styling becomes
+ * cover the website's own styles. Decided 2 September 2026: website styling becomes
  * per-shop and editable by the shop, so it cannot share one fixed palette.
- * If that changes, add the link in public-storefront/index.html and extend
- * the gates to match - not one without the other.
  *
  * Colour values here are contrast-checked by tests/design-contrast.test.js
  * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
@@ -22,8 +20,8 @@
  * src/styles/theme.css carries the same values for the React apps under the
  * --wh-* names; tests/design-sand.test.js fails if the two files disagree,
  * so change both together. The staff app always uses Soft sand - shops no longer
- * recolour it. A shop's colour scheme (THEME_PRESETS) now reaches only the
- * public website (public-storefront), which does not link this file.
+ * recolour it. The old public website that used a shop's colour scheme
+ * (THEME_PRESETS) was removed with website-browse (task 9.2).
  *
  * Still approved from earlier: the --status-* colours (unchanged by Fjell and Soft sand;
  * the --status-complete-paid treatment - a finished job recedes via the

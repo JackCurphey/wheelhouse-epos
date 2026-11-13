@@ -168,23 +168,3 @@ function publishedInfo(content) {
     tracking: liveTracking(content),
   };
 }
-
-export function serializeStorefrontProduct(row) {
-  return {
-    id: row.id,
-    name: row.name,
-    price: Number(row.price),
-    description: row.description || '',
-    photoUrl: row.photo_url || null,
-    shopifyVariantId: row.shopify_variant_id || null,
-  };
-}
-
-// A product at £0 stays off until it is priced (ws-page: "have no price (stay
-// off until priced)"; server/website.js productCounts counts it the same way).
-export async function listStorefrontProducts() {
-  const rows = await prepare(
-    'SELECT id, name, price, description, photo_url, shopify_variant_id FROM products WHERE show_online = ? AND active = 1 AND price > 0 ORDER BY category, name'
-  ).all(true);
-  return rows.map(serializeStorefrontProduct);
-}
