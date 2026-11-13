@@ -109,6 +109,16 @@ test('7.2–7.3 the hand-over sale: the server adds the provider’s share, the 
   assert.ok(frame.bought_here_on, 'bought here');
 });
 
+test('7.4 the order names the frame held for it, for the till’s line and its collected note (till.mjs c2wLine)', async () => {
+  const o = await readyOrder();
+  const held = await inShop(async () => prepare('SELECT frame_number FROM stock_frames WHERE id = ?').get(o.frameId));
+  assert.equal((await order(o.id)).frameNumber, held.frame_number);
+  assert.match(held.frame_number, /^\[FRAME-/);
+  const bike = await framedBike();
+  const unheld = (await post('/api/c2w/orders', { customerId: maya.id, providerId: provider.id, productId: bike, accessoryIds: [], hold: false })).body.order;
+  assert.equal(unheld.frameNumber, null, 'no frame, no number');
+});
+
 test('7.2 a sale claiming a different share is refused, and the order stays ready; the same share is taken once', async () => {
   const o = await readyOrder();
   const before = await salesCount();
