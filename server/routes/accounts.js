@@ -6,8 +6,10 @@ import { currentSession } from '../lib/session.js';
 import { ownerOnly } from '../lib/owner-only.js';
 import { sendJson, readJsonBody } from '../lib/http.js';
 import { prepare } from '../db.js';
+import { closeEntryNow } from '../lib/close-entry.js';
 import { accounts, isProvider, providerName, PROVIDERS } from '../accounts/index.js';
 import { accountLines } from '../accounts/lines.js';
+import { sendWaitingDays } from '../accounts/send.js';
 
 const OWNER_ONLY = "Only the shop's owner can connect accounts software";
 const iso = (v) => new Date(v).toISOString();
@@ -40,6 +42,7 @@ async function state() {
     return { status: 'not_connected', connection: null, providers: PROVIDERS, summary: 'Not connected' };
   }
   const name = providerName(live.provider);
+  const lost = live.status === 'lost';
   const offered = await accounts().listAccounts(live.provider);
   const chosen = new Map((await prepare('SELECT line_key, account_id, account_name FROM accounts_choices WHERE provider = ?').all(live.provider)).map((r) => [r.line_key, r]));
   const groups = (await accountLines()).map((g) => ({
@@ -47,13 +50,17 @@ async function state() {
     lines: g.lines.map((l) => ({ ...l, accountId: chosen.get(l.key)?.account_id ?? null, accountName: chosen.get(l.key)?.account_name ?? null })),
   }));
   const missing = groups.flatMap((g) => g.lines).filter((l) => l.recorded && l.accountId === null).length;
+  // Days that couldn't go (not waiting: those wait for a connection, which says so itself).
+  const needLook = (await prepare("SELECT count(*)::int AS n FROM accounts_sends a JOIN day_closes c ON c.id = a.close_id WHERE a.status = 'failed' AND c.reopened_at IS NULL").get()).n;
   return {
     status: live.status,
     connection: { provider: live.provider, providerName: name, connectedByName: live.connected_by_name ?? null, connectedAt: iso(live.connected_at) },
     // The pretend service says so: nothing leaves Wheelhouse until a real account is set up.
     practice: true,
     accounts: offered, groups, missing,
-    summary: `Connected to ${name}${missing ? ` · ${plural(missing)}` : ''}`,
+    lostOn: lost ? iso(live.disconnected_at) : null,
+    needLook,
+    summary: lost ? `${name} disconnected` : `Connected to ${name}${missing ? ` · ${plural(missing)}` : ''}${needLook ? ` · ${needLook} ${needLook === 1 ? 'day needs' : 'days need'} a look` : ''}`,
   };
 }
 
@@ -81,6 +88,8 @@ export function register(route) {
       `INSERT INTO accounts_connections (provider, status, connected_by, connected_at, disconnected_at) VALUES (?, 'connected', ?, now(), NULL)
        ON CONFLICT (shop_id) DO UPDATE SET provider = EXCLUDED.provider, status = 'connected', connected_by = EXCLUDED.connected_by, connected_at = now(), disconnected_at = NULL`
     ).run(provider, ctx.login.id);
+    // A day that waited goes now, oldest first.
+    await sendWaitingDays();
     sendJson(res, 200, await state());
   });
 
@@ -105,7 +114,33 @@ export function register(route) {
       `INSERT INTO accounts_choices (provider, line_key, account_id, account_name) VALUES (?, ?, ?, ?)
        ON CONFLICT (shop_id, provider, line_key) DO UPDATE SET account_id = EXCLUDED.account_id, account_name = EXCLUDED.account_name, updated_at = now()`
     ).run(conn.provider, body.line, offered.id, offered.name);
+    // A day that couldn't go for want of this account goes now.
+    await sendWaitingDays();
     sendJson(res, 200, await state());
+  });
+
+  // What each day sent: newest first, the days that went, waited, couldn't go or are reopened, and today while open.
+  // screens: rp-accounts-log, rp-accounts-lost
+  route('GET', '/api/accounts/log', async (req, res) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    const conn = await connection();
+    if (!conn) return sendJson(res, 200, { connected: false, days: [] });
+    const name = providerName(conn.provider);
+    const labels = new Map((await accountLines()).flatMap((g) => g.lines).map((l) => [l.key, l.label]));
+    const rows = await prepare(
+      `SELECT to_char(a.day, 'YYYY-MM-DD') AS day, a.close_id, a.status, a.reason, a.failed_line, a.amount_pence, a.sent_at, a.not_recorded,
+              c.closed_at, (c.reopened_at IS NOT NULL) AS reopened
+         FROM accounts_sends a LEFT JOIN day_closes c ON c.id = a.close_id ORDER BY a.day DESC LIMIT 60`
+    ).all();
+    const days = rows.map((r) => ({
+      day: r.day, closeId: r.close_id, closedAt: r.closed_at ? iso(r.closed_at) : null, amountPence: r.amount_pence, sentAt: r.sent_at ? iso(r.sent_at) : null,
+      status: r.reopened ? 'reopened' : r.status, reason: r.reason, line: r.failed_line, missingLine: r.failed_line ? labels.get(r.failed_line) ?? r.failed_line : null,
+      notRecorded: r.not_recorded,
+      text: r.reopened ? 'Reopened: sent again when it is closed' : r.status === 'waiting' ? `sends when ${name} is reconnected` : r.status === 'failed' ? r.reason : null,
+    }));
+    const today = (await closeEntryNow()).day;
+    if (!days.some((d) => d.day === today)) days.unshift({ day: today, closeId: null, closedAt: null, amountPence: null, sentAt: null, status: 'open', reason: null, line: null, missingLine: null, notRecorded: [], text: 'Not closed yet' });
+    sendJson(res, 200, { connected: true, providerName: name, status: conn.status, days });
   });
 
   // Disconnect: nothing more is sent, what was sent stays, and the choices are kept in case they reconnect.

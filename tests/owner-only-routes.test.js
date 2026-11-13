@@ -121,6 +121,9 @@ const ROUTES = [
   ['GET', '/api/website/history'],
   ['GET', `/api/website/history/${MISSING}`],
   ['POST', `/api/website/history/${MISSING}/restore`, {}],
+  // Online orders settings (openspec/changes/website-buy-online, task 1.4).
+  ['GET', '/api/online-orders-settings'],
+  ['PUT', '/api/online-orders-settings', {}],
 ];
 
 for (const [method, path, body] of ROUTES) {
