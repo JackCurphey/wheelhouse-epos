@@ -50,11 +50,17 @@ test('tick a line done and give it a note; both are there when the job is opened
   const openJob = () => page.goto(`${server!.baseUrl}/workshop/diary?date=${day}&job=${jobId}`);
   await openJob();
   const job = page.getByRole('dialog', { name: /Standard service/ });
-  await job.getByRole('checkbox', { name: 'Shimano brake pads done' }).check();
+  // The tick and the note each save as their own request. The page shows both
+  // at once, before they're saved (React copies a typed note into the box's
+  // own text, which getByText finds), so each save is waited for before the job
+  // is opened again: a busy machine reopened it first, and the note or tick was
+  // missing (full runs for #699 and #743, 12 Nov).
+  const saved = () => page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().includes('/progress') && r.ok());
+  await Promise.all([saved(), job.getByRole('checkbox', { name: 'Shimano brake pads done' }).check()]);
   await job.getByRole('button', { name: 'Add a note for Shimano brake pads' }).click();
   await job.getByRole('textbox', { name: 'Note for Shimano brake pads' }).fill('Rear pads worn — replacing');
-  await job.getByRole('textbox', { name: 'Note for Shimano brake pads' }).blur();
-  await expect(job.getByText('Rear pads worn — replacing')).toBeVisible();
+  await Promise.all([saved(), job.getByRole('textbox', { name: 'Note for Shimano brake pads' }).blur()]);
+  await expect(job.getByRole('button', { name: 'Change the note for Shimano brake pads' })).toHaveText('Rear pads worn — replacing');
   if (process.env.WH_SHOTS) await page.screenshot({ path: `${process.env.WH_SHOTS}/line-done-notes.png` });
 
   await openJob();

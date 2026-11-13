@@ -66,6 +66,11 @@ function stubServer() {
   };
 }
 
+// The first wait follows opening the diary: the signed-in check, the diary and its jobs all load
+// first, and the first test also starts everything cold. Testing Library's default 1 s ran out
+// once in a full run (12 Nov), as in restock.test.js. A passing run goes on the moment it shows.
+const OPENED = { timeout: 5000 };
+
 async function openDiary(reminderSentAt, query = '?date=2026-10-05', first = /^Trek Domane AL 3, Standard service/) {
   JOB = job(reminderSentAt);
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
@@ -76,7 +81,7 @@ async function openDiary(reminderSentAt, query = '?date=2026-10-05', first = /^T
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  const block = await ui.findByRole('button', { name: first });
+  const block = await ui.findByRole('button', { name: first }, OPENED);
   return { ...rtl, ui, block };
 }
 async function openJob(reminderSentAt) {

@@ -135,7 +135,10 @@ test('Derailleurs has its own details and Drivetrain’s; a choice filters by it
   assert.deepEqual(heads, ['', 'Product', '[Detail]', 'Number of gears', 'In stock', 'Price']);
   t.fireEvent.click(gears.getByRole('radio', { name: '[12]' }));
   await t.ui.findByText('1 in Drivetrain › Derailleurs with Number of gears [12]');
-  assert.ok(listCalls().some((c) => c.includes('d31=[12]')), listCalls().join('\n'));
+  // The summary shows the filter as it renders; React Query sends its request a moment later,
+  // and with the earlier list also one row long nothing else on screen changes. So wait for
+  // the request itself (1 run in 40 alone, 12 Nov).
+  await t.waitFor(() => assert.ok(listCalls().some((c) => c.includes('d31=[12]')), listCalls().join('\n')));
 });
 
 test('“bearing 30 mm”: each row’s details on its line, the one matched in bold, the unit once', async () => {
