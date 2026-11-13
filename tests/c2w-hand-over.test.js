@@ -171,6 +171,55 @@ test('7.3 commission in pounds, and a provider with no days to pay has no expect
   assert.deepEqual([after.expectedPence, after.expectedBy], [75000, null]);
 });
 
+test('7.3 a percentage commission on odd pence rounds to the nearest penny', async () => {
+  const o = await readyOrder({ certificatePence: 80005 });
+  const res = await sell({ c2wOrderId: o.id, cardAmount: 239.95 });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await order(o.id)).expectedPence, 72004, '£800.05 less 10% (£80.005, rounded to £80.01)');
+});
+
+test('7.2 two hand-overs of one order at once: one sale, the other refused', async () => {
+  const o = await readyOrder();
+  const before = await salesCount();
+  const both = await Promise.all([sell({ c2wOrderId: o.id, cardAmount: 240 }), sell({ c2wOrderId: o.id, cardAmount: 240 })]);
+  assert.deepEqual(both.map((r) => r.status).sort(), [201, 409]);
+  assert.equal(await salesCount(), before + 1);
+});
+
+test('7.2 a bike no longer held for the order is refused, and nothing changes', async () => {
+  const o = await readyOrder();
+  await inShop(async () => prepare("UPDATE stock_frames SET state = 'sold' WHERE id = ? RETURNING id").get(o.frameId));
+  const before = await salesCount();
+  const res = await sell({ c2wOrderId: o.id, cardAmount: 240 });
+  assert.deepEqual([res.status, res.body.code], [409, 'not_held']);
+  assert.equal(await salesCount(), before);
+  assert.equal((await order(o.id)).stage, 'ready');
+});
+
+test('7.2 the sale is the order’s customer’s, whoever the till has picked', async () => {
+  const o = await readyOrder();
+  const other = (await own('/api/customers', { method: 'POST', body: { name: 'Sam Reed', email: `sam-${tag()}@example.test` } })).body;
+  const res = await sell({ c2wOrderId: o.id, cardAmount: 240, customerId: other.id });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const sale = await inShop(async () => prepare('SELECT customer_id FROM sales WHERE id = ?').get(res.body.id));
+  assert.equal(sale.customer_id, maya.id);
+});
+
+test('7.2 a bike held at another of the shop’s sites is handed over there, not at this till', async () => {
+  const o = await readyOrder();
+  await inShop(async () => {
+    const elsewhere = (await prepare(`INSERT INTO sites (name, code) VALUES ('[Other site]', 'O${tag().slice(0, 3)}') RETURNING id`).get()).id;
+    await prepare('UPDATE c2w_orders SET site_id = ? WHERE id = ? RETURNING id').get(elsewhere, o.id);
+    await prepare('UPDATE stock_frames SET site_id = ? WHERE id = ? RETURNING id').get(elsewhere, o.frameId);
+  });
+  const before = await salesCount();
+  const res = await sell({ c2wOrderId: o.id, cardAmount: 240 });
+  assert.deepEqual([res.status, res.body.code], [409, 'c2w_other_site']);
+  assert.match(res.body.error, /\[Other site\]/);
+  assert.equal(await salesCount(), before);
+  assert.equal((await order(o.id)).stage, 'ready');
+});
+
 // ---------- 7.4 ----------
 
 test('7.4 anything Maya adds at the counter goes on the same sale, for her to pay', async () => {
@@ -194,6 +243,13 @@ test('7.4 a certificate covering the whole order: Maya pays nothing, and a disco
   assert.deepEqual([off.body.total, off.body.cardAmount], [740, 0]);
   assert.deepEqual(await paymentsOf(off.body.id), [{ tender_type: TENDER, amount: 740 }]);
   assert.equal((await order(o.id)).expectedPence, 66600, '£740 less 10%');
+
+  // A discount never moves what Maya adds at the counter onto the provider.
+  const both = await readyOrder({ certificatePence: 104000 });
+  const extra = await sell({ c2wOrderId: both.id, items: [{ productId: pump, qty: 1 }], discount: 20, cardAmount: 20 });
+  assert.equal(extra.status, 201, JSON.stringify(extra.body));
+  assert.equal(extra.body.total, 1040);
+  assert.deepEqual(await paymentsOf(extra.body.id), [{ tender_type: TENDER, amount: 1020 }], 'Maya pays for the pump');
 });
 
 test('7.1 the ticked checks must be the provider’s own lines', async () => {
