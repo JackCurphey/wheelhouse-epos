@@ -140,14 +140,15 @@ export async function queueCertificateMessage(orderId, opts) {
 /**
  * Undo of Ready to collect: a Ready to collect still waiting for this order's
  * customer is stopped. The message isn't tied to the order, so it is found by
- * its customer; one already sent can't be stopped.
+ * its customer; one already sent can't be stopped. Cancelling the order stops
+ * the certificate's messages too (`keys`).
  */
-export async function undoReadyMessage(orderId) {
+export async function undoReadyMessage(orderId, keys = ['c2w_ready']) {
   await prepare(
     `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
-     WHERE intent_state = 'intended' AND template_key = 'c2w_ready'
+     WHERE intent_state = 'intended' AND template_key = ANY(?::text[])
        AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)`,
-  ).run(orderId);
+  ).run(keys, orderId);
 }
 
 /**

@@ -114,6 +114,7 @@ test('8.5 Staff can cancel an order with no deposit, from any open stage', async
   assert.equal((await order(ready.id)).stage, 'ready');
   assert.equal((await cancel(ready.id, {}, asJo)).status, 200);
   assert.equal((await order(ready.id)).stage, 'cancelled');
+  assert.deepEqual(await frames(ready.productId), [{ state: 'in_stock', c2w_order_id: null }]);
 });
 
 test('8.5 a cancelled order can’t be cancelled again, and a missing one is not found', async () => {
@@ -143,6 +144,56 @@ test('8.5 a bike already ordered is kept as shop stock: its order line no longer
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(await linesFor(bike), [{ qty_ordered: 1, c2w_order_id: null }]);
   assert.equal((await order(made.id)).events.at(-1).detail.bike, 'keep');
+});
+
+test('8.5 a bike on a supplier order that has been sent, or partly delivered, is kept as shop stock too', async () => {
+  for (const status of ['ordered', 'partially_received']) {
+    const bike = await unstockedBike();
+    const made = await quote(await newMaya(), bike);
+    assert.equal((await post(`/api/c2w/orders/${made.id}/order`, { anyway: true, reason: '[reason]' })).status, 200);
+    await inShop(() => prepare('UPDATE purchase_orders SET status = ? WHERE id = (SELECT purchase_order_id FROM purchase_order_items WHERE c2w_order_id = ?)').run(status, made.id));
+    const res = await cancel(made.id, { bike: 'keep' });
+    assert.equal(res.status, 200, `${status}: ${JSON.stringify(res.body)}`);
+    assert.deepEqual(await linesFor(bike), [{ qty_ordered: 1, c2w_order_id: null }], status);
+  }
+});
+
+test('8.5 a choice for the bike that isn’t keep or send back is refused, and nothing changes', async () => {
+  const bike = await framedBike();
+  const made = await quote(await newMaya(), bike);
+  const res = await cancel(made.id, { bike: 'bin' });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal((await order(made.id)).stage, 'quote');
+  assert.deepEqual((await frames(bike)).map((f) => f.state), ['held']);
+});
+
+test('8.5 a bike held by count (no frame numbers) is let go when the order is cancelled', async () => {
+  const bike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 1 });
+  await inShop(() => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 1) RETURNING product_id').get(site, bike));
+  const made = await quote(await newMaya(), bike);
+  assert.equal(made.held, true);
+  assert.equal((await cancel(made.id)).status, 200);
+  assert.equal((await inShop(() => prepare('SELECT held_at FROM c2w_orders WHERE id = ?').get(made.id))).held_at, null);
+  assert.equal((await quote(await newMaya(), bike)).held, true, 'the one in stock can be held for someone else');
+});
+
+test('8.7 a Ready to collect or Certificate received still waiting to go is stopped when the order is cancelled', async () => {
+  const pending = (maya) => inShop(() => prepare(
+    "SELECT template_key, intent_state FROM customer_messages WHERE customer_id = ? AND template_key IN ('c2w_ready', 'c2w_certificate', 'c2w_certificate_less') ORDER BY id",
+  ).all(maya.id));
+  const maya = await newMaya();
+  const ready = await quote(maya, await framedBike());
+  assert.equal((await post(`/api/c2w/orders/${ready.id}/certificate`, { number: '[certificate number]', amountPence: 100000, ready: true })).status, 200);
+  assert.deepEqual(await pending(maya), [{ template_key: 'c2w_ready', intent_state: 'intended' }]);
+  assert.equal((await cancel(ready.id)).status, 200);
+  assert.deepEqual(await pending(maya), [{ template_key: 'c2w_ready', intent_state: 'undone' }]);
+
+  const sam = await newMaya();
+  const cert = await quote(sam, await framedBike());
+  assert.equal((await post(`/api/c2w/orders/${cert.id}/certificate`, { number: '[certificate number]', amountPence: 100000 })).status, 200);
+  assert.deepEqual((await pending(sam)).map((m) => m.intent_state), ['intended']);
+  assert.equal((await cancel(cert.id)).status, 200);
+  assert.deepEqual((await pending(sam)).map((m) => m.intent_state), ['undone']);
 });
 
 test('8.5 "Send it back to [supplier]" isn’t built yet, and says so without cancelling', async () => {
@@ -187,8 +238,10 @@ test('8.7 with no shop phone, "Your order is cancelled" isn’t sent, and the or
     const maya = await newMaya();
     const made = await quote(maya, await framedBike());
     assert.equal((await cancel(made.id, { tell: true })).status, 200);
-    assert.equal((await order(made.id)).stage, 'cancelled');
+    const o = await order(made.id);
+    assert.equal(o.stage, 'cancelled');
     assert.deepEqual(await messagesTo(maya), []);
+    assert.equal(o.events.at(-1).detail.told, undefined, 'not told when nothing was sent');
   } finally {
     await inShop(() => prepare("UPDATE shops SET phone = '[Shop phone]' WHERE id = current_setting('app.current_shop_id')::int").run());
   }

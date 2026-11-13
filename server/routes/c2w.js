@@ -519,16 +519,31 @@ export function register(route) {
              WHERE po.id = i.purchase_order_id AND i.c2w_order_id = ? AND po.status IN ('draft', 'ordered', 'partially_received') AND i.qty_received < i.qty_ordered
              RETURNING i.purchase_order_id`,
           ).all(id);
-          Object.assign(detail, { bike: 'keep', purchaseOrderId: lines[0].purchase_order_id });
+          Object.assign(detail, { bike: 'keep', ...(lines[0] ? { purchaseOrderId: lines[0].purchase_order_id } : {}) });
         }
         if (row.held_at) {
           await releaseHold(row);
           if (row.frame_id) detail.frameId = row.frame_id;
         }
-        if (tell) detail.told = true;
+        // Messages about the bike that haven't gone yet are stopped.
+        await undoReadyMessage(id, ['c2w_ready', 'c2w_certificate', 'c2w_certificate_less']);
+        // Telling Maya never stops the cancel: a message that can't be queued is
+        // noted on the line, not told (BEGIN here is a savepoint in the step's transaction).
+        if (tell) {
+          await dbExec('BEGIN');
+          try {
+            const sent = await queueC2wMessage(id, 'c2w_cancelled', { req, loginId: who.loginId });
+            await dbExec('COMMIT');
+            if (sent.skipped) detail.notTold = sent.skipped;
+            else detail.told = true;
+          } catch (err) {
+            await dbExec('ROLLBACK').catch(() => {});
+            console.error(`Messages: "Your order is cancelled" for Cycle to Work order ${id} couldn't be queued`, err);
+            detail.notTold = 'error';
+          }
+        }
         return { frame_id: null, held_at: null, hold_until: null };
       }, { detail, reason });
-      if (tell) await queueC2wMessage(id, 'c2w_cancelled', { req, loginId: who.loginId });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });
