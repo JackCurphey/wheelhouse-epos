@@ -4,11 +4,10 @@
 // function; `c2wTodayLines` puts them together, only while "On Today" is on in
 // Settings. The Owner only, as all of Needs attention is until roles (design 7).
 //
-// The kind still to come adds a function here and a line to `c2wTodayLines`:
-// "[Provider] payment is [n] days late" (with pull requests 7 and 8).
 import { prepare } from '../db.js';
 import { shopToday } from '../clock.js';
 import { ORDER_SELECT, shopTimeZone } from './orders.js';
+import { owedOrders } from './money.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysFrom = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
@@ -50,11 +49,24 @@ export async function noCertificate(today, tz, days) {
     }));
 }
 
+// A collected bike the provider hasn't paid for by the date it was expected
+// ("[Provider] payment is [n] days late", op-today-c2w; decision 3): the Owed
+// page's own rule, oldest expected first. A part-paid bike is still owed, so
+// still late; one due today is not late yet.
+export async function paymentsLate(tz) {
+  return (await owedOrders(tz))
+    .filter((o) => o.lateDays !== null)
+    .map((o) => ({
+      kind: 'c2w_payment_late', orderId: o.id, providerName: o.providerName, customerName: o.customerName,
+      collectedOn: o.collectedOn, expectedPence: o.expectedPence, expectedBy: o.expectedBy, lateDays: o.lateDays,
+    }));
+}
+
 export async function c2wTodayLines() {
   // No settings row yet is the default: on.
   const settings = await prepare('SELECT today_lines, no_certificate_days FROM c2w_settings').get();
   if (settings && !settings.today_lines) return [];
   const tz = await shopTimeZone();
   const today = shopToday(tz);
-  return [...(await noCertificate(today, tz, settings?.no_certificate_days)), ...(await holdsEnded(today))];
+  return [...(await noCertificate(today, tz, settings?.no_certificate_days)), ...(await holdsEnded(today)), ...(await paymentsLate(tz))];
 }

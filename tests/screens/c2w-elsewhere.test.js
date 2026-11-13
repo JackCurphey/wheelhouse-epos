@@ -19,6 +19,7 @@ const long = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day
 const LABEL = 'Search jobs, customers, bikes and orders';
 const HOLD = { kind: 'c2w_hold_ended', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', holdUntil: day(-6) };
 const NO_CERT = { kind: 'c2w_no_certificate', orderId: 31, customerName: 'Maya Patel', bike: '[Bike] · [Size]', quotedDays: 9, holdUntil: day(7) };
+const LATE = { kind: 'c2w_payment_late', orderId: 31, providerName: '[Provider]', customerName: 'Maya Patel', collectedOn: day(-20), expectedPence: 90000, expectedBy: day(-12), lateDays: 12 };
 const FOUND = { id: 31, customerName: 'Maya Patel', customerId: 5, bike: '[Bike] · [Size]', stage: 'waiting', quoteRef: 'CW-[n]', holdUntil: day(1), holdEnded: false, certificateNumber: null };
 const OPEN = { kind: 'c2w_order', id: 31, stage: 'waiting', open: true, quoteRef: 'CW-[n]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: day(1), holdEnded: false, certificateNumber: null, collectedAt: null, at: `${day(-13)}T10:00:00.000Z` };
 const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, holdEnded: false, certificateNumber: '[certificate number]', collectedAt: `${day(-10)}T10:00:00.000Z`, at: `${day(-10)}T10:00:00.000Z` };
@@ -140,6 +141,22 @@ test('cw-today: a quote with no bike held has no hold to lengthen, only Open the
   assert.ok(box.getByText('[Bike] · [Size] · quoted 1 day ago') !== null);
   assert.ok(box.queryByRole('button', { name: 'Hold Maya Patel’s bike longer' }) === null);
   assert.ok(box.getByRole('link', { name: 'Open Maya Patel’s order' }) !== null);
+});
+
+test('op-today-c2w: a late payment says which provider, how late, whose bike and what was expected by when, and opens the order', async () => {
+  const { ui, within } = await open('/workshop/today', { items: [LATE] });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  assert.ok(box.getByText('[Provider] payment is 12 days late') !== null);
+  assert.ok(box.getByText(`Maya Patel · collected ${long(day(-20))} · expected £900.00 by ${long(day(-12))}`) !== null);
+  const openIt = box.getByRole('link', { name: 'Open [Provider]’s late payment' });
+  assert.equal(openIt.textContent, 'Open the order');
+  assert.equal(openIt.getAttribute('href'), '/workshop/c2w/31');
+});
+
+test('op-today-c2w: a payment one day late reads “1 day late”', async () => {
+  const { ui, within } = await open('/workshop/today', { items: [{ ...LATE, lateDays: 1 }] });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  assert.ok(box.getByText('[Provider] payment is 1 day late') !== null);
 });
 
 test('cw-today-held: Hold longer on a quote with no certificate holds it in one press; the line goes and the note says until when', async () => {
