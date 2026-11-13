@@ -32,7 +32,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 1.4 Test: `GET /api/online-orders-settings` returns the new settings beside WP-6.1's; `PUT` saves them; reminder 1–60, keeping 2–90 and longer than the reminder; refused for non-Owners (`ownerOnly`)
 - [x] 1.5 Test: the order number comes from the shop's counter, one up, never reused; two at once get different numbers (shown as `[prefix]-` and the number until Jack names the prefix)
 - [x] 1.6 Write the migration (the next free number at build time; latest on main is 149) and extend `server/routes/online-payments.js` to pass 1.1–1.5
-- [ ] 1.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 1.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 2. Online orders settings — screen (pull request 2, about 550 lines)
 
@@ -70,6 +70,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [ ] 5.0b Before any code writes an order payment: `server/payments/refund.js`'s provider-wide sweep (`refundOwed()` with no `jobId`) would refund order payments too, and it can only refund in full
 - [ ] 5.0c Before any code writes an order payment: `server/shop-data-copy.js` (the Refund rows, about lines 125–133) labels every refunded online payment as a deposit for a job ("Online deposit for job …")
 - [ ] 5.0d Before any code writes an order payment: take the order number (`nextOrderNumber()`) last, just before COMMIT, with no provider calls after it, because the counter's row lock holds the shop's settings and other orders' payments until the commit
+- [ ] 5.0e Before any code writes an order payment: the public deposit card route (`server/routes/deposit-payments.js`, the `UPDATE online_payments SET status = ?` matched on `provider_ref` alone, about line 82) needs `AND purpose = 'deposit'`, or an order's pretend `ref` posted to it would set that order payment's status (found by the risky-area review of pull request 1)
 
 - [ ] 5.1 Test: a card that works — in one transaction stock is checked and comes off the collecting shop, store credit is spent, one sale is recorded with "Paid online" and "Store credit" lines, the order gets its number and moves to To get ready, the payment is taken, and Order confirmation is queued
 - [ ] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
