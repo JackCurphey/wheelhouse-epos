@@ -101,3 +101,26 @@ test('without a reopened day there is no bar', async () => {
   await ui.findByRole('heading', { level: 2, name: 'Takings and cash-ups' });
   assert.ok(ui.queryByText(/is reopened/) === null);
 });
+
+test('a Sent to Xero column while accounts software is connected, with a badge for each day, and none without it', async () => {
+  const rowsWith = (sent) => [
+    { kind: 'day', key: '2026-09-17', label: 'Thu 17 Sep', closed: false, sent: 'open' },
+    { kind: 'online', key: '2026-09-17', label: 'Thu 17 Sep · Online', onlinePence: 1250, soFar: true, sent: 'open' },
+    { kind: 'day', key: '2026-09-16', label: 'Wed 16 Sep', closed: true, closeId: 31, takingsPence: 10000, bankedPence: 2500, differencePence: 0, closedByName: 'Jo Taylor', closedAt: '2026-09-16T16:30:00Z', sent: 'failed' },
+    { kind: 'day', key: '2026-09-15', label: 'Tue 15 Sep', closed: true, closeId: 30, takingsPence: 30000, bankedPence: 11500, differencePence: 0, closedByName: 'Jack Lewis', closedAt: '2026-09-15T16:30:00Z', sent },
+    { kind: 'online', key: '2026-09-15', label: 'Tue 15 Sep · Online', onlinePence: 2500, sent },
+  ];
+  const takings = { ...TAKINGS_WEEK, accounts: { providerName: 'Xero', status: 'connected' }, rows: rowsWith('sent') };
+  const { ui, within } = await openReports('/workshop/reports/takings', { answers: served({ takings }) });
+  const table = within(await ui.findByRole('table', { name: 'Closed days' }));
+  assert.deepEqual(table.getAllByRole('columnheader').map((h) => h.textContent), ['Day', 'Takings', 'Cash banked', 'Cash difference', 'Closed by', 'Sent to Xero']);
+  const cells = (name) => [...table.getByText(name).closest('tr').querySelectorAll('th,td')].map((c) => c.textContent).at(-1);
+  assert.equal(cells('Thu 17 Sep'), 'Not closed yet');
+  assert.equal(cells('Wed 16 Sep'), 'Not sent');
+  assert.equal(cells('Tue 15 Sep'), 'Sent');
+  assert.equal(cells('Tue 15 Sep · Online'), 'Sent', 'the Online row says the same as its day');
+  await closeReports();
+  const none = await openReports('/workshop/reports/takings', { answers: served({ takings: { ...TAKINGS_WEEK, accounts: null } }) });
+  const plain = none.within(await none.ui.findByRole('table', { name: 'Closed days' }));
+  assert.ok(!plain.getAllByRole('columnheader').some((h) => /Sent to/.test(h.textContent)));
+});
