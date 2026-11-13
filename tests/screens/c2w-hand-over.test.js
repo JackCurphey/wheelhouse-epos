@@ -29,7 +29,8 @@ const order = (over = {}) => ({
 // What the server answers a hand-over: the sale with both payments (serializeSale).
 const sale = (body) => {
   const counter = (body.items ?? []).reduce((n, it) => n + (it.unitPrice ?? 0) * (it.qty ?? 1), 0);
-  const share = Math.min(state.order.providerPaysPence / 100, state.order.totalPence / 100 + counter);
+  // As server/c2w/hand-over.js: never more than the order's own part, the counter being the customer's.
+  const share = Math.min(state.order.providerPaysPence / 100, state.order.totalPence / 100);
   const extra = [{ tenderType: 'Cycle to Work · [Provider]', amount: share }];
   return { id: 601, createdAt: '2026-09-14T11:00:00.000Z', subtotal: state.order.totalPence / 100 + counter, discount: 0, groupDiscountAmount: 0, groupDiscountName: '',
     total: state.order.totalPence / 100 + counter, paymentMethod: body.cardAmount > 0 ? 'Card' : 'Other', cashAmount: body.cashAmount, cardAmount: body.cardAmount, cashTendered: body.cashTendered, extraPayments: extra,
@@ -230,6 +231,18 @@ test('till-c2w-extra: with something added at the counter, the provider pays its
   assert.ok(pay.getByText('Cycle to Work · [Provider] and card · Sale 601'));
   assert.ok(pay.getByText('Card · Maya Patel'));
   assert.ok(pay.getByText('The receipt shows both payments.'));
+});
+
+test('till-c2w-extra: a certificate for more than the order still leaves Maya what was added at the counter', async () => {
+  const t = await openTill({ theOrder: order({ certificatePence: 120000, providerPaysPence: 120000 }) });
+  await scanPads(t);
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\] · £1,060\.00/ }));
+  assert.ok(await pay.findByText('Maya pays'));
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £28\.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  assert.equal(sales()[0].cardAmount, 28);
 });
 
 test('till-c2w-extra: a certificate for less than the order leaves Maya the difference, even with nothing added', async () => {

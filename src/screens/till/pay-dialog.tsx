@@ -80,8 +80,9 @@ export function PayDialog({ lines, onClose, onNextSale, job, c2w, requestKey, on
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const what = c2w ? `${possessive(c2w.customer)} Cycle to Work order` : items(count);
   const sub = serving ? `${serving.name} serving · ${what}` : what;
-  // The provider pays up to the order's total; the customer pays the rest.
-  const share = c2w ? Math.min(pence(c2w.share), pence(total)) / 100 : 0;
+  // The provider pays up to the order's own total, never the counter's lines,
+  // as the server works it out (server/c2w/hand-over.js); the customer pays the rest.
+  const share = c2w ? Math.min(pence(c2w.share), pence(c2w.orderTotal)) / 100 : 0;
   const rest = c2w ? (pence(total) - pence(share)) / 100 : total;
   const c2wHow = c2w ? `Cycle to Work · ${c2w.provider}` : '';
   const howPaid = (cash: number, card: number, plain: string) => {
