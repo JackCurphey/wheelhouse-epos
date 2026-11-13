@@ -15,7 +15,11 @@ import { Refused, WRONG_STAGE, takeStep } from './orders.js';
 
 const NOT_FOUND = { error: 'Not found' };
 const NOT_OWED = { error: 'Some of the ticked bikes aren’t owed by this provider any more. Refresh to see what’s owed now.', code: 'not_owed' };
-const LOCK = 'SELECT id, stage, provider_id, expected_pence, paid_pence, provider_reference, collected_at, expected_by FROM c2w_orders';
+const NO_EXPECTED = { error: 'Nothing is expected from the provider for this bike yet. Add what they will pay to the order first.', code: 'no_expected' };
+// The screen sends what it showed as owed; if that has changed (the same payment
+// sent twice, or someone else recorded one), nothing is saved.
+const OWED_CHANGED = { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' };
+const LOCK = "SELECT id, stage, provider_id, expected_pence, paid_pence, provider_reference, collected_at, to_char(expected_by, 'YYYY-MM-DD') AS expected_by FROM c2w_orders";
 
 export const owedOf = (r) => Math.max(0, (r.expected_pence ?? 0) - (r.paid_pence ?? 0));
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
@@ -49,11 +53,14 @@ async function applyToOrder(row, step, who, { put, paymentId, payment, extraPenc
  * 'paid' for more, the extra noted. Anything else is refused with the difference
  * (409 `difference`) or as a mistake (Refused 400).
  */
-export async function markPaid(orderId, who, payment, { as = null, reason = null } = {}) {
+export async function markPaid(orderId, who, payment, { as = null, reason = null, seen } = {}) {
   const row = Number.isInteger(orderId) ? await prepare(`${LOCK} WHERE id = ? FOR UPDATE`).get(orderId) : null;
   if (!row) throw new Refused(404, NOT_FOUND);
   if (row.stage !== 'collected') throw new Refused(409, WRONG_STAGE);
+  if (row.expected_pence === null) throw new Refused(409, NO_EXPECTED);
+  if (!Number.isInteger(seen)) throw new Refused(400, { error: 'What’s owed is missing. Refresh and try again.' });
   const owed = owedOf(row);
+  if (owed !== seen) throw new Refused(409, OWED_CHANGED);
   const diff = payment.amountPence - owed;
   const wrong = (error) => new Refused(400, { error });
   let step = 'paid';
@@ -77,22 +84,30 @@ export async function markPaid(orderId, who, payment, { as = null, reason = null
  * bikes of one provider, put on the oldest collected first. Each bike it fully
  * covers is paid; one it covers in part is saved as part paid; one it doesn't
  * reach is left as it was. Anything over what the ticked bikes are owed is
- * noted on the payment and on each paid bike's line.
+ * noted on the payment and on the first bike it pays. `seen` is the total the
+ * screen showed as owed for the ticked bikes.
  */
-export async function recordPayment(providerId, who, payment, orderIds) {
+export async function recordPayment(providerId, who, payment, orderIds, seen) {
   if (!Number.isInteger(providerId) || !(await prepare('SELECT id FROM c2w_providers WHERE id = ?').get(providerId))) throw new Refused(404, NOT_FOUND);
   const rows = await prepare(`${LOCK} WHERE id = ANY(?::int[]) ORDER BY id FOR UPDATE`).all(orderIds);
   if (rows.length !== orderIds.length || rows.some((r) => r.provider_id !== providerId || r.stage !== 'collected')) throw new Refused(409, NOT_OWED);
-  rows.sort((a, b) => (new Date(a.collected_at) - new Date(b.collected_at)) || String(a.expected_by).localeCompare(String(b.expected_by)) || a.id - b.id);
+  if (rows.some((r) => r.expected_pence === null)) throw new Refused(409, NO_EXPECTED);
+  rows.sort((a, b) => (new Date(a.collected_at) - new Date(b.collected_at))
+    || (a.expected_by ?? '9999-12-31').localeCompare(b.expected_by ?? '9999-12-31') || a.id - b.id);
   const expectedPence = rows.reduce((s, r) => s + owedOf(r), 0);
-  const extraPence = Math.max(0, payment.amountPence - expectedPence);
+  if (!Number.isInteger(seen)) throw new Refused(400, { error: 'What’s owed is missing. Refresh and try again.' });
+  if (expectedPence !== seen) throw new Refused(409, OWED_CHANGED);
+  let extraPence = Math.max(0, payment.amountPence - expectedPence);
   const paymentId = payment.amountPence > 0 ? await newPayment(providerId, payment) : null;
   let left = payment.amountPence;
   for (const row of rows) {
     const owed = owedOf(row);
     const put = Math.min(owed, left);
     left -= put;
-    if (put === owed) await applyToOrder(row, 'paid', who, { put, paymentId, payment, extraPence });
+    if (put === owed) {
+      await applyToOrder(row, 'paid', who, { put, paymentId, payment, extraPence });
+      extraPence = 0;
+    }
     else if (put > 0) await applyToOrder(row, 'part_paid', who, { put, paymentId, payment });
   }
   return { expectedPence, receivedPence: payment.amountPence, differencePence: payment.amountPence - expectedPence };

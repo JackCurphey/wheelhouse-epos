@@ -55,17 +55,29 @@ after(async () => {
 
 // A £1,000 order collected on 20 Aug, its certificate £1,000, the provider
 // expected to pay `expected` pence by `by` (12 days late on 1 Sep by default).
-async function collected({ expected = 90000, by = '2026-08-20', prov = provider, paid = null } = {}) {
+async function collected({ expected = 90000, by = '2026-08-20', prov = provider, paid = null, at = '2026-08-20T10:00:00Z' } = {}) {
   const res = await post('/api/c2w/orders', { customerId: maya.id, providerId: prov.id, productId, accessoryIds: [] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const { id } = res.body.order;
   await inShop(() => prepare(`UPDATE c2w_orders SET stage = 'collected', certificate_number = ?, certificate_pence = 100000,
-    collected_at = '2026-08-20T10:00:00Z', expected_pence = ?, expected_by = ?, paid_pence = ? WHERE id = ?`).run(`[certificate ${tag()}]`, expected, by, paid, id));
+    collected_at = ?, expected_pence = ?, expected_by = ?, paid_pence = ? WHERE id = ?`).run(`[certificate ${tag()}]`, at, expected, by, paid, id));
   return id;
 }
 const order = async (id) => (await own(`/api/c2w/orders/${id}`)).body.order;
-const markPaid = (id, body, as = own) => post(`/api/c2w/orders/${id}/paid`, { receivedOn: '2026-09-01', reference: '[reference]', ...body }, as);
-const record = (body, as = own, prov = provider) => post(`/api/c2w/providers/${prov.id}/payments`, { receivedOn: '2026-09-01', reference: '[reference]', ...body }, as);
+// What an order is owed now, as the screen would have shown it (null if it can't be seen or has nothing expected).
+const owedNow = (id) => inShop(async () => {
+  const r = await prepare('SELECT expected_pence, paid_pence FROM c2w_orders WHERE id = ?').get(id);
+  return r && r.expected_pence !== null ? r.expected_pence - (r.paid_pence ?? 0) : null;
+});
+const markPaid = async (id, body, as = own) => post(`/api/c2w/orders/${id}/paid`, { receivedOn: '2026-09-01', reference: '[reference]', owedPence: await owedNow(id), ...body }, as);
+const record = async (body, as = own, prov = provider) => {
+  let expectedPence = null;
+  if (Array.isArray(body.orderIds) && body.orderIds.every(Number.isInteger)) {
+    expectedPence = 0;
+    for (const i of body.orderIds) expectedPence += (await owedNow(i)) ?? 0;
+  }
+  return post(`/api/c2w/providers/${prov.id}/payments`, { receivedOn: '2026-09-01', reference: '[reference]', expectedPence, ...body }, as);
+};
 const paymentsOf = (id) => inShop(() => prepare(`SELECT p.amount_pence, to_char(p.received_on, 'YYYY-MM-DD') AS received_on, p.reference, po.amount_pence AS put
   FROM c2w_payment_orders po JOIN c2w_payments p ON p.id = po.payment_id WHERE po.order_id = ? ORDER BY po.id`).all(id));
 const lastEvent = async (id) => (await order(id)).events.at(-1);
@@ -193,6 +205,58 @@ test('8.2 Record a payment refuses bikes that are not this provider’s collecte
   }
   assert.equal((await order(mine)).stage, 'collected');
   assert.deepEqual(await paymentsOf(mine), []);
+});
+
+test('8.1 a part payment sent twice counts once: the second is refused as what’s owed has changed', async () => {
+  const id = await collected();
+  const first = await markPaid(id, { amountPence: 30000, as: 'part', owedPence: 90000 });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const again = await markPaid(id, { amountPence: 30000, as: 'part', owedPence: 90000 });
+  assert.deepEqual([again.status, again.body.code], [409, 'owed_changed']);
+  assert.equal((await order(id)).paidPence, 30000);
+  assert.equal((await paymentsOf(id)).length, 1);
+  const missing = await markPaid(id, { amountPence: 60000, owedPence: undefined });
+  assert.equal(missing.status, 400, JSON.stringify(missing.body));
+});
+
+test('8.2 a payment sent twice counts once: the second is refused as what’s owed has changed', async () => {
+  const a = await collected();
+  const first = await record({ amountPence: 30000, orderIds: [a], expectedPence: 90000 });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  const again = await record({ amountPence: 30000, orderIds: [a], expectedPence: 90000 });
+  assert.deepEqual([again.status, again.body.code], [409, 'owed_changed']);
+  assert.equal((await order(a)).paidPence, 30000);
+  assert.equal((await paymentsOf(a)).length, 1);
+});
+
+test('8.1–8.2 an order with nothing expected from the provider can’t be paid, and nothing changes', async () => {
+  const id = await collected({ expected: null });
+  const one = await markPaid(id, { amountPence: 0, owedPence: 0 });
+  assert.deepEqual([one.status, one.body.code], [409, 'no_expected']);
+  const many = await record({ amountPence: 0, orderIds: [id], expectedPence: 0 });
+  assert.deepEqual([many.status, many.body.code], [409, 'no_expected']);
+  assert.equal((await order(id)).stage, 'collected');
+  assert.deepEqual(await paymentsOf(id), []);
+});
+
+test('8.2 oldest first is the first collected, then the earliest expected', async () => {
+  // Expected 14 Aug (a Friday) made first, then 10 Aug (a Monday): the Monday one is paid first.
+  const fri = await collected({ expected: 45000, by: '2026-08-14' });
+  const mon = await collected({ expected: 45000, by: '2026-08-10' });
+  // Collected a day earlier, though expected later: paid before both.
+  const first = await collected({ expected: 45000, by: '2026-08-25', at: '2026-08-19T10:00:00Z' });
+  const res = await record({ amountPence: 100000, orderIds: [fri, mon, first] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual([(await order(first)).paidPence, (await order(mon)).paidPence, (await order(fri)).paidPence], [45000, 45000, 10000]);
+});
+
+test('8.2 the extra on a payment is noted once, not on every bike it pays', async () => {
+  const a = await collected({ expected: 90000 });
+  const b = await collected({ expected: 45000 });
+  const res = await record({ amountPence: 137000, orderIds: [a, b] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const extras = [(await lastEvent(a)).detail.extraPence ?? 0, (await lastEvent(b)).detail.extraPence ?? 0];
+  assert.equal(extras[0] + extras[1], 2000);
 });
 
 test('8.3 The Owed list gives each provider its bikes, owed and late, with a total', async () => {

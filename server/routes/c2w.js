@@ -517,7 +517,7 @@ export function register(route) {
     const tz = await shopTimeZone();
     await save(res, 200, async () => {
       const payment = paymentFrom(body, shopToday(tz));
-      await markPaid(id, who, payment, { as: body.as ?? null, reason: optionalWords(body.reason, 'Why', 500) });
+      await markPaid(id, who, payment, { as: body.as ?? null, reason: optionalWords(body.reason, 'Why', 500), seen: body.owedPence });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });
@@ -537,7 +537,7 @@ export function register(route) {
       if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200 || !ids.every((i) => Number.isInteger(i) && i > 0) || new Set(ids).size !== ids.length) {
         throw new ValidationError('Tick the bikes this payment is for');
       }
-      const result = await recordPayment(providerId, who, payment, ids);
+      const result = await recordPayment(providerId, who, payment, ids, body.expectedPence);
       const orders = [];
       for (const i of ids) orders.push(serializeOrder(await loadOrder(i)));
       return { ...result, orders };
