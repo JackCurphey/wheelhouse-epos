@@ -11,8 +11,10 @@
 // /api/site/products, /api/site/products/<id>, /api/site/search and
 // /api/site/suggest; each is a
 // body (sent with 200) or a function (url) => ({ status, body }). Anything
-// else answers 404. The native dialog's showModal and close, missing in
-// jsdom, are stubbed.
+// else answers 404. `answer`, when given, is asked first:
+// (pathname, {url, method}) => ({ status, body }), or undefined to fall
+// through (the staff banner's Turn it on, for example). The native dialog's
+// showModal and close, missing in jsdom, are stubbed.
 //
 // `media(query)` says which media queries match, as a phone or tablet would
 // answer them; left out, nothing matches (a computer). `cookie` is set on
@@ -72,7 +74,7 @@ export const HOME = (stock) => ({
 
 const NOT_FOUND = () => ({ status: 404, body: { error: 'We can’t find that page' } });
 
-export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, product = NOT_FOUND, search = NOT_FOUND, suggest = NOT_FOUND, media, cookie, strict = false, retry = false } = {}) {
+export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = CATEGORIES, home = HOME(), products = NOT_FOUND, product = NOT_FOUND, search = NOT_FOUND, suggest = NOT_FOUND, media, cookie, strict = false, retry = false, answer } = {}) {
   const uninstall = installDom(`http://localhost${BASE}${url}`);
   // `setMedia(fn)` changes which queries match, as turning a tablet or widening a window does.
   let matching = media;
@@ -88,6 +90,8 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
     const address = String(input);
     requests.push({ url: address, method: init?.method ?? 'GET' });
     const { pathname } = new URL(address, 'http://localhost');
+    const own = answer && (await answer(pathname, { url: address, method: init?.method ?? 'GET' }));
+    if (own) return new Response(JSON.stringify(own.body), { status: own.status, headers: { 'content-type': 'application/json' } });
     const source = pathname === `${BASE}/api/site` ? site
       : pathname === `${BASE}/api/site/categories` ? categories
         : pathname === `${BASE}/api/site/home` ? home
@@ -96,8 +100,8 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
               : pathname === `${BASE}/api/site/search` ? search
                 : pathname === `${BASE}/api/site/suggest` ? suggest
                   : NOT_FOUND;
-    const answer = typeof source === 'function' ? await source(address) : { status: 200, body: source };
-    return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { 'content-type': 'application/json' } });
+    const given = typeof source === 'function' ? await source(address) : { status: 200, body: source };
+    return new Response(JSON.stringify(given.body), { status: given.status, headers: { 'content-type': 'application/json' } });
   };
 
   const { render } = await import('@testing-library/react');

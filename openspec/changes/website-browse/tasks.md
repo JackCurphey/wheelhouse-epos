@@ -13,7 +13,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 1.7 Test: a failed read answers 503 with "Something went wrong — try again" and the server keeps running
 - [x] 1.8 Build `server/routes/site.js` with `resolveStorefrontShop`, `runWithShop`, the limiter and `// screens:` lines; mount it in `server/server.js`
 - [x] 1.9 Today's hours and the next opening worked out in the shop's time zone (the shared hours on the first shop's card only, Jack's answer 1); test it on an open day, a closed day and a closure
-- [ ] 1.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 1.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 2. Risky — products: listing, filters, sort, product, suggestions and search
 
@@ -26,7 +26,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 2.7 Test: `GET /api/site/suggest` groups products, repairs, categories and pages, starts from the second letter, and has its own limit
 - [x] 2.8 Test: `GET /api/site/search` answers repairs and pages that match and products by Best match; "bearing 30 mm" answers Bearings with inner diameter 30 mm ticked; nothing found answers empty
 - [x] 2.9 Build the queries in `server/site-products.js`, reusing Stock's detail filter and "bearing 30 mm" reading
-- [ ] 2.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 2.10 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 3. Risky — the website app: shell, home, Shop, not found, off, footer pages
 
@@ -88,15 +88,15 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 
 ## 8. Risky — cookies and the staff banner
 
-- [ ] 8.1 Test: with a tracking tool, no tool script is on the page until Accept all, or until Save my choices turns its kind on; Reject all is remembered in `wh_cookies`
-- [ ] 8.2 Screen tests: wb-cookies-banner, wb-cookies-choose and wb-cookies-saved
-- [ ] 8.3 Screen tests: wb-cookies-page (table from the one list in the code, tools the shop added, what was chosen, Change cookie choices) and wb-cookies-page-plain
-- [ ] 8.4 Test: `POST /api/site/turn-on` and `turn-off` work only for this shop's signed-in Owner, use the Website page's own publish-and-switch, and refuse anyone else
-- [ ] 8.5 Screen tests: wb-off-preview, wb-off-preview-product, wb-off-preview-ask ("Ask Jack Lewis to turn it on.") and wb-turned-on ("Your website is on.", "Customers can see it now.", Turn off)
-- [ ] 8.6 Test: a customer, and staff of another shop, see only wb-off on a switched-off website
-- [ ] 8.7 Build the cookie banner, Choose cookies, the Cookies page and the staff banner
-- [ ] 8.8 Browser test: the cookie banner on a phone
-- [ ] 8.9 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 8.1 Test: with a tracking tool, no tool script is on the page until Accept all, or until Save my choices turns its kind on; Reject all is remembered in `wh_cookies`
+- [x] 8.2 Screen tests: wb-cookies-banner, wb-cookies-choose and wb-cookies-saved
+- [x] 8.3 Screen tests: wb-cookies-page (table from the one list in the code, tools the shop added, what was chosen, Change cookie choices) and wb-cookies-page-plain
+- [x] 8.4 Test: `POST /api/site/turn-on` and `turn-off` work only for this shop's signed-in Owner, use the Website page's own publish-and-switch, and refuse anyone else
+- [x] 8.5 Screen tests: wb-off-preview, wb-off-preview-product, wb-off-preview-ask ("Ask Jack Lewis to turn it on.") and wb-turned-on ("Your website is on.", "Customers can see it now.", Turn off)
+- [x] 8.6 Test: a customer, and staff of another shop, see only wb-off on a switched-off website
+- [x] 8.7 Build the cookie banner, Choose cookies, the Cookies page and the staff banner
+- [x] 8.8 Browser test: the cookie banner on a phone
+- [x] 8.9 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 9. Risky — remove the old site and archive
 

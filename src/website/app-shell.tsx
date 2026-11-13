@@ -10,6 +10,7 @@ import { CategoryPage } from './category.tsx';
 import { ProductPage } from './product.tsx';
 import { SearchPage } from './search.tsx';
 import { ShopPageRoute, ShopsPage } from './shops.tsx';
+import { CookiesPage } from './cookies.tsx';
 import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 
 /**
@@ -40,6 +41,7 @@ export const websiteRoutes: RouteObject[] = [
       { path: 'contact', Component: ContactPage },
       { path: 'collection-returns', Component: CollectionReturnsPage },
       { path: 'privacy', Component: PrivacyPage },
+      { path: 'cookies', Component: CookiesPage },
       { path: 'basket', Component: BasketPage },
       { path: 'shops', Component: ShopsPage },
       { path: 'shops/:id', Component: ShopPageRoute },
