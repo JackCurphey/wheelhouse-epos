@@ -415,10 +415,18 @@ test('3.4 the six online order messages sit under their own heading, after the j
 });
 
 test('3.4 the “on” count counts the online order messages that are on', async () => {
-  const { ui } = await openSettings({ extra: ONLINE(['order_not_ready']) });
+  // Order cancelled's second wording (an unpaid order's) is on too, but isn't a row of its own.
+  const unpaid = template({ key: 'order_cancelled_unpaid', partOf: 'order_cancelled', name: 'Order cancelled', when: 'When an order is cancelled before it was paid', group: 'online_orders', enabled: true });
+  const { ui } = await openSettings({ extra: [...ONLINE(['order_not_ready']), unpaid] });
   await ui.findByText('Order ready to collect');
   // Quote to approve, Bike ready and Booking confirmed, and five of the six.
-  assert.ok(has(await ui.findByRole('button', { name: /^Automatic messages.*8 on/ })));
+  assert.ok(has(await ui.findByRole('button', { name: /^Automatic messages.*(?<!\d)8 on\b/ })));
+});
+
+test('3.4 with all six online order messages on, the count is one more', async () => {
+  const { ui } = await openSettings({ extra: ONLINE() });
+  await ui.findByText('Order ready to collect');
+  assert.ok(has(await ui.findByRole('button', { name: /^Automatic messages.*(?<!\d)9 on\b/ })));
 });
 
 test('3.4 Order ready to collect’s Edit box shows the email as drawn (block 46), emailed to the order’s address', async () => {

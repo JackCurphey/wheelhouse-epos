@@ -41,7 +41,7 @@ const SENT_TONE = {
 type Figures = { pence: number; beforePence: number; diffPence: number | null };
 type Takings = {
   period: { period: string; from: string; to: string; through: string; soFar: boolean; unit: 'day' | 'month'; label: string; against: string };
-  figures: { takings: Figures; card: Figures; cash: Figures; other: Figures; online: Figures; cashDifference: Figures };
+  figures: { takings: Figures; card: Figures; cash: Figures; other: Figures; c2w: Figures; online: Figures; cashDifference: Figures };
   rows: Row[]; bars: SalesRow[]; empty: boolean; nothingBefore: boolean; shopLine: string; today: string;
   // A reopened day in this period: left out of every figure until it is closed again (reports-accounts-and-reopen).
   reopened?: { day: string; label: string; reason: string; reopenedByName: string } | null;
@@ -196,6 +196,8 @@ function Body({ report, onOpen, period }: { report: Takings; onOpen: (id: number
         <Figure name="Card" value={money(f.card.pence)} words={words(f.card)} />
         <Figure name="Cash" value={money(f.cash.pence)} words={words(f.cash)} />
         <Figure name="Other" value={money(f.other.pence)} words="Gift cards, store credit and customer accounts" />
+        {/* UX walk-through 5 H3: a Cycle to Work hand-over's provider share, owed by the provider, not in the drawer. */}
+        <Figure name="Cycle to Work" value={money(f.c2w.pence)} words="Owed by providers, not in the drawer" />
         <Figure name="Online" value={money(f.online.pence)} words="Paid on the website · separate from the tills" />
         <Figure name="Cash differences" value={<Difference pence={f.cashDifference.pence} />} words={words(f.cashDifference)} />
       </div>

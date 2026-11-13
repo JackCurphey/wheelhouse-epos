@@ -32,7 +32,7 @@ type CountedBy = { pence: number; byName: string; at: string; day: string };
 export type Close = {
   id: number; day: string; closedByName: string; closedAt: string; floatStart: FloatStart;
   cashPence: number; drawerCashPence: number; paidOutsPence: number; expectedPence: number; countedPence: number; differencePence: number; reason: string;
-  floatPence: number; bankedPence: number; leftPence: number; topUpPence: number; takingsPence: number; cardPence: number; otherPence: number; onlinePence: number;
+  floatPence: number; bankedPence: number; leftPence: number; topUpPence: number; takingsPence: number; cardPence: number; otherPence: number; c2wPence: number; onlinePence: number;
   countedBy?: CountedBy | null;
 };
 export type Day = {
@@ -546,6 +546,8 @@ function reportRows(c: Close): [string, string, string?][] {
     ['Card', penceText(c.cardPence)],
     ['Cash', penceText(c.cashPence)],
     ['Gift cards, store credit, customer accounts, other', penceText(c.otherPence)],
+    // UX walk-through 5 H3 (reports.mjs ZROWS): owed by the Cycle to Work providers, not in the drawer.
+    ['Cycle to Work', penceText(c.c2wPence), 'Owed by providers, not in the drawer'],
     ['Float at the start', penceText(c.floatStart.pence), `${penceText(c.floatStart.pence)} · ${floatHow(c.floatStart)}`],
     ['Cash difference', difference(c.differencePence)],
     ['Banked', penceText(c.bankedPence)],
