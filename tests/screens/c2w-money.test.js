@@ -407,7 +407,7 @@ test('cw-mark-paid: if someone else marked it paid meanwhile, the popup offers n
   const { ui, within, fireEvent } = await open({
     paid: () => {
       step('paid', { amountPence: 76000, receivedOn: TODAY });
-      return [409, { error: 'What’s owed has changed since you opened this. Refresh to see what’s owed now.', code: 'owed_changed' }];
+      return [409, { error: 'This order has moved on. Refresh to see where it is now.', code: 'wrong_stage' }];
     },
   });
   const box = within(await openMarkPaid(ui, fireEvent));

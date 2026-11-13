@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ApiError, apiMutate } from '@/lib/api/client.ts';
+import { ApiError, apiGet, apiMutate } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { AMOUNT_WORDS, amountOf } from '@/screens/customers/credit-dialog.tsx';
@@ -20,9 +20,11 @@ type As = null | 'paid' | 'part' | 'close';
 export const owedOf = (o: C2wOrder) => Math.max(0, (o.expectedPence ?? 0) - (o.paidPence ?? 0));
 /** Nothing received: allowed only for closing it (amountOf refuses 0). */
 const isNothing = (typed: string) => /^\s*£?\s*0+(\.0{1,2})?\s*$/.test(typed);
-const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
+export const toFocus = (id: string) => setTimeout(() => document.getElementById(id)?.focus(), 0);
 
-export function MarkPaidDialog({ o, today, closing = false, onClose, onSaved }: { o: C2wOrder; today: string; closing?: boolean; onClose: () => void; onSaved: (text: string) => void }) {
+export function MarkPaidDialog({ o, today, closing = false, focusTo = 'cw-next', onClose, onSaved }: {
+  o: C2wOrder; today: string; closing?: boolean; focusTo?: string; onClose: () => void; onSaved: (text: string) => void;
+}) {
   const queryClient = useQueryClient();
   // What's owed is fixed when the popup opens, so a reload can't change what the
   // owner saw; it catches up only when the server says it changed (owed_changed).
@@ -53,16 +55,22 @@ export function MarkPaidDialog({ o, today, closing = false, onClose, onSaved }: 
         queryClient.invalidateQueries({ queryKey: ['c2w-order', o.id] }),
         queryClient.invalidateQueries({ queryKey: ['c2w-orders'] }),
         queryClient.invalidateQueries({ queryKey: ['c2w-count'] }),
+        queryClient.invalidateQueries({ queryKey: ['c2w-owed'] }),
       ]);
       onClose();
-      toFocus('cw-next');
+      toFocus(focusTo);
       // Not drawn (logged): a short note says what was saved, as the other steps do.
       onSaved(as === 'part' ? 'Saved as part paid.' : as === 'close' ? 'Closed with a reason.' : 'Marked paid.');
     } catch (err) {
-      if (err instanceof ApiError && (err.body as { code?: string } | null)?.code === 'owed_changed') {
+      const code = err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
+      // owed_changed: a part payment came in meanwhile. wrong_stage: it was
+      // marked paid or closed elsewhere, so there is nothing more to save here.
+      if (code === 'owed_changed' || code === 'wrong_stage') {
         // The amount typed stays: it's what the remittance says came.
-        await queryClient.invalidateQueries({ queryKey: ['c2w-order', o.id] });
-        const fresh = queryClient.getQueryData<{ order: C2wOrder }>(['c2w-order', o.id])?.order;
+        // Fetched, not just invalidated: from the list or the Owed page nothing else is watching the order.
+        const fresh = await queryClient.fetchQuery({ queryKey: ['c2w-order', o.id], staleTime: 0, queryFn: () => apiGet<{ order: C2wOrder }>(`/api/c2w/orders/${o.id}`) })
+          .then((r) => r.order, () => null);
+        void queryClient.invalidateQueries({ queryKey: ['c2w-owed'] });
         if (fresh) {
           setOwed(owedOf(fresh));
           if (fresh.stage !== 'collected') setGone(true);

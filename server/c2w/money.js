@@ -119,13 +119,13 @@ export async function recordPayment(providerId, who, payment, orderIds, seen) {
 export async function owedOrders(tz, providerId = null) {
   const today = shopToday(tz);
   const rows = await prepare(`SELECT o.id, o.provider_id, p.name AS provider_name, c.name AS customer_name, o.collected_at,
-      o.certificate_number, o.expected_pence, o.paid_pence, to_char(o.expected_by, 'YYYY-MM-DD') AS expected_by
+      o.certificate_number, o.certificate_pence, o.expected_pence, o.paid_pence, to_char(o.expected_by, 'YYYY-MM-DD') AS expected_by
     FROM c2w_orders o JOIN c2w_providers p ON p.id = o.provider_id JOIN customers c ON c.id = o.customer_id
     WHERE o.stage = 'collected'${providerId === null ? '' : ' AND o.provider_id = ?'}
     ORDER BY o.expected_by NULLS LAST, o.id`).all(...(providerId === null ? [] : [providerId]));
   return rows.map((r) => ({
     id: r.id, providerId: r.provider_id, providerName: r.provider_name, customerName: r.customer_name,
-    collectedOn: r.collected_at ? shopToday(tz, new Date(r.collected_at)) : null, certificateNumber: r.certificate_number,
+    collectedOn: r.collected_at ? shopToday(tz, new Date(r.collected_at)) : null, certificateNumber: r.certificate_number, certificatePence: r.certificate_pence,
     expectedPence: r.expected_pence, paidPence: r.paid_pence, owedPence: owedOf(r), expectedBy: r.expected_by, lateDays: lateDaysOf(r.expected_by, today),
   }));
 }
