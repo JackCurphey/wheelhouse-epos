@@ -70,8 +70,13 @@ export function StockPage() {
   const [typed, setTyped] = useState('');
   const search = useTyped(typed);
   // Today's See them opens Stock with Below zero picked (st-today-below; stock-warnings-on-today design 8).
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>(params.get('show') === 'below-zero' ? 'Below zero' : 'All');
+  // The Website page's See them opens Stock filtered to the products it counted, with a line
+  // and Show all, and no new pills (Jack's answer to Q1, 12 Nov; docs/decisions/2026-11-12-website-defaults-taken.md).
+  const showParam = params.get('show');
+  const website = showParam === 'no-photo' || showParam === 'no-price' ? showParam : null;
+  const websiteOnly = website ? [['show', website], ...(params.get('online') === '1' ? [['online', '1']] : [])] : [];
   const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: 'name', up: true });
   const [all, setAll] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
@@ -83,7 +88,7 @@ export function StockPage() {
   const typedFor: { category: string | null; values: Record<number, string> } = JSON.parse(useTyped(JSON.stringify({ category, values })));
   const settled = typedFor.category === category ? typedFor.values : {};
   const sent = details.map((d) => [d, filterValue(d, settled[d.id] ?? '')] as const).filter(([, v]) => v).map(([d, v]) => [`d${d.id}`, v]);
-  const query = new URLSearchParams([...(search ? [['search', search]] : []), ...(category ? [['category', category]] : []), ...sent]).toString();
+  const query = new URLSearchParams([...(search ? [['search', search]] : []), ...(category ? [['category', category]] : []), ...sent, ...websiteOnly]).toString();
   const list = useQuery({
     queryKey: ['stock', query],
     queryFn: async () => (await apiGet<{ rows: ListRow[] }>(`/api/stock-list${query ? `?${query}` : ''}`)).rows,
@@ -157,6 +162,13 @@ export function StockPage() {
       {owner && !isPhone ? <Button className="shrink-0" onClick={() => setAdding({})}>+ Add a product</Button> : null}
       </div>
       <div className={`flex items-center gap-2 ${isPhone ? 'overflow-x-auto pb-0.5' : 'flex-wrap'}`}>{(['All', 'Running low', 'Below zero'] as Filter[]).map(pill)}{picker.pill}</div>
+      {website ? (
+        <p className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm text-[var(--wh-ink)]">
+          <span>{`Showing products with ${website === 'no-photo' ? 'no photo' : 'no price'}`}</span>
+          <span aria-hidden="true">·</span>
+          <button type="button" onClick={() => { setParams({}, { replace: true }); setAll(false); }} className="inline-flex min-h-11 items-center font-semibold underline">Show all</button>
+        </p>
+      ) : null}
       {picker.list}
       {category ? <DetailFilters name={categories.find((c) => c.path === category)?.name ?? category} details={details} values={values} onChange={(id, v) => { setValues({ ...values, [id]: v }); setAll(false); }} /> : null}
       <p role="status" className="m-0 text-sm text-[var(--wh-muted)]">{list.data ? (category ? `${rows.length} ${inCategory}` : rows.length ? plural(rows) : 'No products') : ''}</p>

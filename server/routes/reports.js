@@ -17,7 +17,7 @@ import { stockReport, stockCsv } from '../lib/report-stock.js';
 import { changedReport, changedChoices, changedCsv } from '../lib/report-changed.js';
 import { canSeeCosts } from '../lib/can-see-costs.js';
 import { listSaved, createSaved, renameSaved, deleteSaved, undoSaved, SavedNotFound } from '../lib/saved-reports.js';
-import { closeOn } from './close-the-day.js';
+import { closeOn, reopenClose, canReopen } from './close-the-day.js';
 import { salesCsv, takingsCsv, dayCsv } from '../lib/report-csv.js';
 
 const OWNER_ONLY = "Only the shop's owner can see reports";
@@ -104,9 +104,9 @@ export function register(route) {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
     const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
     const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
-    const close = row ? await closeOn(row.day) : null;
+    const close = row ? await closeOn(row.day, { reopened: true }) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
-    sendJson(res, 200, { close });
+    sendJson(res, 200, { close, canReopen: await canReopen(id) });
   });
   // Download as spreadsheet: each report's table as shown, for the period chosen.
   // screens: rp-sales
@@ -143,7 +143,7 @@ export function register(route) {
     const ctx = await currentSession(req);
     const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
     const row = id === null ? null : await prepare("SELECT to_char(day, 'YYYY-MM-DD') AS day FROM day_closes WHERE id = ?").get(id);
-    const close = row ? await closeOn(row.day) : null;
+    const close = row ? await closeOn(row.day, { reopened: true }) : null;
     if (!close) return sendJson(res, 404, { error: 'That day isn’t closed' });
     sendCsv(res, `day-${ctx.shop.slug}-${close.day}`, dayCsv(close));
   });
@@ -361,4 +361,22 @@ export function register(route) {
     const body = await readJsonBody(req);
     return undoSaved(loginId, id, body && typeof body === 'object' && !Array.isArray(body) ? body : {});
   }));
+  // Reopen the latest closed day with a reason (rp-reopen): the first close is kept as history and the day is
+  // left out of every report until it is closed again. Owner only; see reopenClose for the refusals.
+  // screens: rp-reopen
+  route('POST', '/api/reports/days/:id/reopen', async (req, res, params, query, afterRelease, shopId) => {
+    if (await ownerOnly(req, res, "Only the shop's owner can reopen a day")) return;
+    const ctx = await currentSession(req);
+    const id = /^\d{1,9}$/.test(params.id) ? Number(params.id) : null;
+    if (id === null) return sendJson(res, 404, { error: 'That day isn’t closed' });
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch (err) {
+      if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'Send the reason as JSON' });
+      throw err;
+    }
+    const out = await reopenClose(shopId, ctx, id, body && typeof body === 'object' ? body.reason : undefined);
+    sendJson(res, out.status, out.body);
+  });
 }
