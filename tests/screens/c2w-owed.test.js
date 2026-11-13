@@ -207,6 +207,7 @@ test('cw-owed-provider: Mark paid on a row pays that one bike, and the row goes'
   assert.equal(box.getByRole('textbox', { name: 'Amount received' }).value, '760.00');
   fireEvent.click(box.getByRole('button', { name: 'Mark paid' }));
   await waitFor(() => assert.ok(ui.queryByRole('dialog', { name: 'Mark paid' }) === null));
+  await waitFor(() => assert.equal(document.activeElement?.id, 'cw-owed-h', 'focus goes to the page’s heading'));
   assert.equal(posts('/api/c2w/orders/9/paid').length, 1);
   assert.equal(posts('/api/c2w/orders/9/paid')[0].body.owedPence, 76000);
   assert.ok(await ui.findByRole('heading', { name: '[Provider] · 1 bike owed' }));
