@@ -367,6 +367,6 @@ test('9.1 Settings › Messages has the six, grouped as Cycle to Work, with the 
     ['c2w_cancelled', 'Your order is cancelled', 'When a Cycle to Work order is cancelled, with what happens to any deposit'],
   ]);
   assert.ok(rows.every((t) => t.enabled));
-  // Listed once something sends it: cancelling comes with pull request 8.
-  assert.deepEqual(rows.filter((t) => !t.live).map((t) => t.key), ['c2w_cancelled']);
+  // All six are live: "Your order is cancelled" joined with cancelling (pull request 8b).
+  assert.deepEqual(rows.filter((t) => !t.live).map((t) => t.key), []);
 });
