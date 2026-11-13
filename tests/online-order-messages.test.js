@@ -294,7 +294,7 @@ test('3.7c an unpaid order cancelled has its own wording: no number gap and noth
   assert.equal(m.subject, `Your order is cancelled — ${owner.shop.name}`);
   assert.equal(m.body, [
     'Hi Maya,',
-    'Your order is cancelled: [reason]. Nothing was taken from your card.',
+    'Your order is cancelled: [reason].',
     'See your order: [link]',
     'Any questions? Call us on [shop phone].',
   ].join('\n\n'));

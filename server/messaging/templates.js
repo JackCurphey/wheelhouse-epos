@@ -282,7 +282,7 @@ export const TEMPLATES = {
     draft: true,
     name: 'Order cancelled',
     when: 'When an order is cancelled before it was paid',
-    wording: 'Hi [Customer’s first name],\n\nYour order is cancelled: [Reason]. Nothing was taken from your card.\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
+    wording: 'Hi [Customer’s first name],\n\nYour order is cancelled: [Reason].\n\nSee your order: [Link to your order]\n\nAny questions? Call us on [Shop phone].',
     subject: 'Your order [Order number] is cancelled — [Shop name]',
     tapIns: [...ORDER, 'Reason'],
   },
