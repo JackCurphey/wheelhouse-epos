@@ -1,10 +1,11 @@
 // tests/staff-app-theme.test.js
 //
 // The staff app always uses Fjell (Jack, 27 Sep 2026): a shop's colour scheme
-// no longer recolours it. The scheme keeps reaching the public website.
-// Record: docs/decisions/2026-09-27-fjell-theme.md.
+// no longer recolours it. Record: docs/decisions/2026-09-27-fjell-theme.md.
+// (The old public website that used the scheme is gone; the new one takes the
+// Website page's main colour: openspec/changes/website-browse, task 9.2.)
 //
-// Both apps are plain browser scripts with no exports, so each test runs the
+// The staff app is a plain browser script with no exports, so each test runs the
 // real script in jsdom against a stubbed fetch that answers as a shop whose
 // chosen scheme is 'plum' - if anything applies the scheme, --accent becomes
 // plum's #7a4a94.
@@ -16,8 +17,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { readFile } from './helpers/css.js';
-
-const PLUM_ACCENT = '#7a4a94';
 
 function runScript({ html, script, url, answers }) {
   const dom = new JSDOM(html, { url, runScripts: 'outside-only', pretendToBeVisual: true });
@@ -83,22 +82,6 @@ test('Edit Shop > Office has no colour scheme panel, but the website keeps its s
   assert.equal(doc.getElementById('theme-swatch-grid'), null);
   const presets = [...doc.querySelectorAll('#storefront-theme-preset option')].map((o) => o.value);
   assert.deepEqual(presets, ['forest', 'ocean', 'sunset', 'slate', 'plum']);
-});
-
-test('the public website still applies the shop colour scheme', async (t) => {
-  const { dom } = runScript({
-    html: bodyOf('public-storefront/index.html'),
-    script: readFile('public-storefront/storefront.js'),
-    url: 'http://localhost/store/test-cycles',
-    answers: {
-      '/api/storefront/info': { shopName: 'Test Cycles', themePreset: 'plum', tagline: '', description: '' },
-      '/api/storefront/products': [],
-    },
-  });
-  t.after(() => dom.window.close());
-  const root = dom.window.document.documentElement;
-  await waitFor(() => root.style.getPropertyValue('--accent'), 'the storefront to apply a theme');
-  assert.equal(root.style.getPropertyValue('--accent'), PLUM_ACCENT);
 });
 
 // Retiring the old Edit workshop (Jack, 19 Oct,
