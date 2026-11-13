@@ -27,7 +27,6 @@ import { currentSession, signedInSession, rememberSession, rememberCustomerSessi
 import { SESSION_COOKIE } from './auth.js';
 import { SITE_OFF, SITE_FAILED, sitePath, isSiteApi, siteRateLimited, handleSiteRequest } from './routes/site.js';
 import { ROUTE_AREAS } from './routes/index.js';
-import { siteOrderPath, siteOrderLimited, handleSiteOrderRequest } from './routes/site-orders.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
 export { serializeWorkshopService } from './routes/workshop-settings.js';
@@ -544,25 +543,6 @@ async function dispatch(req, res) {
 
   const storefrontSlug = parseStorefrontSlugCandidate(req, url);
   if (storefrontSlug) {
-    // Buying online's basket and checkout (website-buy-online design 3): the
-    // basket's visitor turned away past the limit before any database work.
-    const orderPath = siteOrderPath(req, pathname, storefrontSlug);
-    if (orderPath && siteOrderLimited(req, res, orderPath)) return;
-    if (orderPath) {
-      const storefrontShop = await resolveStorefrontShop(req, url);
-      if (!storefrontShop) return notFound(res, 'Storefront not found');
-      try {
-        // As a portal route: the body read and the customer looked up before
-        // runWithShop takes this request's connection.
-        if (!(await readBodyFirst(req, res, {}, { gate: readGates.website }))) return;
-        await rememberCustomerSession(req);
-        await runWithShop(storefrontShop.id, () => handleSiteOrderRequest(req, res, orderPath, storefrontShop));
-      } catch (err) {
-        console.error(err);
-        if (!res.headersSent) sendJson(res, 500, { error: 'Internal server error' });
-      }
-      return;
-    }
     const sitePathname = sitePath(pathname, storefrontSlug);
     const siteApi = isSiteApi(sitePathname);
     // The website's own reads turn a visitor away past the limit before any
@@ -587,6 +567,13 @@ async function dispatch(req, res) {
         return notFound(res, siteApi ? SITE_OFF : 'Storefront not found');
       }
       if (siteApi) {
+        // A POST (buying online's basket and checkout) as a portal route: its
+        // body read and the signed-in customer looked up before runWithShop
+        // takes this request's connection.
+        if (req.method === 'POST') {
+          if (!(await readBodyFirst(req, res, {}, { gate: readGates.website }))) return;
+          await rememberCustomerSession(req);
+        }
         const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff));
         if (!answered) notFound(res, 'Unknown website route');
         return;

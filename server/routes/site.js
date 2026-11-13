@@ -1,4 +1,4 @@
-// The customer website's read routes (openspec/changes/website-browse,
+// The customer website's routes (openspec/changes/website-browse,
 // design 2). Each runs inside the shop the address names: server.js finds it
 // with resolveStorefrontShop and calls handleSiteRequest inside runWithShop.
 // Not in ROUTE_AREAS: these are public, found from the address, never from a
@@ -13,6 +13,7 @@ import { toCapacitySettings } from '../workshop/jobs.js';
 import { addDays } from '../lib/report-periods.js';
 import { liveTracking, TOOL_BY_KEY } from '../website-tracking.js';
 import { ownerNames } from '../website.js';
+import { SITE_ORDER_POSTS } from './site-orders.js';
 
 export const SITE_OFF = 'This website isn’t available';
 export const SITE_FAILED = 'Something went wrong — try again';
@@ -47,6 +48,7 @@ export function siteRateLimited(req, res, path) {
  * /store/<slug>/ (Jack's answer 4), or null.
  */
 export async function handleSiteRequest(req, res, path, shop, staff) {
+  if (req.method === 'POST') return sitePost(req, res, path, shop);
   if (req.method !== 'GET') return false;
   const handler = READS[path];
   if (!handler) return false;
@@ -68,6 +70,22 @@ export async function handleSiteRequest(req, res, path, shop, staff) {
     console.error(err);
     sendJson(res, 503, { error: SITE_FAILED });
   }
+  return true;
+}
+
+// The website's POST routes: buying online's basket and checkout
+// (website-buy-online design 3). server.js has read the body and looked up the
+// signed-in customer before runWithShop. Customers only: a switched-off
+// website that resolveStorefrontShop let through for the shop's own staff
+// takes no order, as it shows customers nothing.
+const POSTS = { ...SITE_ORDER_POSTS };
+async function sitePost(req, res, path, shop) {
+  const post = POSTS[path];
+  if (!post) return false;
+  res.setHeader('Cache-Control', 'no-store');
+  const website = await prepare('SELECT is_on FROM website').get();
+  if (!(await isOn(website))) return sendJson(res, 404, { error: SITE_OFF }), true;
+  await post(req, res, shop);
   return true;
 }
 

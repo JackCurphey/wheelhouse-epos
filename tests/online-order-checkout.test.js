@@ -492,3 +492,20 @@ test('stock counts frame-numbered bikes by frames in stock, and less Cycle to Wo
   const held = await basket(shop, { shop: shop.bolton, lines: [{ productId: shop.pads, qty: 3 }] });
   assert.equal(held.body.lines[0].message, 'Only 2 left at Bolton — we’ve changed it to 2');
 });
+
+// ---------- On the website's own routes (routes/site.js) ----------
+
+test('at /store/<slug>/, the basket answers customers; a switched-off website takes no order, even from the shop’s own staff', async () => {
+  const shop = await shopTakingOrders();
+  const post = (path, body, cookie) => fetch(`${server.baseUrl}/store/${shop.slug}${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': network(), ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body),
+  }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  const b = await post('/api/site/basket', { shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }] });
+  assert.equal(b.status, 200, JSON.stringify(b.body));
+  assert.equal(b.body.totalPence, 2800);
+  await inShop(shop, 'UPDATE storefront_settings SET enabled = false RETURNING id');
+  const c = await post('/api/site/checkout', { requestKey: key(), shop: shop.bolton, lines: [{ productId: shop.pads, qty: 1 }], ...maya }, shop.owner.cookie);
+  assert.equal(c.status, 404, JSON.stringify(c.body));
+  assert.equal(c.body.error, 'This website isn’t available');
+  assert.equal(await count(shop, 'online_orders'), 0);
+});
