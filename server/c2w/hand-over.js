@@ -22,7 +22,13 @@ export const SHARE_REFUSED = {
   code: 'c2w_share',
 };
 
-const isC2w = (p) => String(p?.tenderType ?? '').trim().startsWith(C2W_TENDER);
+const BIKE_TWICE = {
+  error: 'The bike is already on this sale from the Cycle to Work order. Take it off the counter’s lines.',
+  code: 'c2w_bike_twice',
+};
+
+// However it is written, so a differently capitalised one can't slip onto another sale.
+const isC2w = (p) => String(p?.tenderType ?? '').trim().toLowerCase().startsWith(C2W_TENDER.toLowerCase());
 /** Whether a sale's payments claim a Cycle to Work share (only a hand-over may). */
 export const claimsC2w = (payments) => (Array.isArray(payments) ? payments : []).some(isC2w);
 
@@ -76,7 +82,9 @@ export async function startHandOver(orderId, { items, payments, discount, checks
     throw new Refused(409, { error: `${row.bike_name ?? 'The bike'} is held at ${site}. Hand it over at that shop’s till.`, code: 'c2w_other_site' });
   }
 
-  // The order's lines first, at the prices quoted, then the counter's.
+  // The order's lines first, at the prices quoted, then the counter's. The
+  // order already carries its bike, so the counter can't add it again (review, 13 Nov).
+  if (items.some((it) => Number(it?.productId) === row.product_id)) throw new Refused(400, BIKE_TWICE);
   const lines = [...quoteItems(row).map((it) => ({ productId: it.productId, qty: 1, unitPrice: it.pricePence / 100 })), ...items];
   const loaded = [];
   for (const it of lines) loaded.push(await loadDocumentLine(it, { checkStock: false }));

@@ -151,14 +151,23 @@ test('7.2 a sale sent twice counts once; a second hand-over of the same order is
   assert.equal(sales.n, 1);
 });
 
-test('7.3 the provider’s share is never cash in the drawer: only what Maya pays in cash is', async () => {
+test('7.3 the provider’s share is never cash in the drawer: close the day counts only what Maya pays in cash', async () => {
+  // The day's float, counted this morning, so close the day works out the drawer.
+  await inShop(async () => prepare('INSERT INTO float_checks (day, login_id, expected_pence, counted_pence, checked_at) VALUES (?, ?, ?, ?, ?) RETURNING id')
+    .get('2026-09-01', owner.loginId, 15000, 15000, '2026-09-01T06:00:00Z'));
+  const drawer = async () => {
+    const res = await own('/api/close-the-day');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    return res.body;
+  };
+  const before = await drawer();
   const o = await readyOrder();
   const res = await sell({ c2wOrderId: o.id, cashAmount: 240, cashTendered: 250 });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  // Close the day counts the drawer from cash_amount alone (server/routes/close-the-day.js).
-  const sale = await inShop(async () => prepare('SELECT cash_amount, card_amount, payment_method FROM sales WHERE id = ?').get(res.body.id));
-  assert.deepEqual([sale.cash_amount, sale.card_amount, sale.payment_method], [240, 0, 'Split']);
   assert.deepEqual(await paymentsOf(res.body.id), [{ tender_type: TENDER, amount: 800 }]);
+  const after = await drawer();
+  assert.equal(after.cashPence - before.cashPence, 24000, 'Maya’s £240 cash, not the provider’s £800');
+  assert.equal(after.expectedPence - before.expectedPence, 24000);
 });
 
 test('7.3 commission in pounds, and a provider with no days to pay has no expected date', async () => {
@@ -182,7 +191,10 @@ test('7.2 two hand-overs of one order at once: one sale, the other refused', asy
   const o = await readyOrder();
   const before = await salesCount();
   const both = await Promise.all([sell({ c2wOrderId: o.id, cardAmount: 240 }), sell({ c2wOrderId: o.id, cardAmount: 240 })]);
-  assert.deepEqual(both.map((r) => r.status).sort(), [201, 409]);
+  // The second waits on the order's lock: refused as already collected, or, on a
+  // slow machine, as busy once the lock wait runs out (limitLockWait, 2 s).
+  const statuses = both.map((r) => r.status).sort();
+  assert.ok(statuses[0] === 201 && [409, 503].includes(statuses[1]), JSON.stringify(statuses));
   assert.equal(await salesCount(), before + 1);
 });
 
@@ -248,6 +260,22 @@ test('7.2 at a till in the other site, the bike held there is handed over', asyn
   const res = await staffRequest(server.baseUrl, tillCookie, '/api/sales', { method: 'POST', body: { cashierId, sellPastStock: true, requestKey: randomUUID(), items: [], c2wOrderId: o.id, cardAmount: 240 } });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.equal((await order(o.id)).stage, 'collected');
+});
+
+test('7.2 the till can’t put the order’s bike on the sale a second time', async () => {
+  const o = await readyOrder();
+  const before = await salesCount();
+  const res = await sell({ c2wOrderId: o.id, items: [{ productId: o.bike, qty: 1 }], cardAmount: 1240 });
+  assert.deepEqual([res.status, res.body.code], [400, 'c2w_bike_twice']);
+  assert.equal(await salesCount(), before);
+  assert.equal((await order(o.id)).stage, 'ready');
+});
+
+test('7.2 a Cycle to Work payment on a sale with no order is refused, however it is written', async () => {
+  const before = await salesCount();
+  const res = await sell({ items: [{ productId: pump, qty: 1 }], payments: [{ tenderType: 'CYCLE TO WORK · [Provider]', amount: 20 }] });
+  assert.deepEqual([res.status, res.body.code], [400, 'c2w_share']);
+  assert.equal(await salesCount(), before);
 });
 
 // ---------- 7.4 ----------
