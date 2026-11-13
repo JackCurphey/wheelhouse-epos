@@ -36,6 +36,10 @@ export const STEPS = {
   // Ordering the bike from the supplier (cw-ordered, cw-order-anyway), and its Undo.
   ordered: { from: ['quote', 'waiting', 'certificate'], to: null },
   order_undone: { from: ['quote', 'waiting', 'certificate'], to: null },
+  // The provider's money (cw-mark-paid, cw-record-payment; server/c2w/money.js).
+  paid: { from: ['collected'], to: 'paid' },
+  part_paid: { from: ['collected'], to: null },
+  shortfall_closed: { from: ['collected'], to: 'closed' },
 };
 // The stages an order can still be holding a bike in.
 const OPEN = "('quote', 'waiting', 'certificate', 'ready')";

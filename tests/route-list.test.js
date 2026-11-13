@@ -23,7 +23,7 @@ const snapshot = readFileSync(new URL('./fixtures/route-list.txt', import.meta.u
   .split('\n').filter(Boolean);
 
 test('the snapshot is the 434 routes it was taken with, each once', () => {
-  assert.equal(snapshot.length, 434);
+  assert.equal(snapshot.length, 439);
   assert.equal(new Set(snapshot).size, snapshot.length);
 });
 

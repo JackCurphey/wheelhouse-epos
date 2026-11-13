@@ -432,3 +432,8 @@ POST /api/c2w/orders/:id/certificate
 POST /api/c2w/orders/:id/ready
 POST /api/c2w/orders/:id/ready/undo
 POST /api/c2w/orders/:id/applied
+POST /api/c2w/orders/:id/paid
+POST /api/c2w/providers/:id/payments
+GET /api/c2w/owed
+GET /api/c2w/owed.csv
+GET /api/c2w/providers/:id/owed
