@@ -267,3 +267,13 @@ test('a reason typed before a recount that came out right is not sent', async ()
   t.fireEvent.click(t.ui.getByRole('button', { name: 'Close the day again' }));
   await t.waitFor(() => assert.deepEqual(posts('/api/close-the-day'), [{ day: MON, countedPence: 22900, expectedPence: 22900 }]));
 });
+
+test('Today: a day that did not go to the accounts software, with the account to choose, and it links to the fold', async () => {
+  const line = { kind: 'day_not_sent', day: MON, providerName: 'Xero', closedAt: NOW, reason: 'Accessories has no Xero account chosen', missingLine: 'Accessories', line: 'sales:Accessories' };
+  const t = await open('/workshop/today', { items: [line] });
+  const title = await t.ui.findByText('Monday 31 August didn’t go to Xero');
+  const li = title.closest('li');
+  assert.ok(/Closed at \d\d:\d\d · Accessories has no Xero account chosen/.test(text(li)), text(li));
+  const choose = t.within(li).getByRole('link', { name: 'Choose an account for Accessories' });
+  assert.equal(choose.getAttribute('href'), '/workshop/settings?room=office&fold=accounts');
+});

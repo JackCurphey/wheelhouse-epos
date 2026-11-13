@@ -441,4 +441,5 @@ GET /api/c2w/providers/:id/owed
 GET /api/accounts
 POST /api/accounts/connect
 PUT /api/accounts/choices
+GET /api/accounts/log
 POST /api/accounts/disconnect
