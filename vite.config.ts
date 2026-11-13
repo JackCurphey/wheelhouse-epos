@@ -26,10 +26,11 @@ export default defineConfig({
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
-      // Named entry points: staff (/workshop) and book (/book).
+      // Named entry points: staff (/workshop), book (/book) and the website (/store/<slug>/).
       input: {
         staff: fileURLToPath(new URL('./src/staff/main.tsx', import.meta.url)),
         book: fileURLToPath(new URL('./src/customer/main.tsx', import.meta.url)),
+        website: fileURLToPath(new URL('./src/website/main.tsx', import.meta.url)),
       },
     },
   },
