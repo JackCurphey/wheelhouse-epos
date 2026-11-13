@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ROUTES } from '@/staff/routes.ts';
 import { SavedNoteArea } from './saved-note.tsx';
@@ -71,7 +71,16 @@ function RoomPage({ room, fold }: { room: SettingsRoom; fold: string | null }) {
   const named = room.areas.some((a) => a.folds.some((f) => f.key === fold)) ? fold : null;
   const first = named ?? room.areas[0]?.folds[0]?.key;
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set(first ? [first] : []));
+  // A named fold that shows only once something has loaded (Showing products waits
+  // on the website's kind) opens when it comes, unless a fold was opened or closed first.
+  const waiting = useRef(fold !== null && named === null);
+  useEffect(() => {
+    if (!waiting.current || named === null) return;
+    waiting.current = false;
+    setOpen(new Set([named]));
+  }, [named]);
   const toggle = (key: string) => setOpen((was) => {
+    waiting.current = false;
     const next = new Set(was);
     if (next.has(key)) next.delete(key); else next.add(key);
     return next;
