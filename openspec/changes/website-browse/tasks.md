@@ -96,7 +96,7 @@ Jack answered questions 1–4 in `design.md` on 12 Nov, option 1 on each (`docs/
 - [x] 8.6 Test: a customer, and staff of another shop, see only wb-off on a switched-off website
 - [x] 8.7 Build the cookie banner, Choose cookies, the Cookies page and the staff banner
 - [x] 8.8 Browser test: the cookie banner on a phone
-- [ ] 8.9 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
+- [x] 8.9 Self-review, `/review`, `risky-area-reviewer`, hand-run CI, full check, merge
 
 ## 9. Risky — remove the old site and archive
 
