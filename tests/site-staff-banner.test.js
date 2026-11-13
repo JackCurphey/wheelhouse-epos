@@ -4,6 +4,7 @@
 // choice turns its kind on; Turn it on and Turn off at /store/<slug>/ work
 // only for this shop's Owner and use the Website page's own code; a customer
 // and another shop's staff see only wb-off.
+import '../server/load-env.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';

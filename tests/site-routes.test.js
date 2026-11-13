@@ -1,6 +1,7 @@
 // The customer website's read routes (openspec/changes/website-browse,
 // design 2, tasks 1.1–1.9): GET /api/site and /api/site/categories, found
 // from the shop's address, answering only what is published and public.
+import '../server/load-env.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';

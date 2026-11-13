@@ -1,6 +1,7 @@
 // The customer website's product routes (openspec/changes/website-browse,
 // design 2 and 3, tasks 2.1–2.8): a category's products with its filters, a
 // product page, suggestions and search, with one stock line for the chosen shop.
+import '../server/load-env.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
