@@ -18,14 +18,14 @@ const showing = (over = {}) => ({
   ...over,
 });
 
-async function openShowing(start, { refuse = null } = {}) {
+async function openShowing(start, { refuse = null, kind = 'wheelhouse', load = null } = {}) {
   let body = start;
   const t = await openScreen(PAGE, {
     answers: {
       '/api/workshop-settings': () => [200, { openingHours: WEEK }],
       '/api/shop-details': () => [200, { name: 'North Street Cycles', receiptFooter: null }],
-      '/api/website': () => [200, { kind: 'wheelhouse' }],
-      '/api/website/showing': () => [200, body],
+      '/api/website': () => [200, { kind }],
+      '/api/website/showing': () => load ?? [200, body],
       '/api/website/start-with': (_q, _m, sent) => {
         if (refuse) return refuse;
         body = { ...body, startedWith: sent.startWith, startedAt: '2026-09-12T10:00:00Z' };
@@ -52,8 +52,8 @@ test('on-settings-show: the start line, a switch on each category, the count wit
   assert.ok(box.getByRole('button', { name: 'Change what your website started with' }));
   assert.ok(fold(t).textContent.includes('Set on each category and product'));
   assert.equal(fold(t).getAttribute('aria-expanded'), 'true');
-  assert.deepEqual(box.getAllByRole('switch').map((s) => [s.getAttribute('aria-label') ?? s.textContent, s.getAttribute('aria-checked')]).map(([, on]) => on), ['true', 'true', 'false']);
-  assert.ok(box.getByRole('switch', { name: 'Drivetrain › Derailleurs' }));
+  assert.deepEqual(box.getAllByRole('switch').map((s) => [s.getAttribute('aria-label'), s.getAttribute('aria-checked')]),
+    [['Bearings', 'true'], ['Drivetrain', 'true'], ['Drivetrain › Derailleurs', 'false']]);
   assert.ok(box.getByText('2 products are set differently from their category.'));
   const see = box.getByRole('link', { name: 'See the products set differently from their category, in Stock' });
   assert.ok(see.getAttribute('href').endsWith('/stock?show=online-differs'), see.getAttribute('href'));
@@ -78,6 +78,30 @@ test('none set differently, or a website set up before the start was kept, says 
   assert.ok(box.queryByText(/^Started with/) === null);
   assert.ok(box.queryByRole('button', { name: 'Change what your website started with' }) === null);
   assert.ok(box.queryByText(/set differently from their category/) === null);
+  assert.ok(box.queryByText(/^New products follow their category/) === null, 'there, new products stay off until switched on');
+  assert.ok(box.getByText('Each product’s page in Stock has its own “Show on website” switch.'));
+});
+
+test('one product set differently says so in the singular', async () => {
+  const t = await openShowing(showing({ differentCount: 1 }));
+  assert.ok(await area(t).findByText('1 product is set differently from their category.'));
+});
+
+test('a Shopify website, or none set up yet, has no Showing products fold', async () => {
+  for (const kind of ['shopify', null]) {
+    const t = await openShowing(showing(), { kind });
+    await t.ui.findByRole('button', { name: /^What the website sells/ });
+    await t.waitFor(() => assert.ok(calls.some((c) => c.path === '/api/website')));
+    assert.ok(t.ui.queryByRole('button', { name: /^Showing products/ }) === null, String(kind));
+    await closeWebsite();
+  }
+});
+
+test('Showing products that won’t load says so', async () => {
+  const t = await openShowing(showing(), { load: [500, { error: 'boom' }] });
+  // A server failure is tried three more times first (app-shell.tsx).
+  const said = await area(t).findByText('Wheelhouse couldn’t load the categories. Try again in a moment.', {}, { timeout: 15000 });
+  assert.ok(said.closest('[role="alert"]'));
 });
 
 test('Change asks set-up step 3’s question again; Save sends the answer and the line follows', async () => {
@@ -90,11 +114,22 @@ test('Change asks set-up step 3’s question again; Save sends the answer and th
   assert.ok(inside.getByText('Either way, every category and product has its own “Show on website” switch afterwards.'));
   assert.equal(inside.getByRole('radio', { name: /Nothing online/ }).checked, true, 'the answer given before');
   assert.ok(inside.getByText('Everything with a price shows. Switch off what you don’t want online.'));
+  assert.ok(inside.getByText('Saving sets every category and product again, including any set differently on their own page.'));
   t.fireEvent.click(inside.getByRole('radio', { name: /Every product online/ }));
   t.fireEvent.click(inside.getByRole('button', { name: 'Save' }));
   await t.waitFor(() => assert.deepEqual(sent('/api/website/start-with'), [{ startWith: 'every' }]));
   assert.ok(await box.findByText('Started with every product online on Sat 12 Sep.'));
   await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+});
+
+test('Cancel closes Change and sends nothing', async () => {
+  const t = await openShowing(showing());
+  t.fireEvent.click(await area(t).findByRole('button', { name: 'Change what your website started with' }));
+  const dialog = await t.ui.findByRole('dialog');
+  t.fireEvent.click(t.within(dialog).getByRole('radio', { name: /Nothing online/ }));
+  t.fireEvent.click(t.within(dialog).getByRole('button', { name: 'Cancel' }));
+  await t.waitFor(() => assert.ok(t.ui.queryByRole('dialog') === null));
+  assert.deepEqual(sent('/api/website/start-with'), []);
 });
 
 test('Change refused by the server says so in the dialog and keeps it open', async () => {

@@ -31,7 +31,7 @@ const DIFFERS = 'online-differs';
 async function showsOf(query) {
   if (query.get('show') === DIFFERS) {
     const shown = new Map((await db.prepare('SELECT path, show_online FROM product_categories').all()).map((c) => [c.path, c.show_online]));
-    return Object.assign((p) => priced(p) && shown.has(p.category) && shown.get(p.category) !== p.show_online, { on: true });
+    return Object.assign((p) => Number(p.active) === 1 && priced(p) && shown.has(p.category) && shown.get(p.category) !== p.show_online, { on: true });
   }
   const which = SHOWS[query.get('show')];
   if (!which) return Object.assign(() => true, { on: false });

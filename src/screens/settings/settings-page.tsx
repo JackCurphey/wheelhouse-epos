@@ -19,7 +19,7 @@ import { OtherWaysToPay, useOtherWaysSummary } from './other-ways-to-pay.tsx';
 import { CollectionSettings, useCollectionSummary } from './collection-settings.tsx';
 import { CloseEntrySettings, CountFirstSettings, FloatSettings, useCloseEntrySummary, useCountFirstSummary, useFloatSummary } from './end-of-day-settings.tsx';
 import { ApplySettings, DepositSettings, HoldSettings, OrderSettings, ProvidersSettings, TodaySettings, useC2wSummaries } from './c2w-settings.tsx';
-import { BuyingOnline, NotCollected, PayingOnline, ReadyShelf, ShowingProducts, useOnlineOrdersSummaries, usePayingOnlineSummary, WebsiteSells } from './online-orders-settings.tsx';
+import { BuyingOnline, NotCollected, PayingOnline, ReadyShelf, ShowingProducts, useOnlineOrdersSummaries, usePayingOnlineSummary, useWheelhouseWebsite, WebsiteSells } from './online-orders-settings.tsx';
 import { TillsSettings, useTillsSummary } from './tills-settings.tsx';
 import { QuickButtonsSettings, useQuickButtonsSummary } from './quick-buttons-settings.tsx';
 import { SigningInSettings, useSigningInSummary } from './signing-in-settings.tsx';
@@ -1081,6 +1081,7 @@ function OwnerSettings() {
   const accountsSummary = useAccounts().data?.summary ?? '';
   const payingOnline = usePayingOnlineSummary();
   const online = useOnlineOrdersSummaries();
+  const wheelhouseWebsite = useWheelhouseWebsite();
   const s = settings.data;
   // Only what's built (stage 1 drawing gaps decision 6), in the drawn rooms'
   // order and words (settings-frame.mjs SETTINGS_ROOMS).
@@ -1119,8 +1120,9 @@ function OwnerSettings() {
         // (website-management design 6; website-buy-online tasks 2.1–2.3).
         { key: 'online', title: 'Online orders', intro: 'What the website sells, paying online, and collecting orders.', lead: <BuyingOnline />, folds: [
           { key: 'online-sells', title: 'What the website sells', summary: online.sells, body: <WebsiteSells /> },
-          // Second, as drawn (on-settings-show; website-buy-online task 2.5).
-          { key: 'online-show', title: 'Showing products', summary: 'Set on each category and product', body: <ShowingProducts /> },
+          // Second, as drawn (on-settings-show; website-buy-online task 2.5); only for
+          // Wheelhouse's own website, set up (server/website-showing.js).
+          ...(wheelhouseWebsite ? [{ key: 'online-show', title: 'Showing products', summary: 'Set on each category and product', body: <ShowingProducts /> }] : []),
           { key: 'paying-online', title: 'Paying online', summary: payingOnline, body: <PayingOnline /> },
           { key: 'online-not-collected', title: 'Not collected', summary: online.collect, body: <NotCollected /> },
           { key: 'online-shelf', title: 'Where ready orders wait', summary: online.shelf, body: <ReadyShelf /> },

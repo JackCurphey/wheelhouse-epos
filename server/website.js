@@ -12,7 +12,6 @@ import { paymentAccount, paymentsState } from './payments/provider.js';
 import { dbExec, prepare } from './db.js';
 import { getOrCreateStorefrontSettings, STOREFRONT_BASE_DOMAIN } from './storefront.js';
 import { linkState } from './shopify/link.js';
-import { START_CHOICES, startProducts } from './website-showing.js';
 import { liveTracking, savedTool, TOOL_BY_KEY, TRACKING_TOOLS, trackingList } from './website-tracking.js';
 
 // History keeps 90 days (spec question 3, default taken:
@@ -498,6 +497,21 @@ function checkColour(colour) {
 
 // The three steps' answers, once only (ws-start-which, -look, -products).
 // Shopify is set up by connecting it (pull request 6b).
+export const START_CHOICES = ['every', 'nothing'];
+
+// Set-up step 3's answer, at set-up and from Showing products' Change
+// (website-buy-online design 15): every product online means active ones with a
+// price (one with no price stays off until priced); nothing online means every
+// product off, inactive ones too. Every category follows, so new products follow
+// the answer, and the answer and its date are kept for the "Started with" line.
+// Runs inside the caller's transaction, website row locked.
+export async function startProducts(startWith) {
+  const every = startWith === 'every';
+  await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(every);
+  await prepare('UPDATE product_categories SET show_online = ?').run(every);
+  await prepare('UPDATE website SET started_with = ?, started_with_at = now(), updated_at = now()').run(startWith);
+}
+
 export async function setUp(body, loginId) {
   if (body?.kind !== 'wheelhouse') throw new WebsiteError(400, 'Choose Wheelhouse’s website');
   if (!START_CHOICES.includes(body.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');

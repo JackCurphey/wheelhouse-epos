@@ -6,22 +6,22 @@
 // own page in Stock. Change asks set-up step 3's question again, with set-up's
 // own rule for products. Every function runs inside the request's shop
 // (runWithShop), so row-level security keeps each shop to its own rows.
+//
+// Only for Wheelhouse's own website, once set up: set-up sets every switch
+// again, and a Shopify website hears about a product going off only from that
+// product's own page in Stock (unpublishProductFromShopify), not from a switch
+// that sets many at once.
 import { prepare } from './db.js';
-import { getOrCreateWebsite, inTransaction, WebsiteError } from './website.js';
+import { getOrCreateWebsite, inTransaction, START_CHOICES, startProducts, WebsiteError } from './website.js';
 import { JOIN } from './lib/categories.js';
+import { limitLockWait } from './lib/stock.js';
 
-export const START_CHOICES = ['every', 'nothing'];
-
-// Set-up step 3's answer, at set-up and from Change: every product online means
-// active ones with a price (one with no price stays off until priced); nothing
-// online means every product off, inactive ones too. Every category follows, so
-// new products follow the answer, and the answer and its date are kept for the
-// "Started with" line. Runs inside the caller's transaction, website row locked.
-export async function startProducts(startWith) {
-  const every = startWith === 'every';
-  await prepare('UPDATE products SET show_online = (? AND price > 0 AND active = 1)').run(every);
-  await prepare('UPDATE product_categories SET show_online = ?').run(every);
-  await prepare('UPDATE website SET started_with = ?, started_with_at = now(), updated_at = now()').run(startWith);
+// The website row locked, in the caller's transaction, refused unless it is
+// Wheelhouse's own website, set up.
+async function lockWheelhouseWebsite() {
+  const website = await prepare('SELECT kind FROM website FOR UPDATE').get();
+  if (website?.kind === 'shopify') throw new WebsiteError(409, 'Switch a Shopify website’s products on each product’s page in Stock');
+  if (website?.kind !== 'wheelhouse') throw new WebsiteError(409, 'Set up the website first');
 }
 
 // The fold: how the website started, each category's switch (parents before the
@@ -50,8 +50,14 @@ export async function setCategoryShown(id, body) {
   if (typeof body?.showOnline !== 'boolean') throw new WebsiteError(400, 'Say whether the category shows on the website');
   const categoryId = Number(id);
   if (!Number.isSafeInteger(categoryId) || categoryId <= 0) throw new WebsiteError(404, 'There is no such category');
+  await getOrCreateWebsite();
   await inTransaction(async () => {
-    const category = await prepare('SELECT path FROM product_categories WHERE id = ? FOR UPDATE').get(categoryId);
+    await limitLockWait();
+    await lockWheelhouseWebsite();
+    // NO KEY UPDATE, not UPDATE: held against a rename, but not against a product
+    // save holding its own row and this category with KEY SHARE (categoryFor),
+    // which would otherwise wait on each other.
+    const category = await prepare('SELECT path FROM product_categories WHERE id = ? FOR NO KEY UPDATE').get(categoryId);
     if (!category) throw new WebsiteError(404, 'There is no such category');
     const inside = `${category.path}${JOIN}`;
     const within = '(path = ? OR left(path, length(?)) = ?)';
@@ -69,8 +75,7 @@ export async function startAgain(body) {
   if (!START_CHOICES.includes(body?.startWith)) throw new WebsiteError(400, 'Choose every product online, or nothing');
   await getOrCreateWebsite();
   await inTransaction(async () => {
-    const website = await prepare('SELECT kind FROM website FOR UPDATE').get();
-    if (!website.kind) throw new WebsiteError(409, 'Set up the website first');
+    await lockWheelhouseWebsite();
     await startProducts(body.startWith);
   });
   return showing();

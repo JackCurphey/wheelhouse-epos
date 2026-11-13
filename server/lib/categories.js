@@ -23,7 +23,8 @@ export function tidyCategory(text) {
 // A new category shows on the website as the one it's inside does; a new top-level
 // one shows unless the website started with nothing online (openspec/changes/
 // website-buy-online, Showing products: new products follow their category).
-const SHOWS_LIKE_PARENT = `COALESCE(
+// Takes the parent's id as its one parameter; Stock › Categories uses it too.
+export const SHOWS_LIKE_PARENT = `COALESCE(
   (SELECT show_online FROM product_categories WHERE id = ?),
   (SELECT started_with IS DISTINCT FROM 'nothing' FROM website),
   true)`;
@@ -54,9 +55,14 @@ export async function categoryFor(text) {
   return path;
 }
 
-// A new product with no switch of its own follows its category; one with no
-// category (Uncategorised) stays off until switched on, as before.
+// A new product with no switch of its own follows its category, on Wheelhouse's
+// own website once set up with a start answer. Otherwise (no website yet, a
+// Shopify website, or one set up before the answer was kept), and with no
+// category (Uncategorised), it stays off until switched on, as before.
 export async function categoryShows(path) {
-  const row = await prepare('SELECT show_online FROM product_categories WHERE path = ?').get(path);
-  return row ? row.show_online : false;
+  const row = await prepare(
+    `SELECT c.show_online AND w.kind = 'wheelhouse' AND w.started_with IS NOT NULL AS shows
+     FROM product_categories c CROSS JOIN website w WHERE c.path = ?`
+  ).get(path);
+  return row?.shows === true;
 }

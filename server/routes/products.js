@@ -269,8 +269,9 @@ export function register(route) {
         // Its category's path found or made (category-tree), with a limit on waiting.
         await limitLockWait();
         const category = await categoryFor(body.category);
-        // Sent with no switch of its own, it follows its category (Showing products).
-        const showOnline = body.showOnline === undefined ? await categoryShows(category) : Boolean(body.showOnline);
+        // Sent with no switch of its own, it follows its category (Showing products),
+        // with set-up's rule that one with no price stays off until priced.
+        const showOnline = body.showOnline === undefined ? price > 0 && await categoryShows(category) : Boolean(body.showOnline);
         info = await db
           .prepare(
             `INSERT INTO products (sku, barcode, name, category, price, cost, low_stock_threshold, supplier, brand, show_online, description, photo_url, updated_at)

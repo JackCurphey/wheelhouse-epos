@@ -49,6 +49,8 @@ const showing = async (req) => ok(await req('/api/website/showing'));
 const categoryId = (state, path) => state.categories.find((c) => c.path === path).id;
 const setCategory = async (req, state, path, on) => ok(await req(`/api/website/categories/${categoryId(state, path)}`, { method: 'PUT', body: { showOnline: on } }));
 const SET_UP = { kind: 'wheelhouse', startWith: 'every', mainColour: '#1A3F66' };
+const setUp = async (req, startWith = 'every') => ok(await req('/api/website/set-up', { method: 'POST', body: { ...SET_UP, startWith } }));
+const addOne = async (req, sku, category, extra = {}) => ok(await req('/api/products', { method: 'POST', body: { name: '[Product]', sku, category, price: 5, ...extra } }), 201);
 
 test('Showing products lists each category, parents before their sub-categories, each On to begin with', async (t) => {
   const { req } = await freshShop(t, '[Showing shop]');
@@ -63,13 +65,22 @@ test('Showing products lists each category, parents before their sub-categories,
 test('a category’s switch sets every product in it and in its sub-categories, and nothing else', async (t) => {
   const { shop, req } = await freshShop(t, '[Category switch shop]');
   await addProducts(req);
+  // Names that start the same way, and a "%" that LIKE would read as "anything".
+  await addOne(req, '[drivetrain tool]', 'Drivetrain Tools', { showOnline: true });
+  await addOne(req, '[sale]', 'Sale 50%', { showOnline: true });
+  await addOne(req, '[sale off tube]', 'Sale 50% off › Tubes', { showOnline: true });
+  await setUp(req);
   const after = await setCategory(req, await showing(req), 'Drivetrain', false);
-  assert.deepEqual(after.categories.map((c) => [c.path, c.showOnline]), [['Bearings', true], ['Drivetrain', false], ['Drivetrain › Derailleurs', false], ['Tyres', true]]);
+  assert.deepEqual(after.categories.filter((c) => !c.path.startsWith('Sale')).map((c) => [c.path, c.showOnline]),
+    [['Bearings', true], ['Drivetrain', false], ['Drivetrain Tools', true], ['Drivetrain › Derailleurs', false], ['Tyres', true]]);
   const now = await switches(shop.id);
   assert.equal(now['[drivetrain]'], false);
   assert.equal(now['[derailleur]'], false);
+  assert.equal(now['[drivetrain tool]'], true, 'a category whose name only starts the same way is not inside it');
   assert.equal(now['[bearing 1]'], true);
   assert.equal(now['[tyre]'], true);
+  await setCategory(req, after, 'Sale 50%', false);
+  assert.equal((await switches(shop.id))['[sale off tube]'], true, '“%” matches only itself');
   const back = await setCategory(req, after, 'Drivetrain', true);
   assert.equal(back.categories.find((c) => c.path === 'Drivetrain › Derailleurs').showOnline, true);
   assert.equal((await switches(shop.id))['[derailleur]'], true);
@@ -91,16 +102,21 @@ test('Stock’s See them filter lists exactly the products set differently from 
   await runWithShop(shop.id, async () => {
     await prepare("UPDATE products SET show_online = false WHERE sku IN ('[bearing 1]', '[bearing 2]', '[bearing no price]')").run();
   });
+  await runWithShop(shop.id, () => prepare("UPDATE products SET show_online = false, active = 0 WHERE sku = '[tyre]'").run());
   const rows = ok(await req('/api/stock-list?show=online-differs')).rows;
   assert.deepEqual(rows.map((r) => r.sku).sort(), ['[bearing 1]', '[bearing 2]']);
+  const all = ok(await req('/api/stock-list?show=online-differs&all=1')).rows;
+  assert.deepEqual(all.map((r) => r.sku).sort(), ['[bearing 1]', '[bearing 2]'], 'not on sale isn’t counted, so isn’t listed either');
 });
 
 test('a new product follows its category; one sent with its own switch keeps it', async (t) => {
   const { shop, req } = await freshShop(t, '[New product shop]');
   await addProducts(req);
+  await setUp(req);
   await setCategory(req, await showing(req), 'Tyres', false);
-  const add = async (sku, category, extra = {}) => ok(await req('/api/products', { method: 'POST', body: { name: '[Product]', sku, category, price: 5, ...extra } }), 201);
+  const add = (sku, category, extra) => addOne(req, sku, category, extra);
   assert.equal((await add('[new bearing]', 'Bearings')).showOnline, true);
+  assert.equal((await add('[new bearing no price]', 'Bearings', { price: 0 })).showOnline, false, 'set-up’s rule: off until priced');
   assert.equal((await add('[new tyre]', 'Tyres')).showOnline, false);
   assert.equal((await add('[new tyre on]', 'Tyres', { showOnline: true })).showOnline, true);
   assert.equal((await add('[new nothing]', '')).showOnline, false, 'Uncategorised has no switch: off until switched on, as before');
@@ -110,10 +126,41 @@ test('a new product follows its category; one sent with its own switch keeps it'
   assert.equal((await switches(shop.id))['[new bearing]'], true);
 });
 
-test('set-up “Every product online” says so with its date, and turns every category on', async (t) => {
-  const { req } = await freshShop(t, '[Started every shop]');
+test('with no Wheelhouse website started under this rule, a new product stays off, as before', async (t) => {
+  const { shop, req } = await freshShop(t, '[Not started shop]');
   await addProducts(req);
-  await setCategory(req, await showing(req), 'Tyres', false);
+  assert.equal((await addOne(req, '[before set-up]', 'Bearings')).showOnline, false, 'no website yet');
+  await setUp(req, 'nothing');
+  await runWithShop(shop.id, async () => {
+    await prepare('UPDATE product_categories SET show_online = true').run();
+    await prepare('UPDATE website SET started_with = NULL, started_with_at = NULL').run();
+  });
+  assert.equal((await addOne(req, '[older website]', 'Bearings')).showOnline, false, 'a website set up before the start answer was kept');
+  await runWithShop(shop.id, () => prepare("UPDATE website SET kind = 'shopify', started_with = 'every'").run());
+  assert.equal((await addOne(req, '[shopify]', 'Bearings')).showOnline, false, 'Shopify gets nothing it wasn’t sent');
+});
+
+test('a category added in Stock › Categories follows the same rule as one made by a product', async (t) => {
+  const { req } = await freshShop(t, '[Categories page shop]');
+  await addProducts(req);
+  const make = async (name, parentId) => ok(await req('/api/product-categories', { method: 'POST', body: { name, parentId } }), 201);
+  await setUp(req, 'nothing');
+  await make('Lights');
+  let state = await showing(req);
+  assert.equal(state.categories.find((c) => c.path === 'Lights').showOnline, false, 'started with nothing online');
+  ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'every' } }));
+  state = await setCategory(req, await showing(req), 'Drivetrain', false);
+  await make('Chains', categoryId(state, 'Drivetrain'));
+  await make('Helmets');
+  state = await showing(req);
+  assert.equal(state.categories.find((c) => c.path === 'Drivetrain › Chains').showOnline, false, 'inside one that is off');
+  assert.equal(state.categories.find((c) => c.path === 'Helmets').showOnline, true, 'started with every product online');
+});
+
+test('set-up “Every product online” says so with its date, and turns every category on', async (t) => {
+  const { shop, req } = await freshShop(t, '[Started every shop]');
+  await addProducts(req);
+  await runWithShop(shop.id, () => prepare("UPDATE product_categories SET show_online = false WHERE path = 'Tyres'").run());
   ok(await req('/api/website/set-up', { method: 'POST', body: SET_UP }));
   const state = await showing(req);
   assert.equal(state.startedWith, 'every');
@@ -157,12 +204,24 @@ test('Change is refused before set-up and without a choice; a category switch ne
   const { req } = await freshShop(t, '[Refused shop]');
   await addProducts(req);
   ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'every' } }), 409);
+  ok(await req(`/api/website/categories/${categoryId(await showing(req), 'Bearings')}`, { method: 'PUT', body: { showOnline: false } }), 409);
   ok(await req('/api/website/set-up', { method: 'POST', body: SET_UP }));
   ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'some' } }), 400);
   ok(await req('/api/website/categories/999999999', { method: 'PUT', body: { showOnline: false } }), 404);
   const state = await showing(req);
   ok(await req(`/api/website/categories/${categoryId(state, 'Bearings')}`, { method: 'PUT', body: { showOnline: 'no' } }), 400);
   assert.equal((await showing(req)).categories.find((c) => c.path === 'Bearings').showOnline, true);
+});
+
+test('a Shopify website’s products aren’t switched here: Shopify isn’t told when one goes off', async (t) => {
+  const { shop, req } = await freshShop(t, '[Shopify showing shop]');
+  await addProducts(req);
+  ok(await req('/api/website'));
+  await runWithShop(shop.id, () => prepare("UPDATE website SET kind = 'shopify'").run());
+  const state = await showing(req);
+  ok(await req(`/api/website/categories/${categoryId(state, 'Bearings')}`, { method: 'PUT', body: { showOnline: false } }), 409);
+  ok(await req('/api/website/start-with', { method: 'POST', body: { startWith: 'nothing' } }), 409);
+  assert.equal((await switches(shop.id))['[bearing 1]'], true);
 });
 
 test('only the Owner reads or changes Showing products', async (t) => {

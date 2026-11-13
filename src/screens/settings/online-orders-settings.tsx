@@ -35,9 +35,11 @@ const useOnlineOrders = () => useQuery({ queryKey: KEY, queryFn: () => apiGet<On
 /** Whether the website is the shop's Shopify shop (ws-pay-shopify): Shopify's checkout takes the website's payments. */
 const useWebsiteKind = () => {
   const site = useQuery({ queryKey: ['website'], queryFn: () => apiGet<{ kind: string | null }>('/api/website'), retry: false });
-  return { known: site.isFetched, shopify: site.data?.kind === 'shopify' };
+  return { known: site.isFetched, shopify: site.data?.kind === 'shopify', wheelhouse: site.data?.kind === 'wheelhouse' };
 };
 const useShopifyWebsite = () => useWebsiteKind().shopify;
+/** Whether the website is Wheelhouse's own, set up: only then does Showing products show (server/website-showing.js). */
+export const useWheelhouseWebsite = () => useWebsiteKind().wheelhouse;
 
 /** Where "Add the details" and the Website page's Taking payments row open. */
 export const PAYING_ONLINE = `${ROUTES.settings}?room=front-desk&fold=paying-online`;
@@ -120,13 +122,18 @@ export function ShowingProducts() {
   const [said, setSaid] = useState<Said>(null);
   const [changing, setChanging] = useState(false);
   const d = showing.data;
+  if (showing.isError) return <p role="alert" className="m-0 text-sm">Wheelhouse couldn’t load the categories. Try again in a moment.</p>;
   if (!d) return null;
+  // Both set products' own switches too, so Stock's list and product pages read again.
+  const saved = (next: Showing) => {
+    queryClient.setQueryData(SHOWING, next);
+    void queryClient.invalidateQueries({ queryKey: SHOWING });
+    void queryClient.invalidateQueries({ queryKey: ['stock'] });
+    void queryClient.invalidateQueries({ queryKey: ['product'] });
+  };
   async function turn(id: number, showOnline: boolean) {
     setSaid(null);
-    try {
-      queryClient.setQueryData(SHOWING, await apiMutate<Showing>(`/api/website/categories/${id}`, { showOnline }, { method: 'PUT' }));
-      void queryClient.invalidateQueries({ queryKey: SHOWING });
-    } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
+    try { saved(await apiMutate<Showing>(`/api/website/categories/${id}`, { showOnline }, { method: 'PUT' })); } catch (err) { setSaid({ ok: false, text: couldntSave(err) }); }
   }
   const started = d.startedWith && d.startedAt
     ? `Started with ${d.startedWith === 'every' ? 'every product' : 'nothing'} online on ${dayText(londonDay(d.startedAt))}.` : null;
@@ -150,10 +157,11 @@ export function ShowingProducts() {
             className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--wh-ink)]">See them</Link>
         </p>
       ) : null}
-      <p className={hint}>New products follow their category. Each product’s page in Stock has its own “Show on website” switch.</p>
+      {/* A website set up before the start was kept leaves new products off (server/lib/categories.js categoryShows). */}
+      <p className={hint}>{`${d.startedWith ? 'New products follow their category. ' : ''}Each product’s page in Stock has its own “Show on website” switch.`}</p>
       {changing && d.startedWith ? (
         <StartAgain was={d.startedWith} onClose={() => setChanging(false)}
-          onSaved={(next) => { queryClient.setQueryData(SHOWING, next); setChanging(false); }} />
+          onSaved={(next) => { saved(next); setChanging(false); }} />
       ) : null}
     </div>
   );
@@ -179,6 +187,7 @@ function StartAgain({ was, onClose, onSaved }: { was: StartWith; onClose: () => 
           <legend className="sr-only">Start with</legend>
           <StartOptions startWith={startWith} onChoose={setStartWith} group="start-again" />
         </fieldset>
+        <p className={hint}>Saving sets every category and product again, including any set differently on their own page.</p>
         {problem ? <p role="alert" className="m-0 text-sm font-semibold text-[var(--wh-danger-hover)]">{problem}</p> : null}
       </DialogBody>
       <DialogFooter>
