@@ -29,6 +29,33 @@ export type C2wView = {
   howToApply: string | null;
 };
 
+/**
+ * One of the signed-in customer's own orders (GET
+ * /api/portal/:shopSlug/c2w-orders[/:id]): the same fields as the link, its
+ * id, and the till sale it was collected with, if any.
+ */
+export type C2wOrder = C2wView & { id: number; saleId: number | null };
+
+const once = { retry: false, refetchOnWindowFocus: false } as const;
+const portal = (shopSlug: string) => `/api/portal/${encodeURIComponent(shopSlug)}`;
+
+export function useC2wOrders(shopSlug: string) {
+  return useQuery({
+    queryKey: ['account', shopSlug, 'c2w-orders'],
+    queryFn: () => apiGet<C2wOrder[]>(`${portal(shopSlug)}/c2w-orders`),
+    ...once,
+  });
+}
+
+export function useC2wOrder(shopSlug: string, id: string) {
+  return useQuery({
+    queryKey: ['account', shopSlug, 'c2w-orders', id],
+    queryFn: () => apiGet<C2wOrder>(`${portal(shopSlug)}/c2w-orders/${encodeURIComponent(id)}`),
+    enabled: /^\d+$/.test(id),
+    ...once,
+  });
+}
+
 export function useC2wLink(shopSlug: string, code: string) {
   return useQuery({
     queryKey: ['c2w-link', shopSlug, code],
