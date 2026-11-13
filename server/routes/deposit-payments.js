@@ -43,8 +43,10 @@ export function register(route) {
         `INSERT INTO online_payments (provider, provider_ref, amount_pence, request_key_hash) VALUES (?, '', ?, ?)
          ON CONFLICT (shop_id, request_key_hash) DO NOTHING RETURNING id`
       ).all(provider.name, deposit.pence, keyHash);
-      const row = await prepare('SELECT * FROM online_payments WHERE request_key_hash = ? FOR UPDATE').get(keyHash);
-      if (row.job_id) {
+      // Deposits only: an online order's payment shares the table (migration 154).
+      const row = await prepare("SELECT * FROM online_payments WHERE request_key_hash = ? AND purpose = 'deposit' FOR UPDATE").get(keyHash);
+      // A key already used for an order's payment gets the same answer as one already booked.
+      if (!row || row.job_id) {
         await dbExec('ROLLBACK');
         return sendJson(res, 409, { error: 'This booking has already been sent.', code: 'already_booked' });
       }

@@ -49,8 +49,9 @@ overnight questions answered (#735).
 **Jack next:**
 1. Finish website browse, Buy online and Cycle to Work (the open pull
    requests above).
-2. Products, stock, sizes and colours (WP-1.5): nine of ten pieces in (#759
-   open ticks the tenth).
+2. Products, stock, sizes and colours (WP-1.5): all in but piece 7, which
+   waits for a real Citrus Lime export (piece 10 was built in #632 to #635;
+   its box is ticked, #759).
 3. Paying a repair online: waits on Mark's deposit taken at the till.
 4. The text receipt and its page: waits on Mark's step C.
 
