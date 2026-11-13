@@ -9,7 +9,7 @@
 // Each queued message is noted on the order (an online_order_events 'message'
 // line), as customer_messages has no order column: that is how the order finds
 // an email that didn't arrive (orderEmailProblem).
-import { prepare } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 import { queueMessage, UNDO_MS } from '../messaging/engine.js';
 import { formatOpeningHours } from '../messaging/templates.js';
 import { messageLink } from '../workshop/job-messages.js';
@@ -18,6 +18,7 @@ import { toCapacitySettings } from '../workshop/jobs.js';
 import { longDate } from '../c2w/orders.js';
 import { isHttpsRequest } from '../proxy-trust.js';
 import { orderReference } from './numbers.js';
+import { penceText } from '../lib/money-text.js';
 
 export const ORDER_KEYS = ['order_confirmation', 'order_ready', 'order_still_waiting', 'order_item_not_supplied', 'order_cancelled', 'order_not_ready'];
 
@@ -46,19 +47,73 @@ export const orderLinkPath = (shopSlug, code) => `/store/${shopSlug}/orders/${co
 // the request's own host.
 const baseFor = (req) => process.env.APP_PUBLIC_URL || (req ? `${isHttpsRequest(req) ? 'https' : 'http'}://${req.headers.host}` : null);
 
+// Which shop the order is collected from, in its messages: the business's name,
+// and the shop's after it when that shop has a name of its own ("North Street
+// Cycles, Bolton", on-email-ready). A business's first shop is named after the
+// business, so a one-shop business is just its name. The address and phone stay
+// the business's: shops have none of their own yet (decided while building).
+const shopNameFor = (business, siteName) => (siteName && siteName !== business ? `${business}, ${siteName}` : business);
+
+/**
+ * The shop's lines ("North Street Cycles, Bolton / Open … / [address] · [phone]",
+ * on-email-ready), leaving out what Shop details hasn't got, so there's no bare
+ * "Open" and no "·" with nothing beside it.
+ */
+export function whereToCollect({ name, hours, address, phone }) {
+  const reach = [address, phone].filter(Boolean).join(' · ');
+  return [name, hours ? `Open ${hours}` : '', reach].filter(Boolean).join('\n');
+}
+
+// "£10.00 store credit and £35.00 by card", as the order was paid.
+function howPaid(order) {
+  return [order.credit_pence > 0 ? `${penceText(order.credit_pence)} store credit` : '', order.card_pence > 0 ? `${penceText(order.card_pence)} by card` : '']
+    .filter(Boolean).join(' and ');
+}
+
+// Sent once an order: a second (a retried step) is skipped while the first
+// stands. One undone in its Undo time, or one that failed, doesn’t count; one
+// not known to have gone ("unknown") does, as the customer may have it.
+const ONCE = ['order_confirmation', 'order_cancelled'];
+
 /**
  * Queues one order message for an order, filled in from the order as it is
  * now. `vars` adds the step's own tap-ins (Item, Reason, Amount refunded).
  * `req` gives the link's host when there's no APP_PUBLIC_URL. Returns
- * queueMessage's answer ({ id } or { skipped }).
+ * queueMessage's answer ({ id } or { skipped }). Order cancelled for an order
+ * never paid goes in its own wording, with nothing refunded. Its own
+ * transaction (a savepoint inside the caller's) holds the order's row from the
+ * send-once check to the email's record on the order, so two at once queue one
+ * and a failure between them leaves neither (risky-area review).
  */
-export async function queueOrderMessage(orderId, key, { req = null, loginId = null, vars = {} } = {}) {
+export async function queueOrderMessage(orderId, key, options = {}) {
   if (!ORDER_KEYS.includes(key)) throw new Error(`${key} is not an online order message`);
+  await dbExec('BEGIN');
+  try {
+    const queued = await queueHoldingOrder(orderId, key, options);
+    await dbExec('COMMIT');
+    return queued;
+  } catch (err) {
+    await dbExec('ROLLBACK');
+    throw err;
+  }
+}
+
+async function queueHoldingOrder(orderId, key, { req = null, loginId = null, vars = {} }) {
   const order = await prepare(
-    `SELECT id, customer_id, name, email, number, order_code, to_char(keep_until, 'YYYY-MM-DD') AS keep_until
-     FROM online_orders WHERE id = ?`,
+    `SELECT o.id, o.customer_id, o.name, o.email, o.number, o.order_code, o.card_pence, o.credit_pence,
+            to_char(o.keep_until, 'YYYY-MM-DD') AS keep_until, s.name AS site_name
+     FROM online_orders o LEFT JOIN sites s ON s.id = o.site_id WHERE o.id = ? FOR UPDATE OF o`,
   ).get(orderId);
   if (!order) return { skipped: 'no_order' };
+  const family = key;
+  if (key === 'order_cancelled' && order.number === null) key = 'order_cancelled_unpaid';
+  if (ONCE.includes(family)) {
+    const earlier = await prepare(
+      `SELECT 1 FROM online_order_events e JOIN customer_messages m ON m.id = (e.detail->>'messageId')::int
+       WHERE e.order_id = ? AND e.kind = 'message' AND e.detail->>'key' IN (?, ?) AND m.intent_state NOT IN ('undone', 'failed')`,
+    ).get(orderId, family, `${family}_unpaid`);
+    if (earlier) return { skipped: 'already' };
+  }
   const shop = await prepare("SELECT name, slug, address, phone FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
   const settings = await prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const base = baseFor(req);
@@ -68,23 +123,37 @@ export async function queueOrderMessage(orderId, key, { req = null, loginId = nu
     console.error(`Messages: no APP_PUBLIC_URL, so online order ${orderId}'s ${key} message wasn't sent`);
     return { skipped: 'no_link' };
   }
+  const shopName = shopNameFor(shop.name, order.site_name);
+  const hours = settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : '';
+  const bought = key === 'order_confirmation'
+    ? (await prepare(
+      `SELECT l.qty, p.name FROM online_order_lines l JOIN products p ON p.id = l.product_id
+       WHERE l.order_id = ? ORDER BY l.id`,
+    ).all(orderId)).map((l) => `${l.qty} × ${l.name}`).join('\n')
+    : '';
+  const own = { ...vars };
+  // The reason has its own full stop in the wording, so one typed with it loses it.
+  if (typeof own.Reason === 'string') own.Reason = own.Reason.trim().replace(/\.+$/, '');
   const queued = await queueMessage({
     customerId: order.customer_id,
     email: order.email ?? '',
     key,
-    delayMs: WAIT_MS[key] ?? UNDO_MS,
+    delayMs: WAIT_MS[family] ?? UNDO_MS,
     loginId,
     vars: {
       'Customer’s first name': (order.name ?? '').trim().split(/\s+/)[0],
       'Order number': order.number === null ? '' : orderReference(order.number),
-      'Shop name': shop.name,
+      'Shop name': shopName,
       'Link to your order': link,
       // With no phone in Shop details, "the shop", as Work added within your limit says.
       'Shop phone': shop.phone || 'the shop',
       'Shop address': shop.address || '',
-      'Opening hours': settings ? formatOpeningHours(openingHoursFor(toCapacitySettings(settings))) : '',
+      'Opening hours': hours,
+      'Where to collect': whereToCollect({ name: shopName, hours, address: shop.address, phone: shop.phone }),
+      'What you bought': bought,
+      'How you paid': howPaid(order),
       'Keep until': order.keep_until ? longDate(order.keep_until) : '',
-      ...vars,
+      ...own,
     },
   });
   if (queued.id) {
@@ -100,10 +169,13 @@ export async function queueOrderMessage(orderId, key, { req = null, loginId = nu
  * waits. One already sent can't be stopped.
  */
 export async function undoOrderReady(orderId) {
-  await prepare(
+  const undone = await prepare(
     `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
-     WHERE intent_state = 'intended' AND id = (SELECT ready_message_id FROM online_orders WHERE id = ?)`,
-  ).run(orderId);
+     WHERE intent_state = 'intended' AND id = (SELECT ready_message_id FROM online_orders WHERE id = ?)
+     RETURNING id`,
+  ).get(orderId);
+  // The order lets go of it, so nothing takes the undone email for its ready one.
+  if (undone) await prepare('UPDATE online_orders SET ready_message_id = NULL WHERE id = ? AND ready_message_id = ?').run(orderId, undone.id);
 }
 
 /**
@@ -118,16 +190,17 @@ export async function orderReadyStillNeeded(messageId) {
 /**
  * The order's email that couldn't reach the customer, for the row's "Email
  * didn’t arrive · [phone]" (on-orders): { failed: its key, phone } when the
- * order's latest email that has been tried failed, or null. One that arrived
- * after it clears it (risky-area review).
+ * order's latest email that has been tried failed, or was left not knowing
+ * whether it went ("unknown"), or null. One that arrived after it clears it
+ * (risky-area review).
  */
 export async function orderEmailProblem(orderId) {
   const row = await prepare(
     `SELECT m.template_key, m.intent_state, o.phone FROM online_order_events e
      JOIN online_orders o ON o.id = e.order_id
      JOIN customer_messages m ON m.id = (e.detail->>'messageId')::int
-     WHERE e.order_id = ? AND e.kind = 'message' AND m.intent_state IN ('failed', 'delivered')
+     WHERE e.order_id = ? AND e.kind = 'message' AND m.intent_state IN ('failed', 'unknown', 'delivered')
      ORDER BY m.id DESC LIMIT 1`,
   ).get(orderId);
-  return row?.intent_state === 'failed' ? { failed: row.template_key, phone: row.phone } : null;
+  return row && row.intent_state !== 'delivered' ? { failed: row.template_key, phone: row.phone } : null;
 }
