@@ -59,21 +59,10 @@ function expectedPence(sharePence, terms) {
   return Math.max(0, sharePence - commission);
 }
 
-/**
- * Before the sale, in its transaction: locks the order, checks it is at Ready to
- * collect, and returns the sale's customer, lines and payments, with `finish`
- * to run once the sale is made. Throws Refused (404, 409 wrong_stage, 400
- * c2w_share, 409 c2w_other_site) or ValidationError, with nothing changed.
- * `tillSite` is the till's own site (null when it has none set).
- */
-export async function startHandOver(orderId, { items, payments, discount, checks, tillSite = null }) {
-  const locked = await prepare('SELECT id, stage FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
-  if (!locked) throw new Refused(404, { error: 'Not found' });
-  if (locked.stage !== 'ready') throw new Refused(409, WRONG_STAGE);
-  const row = await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId);
-  const terms = await prepare('SELECT commission_kind, commission_value, pays_in_days, handover_note FROM c2w_providers WHERE id = ?').get(row.provider_id);
-  const ticked = readChecks(checks, terms.handover_note);
-
+// The checks and sums the sale and the till's "amount due" share, so the two
+// always agree: refused at another site or with the bike added twice, then the
+// sale's lines, total and the provider's share.
+async function figuresFor(row, { items, discount, tillSite }) {
   // The bike leaves stock at the till's site, so it is handed over at the shop
   // that holds it (default taken overnight 12 Nov; Jack can overrule).
   const heldAt = row.site_id ?? (row.frame_id ? (await prepare('SELECT site_id FROM stock_frames WHERE id = ?').get(row.frame_id))?.site_id ?? null : null);
@@ -91,9 +80,49 @@ export async function startHandOver(orderId, { items, payments, discount, checks
   // The provider pays up to the certificate, and never more than the order's
   // part of the sale comes to: a discount (or the customer's group discount) can
   // bring it lower, and what the customer adds at the counter is theirs to pay.
-  const { total } = await computeOrderTotals({ items: loaded, discount, customerId: row.customer_id });
+  const { total, groupDiscount } = await computeOrderTotals({ items: loaded, discount, customerId: row.customer_id });
+  const totalPence = poundsToPence(total);
   const counterPence = loaded.slice(lines.length - items.length).reduce((sum, l) => sum + l.lineTotalPence, 0);
-  const sharePence = Math.max(0, Math.min(providerPays(row), poundsToPence(total) - counterPence));
+  const sharePence = Math.max(0, Math.min(providerPays(row), totalPence - counterPence));
+  return { lines, totalPence, sharePence, groupDiscount };
+}
+
+/**
+ * What the till asks for before taking any card (review of pull request 7b): the
+ * sale's total with the customer's group discount, the provider's share and what
+ * the customer pays, worked out as the sale will. Records nothing. Throws what
+ * the sale would (404, 409 wrong_stage, 409 c2w_other_site, 400 c2w_bike_twice,
+ * or ValidationError for a retired product).
+ */
+export async function handOverDue(orderId, { items, discount, tillSite = null }) {
+  const row = Number.isInteger(orderId) ? await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId) : null;
+  if (!row) throw new Refused(404, { error: 'Not found' });
+  if (row.stage !== 'ready') throw new Refused(409, WRONG_STAGE);
+  const { totalPence, sharePence, groupDiscount } = await figuresFor(row, { items, discount, tillSite });
+  return {
+    totalPence,
+    sharePence,
+    customerPaysPence: totalPence - sharePence,
+    groupDiscountPence: poundsToPence(groupDiscount.amount),
+    groupName: groupDiscount.name,
+  };
+}
+
+/**
+ * Before the sale, in its transaction: locks the order, checks it is at Ready to
+ * collect, and returns the sale's customer, lines and payments, with `finish`
+ * to run once the sale is made. Throws Refused (404, 409 wrong_stage, 400
+ * c2w_share, 409 c2w_other_site) or ValidationError, with nothing changed.
+ * `tillSite` is the till's own site (null when it has none set).
+ */
+export async function startHandOver(orderId, { items, payments, discount, checks, tillSite = null }) {
+  const locked = await prepare('SELECT id, stage FROM c2w_orders WHERE id = ? FOR UPDATE').get(orderId);
+  if (!locked) throw new Refused(404, { error: 'Not found' });
+  if (locked.stage !== 'ready') throw new Refused(409, WRONG_STAGE);
+  const row = await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId);
+  const terms = await prepare('SELECT commission_kind, commission_value, pays_in_days, handover_note FROM c2w_providers WHERE id = ?').get(row.provider_id);
+  const ticked = readChecks(checks, terms.handover_note);
+  const { lines, sharePence } = await figuresFor(row, { items, discount, tillSite });
   const tender = `${C2W_TENDER}${row.provider_name}`;
   const claimed = payments.filter(isC2w);
   if (claimed.length > 1 || claimed.some((p) => String(p.tenderType).trim() !== tender || poundsToPence(p.amount) !== sharePence)) {

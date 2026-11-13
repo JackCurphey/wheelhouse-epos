@@ -26,15 +26,27 @@ const order = (over = {}) => ({
   providerPaysPence: 106000, customerPaysPence: null, certificateLate: false, saleId: null, collectedAt: null, paidOn: null, closeReason: null,
   inStock: true, held: true, purchaseOrderId: null, orderedFrom: null, releasedAt: null, expectedPence: null, expectedBy: null, paidPence: null, providerReference: null, next: 'hand-over', ...over,
 });
-// What the server answers a hand-over: the sale with both payments (serializeSale).
+// What the server works out for a hand-over (server/c2w/hand-over.js figuresFor):
+// the customer's group discount off the whole sale, and the provider's share never
+// more than the order's own part, the counter's lines being the customer's.
+const due = (body) => {
+  const counter = Math.round((body.items ?? []).reduce((n, it) => n + (it.unitPrice ?? 0) * (it.qty ?? 1), 0) * 100);
+  const subtotal = state.order.totalPence + counter;
+  const groupDiscountPence = state.group ? Math.round((subtotal * state.group.percent) / 100) : 0;
+  const totalPence = subtotal - groupDiscountPence;
+  const sharePence = Math.max(0, Math.min(state.order.providerPaysPence, totalPence - counter));
+  return { totalPence, sharePence, customerPaysPence: totalPence - sharePence, groupDiscountPence, groupName: state.group ? `${state.group.name} (${state.group.percent}%)` : '' };
+};
+// What the server answers a hand-over: the sale with both payments (serializeSale),
+// refused, as the server would, unless what the till took adds up to what's due.
 const sale = (body) => {
-  const counter = (body.items ?? []).reduce((n, it) => n + (it.unitPrice ?? 0) * (it.qty ?? 1), 0);
-  // As server/c2w/hand-over.js: never more than the order's own part, the counter being the customer's.
-  const share = Math.min(state.order.providerPaysPence / 100, state.order.totalPence / 100);
-  const extra = [{ tenderType: 'Cycle to Work · [Provider]', amount: share }];
-  return { id: 601, createdAt: '2026-09-14T11:00:00.000Z', subtotal: state.order.totalPence / 100 + counter, discount: 0, groupDiscountAmount: 0, groupDiscountName: '',
-    total: state.order.totalPence / 100 + counter, paymentMethod: body.cardAmount > 0 ? 'Card' : 'Other', cashAmount: body.cashAmount, cardAmount: body.cardAmount, cashTendered: body.cashTendered, extraPayments: extra,
-    items: [{ id: 1, name: '[Bike] · [Size]', qty: 1, unitPrice: 1000, lineTotal: 1000 }] };
+  const d = due(body);
+  if (Math.round((body.cashAmount + body.cardAmount) * 100) !== d.customerPaysPence) return [400, { error: 'The payments don’t add up to the total' }];
+  const extra = d.sharePence > 0 ? [{ tenderType: 'Cycle to Work · [Provider]', amount: d.sharePence / 100 }] : [];
+  state.order = { ...state.order, stage: 'collected', saleId: 601 };
+  return [201, { id: 601, createdAt: '2026-09-14T11:00:00.000Z', subtotal: (d.totalPence + d.groupDiscountPence) / 100, discount: 0, groupDiscountAmount: d.groupDiscountPence / 100, groupDiscountName: d.groupName,
+    total: d.totalPence / 100, paymentMethod: body.cardAmount > 0 ? 'Card' : 'Other', cashAmount: body.cashAmount, cardAmount: body.cardAmount, cashTendered: body.cashTendered, extraPayments: extra,
+    items: [{ id: 1, name: '[Bike] · [Size]', qty: 1, unitPrice: 1000, lineTotal: 1000 }] }];
 };
 
 const realFetch = globalThis.fetch;
@@ -53,10 +65,10 @@ afterEach(async () => {
   rendered = false;
 });
 
-/** `onSale` answers POST /api/sales with [status, body]. */
-async function open(path, { theOrder = order(), onSale, tick = 100000 } = {}) {
+/** `onSale` answers POST /api/sales with [status, body], `onDue` the amount due; `group` is Maya's group discount. */
+async function open(path, { theOrder = order(), onSale, onDue, group = null, tick = 100000 } = {}) {
   calls = [];
-  state = { order: theOrder };
+  state = { order: theOrder, group };
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -73,9 +85,13 @@ async function open(path, { theOrder = order(), onSale, tick = 100000 } = {}) {
     if (p === '/api/workshop-services') return reply(200, []);
     if (p === '/api/shop-details') return reply(200, { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]' });
     if (method === 'POST' && p === '/api/sales') {
-      if (onSale) { const [status, b] = onSale(body); return reply(status, b); }
-      state.order = { ...state.order, stage: 'collected', saleId: 601 };
-      return reply(201, sale(body));
+      const [status, b] = onSale ? onSale(body) : sale(body);
+      return reply(status, b);
+    }
+    if (method === 'POST' && p === '/api/c2w/orders/9/hand-over/due') {
+      if (state.order.stage !== 'ready') return reply(409, { error: 'This order isn’t at that stage any more. Reload to see where it is.', code: 'wrong_stage' });
+      const [status, b] = onDue ? onDue(body) : [200, due(body)];
+      return reply(status, b);
     }
     if (p === '/api/c2w/orders/9') return reply(200, { order: { ...state.order, events: [] }, today: TODAY });
     if (p.startsWith('/api/')) return reply(200, []);
@@ -175,13 +191,13 @@ test('till-c2w: the order’s lines are locked and marked “on the order”, th
   const pill = t.sale.getByRole('button', { name: 'Bike collected when paid' });
   assert.equal(pill.getAttribute('aria-pressed'), 'true');
   assert.equal(pill.disabled, true, 'handing over is collecting the bike');
-  assert.ok(t.sale.getByRole('button', { name: 'Take payment · £1,060.00' }));
+  assert.ok(await t.sale.findByRole('button', { name: 'Take payment · £1,060.00' }));
 });
 
 test('till-c2w: a counter line goes under the order’s, marked “added at the counter”, and adds to the total', async () => {
   const t = await openTill();
   await scanPads(t);
-  assert.ok(t.sale.getByRole('button', { name: 'Take payment · £1,088.00' }));
+  assert.ok(await t.sale.findByRole('button', { name: 'Take payment · £1,088.00' }));
 });
 
 test('till-c2w: an order no longer ready to hand over says so, with no payment to take', async () => {
@@ -276,4 +292,94 @@ test('after Paid, the next sale is an empty till, not the order again', async ()
   await t.waitFor(() => assert.equal(window.location.search, ''));
   await t.waitFor(() => assert.ok(t.ui.queryByText('[Bike] · [Size]') === null));
   assert.ok(t.ui.getByRole('button', { name: /^Take payment/ }).disabled);
+});
+
+// ---- The amount due comes from the server (review of pull request 7b) ----
+
+test('till-c2w: Maya’s group discount comes off the total, and the provider’s share and the card add up to it', async () => {
+  const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }), group: { name: '[Group]', percent: 10 } });
+  await scanPads(t);
+  // £1,088.00 less 10%: the provider pays up to the order's part, Maya the counter's £28.00.
+  assert.ok(await t.sale.findByRole('button', { name: 'Take payment · £979.20' }));
+  assert.ok(t.sale.getByText('[Group] (10%)') && t.sale.getByText('−£108.80'));
+  const pay = await payDialog(t);
+  assert.ok(pay.getByRole('heading', { name: 'Take payment · £979.20' }));
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\] · £951\.20/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: /^Card · £28\.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  assert.equal(sales()[0].cardAmount, 28);
+  assert.ok(pay.getByText('£951.20'), 'the Paid rows show the provider’s share as the server worked it out');
+});
+
+test('till-c2w: a hand-over the server would refuse says so before any card is taken', async () => {
+  const onDue = () => [409, { error: '[Bike] · [Size] is held at [Other shop]. Hand it over at that shop’s till.', code: 'c2w_other_site' }];
+  const t = await openTill({ onDue });
+  assert.equal((await t.sale.findByRole('alert')).textContent, '[Bike] · [Size] is held at [Other shop]. Hand it over at that shop’s till.');
+  assert.equal(t.sale.getByRole('button', { name: /^Take payment/ }).disabled, true);
+  assert.equal(sales().length, 0);
+});
+
+test('till-c2w: the amount due is asked again when the counter’s lines change', async () => {
+  const t = await openTill();
+  await t.sale.findByRole('button', { name: 'Take payment · £1,060.00' });
+  await scanPads(t);
+  await t.sale.findByRole('button', { name: 'Take payment · £1,088.00' });
+  const asked = calls.filter((c) => c.url === '/api/c2w/orders/9/hand-over/due').map((c) => c.body.items.length);
+  assert.deepEqual([asked[0], asked.at(-1)], [0, 1]);
+});
+
+test('till-c2w-extra: Card from the first step takes what the certificate doesn’t cover', async () => {
+  const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }) });
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: 'Card' }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  assert.deepEqual(sales(), [{ items: [], c2wOrderId: 9, c2wChecks: [], cashAmount: 0, cardAmount: 60, cashTendered: null, cashierId: 21, sellPastStock: true }]);
+});
+
+test('till-c2w-extra: Split takes Maya’s part in cash and card, the provider paying its share', async () => {
+  const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }) });
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: 'Split' }));
+  t.fireEvent.change(await pay.findByLabelText('Cash part'), { target: { value: '20' } });
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £40\.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  assert.deepEqual(sales(), [{ items: [], c2wOrderId: 9, c2wChecks: [], cashAmount: 20, cardAmount: 40, cashTendered: 20, cashierId: 21, sellPastStock: true }]);
+});
+
+test('a server fault during a hand-over says the sale may have saved, not that none was', async () => {
+  const onSale = () => [500, { error: 'Something went wrong' }];
+  const t = await openTill({ theOrder: order({ certificatePence: 100000, providerPaysPence: 100000 }), onSale });
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: /^Card · £60\.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.equal((await pay.findByRole('alert')).textContent, 'Something went wrong in Wheelhouse, so this sale may have saved. Check Maya Patel’s order before taking payment again: if it’s Collected, don’t take the card payment again.');
+});
+
+test('Paid keeps its figures when the order is fetched again as Collected', async () => {
+  const t = await openTill();
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
+  assert.ok(await pay.findByRole('heading', { name: 'Paid' }));
+  const shown = pay.getAllByText('£1,060.00').length;
+  const before = calls.filter((c) => c.url === '/api/c2w/orders/9').length;
+  await shell.queryClient.invalidateQueries({ queryKey: ['c2w-order', 9] });
+  await t.waitFor(() => assert.ok(calls.filter((c) => c.url === '/api/c2w/orders/9').length > before));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(pay.getByRole('heading', { name: 'Paid' }));
+  assert.equal(pay.getAllByText('£1,060.00').length, shown, 'the provider’s share and the total are still shown');
+});
+
+test('after Paid, the order, the lists and the count are fetched again', async () => {
+  const t = await openTill({ tick: 5 });
+  const counted = () => calls.filter((c) => c.url === '/api/c2w/count').length;
+  await t.waitFor(() => assert.ok(counted() > 0));
+  const before = counted();
+  const pay = await payDialog(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cycle to Work · \[Provider\]/ }));
+  await t.waitFor(() => assert.equal(window.location.search, ''));
+  await t.waitFor(() => assert.ok(counted() > before, 'the Cycle to Work count in the menu'));
 });

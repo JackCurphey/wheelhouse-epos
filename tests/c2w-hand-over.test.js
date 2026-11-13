@@ -67,9 +67,9 @@ async function framedBike() {
 const post = (p, body) => own(p, { method: 'POST', body });
 const order = async (id) => (await own(`/api/c2w/orders/${id}`)).body.order;
 // Maya's order for the bike and a £40 lock (£1,040), certificate £800, ready to collect.
-async function readyOrder({ certificatePence = 80000, providerId = provider.id } = {}) {
+async function readyOrder({ certificatePence = 80000, providerId = provider.id, customerId = maya.id } = {}) {
   const bike = await framedBike();
-  const res = await post('/api/c2w/orders', { customerId: maya.id, providerId, productId: bike, accessoryIds: [lock] });
+  const res = await post('/api/c2w/orders', { customerId, providerId, productId: bike, accessoryIds: [lock] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const cert = await post(`/api/c2w/orders/${res.body.order.id}/certificate`, { number: '[certificate number]', amountPence: certificatePence, difference: 'keep', ready: true });
   assert.equal(cert.status, 200, JSON.stringify(cert.body));
@@ -342,4 +342,59 @@ test('7.2 a plain sale can’t claim a Cycle to Work payment, and still needs it
   assert.equal(made.status, 201);
   const paid = await own(`/api/sale-documents/${made.body.id}/convert`, { method: 'POST', body: { cashierId, sellPastStock: true, payments: [{ tenderType: TENDER, amount: 20 }] } });
   assert.deepEqual([paid.status, paid.body.code], [400, 'c2w_share']);
+});
+
+// ---------- What the till asks for, before the card (review of pull request 7b) ----------
+
+const due = (id, body = {}) => post(`/api/c2w/orders/${id}/hand-over/due`, { items: [], ...body });
+
+test('7.4 the amount due: a customer in a 10% group is asked for what the server will charge, before any card is taken', async () => {
+  const sam = (await own('/api/customers', { method: 'POST', body: { name: 'Sam Okafor', email: `sam-${tag()}@example.test` } })).body;
+  await inShop(async () => {
+    const group = (await prepare("INSERT INTO customer_groups (name, discount_percent) VALUES ('[Group]', 10) RETURNING id").get()).id;
+    await prepare('INSERT INTO customer_group_members (customer_id, group_id) VALUES (?, ?) RETURNING customer_id').get(sam.id, group);
+  });
+  const o = await readyOrder({ customerId: sam.id });
+  const before = await salesCount();
+  const res = await due(o.id);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  // £1,040 less 10% is £936; the provider pays its £800, Sam the £136 left.
+  assert.deepEqual(
+    [res.body.totalPence, res.body.sharePence, res.body.customerPaysPence, res.body.groupDiscountPence, res.body.groupName],
+    [93600, 80000, 13600, 10400, '[Group] (10%)'],
+  );
+  assert.equal(await salesCount(), before, 'asking records nothing');
+  assert.equal((await order(o.id)).stage, 'ready');
+  const sold = await sell({ c2wOrderId: o.id, cardAmount: res.body.customerPaysPence / 100 });
+  assert.equal(sold.status, 201, JSON.stringify(sold.body));
+
+  // A certificate for more than the discounted order, and a £20 pump at the
+  // counter: £1,060 less 10% is £954; the pump is Sam's at its £20, the provider pays the £934 left.
+  const big = await readyOrder({ customerId: sam.id, certificatePence: 95000 });
+  const pumped = { items: [{ productId: pump, qty: 1 }] };
+  const all = await due(big.id, pumped);
+  assert.equal(all.status, 200, JSON.stringify(all.body));
+  assert.deepEqual([all.body.totalPence, all.body.sharePence, all.body.customerPaysPence], [95400, 93400, 2000]);
+  const paid = await sell({ c2wOrderId: big.id, ...pumped, cardAmount: 20 });
+  assert.equal(paid.status, 201, JSON.stringify(paid.body));
+  assert.deepEqual(await paymentsOf(paid.body.id), [{ tender_type: TENDER, amount: 934 }]);
+});
+
+test('7.2 the amount due refuses what the sale would refuse, before the card: another site, the bike twice, not ready', async () => {
+  const away = await readyOrder();
+  await inShop(async () => {
+    const elsewhere = (await prepare(`INSERT INTO sites (name, code) VALUES ('[Other site]', ?) RETURNING id`).get(letters())).id;
+    await prepare('UPDATE c2w_orders SET site_id = ? WHERE id = ? RETURNING id').get(elsewhere, away.id);
+  });
+  const site409 = await due(away.id);
+  assert.deepEqual([site409.status, site409.body.code], [409, 'c2w_other_site']);
+
+  const o = await readyOrder();
+  const twice = await due(o.id, { items: [{ productId: o.bike, qty: 1 }] });
+  assert.deepEqual([twice.status, twice.body.code], [400, 'c2w_bike_twice']);
+
+  assert.equal((await sell({ c2wOrderId: o.id, cardAmount: 240 })).status, 201);
+  const gone = await due(o.id);
+  assert.deepEqual([gone.status, gone.body.code], [409, 'wrong_stage']);
+  assert.equal((await due(999999)).status, 404);
 });

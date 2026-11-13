@@ -55,12 +55,12 @@ const BIG = 'flex w-full min-h-[84px] items-center gap-4 rounded-xl border px-[1
  * or a smaller certificate, is taken from the customer as a second payment.
  * One call records both, with the order's lines added by the server.
  */
-export type C2wPayment = { orderId: number; checks: string[]; orderTotal: number; share: number; provider: string; customer: string; certificateNumber: string; bike: string; frameNumber: string | null };
+export type C2wPayment = { orderId: number; checks: string[]; total: number; share: number; provider: string; customer: string; certificateNumber: string; bike: string; frameNumber: string | null };
 const C2W_SUB = (provider: string) => `The certificate · owed by ${provider}, not in the drawer`;
 
 type JobPayment = { orderId: number; total: number; receipt?: ReceiptJob; customer?: ReceiptCustomer | null; signedOffBy?: number | null; afterPaid: (reply: { jobWarning?: string }) => Promise<string | null> };
 
-export function PayDialog({ lines, onClose, onNextSale, job, c2w, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; c2w?: C2wPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
+export function PayDialog({ lines, onClose, onNextSale, job, c2w: c2wNow, requestKey, onAnswerLost, onAnswerSettled }: { lines: TillLine[]; onClose: () => void; onNextSale: () => void; job?: JobPayment; c2w?: C2wPayment; requestKey: string; onAnswerLost?: () => void; onAnswerSettled?: () => void }) {
   const session = useSession();
   const me = session.status === 'signed-in' ? session.user.employee : null;
   const shopName = session.status === 'signed-in' ? session.shop.name : '';
@@ -74,15 +74,18 @@ export function PayDialog({ lines, onClose, onNextSale, job, c2w, requestKey, on
   const [step, setStep] = useState<Step>(serving ? { kind: 'methods' } : { kind: 'who' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // A hand-over's figures are the server's amount due when the box opened, kept
+  // as they were: once the order is Collected a refetch can't change what Paid
+  // shows (review of pull request 7b).
+  const [c2w] = useState(c2wNow);
   // A job's order is paid at the amount due, discounts taken off on the server.
-  // A Cycle to Work order is its own lines, added by the server, plus the counter's.
-  const total = job ? job.total : (c2w?.orderTotal ?? 0) + saleTotal(lines);
+  // A Cycle to Work order's total and share are the server's (POST hand-over/due).
+  const total = job ? job.total : c2w ? c2w.total : saleTotal(lines);
   const count = lines.reduce((n, l) => n + l.qty, 0);
   const what = c2w ? `${possessive(c2w.customer)} Cycle to Work order` : items(count);
   const sub = serving ? `${serving.name} serving · ${what}` : what;
-  // The provider pays up to the order's own total, never the counter's lines,
-  // as the server works it out (server/c2w/hand-over.js); the customer pays the rest.
-  const share = c2w ? Math.min(pence(c2w.share), pence(c2w.orderTotal)) / 100 : 0;
+  // The provider's share as the server works it out (server/c2w/hand-over.js); the customer pays the rest.
+  const share = c2w ? c2w.share : 0;
   const rest = c2w ? (pence(total) - pence(share)) / 100 : total;
   const c2wHow = c2w ? `Cycle to Work · ${c2w.provider}` : '';
   const howPaid = (cash: number, card: number, plain: string) => {
@@ -136,6 +139,8 @@ export function PayDialog({ lines, onClose, onNextSale, job, c2w, requestKey, on
       // A job whose work can't be finished yet is refused before anything is taken.
       // The card machine may already have taken it: say so (fresh review).
       else if (job && err instanceof ApiError && err.code === 'illegal') setError(`The work isn’t finished, so this job can’t be paid yet. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
+      // A server fault says neither way, so the hand-over may have gone through.
+      else if (c2w && err instanceof ApiError && err.status >= 500) setError(`Something went wrong in Wheelhouse, so this sale may have saved. Check ${possessive(c2w.customer)} order before taking payment again${card > 0 ? ': if it’s Collected, don’t take the card payment again.' : '.'}`);
       else if ((job || c2w) && err instanceof ApiError) setError(`${err.message.replace(/\.$/, '')}. No sale was recorded${card > 0 ? ': if the card machine took the payment, reverse it on the machine.' : '.'}`);
       else setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {

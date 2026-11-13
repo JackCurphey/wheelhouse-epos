@@ -18,7 +18,7 @@ import { PinCheckin, ServingButton } from './pin-checkin.tsx';
 import { WorkingPills } from './workshop-computer.tsx';
 import { useTillCheckin, type ThisTillName } from '@/lib/till-checkin.ts';
 import { SignOffDialog, signedOffWhen } from '@/screens/diary/sign-off-dialog.tsx';
-import { lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
+import { asSaleItem, lineSub, lineTotal, money, saleTotal, stockWarning, type TillLine } from './rules.ts';
 import { possessive, type C2wOrder } from '@/screens/c2w/c2w-bits.tsx';
 
 /**
@@ -117,6 +117,7 @@ function useSaleOpen(open: boolean, onOpenChange: (open: boolean) => void) {
 }
 
 type C2wHandOver = { id: number; checks: string[]; onDone: () => void };
+type C2wDue = { totalPence: number; sharePence: number; customerPaysPence: number; groupDiscountPence: number; groupName: string };
 
 /**
  * A Cycle to Work order at the till (till.mjs till-c2w): its bike and
@@ -158,10 +159,20 @@ function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void
     if (lines.length === 0 && !answerLost) setSaleKey(newRequestKey());
   }
   useSaleOpen(lines.length > 0 || paying || Boolean(c2w), onOpenChange);
-  const orderTotal = c2w && handOver.o && handOver.ready ? handOver.o.totalPence / 100 : 0;
-  const total = orderTotal + saleTotal(lines);
+  // What the hand-over comes to, asked of the server before any card is taken:
+  // the customer's group discount, and a sale the server would refuse, show here
+  // (review of pull request 7b). Asked again whenever the counter's lines change.
+  const items = lines.map(asSaleItem);
+  const due = useQuery({
+    queryKey: ['c2w-due', c2w?.id, items],
+    queryFn: () => apiMutate<C2wDue>(`/api/c2w/orders/${c2w?.id}/hand-over/due`, { items }),
+    enabled: Boolean(c2w) && handOver.ready && !paying,
+    retry: false,
+  });
+  const figures = due.isSuccess && !due.isFetching ? due.data : null;
+  const total = c2w ? (figures ? figures.totalPence / 100 : (handOver.ready && handOver.o ? handOver.o.totalPence / 100 : 0) + saleTotal(lines)) : saleTotal(lines);
   const blocked = Boolean(c2w) && (handOver.query.isError || Boolean(handOver.o && !handOver.ready));
-  const canPay = c2w ? handOver.ready : lines.length > 0;
+  const canPay = c2w ? handOver.ready && Boolean(figures) : lines.length > 0;
   // After the hand-over, the order page and lists show it Collected; the till starts empty.
   const nextSale = () => {
     setLines([]);
@@ -279,6 +290,12 @@ function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void
             })}
           </ul>
         )}
+        {figures && figures.groupDiscountPence > 0 ? (
+          <div className="flex items-baseline justify-between gap-3 border-t border-[var(--wh-border)] py-2.5 text-sm"><span>{figures.groupName}</span><span className="font-mono">{`−${money(figures.groupDiscountPence / 100)}`}</span></div>
+        ) : null}
+        {c2w && handOver.ready && due.isError ? (
+          <p role="alert" className="m-0 text-sm font-semibold">{due.error instanceof ApiError ? due.error.message : 'Wheelhouse couldn’t work out what’s due. Try again in a moment.'}</p>
+        ) : null}
         {c2w && handOver.ready ? (
           <button type="button" aria-pressed="true" disabled className="inline-flex min-h-11 items-center gap-1.5 self-end rounded-full border border-[var(--wh-ink)] bg-[var(--wh-ink)] px-4 text-sm font-semibold text-[var(--wh-panel)]">
             Bike collected when paid
@@ -311,9 +328,9 @@ function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void
           onAnswerSettled={() => setAnswerLost(false)}
           onClose={() => setPaying(false)}
           onNextSale={nextSale}
-          c2w={c2w && handOver.o ? {
-            orderId: c2w.id, checks: c2w.checks, orderTotal, provider: handOver.o.providerName, customer: handOver.o.customerName,
-            share: (handOver.o.providerPaysPence ?? handOver.o.certificatePence ?? handOver.o.totalPence) / 100,
+          c2w={c2w && handOver.o && figures ? {
+            orderId: c2w.id, checks: c2w.checks, total: figures.totalPence / 100, provider: handOver.o.providerName, customer: handOver.o.customerName,
+            share: figures.sharePence / 100,
             certificateNumber: handOver.o.certificateNumber ?? '', bike: handOver.o.bike, frameNumber: handOver.o.frameNumber ?? null,
           } : undefined}
         />
