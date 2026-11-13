@@ -16,8 +16,10 @@ const byProvider = (rows) => new Map(rows.map((r) => [r.provider_id, r]));
 
 // Paid and commission are counted on the day each order is marked paid (the
 // drawing's note): orders marked paid with paid_on in the period. Commission is
-// the certificate less what the provider paid, over orders that have both. A
-// part-paid order counts nowhere until it is marked paid.
+// the certificate less what the provider was expected to pay, over orders that
+// have both; on a paid order that is also what it paid, since any extra is
+// noted apart (server/c2w/money.js). A part-paid order counts nowhere until it
+// is marked paid.
 async function paid(from, to) {
   return byProvider(await prepare(
     `SELECT provider_id, COALESCE(sum(paid_pence), 0)::int AS paid,

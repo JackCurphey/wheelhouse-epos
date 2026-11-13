@@ -151,3 +151,28 @@ test('Staff who can’t see costs are refused, and signed out is 401', async () 
   assert.equal((await fetch(`${server.baseUrl}/api/reports/c2w.csv`, { headers: { cookie: jo.cookie } })).status, 403);
   assert.equal((await fetch(`${server.baseUrl}/api/reports/c2w`)).status, 401);
 });
+
+// A retired provider keeps its row while it still has something to show
+// (decision 5): here a bike it still owes for. Its own shop, so the figures
+// above stay as they are.
+test('a retired provider still owed for a bike keeps its row', async () => {
+  const shop = await staffSignup(server.baseUrl, { shopName: 'Retired Cycles' });
+  try {
+    const own = as(shop);
+    assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, remindDays: 2, quoteValidDays: 30 } })).status, 200);
+    const gone = (await own('/api/c2w/providers', { method: 'POST', body: { name: '[Retired provider]' } })).body.provider;
+    const maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: `maya-${tag()}@example.test` } })).body;
+    const inShop = (fn) => runWithShop(shop.shop.id, fn);
+    const productId = await inShop(async () => (await prepare(
+      "INSERT INTO products (sku, name, category, price, cost, stock_qty, updated_at) VALUES (?, '[Bike] · [Size]', 'Bikes', 1000, 600, 0, now())"
+    ).run(`[Supplier code]-${tag()}`)).lastInsertRowid);
+    const made = await own('/api/c2w/orders', { method: 'POST', body: { customerId: maya.id, providerId: gone.id, productId, accessoryIds: [] } });
+    assert.equal(made.status, 201, JSON.stringify(made.body));
+    await inShop(() => prepare("UPDATE c2w_orders SET stage = 'collected', certificate_pence = 40000, expected_pence = 40000, collected_at = '2026-10-16T10:00:00Z', expected_by = '2026-11-01' WHERE id = ?").run(made.body.order.id));
+    await inShop(() => prepare('UPDATE c2w_providers SET retired_at = now() WHERE id = ?').run(gone.id));
+    const { body } = await report('period=this-month', shop);
+    assert.deepEqual(body.providers.map((p) => [p.name, p.owedPence]), [['[Retired provider]', 40000]]);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
+});
