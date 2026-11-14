@@ -148,7 +148,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 11.4 Screen test: `on-basket`, `on-basket-changed`, `on-basket-empty` with Undo; WP-6.2's "can't take orders online yet" basket message goes
 - [x] 11.5 Test: `wh_basket` is set and read, listed on WP-6.2's Cookies page from the one list, lasting "[n] days" until Jack says
 - [x] 11.6 Build in `src/website/` to pass 11.1–11.5; browser test on a phone and a computer
-- [ ] 11.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 11.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 12. Checkout, paying and confirmation screens (pull request 12, about 600 lines — waits for WP-6.2's website app, its pull request 3)
 
