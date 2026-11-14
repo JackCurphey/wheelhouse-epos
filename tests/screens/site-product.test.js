@@ -54,7 +54,11 @@ const answering = (body) => (url) => {
 };
 const open = (product, extra = {}) => renderWebsite({ url: `/products/${product.id}`, product: answering(product), cookie: 'wh_shop=1', ...extra });
 const productAsks = () => r.requests.map((q) => new URL(q.url, 'http://localhost')).filter((u) => u.pathname.startsWith(`${BASE}/api/site/products/`));
-const line = () => r.ui.getByRole('status');
+// The stock line: the one status with words in it. Add to basket's own
+// "Added …" status is always on the page (empty until something is added), so
+// a screen reader hears it when it fills.
+const said = () => r.ui.queryAllByRole('status').filter((s) => s.textContent !== '');
+const line = () => { const s = said(); assert.equal(s.length, 1, `one stock line, not ${s.length}`); return s[0]; };
 
 // ---------- 5.1 wb-product ----------
 
@@ -79,8 +83,7 @@ test('a product (wb-product): price, "Includes VAT · Shimano", the stock line, 
   assert.equal(qty.querySelector('[aria-live="polite"]').textContent, '2');
   fireEvent.click(within(qty).getByRole('button', { name: 'One fewer Shimano brake pads B05S-RX' }));
   assert.equal(qty.querySelector('[aria-live="polite"]').textContent, '1');
-  // Until WP-6.3 the basket path says the shop can't take orders online yet (written line 1).
-  assert.equal(href(ui.getByRole('link', { name: 'Add to basket' })), `${BASE}/basket`);
+  assert.ok(ui.getByRole('button', { name: 'Add to basket' }));
   const ask = ui.getByRole('button', { name: 'Ask the shop about this' });
   assert.ok(ui.queryByRole('region', { name: 'Ask the shop' }) === null);
   fireEvent.click(ask);
@@ -101,13 +104,13 @@ test('a product with no brand still says "Includes VAT", with nothing after it',
   assert.ok(ui.queryByText(/Includes VAT ·/) === null);
 });
 
-test('with no shop chosen there is no stock line, and Add to basket stays', async () => {
+test('with no shop chosen it asks for one (on-pick-shop), and Add to basket stays', async () => {
   r = await renderWebsite({ url: '/products/101', product: answering({ ...PADS, stock: { line: 'none' } }) });
   const { ui } = r;
   await ui.findByRole('heading', { level: 1, name: 'Shimano brake pads B05S-RX' });
   assert.equal(productAsks()[0].searchParams.get('shop'), null);
-  assert.ok(ui.queryByRole('status') === null);
-  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+  assert.equal(line().textContent, 'Choose a shop to see when it’s ready');
+  assert.ok(ui.getByRole('button', { name: 'Add to basket' }));
 });
 
 // ---------- 5.2 wb-product-sizes ----------
@@ -127,7 +130,7 @@ test('a product with sizes (wb-product-sizes): nothing chosen, "Choose a colour 
   assert.deepEqual(within(size).getAllByRole('radio').map((b) => b.textContent), SIZES);
   assert.ok(ui.getAllByRole('radio').every((b) => b.getAttribute('aria-checked') === 'false'));
   assert.equal(line().textContent, 'Choose a colour and size to see when it’s ready');
-  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+  assert.ok(ui.getByRole('button', { name: 'Add to basket' }));
   // A size alone isn't enough.
   fireEvent.click(within(size).getByRole('radio', { name: 'L' }));
   assert.ok(within(size).getByText('Size: L'));
@@ -143,7 +146,7 @@ test('a product with sizes (wb-product-sizes): nothing chosen, "Choose a colour 
   assert.deepEqual(rows, [['Sizes', 'S, M, L, XL'], ['Colours', '[Colour 1], [Colour 2]'], ['[Detail]', '[value]'], ['Brand', '[Brand]']]);
 });
 
-test('a product with sizes and no shop chosen: the prompt until both are chosen, then no stock line at all', async () => {
+test('a product with sizes and no shop chosen: the prompt until both are chosen, then “Choose a shop”', async () => {
   const none = { ...SIZED, items: SIZED.items.filter((i) => !(i.colour === '[Colour 2]' && i.size === 'XL')).map((i) => ({ ...i, stock: { line: 'none' } })) };
   r = await renderWebsite({ url: '/products/501', product: answering(none) });
   const { ui } = r;
@@ -156,13 +159,13 @@ test('a product with sizes and no shop chosen: the prompt until both are chosen,
   // With no shop, no size is judged out.
   assert.ok(within(size).getAllByRole('radio').every((b) => !b.className.includes('line-through') && !b.textContent.includes('not in stock')));
   fireEvent.click(within(size).getByRole('radio', { name: 'M' }));
-  assert.ok(ui.queryByRole('status') === null, 'no prompt and no stock line once both are chosen');
-  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+  assert.equal(line().textContent, 'Choose a shop to see when it’s ready', 'once both are chosen, it asks for a shop');
+  assert.ok(ui.getByRole('button', { name: 'Add to basket' }));
   // A pair the shop doesn't have, with no shop chosen, is no different.
   fireEvent.click(ui.getByRole('radio', { name: '[Colour 2]' }));
   fireEvent.click(within(size).getByRole('radio', { name: 'XL' }));
-  assert.ok(ui.queryByRole('status') === null);
-  assert.ok(ui.getByRole('link', { name: 'Add to basket' }));
+  assert.equal(line().textContent, 'Choose a shop to see when it’s ready');
+  assert.ok(ui.getByRole('button', { name: 'Add to basket' }));
 });
 
 test('a colour and size pair the shop doesn’t have counts as sold out at the chosen shop', async () => {
@@ -177,7 +180,7 @@ test('a colour and size pair the shop doesn’t have counts as sold out at the c
   assert.ok(xl.className.includes('line-through'));
   fireEvent.click(xl);
   assert.equal(line().textContent, 'Sold out at Bolton');
-  assert.ok(ui.queryByRole('link', { name: 'Add to basket' }) === null);
+  assert.ok(ui.queryByRole('button', { name: 'Add to basket' }) === null);
   assert.ok(ui.getByRole('button', { name: 'Ask the shop about this' }));
 });
 
@@ -253,8 +256,8 @@ test('a size at the other shop (wb-product-size-other): struck, read out " — n
   assert.equal(document.getElementById(m.getAttribute('aria-describedby')).textContent, 'M isn’t in stock at Bolton in [Colour 1].');
   assert.equal(line().textContent, 'M isn’t in stock at Bolton in [Colour 1] — it’s in stock at our [Second site] shop');
   assert.equal(line().querySelector('strong').textContent, 'M isn’t in stock at Bolton');
-  assert.equal(href(ui.getByRole('link', { name: 'Collect from [Second site] instead' })), `${BASE}/shops/2`);
-  assert.ok(ui.queryByRole('link', { name: 'Add to basket' }) === null);
+  assert.ok(ui.getByRole('button', { name: 'Collect from [Second site] instead' }));
+  assert.ok(ui.queryByRole('button', { name: 'Add to basket' }) === null);
   assert.ok(ui.queryByRole('group', { name: /^Quantity of/ }) === null);
   assert.ok(ui.getByRole('button', { name: 'Ask the shop about this' }));
   // Another colour: M is in stock again.
@@ -263,20 +266,18 @@ test('a size at the other shop (wb-product-size-other): struck, read out " — n
   assert.equal(line().textContent, 'Ready today at Bolton · 2 in stock');
 });
 
-test('"Collect from [Second site] instead" opens that shop’s page, not "We can’t find that page"', async () => {
+test('"Collect from [Second site] instead" chooses that shop and stays on the product (on-pick-shop)', async () => {
   r = await open(SIZED);
   const { ui } = r;
-  const { fireEvent } = await rtl();
+  const { fireEvent, waitFor } = await rtl();
   await ui.findByRole('heading', { level: 1, name: '[Product with sizes]' });
   fireEvent.click(ui.getByRole('radio', { name: '[Colour 1]' }));
   fireEvent.click(ui.getByRole('radio', { name: 'M — not in stock at Bolton' }));
-  fireEvent.click(ui.getByRole('link', { name: 'Collect from [Second site] instead' }));
-  const h1 = await ui.findByRole('heading', { level: 1 });
-  assert.notEqual(h1.textContent, '[Product with sizes]', 'the link went somewhere');
-  assert.notEqual(h1.textContent, 'We can’t find that page');
-  // Pull request 7's shop page, for the shop the link names.
-  assert.equal(h1.textContent, 'North Street Cycles, [Second site]');
-  assert.ok(ui.getByRole('button', { name: 'Collect from here' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Collect from [Second site] instead' }));
+  assert.ok(document.cookie.includes('wh_shop=2'), 'the shop is remembered');
+  await waitFor(() => assert.equal(productAsks().at(-1).searchParams.get('shop'), '2', 'the product is asked for again at [Second site]'));
+  assert.equal(r.router.state.location.pathname, `${BASE}/products/501`);
+  assert.ok(ui.getByRole('heading', { level: 1, name: '[Product with sizes]' }));
 });
 
 // ---------- 5.4 wb-product-held ----------
@@ -287,7 +288,7 @@ test('sold out at the chosen shop (wb-product-held): "Sold out at Bolton", no Ad
   await ui.findByRole('heading', { level: 1, name: '[Bike]' });
   assert.equal(line().textContent, 'Sold out at Bolton');
   assert.equal(line().querySelector('strong').textContent, 'Sold out at Bolton');
-  assert.ok(ui.queryByRole('link', { name: 'Add to basket' }) === null);
+  assert.ok(ui.queryByRole('button', { name: 'Add to basket' }) === null);
   assert.ok(ui.getByRole('button', { name: 'Ask the shop about this' }));
 });
 

@@ -86,12 +86,12 @@ test('on a phone: nothing chosen to start, the stock line once colour and size a
   await expect(m).toHaveAttribute('aria-checked', 'true');
   await expect(line).toHaveText('Sold out at Bolton');
   await expect(m).toHaveAccessibleDescription('M isn’t in stock at Bolton in [Colour 1].');
-  await expect(page.getByRole('link', { name: 'Add to basket' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add to basket' })).toHaveCount(0);
 
   await size.getByRole('radio', { name: 'L', exact: true }).click();
   await expect(line).toHaveText('Ready today at Bolton · 2 in stock');
-  await page.getByRole('link', { name: 'Add to basket' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Basket' })).toBeVisible();
-  await expect(page.getByText(/ can’t take orders online yet\.$/)).toBeVisible();
+  // This shop hasn't switched buying online on (website-basket.spec.ts buys).
+  await expect(page.getByText('Not taking online orders right now.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add to basket' })).toHaveCount(0);
   if (process.env.WH_SHOTS) await page.screenshot({ path: `${process.env.WH_SHOTS}/website-product-390.png` });
 });

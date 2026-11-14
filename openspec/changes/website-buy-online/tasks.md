@@ -142,12 +142,12 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 11. Product page and basket screens (pull request 11, about 550 lines, risky: public routes — waits for WP-6.2's website app, product page, chosen shop and cookies, its pull requests 3, 5, 7 and 8)
 
-- [ ] 11.1 Screen test: `on-product` and `on-product-added` on WP-6.2's product page — the stock line, the quantity buttons ("One fewer …", "One more …"), Add to basket, "Added 2 × Shimano brake pads" with View basket, the basket count in its label ("Basket, 3 items")
-- [ ] 11.2 Screen test: `on-product-out` with "Sold out at Bolton" (decided while planning 1) and `on-product-out-other` with "Collect from [Second site] instead"; `on-product-off`
-- [ ] 11.3 Screen test: `on-product-no-shop` and `on-choose-shop` — one tap chooses, remembers and adds; Cancel adds nothing
-- [ ] 11.4 Screen test: `on-basket`, `on-basket-changed`, `on-basket-empty` with Undo; WP-6.2's "can't take orders online yet" basket message goes
-- [ ] 11.5 Test: `wh_basket` is set and read, listed on WP-6.2's Cookies page from the one list, lasting "[n] days" until Jack says
-- [ ] 11.6 Build in `src/website/` to pass 11.1–11.5; browser test on a phone and a computer
+- [x] 11.1 Screen test: `on-product` and `on-product-added` on WP-6.2's product page — the stock line, the quantity buttons ("One fewer …", "One more …"), Add to basket, "Added 2 × Shimano brake pads" with View basket, the basket count in its label ("Basket, 3 items")
+- [x] 11.2 Screen test: `on-product-out` with "Sold out at Bolton" (decided while planning 1) and `on-product-out-other` with "Collect from [Second site] instead"; `on-product-off`
+- [x] 11.3 Screen test: `on-product-no-shop` and `on-choose-shop` — one tap chooses, remembers and adds; Cancel adds nothing
+- [x] 11.4 Screen test: `on-basket`, `on-basket-changed`, `on-basket-empty` with Undo; WP-6.2's "can't take orders online yet" basket message goes
+- [x] 11.5 Test: `wh_basket` is set and read, listed on WP-6.2's Cookies page from the one list, lasting "[n] days" until Jack says
+- [x] 11.6 Build in `src/website/` to pass 11.1–11.5; browser test on a phone and a computer
 - [ ] 11.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 12. Checkout, paying and confirmation screens (pull request 12, about 600 lines — waits for WP-6.2's website app, its pull request 3)

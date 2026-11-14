@@ -8,16 +8,19 @@ import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
 import { AskTheShop, Crumbs } from './category.tsx';
 import { NotFoundPage, usePageTitle } from './pages.tsx';
-import { Failed, H1, H2, linkButton, priceText } from './parts.tsx';
-import { useCategories, useProduct, useSiteContext, type PageStock, type Product } from './site-query.ts';
+import { Button } from '@/components/ui/button';
+import { addTo, readBasket } from './basket.ts';
+import { Failed, H1, H2, priceText } from './parts.tsx';
+import { useCategories, useProduct, useSiteContext, useTaking, type PageStock, type Product } from './site-query.ts';
 
 /**
  * A product's page (website-browse tasks 5.1-5.7, design 3 and 7; wb-product,
  * wb-product-sizes, wb-product-size-other, wb-product-held and
  * wb-product-photos in browse.mjs): the photos, the path, the name and
  * price, the colour and size choosers with nothing chosen, the stock line at
- * the chosen shop, buying, About it and Specifications. Add to basket opens
- * the basket path until WP-6.3 (written line 1).
+ * the chosen shop, buying, About it and Specifications. Add to basket
+ * (website-buy-online tasks 11.1-11.3; on-product-added, on-product-off,
+ * on-product-no-shop) puts the product, or the chosen size, in the basket.
  */
 export function ProductPage() {
   const { id: raw = '' } = useParams();
@@ -35,8 +38,10 @@ const radio = (on: boolean) => cn('inline-flex min-h-11 items-center gap-2 round
 
 function ProductView({ product }: { product: Product }) {
   usePageTitle(product.name);
-  const { address, site, chosen } = useSiteContext();
+  const { address, site, chosen, several, choose } = useSiteContext();
   const categories = useCategories(address);
+  // Asked once: a shop not taking orders says so instead of Add to basket. Until it answers, or if it can't, Add to basket shows; checkout asks again.
+  const taking = useTaking(address);
   const [colour, setColour] = useState<string | null>(null);
   const [size, setSize] = useState<string | null>(null);
   const outId = useId();
@@ -114,16 +119,21 @@ function ProductView({ product }: { product: Product }) {
         <StockBox tone="ok"><strong>Ready today at {stock.shop}</strong> · {stock.qty} in stock</StockBox>
       ) : stock.line === 'sold-out' ? (
         <StockBox tone="grey"><strong>Sold out at {stock.shop}</strong></StockBox>
+      ) : stock.line === 'none' && several ? (
+        <StockBox tone="grey">Choose a shop to see when it’s ready</StockBox>
       ) : stock.line === 'elsewhere' ? (
         <>
           <StockBox tone="warn">
             <strong>{(hasSizes ? size : hasColours ? colour : 'It')} isn’t in stock at {stock.shop}</strong>{inColour} — it’s in stock at our {stock.at} shop
           </StockBox>
-          {/* Choosing the shop comes with pull request 7; until then this opens that shop's page, as the shop cards do. */}
-          <Link to={shopPath(site.shops, stock.at)} className={cn(linkButton('default'), 'self-start')}>Collect from {stock.at} instead</Link>
+          {otherShop(site.shops, stock.at) && (
+            <Button variant="default" className="min-h-11 self-start text-size-15" onClick={() => choose(otherShop(site.shops, stock.at)!.id)}>Collect from {stock.at} instead</Button>
+          )}
         </>
       ) : null}
-      {buy && <Buy name={product.name} />}
+      {taking.data === false ? (
+        <StockBox tone="grey"><strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this</StockBox>
+      ) : buy && <Buy name={product.name} productId={sized ? (item?.id ?? null) : product.id} />}
       <AskTheShop label="Ask the shop about this" />
     </div>
   );
@@ -177,13 +187,10 @@ function roving(values: string[], chosen: string | null, choose: (v: string) => 
   };
 }
 
-const shopPath = (shops: { id: number; name: string }[], name: string) => {
-  const shop = shops.find((s) => s.name === name);
-  return shop ? `/shops/${shop.id}` : '/shops';
-};
+const otherShop = (shops: { id: number; name: string }[], name: string) => shops.find((s) => s.name === name);
 
 /** The stock line's box (browse.mjs `readyBox`), read out as it changes. */
-function StockBox({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: React.ReactNode }) {
+export function StockBox({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: React.ReactNode }) {
   const Icon = tone === 'ok' ? Check : tone === 'warn' ? CircleAlert : Store;
   return (
     <p role="status" className={cn(
@@ -196,18 +203,44 @@ function StockBox({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; children: 
   );
 }
 
-/** How many, and Add to basket (browse.mjs `qty`); the number goes to the basket with WP-6.3. */
-function Buy({ name }: { name: string }) {
+/**
+ * How many, and Add to basket (browse.mjs `qty`; on-product-added): adds to
+ * the basket, adding to the line already there, and says so with View
+ * basket. `productId` is null until a size is chosen. With several shops and
+ * none chosen, the box asks which first, then adds (on-choose-shop).
+ */
+function Buy({ name, productId }: { name: string; productId: number | null }) {
+  const { setBasket, chosen, several, openChooser } = useSiteContext();
   const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState<number | null>(null);
+  // Read from the cookie at the moment of adding, so an add that waits for the
+  // shop box adds to the basket as it is then (another tab may have changed it).
+  const add = () => {
+    if (productId === null) return;
+    setBasket(addTo(readBasket(), productId, qty));
+    setAdded(qty);
+  };
   const step = 'inline-flex size-11 items-center justify-center border-0 bg-[var(--wh-panel)] text-[var(--wh-ink)]';
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div role="group" aria-label={`Quantity of ${name}`} className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--wh-input-border)]">
-        <button type="button" aria-label={`One fewer ${name}`} onClick={() => setQty((q) => Math.max(1, q - 1))} className={step}><Minus aria-hidden className="size-4" /></button>
-        <span aria-live="polite" className="min-w-10 text-center text-[16px] font-bold">{qty}</span>
-        <button type="button" aria-label={`One more ${name}`} onClick={() => setQty((q) => q + 1)} className={step}><Plus aria-hidden className="size-4" /></button>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label={`Quantity of ${name}`} className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--wh-input-border)]">
+          <button type="button" aria-label={`One fewer ${name}`} onClick={() => setQty((q) => Math.max(1, q - 1))} className={step}><Minus aria-hidden className="size-4" /></button>
+          <span aria-live="polite" className="min-w-10 text-center text-[16px] font-bold">{qty}</span>
+          <button type="button" aria-label={`One more ${name}`} onClick={() => setQty((q) => Math.min(99, q + 1))} className={step}><Plus aria-hidden className="size-4" /></button>
+        </div>
+        <Button
+          variant="accent"
+          className="min-h-11 text-size-15"
+          disabled={productId === null}
+          onClick={(e) => (several && !chosen ? openChooser(e.currentTarget, add) : add())}
+        >
+          Add to basket
+        </Button>
       </div>
-      <Link to="/basket" className={linkButton('accent')}>Add to basket</Link>
+      <p role="status" className="m-0 text-size-15">
+        {added !== null && <><span>Added {added} × {name}</span> <Link to="/basket" className="font-semibold text-[var(--wh-ink)]">View basket</Link></>}
+      </p>
     </div>
   );
 }
