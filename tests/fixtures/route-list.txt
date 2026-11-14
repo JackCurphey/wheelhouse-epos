@@ -447,6 +447,13 @@ POST /api/c2w/providers/:id/payments
 GET /api/c2w/owed
 GET /api/c2w/owed.csv
 GET /api/c2w/providers/:id/owed
+GET /api/online-orders
+GET /api/online-order-count
+GET /api/online-orders/:id
+POST /api/online-orders/:id/ready
+POST /api/online-orders/:id/ready/undo
+POST /api/online-orders/:id/not-ready
+POST /api/online-orders/:id/hand-over
 GET /api/accounts
 POST /api/accounts/connect
 PUT /api/accounts/choices

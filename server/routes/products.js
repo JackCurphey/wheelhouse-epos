@@ -19,6 +19,7 @@ import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
 import { heldCounts } from '../c2w/orders.js';
+import { forOnlineOrders } from '../online-orders/orders.js';
 import { bikeKinds, isBike } from '../lib/bikes.js';
 import { productWarranty } from '../lib/warranties.js';
 
@@ -56,7 +57,7 @@ export async function syncProductWithShopifyIfNeeded(previousProductRow, updated
 }
 
 
-async function listProducts({ search, category, activeOnly }, costs) {
+async function listProducts({ search, category, activeOnly, siteId = null }, costs) {
   let sql = 'SELECT * FROM products WHERE 1=1';
   const params = [];
   if (activeOnly) {
@@ -81,9 +82,18 @@ async function listProducts({ search, category, activeOnly }, costs) {
   // figure itself keeps until the bike is collected (task 5.4). Never below the figure's own
   // shortfall, so a figure already short stays as it was.
   const held = await heldCounts(rows.map((r) => r.id));
+  // Paid online orders waiting for it, with their numbers (website-buy-online
+  // task 6.6): "for an online order". The figure already lost them at payment,
+  // so freeQty stays as it is. On a till, that shop's orders only.
+  const online = await forOnlineOrders(rows.map((r) => r.id), siteId);
   return rows.map((row) => {
     const h = held.get(row.id) ?? 0;
-    return { ...serializeProduct(row, costs, kinds), freeQty: h ? Math.max(Math.min(row.stock_qty, 0), row.stock_qty - h) : row.stock_qty };
+    const waiting = online.get(row.id);
+    return {
+      ...serializeProduct(row, costs, kinds),
+      freeQty: h ? Math.max(Math.min(row.stock_qty, 0), row.stock_qty - h) : row.stock_qty,
+      ...(waiting ? { forOnlineOrders: waiting } : {}),
+    };
   });
 }
 
@@ -183,6 +193,7 @@ export function register(route) {
       search: query.get('search') || '',
       category: query.get('category') || '',
       activeOnly: query.get('all') !== '1',
+      siteId: (await siteHere(req)) ?? null,
     }, await canSeeCosts(req));
     sendJson(res, 200, products);
   });
