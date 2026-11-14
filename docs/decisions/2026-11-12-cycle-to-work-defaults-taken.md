@@ -47,9 +47,10 @@ repo).
    (option 1).** Jack's answer, 14 Nov, relayed by the Front desk. Settled:
    such money is not counted in Paid. No code changes.
 6. **`paid_on` is the day the money was received, not the day the bike was
-   marked paid** (as #770 put it) — still open; the Front desk is putting it
-   to Jack next.
+   marked paid** (as #770 put it) — keep counting by the day the payment was
+   received (option 1). Jack's answer, 14 Nov, relayed by the Front desk.
+   Settled. The `rp-c2w` note now reads "on the day the payment was
+   received", in the drawing and on the screen.
 
 Status: items 1–2 defaults taken; items 3–4 answered by Jack on 12 Nov;
-pull requests 7–8 going ahead. Item 5 answered by Jack on 14 Nov; item 6
-open.
+pull requests 7–8 going ahead. Items 5–6 answered by Jack on 14 Nov.

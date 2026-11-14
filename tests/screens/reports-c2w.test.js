@@ -78,7 +78,7 @@ test('the table by provider with its All providers row, the link to the Owed pag
   ]);
   assert.ok(ui.queryByText('Each bike, and what’s owed on it right now, is on Cycle to Work’s Owed page.') !== null);
   assert.equal(ui.getByRole('link', { name: 'See what Cycle to Work providers owe now' }).getAttribute('href'), '/workshop/c2w/owed');
-  assert.ok(ui.queryByText('Paid and commission are counted on the day each order is marked paid. They go to Xero with that day’s summary.') !== null);
+  assert.ok(ui.queryByText('Paid and commission are counted on the day the payment was received. They go to Xero with that day’s summary.') !== null);
 });
 
 test('with no providers set up it says so in one line, with no graph or table', async () => {

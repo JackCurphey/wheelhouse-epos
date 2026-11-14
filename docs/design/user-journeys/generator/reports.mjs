@@ -369,7 +369,7 @@ const c2wReport = () => wrap(`${head('Cycle to Work: owed and paid', 'North Stre
 ${stats([stat('Owed now', '£[£]', '[n] bikes · [n] late'), stat('Paid', '£[£]', UP('£[£]', 'the same days in August')), stat('Commission', '£[£]', UP('£[£]', 'the same days in August')), stat('Shortfalls closed', '£[£]', '[n] orders closed with a reason')])}
 ${box(`${graph('Paid by provider', ['[Provider]', '[Provider]'], { key: ['Paid this month so far', 'Same days in August'], says: 'most paid by [Provider]; [up or down] £[£] on the same days in August' })}${table('Cycle to Work by provider', C2W_COLS, [c2wRow(), c2wRow()], ['All providers', '[n]', '[£]', '[£]', '[£]', '[n]'])}`)}
 <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>Each bike, and what’s owed on it right now, is on Cycle to Work’s Owed page.</span>${linkBtn('See what’s owed now', 'See what Cycle to Work providers owe now')}</p>
-${note('Paid and commission are counted on the day each order is marked paid. They go to Xero with that day’s summary.')}`);
+${note('Paid and commission are counted on the day the payment was received. They go to Xero with that day’s summary.')}`);
 
 // ---------- Who sees what (decision 5; audit M14, L6) ----------
 const HINTS = { 'Can see reports': 'Sales, takings, workshop, and discounts without who gave them', 'Can see costs and margin': 'Adds margin, stock value, cost columns and VAT. Turns on “Can see reports” too.' };

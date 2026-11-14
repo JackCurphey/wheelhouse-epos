@@ -129,7 +129,7 @@ cancelled", its three drawn wordings, sent by pull request 8's Cancel).
 
 - [x] 10.1 Test: the Today source gives the hold and late-payment lines, Owner only, and only when "On Today" is on (built in #725, #734 and #770)
 - [x] 10.2 Test: header search finds orders by name and quote number; the customer page lists their orders (built in #725; at archive, add "certificate number" to the header search spec)
-- [x] 10.3 Test: the `rp-c2w` report — tiles and the by-provider table, counted on the day marked paid
+- [x] 10.3 Test: the `rp-c2w` report — tiles and the by-provider table, counted on the day the payment was received
 - [x] 10.4 Screen test: `cw-today`, `cw-today-held`, `op-today-c2w`, `cs-search-c2w`, `cs-page-c2w`, `-collected`, `rp-c2w`; the Takings report counts Cycle to Work money in
 - [x] 10.5 Build to pass 10.1–10.4
 - [x] 10.6 Self-review with `reviewer`; full check
