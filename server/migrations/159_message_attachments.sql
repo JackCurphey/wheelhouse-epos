@@ -8,17 +8,24 @@
 
 LOCK TABLE customer_messages IN SHARE ROW EXCLUSIVE MODE;
 
+-- A file belongs to a message of its own shop: the link carries the shop too,
+-- as migration 117 does. id first, so the link's check finds it as the primary
+-- key would.
+CREATE UNIQUE INDEX IF NOT EXISTS customer_messages_id_shop_id ON customer_messages (id, shop_id);
+
 CREATE TABLE IF NOT EXISTS customer_message_attachments (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
-  message_id INTEGER NOT NULL REFERENCES customer_messages(id) ON DELETE CASCADE,
+  message_id INTEGER NOT NULL,
   filename TEXT NOT NULL CHECK (char_length(filename) BETWEEN 1 AND 200),
   content_type TEXT NOT NULL CHECK (char_length(content_type) BETWEEN 1 AND 100),
   content BYTEA NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (message_id, shop_id) REFERENCES customer_messages (id, shop_id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS customer_message_attachments_message ON customer_message_attachments (shop_id, message_id);
+-- message_id first: deleting a message finds its files by message_id alone.
+CREATE INDEX IF NOT EXISTS customer_message_attachments_message ON customer_message_attachments (message_id, shop_id);
 
 ALTER TABLE customer_message_attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customer_message_attachments FORCE ROW LEVEL SECURITY;

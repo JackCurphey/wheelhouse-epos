@@ -94,6 +94,9 @@ test('a message’s files go with it, and another shop can’t read them', async
   const id = await inShop(() => sendEmailTo({ to: 'gone@example.test', subject: 'S', body: 'B', attachments: [PDF] }));
   assert.equal((await filesOf(id, other.id)).length, 0, 'not visible to another shop');
   assert.equal((await filesOf(id)).length, 1);
+  // A file hangs only off its own shop's message, even if another shop names its id.
+  await assert.rejects(inShop(() => prepare('INSERT INTO customer_message_attachments (message_id, filename, content_type, content) VALUES (?, ?, ?, ?)')
+    .run(id, PDF.filename, PDF.contentType, PDF.content), other.id), /foreign key/);
   await inShop(() => prepare('DELETE FROM customer_messages WHERE id = ?').run(id));
   assert.equal((await filesOf(id)).length, 0);
 });

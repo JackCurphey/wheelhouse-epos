@@ -24,8 +24,11 @@ messages' attachments.
 ## Decisions
 
 1. **A table of its own, migration 159.** `customer_message_attachments (id,
-   shop_id, message_id → customer_messages(id) ON DELETE CASCADE, filename,
-   content_type, content bytea, created_at)`, with the shop's row-level
+   shop_id, message_id, filename, content_type, content bytea, created_at)`.
+   The link carries the shop too, `(message_id, shop_id)` →
+   `customer_messages (id, shop_id)` ON DELETE CASCADE, as migration 117
+   does, so a file can only hang off its own shop's message; an index led by
+   `message_id` lets a deleted message find its files. With the shop's row-level
    security forced and a policy, as migration 085 does. Kept apart from
    `customer_messages` so the outbox's reads never load file contents. The
    cascade means a customer's privacy deletion, a merge's moves and a shop's
@@ -57,7 +60,7 @@ messages' attachments.
    follow the printed quote, which is A4 in UK shops. Logged as defaults.
 
 5. **The logo only when the PDF can hold it.** The shop's uploaded logo (PNG
-   or JPEG in `UPLOADS_DIR`, read with `readUploadedImage`) goes in; a WebP
+   or JPEG in `UPLOADS_DIR`, where `readUploadedImage` stores it, checked by its first bytes) goes in; a WebP
    logo, a logo held elsewhere or none leaves the space empty. The screen's
    "LOGO" box marks where a logo goes on screen; on a customer's file it would
    read as a missing mark, so it isn't drawn. Never a made-up mark.
