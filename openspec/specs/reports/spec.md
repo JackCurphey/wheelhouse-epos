@@ -104,7 +104,7 @@ Each report except a closed day's SHALL show a graph above its table: bars by da
 - **THEN** each report shows its figures and table with no graph
 
 ### Requirement: Takings and cash-ups lists each closed day
-Takings and cash-ups SHALL open on This week, with the same periods as Sales, and show Closed days' takings, Card, Cash, Other ("Gift cards, store credit and customer accounts"), Online ("Paid on the website · separate from the tills") and Cash differences, a graph of takings by closed day, and a table of days, newest first: Day, Takings, Cash banked, Cash difference, Closed by.
+Takings and cash-ups SHALL open on This week, with the same periods as Sales, and show Closed days' takings, Card, Cash, Other ("Gift cards, store credit and customer accounts"), Cycle to Work ("Owed by providers, not in the drawer"), Online ("Paid on the website · separate from the tills") and Cash differences, a graph of takings by closed day, and a table of days, newest first: Day, Takings, Cash banked, Cash difference, Closed by. Cycle to Work and Online SHALL be beside Closed days' takings, not in them (Jack, 14 Nov, merge-c2w Q1 option 2).
 
 #### Scenario: the comparison while today is open
 - **WHEN** Jack opens Takings and cash-ups on Thursday and Thursday isn't closed yet
@@ -117,6 +117,10 @@ Takings and cash-ups SHALL open on This week, with the same periods as Sales, an
 #### Scenario: a short day stands out
 - **WHEN** a day's cash was short
 - **THEN** its Cash difference shows with a minus sign, in the warning colour and in words for a screen reader
+
+#### Scenario: Cycle to Work money beside the takings
+- **WHEN** a closed day had a Cycle to Work hand-over
+- **THEN** its provider share is in the Cycle to Work figure and not in Closed days' takings
 
 ### Requirement: A past day nobody closed shows as Not closed
 A past day in the period that nobody closed, and that Close the day can still close, SHALL be its own row in Takings and cash-ups (when it is shown by day, not by month) reading "Not closed", with its takings so far and a "Close it" link to Close the day for that day. It SHALL have no Online row and SHALL NOT be in the headline figures. Today, not yet closed, keeps its "Not closed yet" row.
