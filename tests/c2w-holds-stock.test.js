@@ -170,13 +170,18 @@ test('5.4 an order holding a frame is left out of what Shopify sells once, not t
   assert.equal(await online(bike), 2, 'a frame held for an order counts once');
 });
 
+// Shopify linked and sent once (a bike also needs online() to be queued). No sender serves
+// this provider, so the queue stays put for the test to read.
+const linkShopify = async () => inShop(async () => prepare("INSERT INTO shopify_link (provider, address, last_sent_at) VALUES ('[no sender]', '[shop].myshopify.com', now()) ON CONFLICT (shop_id) DO UPDATE SET state = 'idle', last_sent_at = now() RETURNING shop_id").get());
+const queuedFor = async (bike) => inShop(async () => Boolean(await prepare('SELECT 1 FROM shopify_changed WHERE product_id = ?').get(bike)));
+const clearQueue = async (...bikes) => inShop(async () => { for (const bike of bikes) await prepare('DELETE FROM shopify_changed WHERE product_id = ?').run(bike); });
+
 test('5.4 a hold taken or let go by count queues the bike for Shopify, as a held frame does', async () => {
   const bike = await countedBike(2);
   await online(bike);
-  // Linked and sent once. No sender serves this provider, so the queue stays put for the test to read.
-  await inShop(async () => prepare("INSERT INTO shopify_link (provider, address, last_sent_at) VALUES ('[no sender]', '[shop].myshopify.com', now()) ON CONFLICT (shop_id) DO UPDATE SET state = 'idle', last_sent_at = now() RETURNING shop_id").get());
-  const queued = async () => inShop(async () => Boolean(await prepare('SELECT 1 FROM shopify_changed WHERE product_id = ?').get(bike)));
-  const clear = async () => inShop(async () => prepare('DELETE FROM shopify_changed WHERE product_id = ?').run(bike));
+  await linkShopify();
+  const queued = () => queuedFor(bike);
+  const clear = () => clearQueue(bike);
   await clear();
   const held = (await quote(bike)).body.order;
   assert.equal(held.held, true);
@@ -188,3 +193,30 @@ test('5.4 a hold taken or let go by count queues the bike for Shopify, as a held
   assert.equal(await queued(), true, 'letting the hold go queues the bike');
 });
 
+test('5.4 a count hold moved to another bike queues both bikes for Shopify', async () => {
+  const [from, to] = [await countedBike(2), await countedBike(2)];
+  await online(from);
+  await online(to);
+  await linkShopify();
+  const held = (await quote(from)).body.order;
+  assert.equal(held.held, true);
+  await clearQueue(from, to);
+  await inShop(async () => prepare('UPDATE c2w_orders SET product_id = ? WHERE id = ?').run(to, held.id));
+  assert.equal(await queuedFor(from), true, 'the bike let go is queued');
+  assert.equal(await queuedFor(to), true, 'the bike now held is queued');
+});
+
+test('5.4 an order holding a bike by count, deleted, queues the bike for Shopify', async () => {
+  const bike = await countedBike(2);
+  await online(bike);
+  await linkShopify();
+  const held = (await quote(bike)).body.order;
+  assert.equal(held.held, true);
+  await clearQueue(bike);
+  await inShop(async () => {
+    // Its events first: they point at the order, with no cascade.
+    await prepare('DELETE FROM c2w_order_events WHERE order_id = ?').run(held.id);
+    await prepare('DELETE FROM c2w_orders WHERE id = ?').run(held.id);
+  });
+  assert.equal(await queuedFor(bike), true, 'the deleted hold queues the bike');
+});
