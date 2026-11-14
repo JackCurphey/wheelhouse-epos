@@ -120,13 +120,13 @@ test('connecting Xero with the pretend service saves who and when, and lists the
   assert.deepEqual(body.accounts.map((a) => a.name).slice(0, 2), ['[Xero account 1]', '[Xero account 2]']);
   assert.deepEqual(body.groups.map((g) => g.title), ['Sales go to', 'Money taken goes to', 'Everything else goes to']);
   assert.deepEqual(body.groups[0].lines.map((l) => l.label), ['Accessories', 'Drivetrain', 'Labour', 'Other sales']);
-  assert.deepEqual(body.groups[1].lines.map((l) => l.label), ['Cash', 'Card', 'Customer accounts', 'Gift cards', 'Online sales (paid on the website)']);
+  assert.deepEqual(body.groups[1].lines.map((l) => l.label), ['Cash', 'Card', 'Customer accounts', 'Gift cards', 'Cycle to Work (owed by providers)', 'Online sales (paid on the website)']);
   assert.deepEqual(body.groups[2].lines.map((l) => l.label), ['Cash differences', 'Refunds', 'Discounts given', 'VAT on sales']);
   assert.ok(body.groups.every((g) => g.lines.every((l) => l.accountId === null)));
   // Refunds and Discounts given aren't recorded yet, so they don't hold a day up.
   assert.deepEqual([lines(body)['other:refunds'].recorded, lines(body)['other:discounts'].recorded, lines(body)['money:cash'].recorded], [false, false, true]);
-  assert.equal(body.missing, 11, 'every recorded line still needs an account');
-  assert.equal(body.summary, 'Connected to Xero · 11 accounts to choose');
+  assert.equal(body.missing, 12, 'every recorded line still needs an account');
+  assert.equal(body.summary, 'Connected to Xero · 12 accounts to choose');
 });
 
 test('connecting again is refused, and QuickBooks works for another shop', async () => {
@@ -148,15 +148,15 @@ test('choosing an account saves it at once, clearing it puts the line back to ne
   let body = (await get()).body;
   assert.equal(lines(body)['money:cash'].accountId, accounts[2].id);
   assert.equal(lines(body)['money:cash'].accountName, accounts[2].name);
-  assert.equal(body.missing, 10);
-  assert.equal(body.summary, 'Connected to Xero · 10 accounts to choose');
+  assert.equal(body.missing, 11);
+  assert.equal(body.summary, 'Connected to Xero · 11 accounts to choose');
   assert.equal((await choose('sales:Accessories', accounts[0].id)).status, 200);
   assert.equal((await choose('money:cash', accounts[3].id)).status, 200, 'changing it replaces it');
   assert.equal(lines((await get()).body)['money:cash'].accountId, accounts[3].id);
   assert.equal((await choose('money:cash', null)).status, 200);
   body = (await get()).body;
   assert.equal(lines(body)['money:cash'].accountId, null);
-  assert.equal(body.missing, 10, 'Accessories chosen, Cash cleared again');
+  assert.equal(body.missing, 11, 'Accessories chosen, Cash cleared again');
 });
 
 test('an account the service doesn\'t offer, a line that isn\'t one, or choosing before connecting is refused', async () => {

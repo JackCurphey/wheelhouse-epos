@@ -29,7 +29,7 @@ The fold SHALL offer "Connect Xero" and "Connect QuickBooks" with the note "Each
 - **THEN** no request leaves Wheelhouse and the pretend service holds what is sent
 
 ### Requirement: Which account each line goes to
-Once connected, the fold SHALL list, each with a choice of account, "Sales go to" (each category), "Money taken goes to" (Cash, Card, Customer accounts, Gift cards, and "Online sales (paid on the website)") and "Everything else goes to" (Cash differences, Refunds, Discounts given, VAT on sales), with the note "VAT on sales goes to one Xero account for every rate. Check these choices with your accountant before the first day is sent." A line with no account chosen SHALL be marked "No Xero account chosen — days with [line] sales can't be sent" beside its choice, in words as well as the warning colour. Choices SHALL be kept when disconnecting.
+Once connected, the fold SHALL list, each with a choice of account, "Sales go to" (each category), "Money taken goes to" (Cash, Card, Customer accounts, Gift cards, "Cycle to Work (owed by providers)" (Jack, 14 Nov, merge-c2w Q1 option 2; `c2w-accounts-line`), and "Online sales (paid on the website)") and "Everything else goes to" (Cash differences, Refunds, Discounts given, VAT on sales), with the note "VAT on sales goes to one Xero account for every rate. Check these choices with your accountant before the first day is sent." A line with no account chosen SHALL be marked "No Xero account chosen — days with [line] sales can't be sent" beside its choice, in words as well as the warning colour. Choices SHALL be kept when disconnecting.
 
 #### Scenario: choosing an account
 - **WHEN** Jack chooses an account for Cash

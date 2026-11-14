@@ -16,7 +16,7 @@ import pg from 'pg';
 import { createAppDatabase, dropDatabase, adminUrlFrom, appRoleFrom } from '../scripts/dev/new-db.mjs';
 import { runWithShop, prepare, pool } from '../server/db.js';
 import { sendClosedDay } from '../server/accounts/send.js';
-import { buildSummary } from '../server/accounts/summary.js';
+import { buildSummary, moneyBucket } from '../server/accounts/summary.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, staffFreshCookie, checkInAtTill } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -61,7 +61,7 @@ async function shop({ connect = true, choose = true } = {}) {
     assert.equal((await post(owner, '/api/accounts/connect', { provider: 'xero' })).status, 200);
     if (choose) {
       const accounts = (await call(owner, '/api/accounts')).body.accounts;
-      const lines = ['sales:Drivetrain', 'sales:Accessories', 'sales:Labour', 'sales:Other sales', 'money:cash', 'money:card', 'money:accounts', 'money:gift', 'money:online', 'other:cash_difference', 'other:vat'];
+      const lines = ['sales:Drivetrain', 'sales:Accessories', 'sales:Labour', 'sales:Other sales', 'money:cash', 'money:card', 'money:accounts', 'money:gift', 'money:c2w', 'money:online', 'other:cash_difference', 'other:vat'];
       for (const [i, line] of lines.entries()) {
         assert.equal((await call(owner, '/api/accounts/choices', { method: 'PUT', body: { line, accountId: accounts[i % accounts.length].id } })).status, 200, line);
       }
@@ -192,6 +192,20 @@ test('online money, customer accounts and gift cards each go to their own line',
   const lines = Object.fromEntries((await pretendSummaries(owner))[0].summary.lines.map((l) => [l.key, l.amountPence]));
   assert.deepEqual([lines['money:online'], lines['money:gift'], lines['money:accounts']], [2000, 500, 700]);
   assert.equal(lines['sales:Drivetrain'], 3200);
+});
+
+// A Cycle to Work hand-over's provider share is owed by the provider: its own line, the same way online money has
+// one, not Gift cards (Jack, 14 Nov, merge-c2w Q1 option 2).
+test('Cycle to Work money goes to its own line, not Gift cards', async () => {
+  const owner = await shop();
+  await oldSale(owner, '2026-09-01T10:00:00Z', { extra: [{ tenderType: 'Cycle to Work · Cyclescheme', amount: 880 }, { tenderType: 'Gift card', amount: 5 }], lines: [{ product: owner.chain.id, name: 'Bike', total: 885 }] });
+  await closeToday(owner, FLOAT);
+  const held = (await pretendSummaries(owner))[0];
+  const lines = Object.fromEntries(held.summary.lines.map((l) => [l.key, l.amountPence]));
+  assert.deepEqual([lines['money:c2w'], lines['money:gift']], [88000, 500]);
+  assert.equal(held.summary.lines.find((l) => l.key === 'money:c2w').label, 'Cycle to Work (owed by providers)');
+  assert.equal(held.summary.balanced, true);
+  assert.deepEqual(['cycle to work · bike2work', ' Cycle to Work · Acme Account ', 'Customer account', 'Gift card'].map(moneyBucket), ['c2w', 'c2w', 'accounts', 'gift']);
 });
 
 test('labour and a sale with no category have their own lines', async () => {
