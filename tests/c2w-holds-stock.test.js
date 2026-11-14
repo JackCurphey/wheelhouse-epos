@@ -1,0 +1,118 @@
+// A bike held for a Cycle to Work order is left out of the stock the shop can
+// sell (openspec/changes/cycle-to-work task 5.4; decided-while-building
+// 12 Nov, PR 5 item 7): the till's search, Stock's list and the product page.
+// The storefront's side is in tests/site-products.test.js ("the last bike held
+// for a Cycle to Work order counts as sold out"). The stock figure itself is
+// left alone: a held bike is still in the shop. Days and prices are made-up
+// test values; the drawings leave them bracketed.
+//
+// The server clock is pinned to 1 Sep 2026 (WHEELHOUSE_TEST_CLOCK).
+// Needs the compose Postgres up (npm run docker:up) or it hangs with no output.
+import '../server/load-env.js';
+import test, { before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { pool, runWithShop, prepare } from '../server/db.js';
+import { startLiveServer } from './helpers/liveServer.js';
+import { staffSignup, staffRequest } from './helpers/staff.js';
+import { deleteTestShop } from './helpers/testShop.js';
+import { seedProduct } from './helpers/till.js';
+
+let server;
+let owner;
+let provider;
+let maya;
+let site;
+const own = (p, options) => staffRequest(server.baseUrl, owner.cookie, p, options);
+const inShop = (fn) => runWithShop(owner.shop.id, fn);
+const tag = () => randomUUID().slice(0, 8);
+
+before(async () => {
+  server = await startLiveServer();
+  owner = await staffSignup(server.baseUrl, { shopName: 'North Street Cycles', ownerName: 'Jack Lewis' });
+  const set = await own('/api/c2w/settings', { method: 'PUT', body: { holdDays: 7, remindDays: 2, quoteValidDays: 30 } });
+  assert.equal(set.status, 200, JSON.stringify(set.body));
+  provider = (await own('/api/c2w/providers', { method: 'POST', body: { name: '[Provider]' } })).body.provider;
+  maya = (await own('/api/customers', { method: 'POST', body: { name: 'Maya Patel', email: `maya-${tag()}@example.test` } })).body;
+  site = await inShop(async () => (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get()).id);
+  // A bike category, so Stock's list treats these as bikes counted by frame.
+  await inShop(async () => prepare("INSERT INTO product_categories (name, path, bike_kind) VALUES ('Bikes', 'Bikes', 'bikes') RETURNING id").get());
+});
+after(async () => {
+  if (owner) await deleteTestShop(owner.shop.id);
+  if (server) await server.stop();
+  await pool.end();
+});
+
+// A bike with frame numbers, `frames` of them in stock at the shop's site.
+async function framedBike(frames) {
+  const id = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: frames });
+  await inShop(async () => {
+    await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').get(site, id, frames);
+    await prepare("UPDATE products SET category = 'Bikes' WHERE id = ?").run(id);
+    for (let i = 0; i < frames; i += 1) {
+      const key = `[FRAME-${tag()}]`;
+      await prepare('INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key) VALUES (?, ?, ?, ?) RETURNING id').get(id, site, key, key);
+    }
+  });
+  return id;
+}
+// A bike with no frame numbers: only the site's stock figure.
+async function countedBike(qty) {
+  const id = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: qty });
+  await inShop(async () => prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, ?) RETURNING product_id').get(site, id, qty));
+  return id;
+}
+const quote = async (productId, body = {}) => own('/api/c2w/orders', {
+  method: 'POST', body: { customerId: maya.id, providerId: provider.id, productId, accessoryIds: [], ...body },
+});
+
+// The till's search (item-search.tsx: "[n] in stock" or "None in stock").
+const inTill = async (productId) => {
+  const res = await own(`/api/products?search=${encodeURIComponent('[Bike]')}`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  return res.body.find((p) => p.id === productId);
+};
+const release = (id) => own(`/api/c2w/orders/${id}/release`, { method: 'POST', body: {} });
+
+test('5.4 the till search leaves a held frame out of what is free, and the stock figure alone; Release puts it back', async () => {
+  const bike = await framedBike(2);
+  const held = (await quote(bike)).body.order;
+  assert.equal(held.held, true);
+  assert.deepEqual([(await inTill(bike)).stockQty, (await inTill(bike)).freeQty], [2, 1]);
+  assert.equal((await release(held.id)).status, 200);
+  assert.equal((await inTill(bike)).freeQty, 2);
+});
+
+test('5.4 the last bike held, by frame or by count, is none free at the till', async () => {
+  const framed = await framedBike(1);
+  const counted = await countedBike(1);
+  assert.equal((await quote(framed)).body.order.held, true);
+  assert.equal((await quote(counted)).body.order.held, true);
+  assert.deepEqual([(await inTill(framed)).stockQty, (await inTill(framed)).freeQty], [1, 0]);
+  assert.deepEqual([(await inTill(counted)).stockQty, (await inTill(counted)).freeQty], [1, 0]);
+});
+
+test('5.4 a quote without the hold leaves the bike free at the till', async () => {
+  const bike = await countedBike(1);
+  const open = (await quote(bike, { hold: false })).body.order;
+  assert.equal(open.held, false, JSON.stringify(open));
+  assert.equal((await inTill(bike)).freeQty, 1);
+});
+
+test('5.4 Stock’s row for a bike counts only the frames free to sell', async () => {
+  const bike = await framedBike(2);
+  await quote(bike);
+  const rows = (await own(`/api/stock-list?search=${encodeURIComponent('[Bike]')}`)).body.rows;
+  assert.equal(rows.find((r) => r.id === bike).framesInStock, 1);
+});
+
+test('5.4 the product page says whose order a held frame is for and until when (st-product-bike: “Held for [Customer] until [date]”)', async () => {
+  const bike = await framedBike(2);
+  const held = (await quote(bike)).body.order;
+  const page = (await own(`/api/products/${bike}`)).body;
+  const [free, kept] = page.frames;
+  assert.deepEqual([free.state, free.heldFor], ['in_stock', null]);
+  assert.equal(kept.state, 'held');
+  assert.deepEqual(kept.heldFor, { orderId: held.id, customerId: maya.id, customerName: 'Maya Patel', until: '2026-09-08' });
+});

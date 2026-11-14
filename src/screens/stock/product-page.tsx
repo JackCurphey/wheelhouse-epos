@@ -14,6 +14,7 @@ import { answerText, type Detail } from './stock-list-bits.tsx';
 import { count, marginText, money, mono, stockState, StateTag, type Product } from './stock-bits.tsx';
 import { dateText } from '@/screens/deliveries/frame-number.tsx';
 import { BrandWarranty, type Warranty } from './product-warranty.tsx';
+import { customerHref } from '@/screens/customers/customers-page.tsx';
 
 /**
  * A product's page (drawn as st-product, st-product-staff and st-product-bike
@@ -36,7 +37,9 @@ type PriceChange = Which & { id: string; type: 'price_change'; field: 'price' | 
 export type Line = Move | PriceChange;
 export type ShopStock = { id: number; name: string; qty: number; here: boolean };
 type Answered = Detail & { from: string; value: number | string | null };
-type Frame = { id: number; frameNumber: string; state: 'in_stock' | 'held' | 'sold'; bookedInAt: string; deliveryId: number | null; supplierName: string | null };
+// heldFor: the Cycle to Work order a held frame is for; until is null once the certificate is in (task 5.4).
+type HeldFor = { orderId: number; customerId: number; customerName: string; until: string | null };
+type Frame = { id: number; frameNumber: string; state: 'in_stock' | 'held' | 'sold'; bookedInAt: string; deliveryId: number | null; supplierName: string | null; heldFor?: HeldFor | null };
 type Page = Product & { stockAtShops: ShopStock[]; history: Line[]; details?: Answered[]; isBike?: boolean; frames?: Frame[]; isEbike?: boolean; warranty?: Warranty };
 type Show = 'Everything' | 'Sold' | 'Received' | 'Counted and adjusted' | 'Price changes';
 const WHAT: Record<string, [string, Show | null]> = {
@@ -81,7 +84,12 @@ function BikeFrames({ frames, stock }: { frames: Frame[]; stock: number }) {
             <li key={f.id} className="flex min-h-14 flex-wrap items-center gap-3 border-t border-[var(--wh-border)] py-2">
               <span className="flex min-w-0 flex-[1_1_200px] flex-col gap-0.5">
                 <span className="text-size-15 font-semibold">Frame <span className={mono}>{f.frameNumber}</span></span>
-                <span className="text-size-13 text-[var(--wh-muted)]">{`Booked in ${dateText(f.bookedInAt)}${f.supplierName ? ` from ${f.supplierName}` : ''}`}</span>
+                {f.heldFor ? (
+                  <span className="text-size-13 text-[var(--wh-muted)]">
+                    {'Held for '}<Link to={customerHref(f.heldFor.customerId)} className="text-[var(--wh-ink)]">{f.heldFor.customerName}</Link>
+                    {`${f.heldFor.until ? ` until ${dateText(f.heldFor.until)}` : ''} · Cycle to Work — not for sale`}
+                  </span>
+                ) : <span className="text-size-13 text-[var(--wh-muted)]">{`Booked in ${dateText(f.bookedInAt)}${f.supplierName ? ` from ${f.supplierName}` : ''}`}</span>}
               </span>
               <span className={`inline-flex min-h-[26px] items-center rounded-full px-2.5 text-xs font-bold whitespace-nowrap ${FRAME_TAG[f.state][1]}`}>{FRAME_TAG[f.state][0]}</span>
             </li>

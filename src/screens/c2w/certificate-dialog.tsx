@@ -40,7 +40,7 @@ export function Tick({ checked, onChange, label, sub }: { checked: boolean; onCh
   );
 }
 
-function Choice<T extends string>({ legend, name, value, options, onPick }: { legend: string; name: string; value: T; options: { value: T; label: string; hint?: string }[]; onPick: (v: T) => void }) {
+export function Choice<T extends string>({ legend, name, value, options, onPick }: { legend: string; name: string; value: T; options: { value: T; label: string; hint?: string }[]; onPick: (v: T) => void }) {
   return (
     <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
       <legend className="mb-1 p-0 text-size-15 font-bold">{legend}</legend>

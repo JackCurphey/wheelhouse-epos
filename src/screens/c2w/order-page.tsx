@@ -20,6 +20,7 @@ import { HandOverDialog } from './hand-over-dialog.tsx';
 import { CancelDialog, MoreMenu } from './cancel-dialog.tsx';
 import { ChangeDialog, type ChangeWhat } from './change-dialog.tsx';
 import { MarkPaidDialog, owedOf } from './mark-paid-dialog.tsx';
+import { HoldDialog, holdSaidText, type HoldSaid, type HoldStep } from './hold-dialog.tsx';
 
 /**
  * One Cycle to Work order (c2w.mjs orderPage; cw-order-held, and the owner's
@@ -56,7 +57,7 @@ function Stages({ o }: { o: Full }) {
   );
 }
 
-type Act = { onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; onHandOver: () => void; busy: boolean };
+type Act = { onHold: (start: HoldStep) => void; onApplied: () => void; onCertificate: () => void; onReady: () => void; onOrder: () => void; onHandOver: () => void; busy: boolean };
 type Money = { provider: Provider | undefined; lateDays: number | null; canPay: boolean; onPay: () => void; onCloseOwed: () => void };
 
 /** What one payment put on this order, its extra included (paymentPence is the whole payment, which may cover several bikes). */
@@ -177,12 +178,11 @@ function NextStep({ o, rule, remindDays, now, act, money }: { o: Full; rule: str
   }
   if (o.holdUntil) {
     const left = daysBetween(now, o.holdUntil);
-    // Hold longer and Release the bike come with pull request 5b (logged).
     return (
       <Box label="cw-next">
         {head('Next: the certificate')}
         <Msg><strong>{`${o.bike} is held until ${longDate(o.holdUntil)}.`}</strong>{left >= 0 ? ` Hold ends in ${plural(left, 'day', 'days')} — we’ll remind the shop ${remindDays === null ? '[n] days' : plural(remindDays, 'day', 'days')} before.` : ''}</Msg>
-        {row(addCertificate('primary'))}
+        {row(<>{addCertificate('primary')}<Button onClick={() => act.onHold('hold-longer')}>Hold longer</Button><Button onClick={() => act.onHold('release')}>Release the bike</Button></>)}
       </Box>
     );
   }
@@ -359,6 +359,7 @@ function OrderBody() {
   const [open, setOpen] = useState<'applied' | 'certificate' | 'hand-over' | 'cancel' | 'paid' | 'close' | null>(null);
   const [stepping, setStepping] = useState(false);
   const [changing, setChanging] = useState<ChangeWhat | null>(null);
+  const [holding, setHolding] = useState<HoldStep | null>(null);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
   // of it, so a reload or Back doesn't show it again. An email that didn't go
@@ -403,7 +404,24 @@ function OrderBody() {
       setStepping(false);
     }
   }
-  const act = { onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), onHandOver: () => setOpen('hand-over'), busy: stepping };
+  // Hold longer or Release the bike (cw-hold-ending): Today's note, and Undo for Hold longer.
+  async function held(said: HoldSaid) {
+    const current = o as Full;
+    await reload();
+    show(said.step === 'hold-longer' && said.holdUntil
+      ? { text: holdSaidText(current.customerName, said), action: { label: 'Undo', run: () => { saved.busy(); void undoLonger(); } } }
+      : { text: holdSaidText(current.customerName, said) });
+  }
+  async function undoLonger() {
+    try {
+      await apiMutate(`/api/c2w/orders/${id}/hold-longer/undo`, {});
+      show({ text: 'Undone' });
+    } catch (err) {
+      show({ text: serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.', failed: true });
+    }
+    void reload();
+  }
+  const act = { onHold: setHolding, onApplied: () => setOpen('applied'), onCertificate: () => setOpen('certificate'), onReady: () => void step('ready'), onOrder: () => void step('order'), onHandOver: () => setOpen('hand-over'), busy: stepping };
   const canPay = session.status === 'signed-in' && session.user.isOwner;
   const money = { provider, lateDays: settings?.paymentLateDays ?? null, canPay, onPay: () => setOpen('paid'), onCloseOwed: () => setOpen('close') };
   const left = <><NextStep o={o} rule={settings?.orderRule} remindDays={settings?.remindDays ?? null} now={today} act={act} money={money} /><History o={o} /></>;
@@ -416,7 +434,7 @@ function OrderBody() {
           <h2 className="m-0 text-size-22 font-bold md:text-size-26">{`${o.customerName} · Cycle to Work`}</h2>
           <p className={note}>{`Quote ${o.quoteRef} · ${o.siteName && o.siteName !== shop ? `${shop}, ${o.siteName}` : shop}`}</p>
         </div>
-        {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} onChange={setChanging} /> : null}
+        {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} onChange={setChanging} onRelease={() => setHolding('release')} /> : null}
       </div>
       {o.stage === 'cancelled' || o.stage === 'closed' ? null : <Stages o={o} />}
       <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[minmax(0,1fr)_420px]">
@@ -426,6 +444,7 @@ function OrderBody() {
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
       {open === 'hand-over' ? <HandOverDialog o={o} provider={provider} onClose={() => setOpen(null)} /> : null}
+      {holding ? <HoldDialog o={o} events={o.events} today={today} holdDays={settings?.holdDays ?? null} start={holding} onClose={() => setHolding(null)} onSaved={(said) => void held(said)} /> : null}
       {changing ? <ChangeDialog o={o} what={changing} onClose={() => setChanging(null)} /> : null}
       {open === 'cancel' ? <CancelDialog o={o} events={o.events} shop={shop} onClose={() => setOpen(null)} /> : null}
       {open === 'paid' || open === 'close' ? <MarkPaidDialog o={o} today={today} closing={open === 'close'} onClose={() => setOpen(null)} onSaved={(text) => show({ text })} /> : null}

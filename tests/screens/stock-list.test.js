@@ -290,6 +290,24 @@ test('a bike’s page lists each frame number, in stock and booked in from its s
   assert.match(history.getAllByRole('listitem')[0].textContent, /2 frame numbers · Jo Taylor/);
 });
 
+// A frame held for a Cycle to Work order (st-product-bike's held row; openspec/changes/cycle-to-work task 5.4).
+const HELD = { id: 3, frameNumber: '[frame 3]', state: 'held', bookedInAt: '2026-09-01T10:00:00.000Z', deliveryId: 77, supplierName: '[Supplier]', heldFor: { orderId: 12, customerId: 5, customerName: 'Maya Patel', until: '2026-09-08' } };
+
+test('5.4 a held frame says whose Cycle to Work order it’s for and until when, and links the customer', async () => {
+  const { ui, within } = await open('/workshop/stock/1', { page: bikePage({ frames: [FRAMES[0], HELD] }) });
+  const box = within(await ui.findByRole('region', { name: 'Bikes by frame number' }));
+  const rows = box.getAllByRole('listitem');
+  assert.equal(rows[1].textContent, 'Frame [frame 3]Held for Maya Patel until 8 Sep 2026 · Cycle to Work — not for saleHeld');
+  assert.equal(within(rows[1]).getByRole('link', { name: 'Maya Patel' }).getAttribute('href'), '/workshop/customers/5');
+  assert.equal(rows[0].textContent, 'Frame [frame 2]Booked in 1 Sep 2026 from [Supplier]In stock');
+});
+
+test('5.4 a frame held until collection (the certificate is in) has no end date', async () => {
+  const { ui, within } = await open('/workshop/stock/1', { page: bikePage({ frames: [FRAMES[0], { ...HELD, heldFor: { ...HELD.heldFor, until: null } }] }) });
+  const box = within(await ui.findByRole('region', { name: 'Bikes by frame number' }));
+  assert.equal(box.getAllByRole('listitem')[1].textContent, 'Frame [frame 3]Held for Maya Patel · Cycle to Work — not for saleHeld');
+});
+
 test('a bike with none booked in says how frames are recorded', async () => {
   const { ui } = await open('/workshop/stock/1', { page: bikePage({ frames: [], history: [] }) });
   assert.ok(await ui.findByText('No bikes in stock yet. Each bike’s frame number is recorded when it’s booked in.'));
