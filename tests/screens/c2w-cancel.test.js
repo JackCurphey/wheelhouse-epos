@@ -184,11 +184,25 @@ test('cw-more › Change the accessories: the order’s accessories are listed; 
   assert.deepEqual(posts('/change').map((c) => c.body), [{ what: 'accessories', accessoryIds: [24] }]);
 });
 
+test('cw-more › Change the accessories: picking one already on the list adds it once', async () => {
+  const theOrder = order({ accessories: [{ productId: 22, name: '[Accessory]', pricePence: 4000 }], totalPence: 104000 });
+  const { ui, within, fireEvent } = await open({ theOrder, products: [LIGHTS], on: { '/change': changed({ added: [LIGHTS.name] }) } });
+  const box = within(await openChange(ui, fireEvent, 2, 'Change the accessories'));
+  for (let i = 0; i < 2; i += 1) {
+    fireEvent.change(box.getByRole('combobox', { name: 'Accessories' }), { target: { value: 'Se' } });
+    fireEvent.click(await box.findByRole('option', { name: LIGHTS.name }));
+  }
+  const chosen = box.getByRole('list', { name: 'Accessories chosen' });
+  assert.deepEqual(within(chosen).getAllByRole('listitem').map((l) => l.textContent.replace('✕', '')), ['[Accessory]', LIGHTS.name]);
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  await ui.findByRole('heading', { level: 2, name: 'The revised quote' });
+  assert.deepEqual(posts('/change').map((c) => c.body), [{ what: 'accessories', accessoryIds: [22, 24] }]);
+});
+
 test('cw-more › Change the provider: choose another provider and save', async () => {
   const { ui, within, fireEvent } = await open({ providers: [PROVIDER, OTHER_PROVIDER], on: { '/change': changed({ from: '[Provider]', to: '[Second provider]' }, { providerId: 4, providerName: '[Second provider]' }) } });
   const box = within(await openChange(ui, fireEvent, 3, 'Change the provider'));
   const pick = box.getByRole('combobox', { name: 'Scheme provider' });
-  await box.findByRole('option', { name: '[Second provider]' });
   await box.findByRole('option', { name: '[Second provider]' });
   assert.equal(pick.value, '3');
   fireEvent.change(pick, { target: { value: '4' } });

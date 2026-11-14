@@ -85,7 +85,7 @@ export function ChangeDialog({ o, what, onClose }: { o: C2wOrder; what: ChangeWh
                 ))}
               </ul>
             ) : null}
-            <Search<Product> id="ch-acc" label="Accessories" path="/api/products" name={(p) => p.name} onPick={(p) => setExtras((x) => [...x, { id: p.id, name: p.name }])} show={priced} />
+            <Search<Product> id="ch-acc" label="Accessories" path="/api/products" name={(p) => p.name} onPick={(p) => setExtras((x) => (x.some((a) => a.id === p.id) ? x : [...x, { id: p.id, name: p.name }]))} show={priced} />
           </Field>
         ) : null}
         {what === 'provider' ? (

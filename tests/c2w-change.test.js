@@ -207,7 +207,7 @@ test('4.8 refusals: the same bike or provider, a stage past the certificate, and
   const placed = await own(`/api/c2w/orders/${ordered.id}/order`, { method: 'POST', body: { anyway: true, reason: '[reason]' } });
   assert.equal(placed.status, 200, JSON.stringify(placed.body));
   assert.equal((await change(ordered.id, { what: 'bike', productId: bike })).body.code, 'on_order');
-  assert.equal((await change(ordered.id, { what: 'accessories', accessoryIds: [] })).status, 200, 'the accessories can still change');
+  assert.equal((await change(ordered.id, { what: 'accessories', accessoryIds: [await accessory('20.00')] })).status, 200, 'the accessories can still change');
 });
 
 test('4.8 the quote says what changed and whether it has been emailed since (cw-quote-revised)', async () => {
@@ -223,4 +223,98 @@ test('4.8 the quote says what changed and whether it has been emailed since (cw-
   assert.equal((await own(`/api/c2w/orders/${o.id}/email-quote`, { method: 'POST', body: {} })).status, 200);
   const q2 = (await own(`/api/c2w/orders/${o.id}/quote`)).body.quote;
   assert.deepEqual(q2.revision, { what: 'bike', on: '2026-09-01', sent: true });
+});
+
+// From the self-review (reviewer, risky-area-reviewer and /review, 14 Nov).
+test('4.8 the same accessories again is refused: nothing to revise', async () => {
+  const bike = await framedBike(1);
+  const a = await accessory('20.00');
+  const b = await accessory('30.00');
+  const o = await quote(bike, { accessoryIds: [a, b] });
+  const had = (await order(o.id)).events.length;
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [a, b] })).body.code, 'same_choice');
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [b, a] })).body.code, 'same_choice', 'the same ones in another order');
+  const now = await order(o.id);
+  assert.deepEqual([now.quoteRevisedAt, now.events.length], [null, had]);
+});
+
+test('4.8 the accessories list is checked: each once, whole ids, up to 20', async () => {
+  const bike = await framedBike(1);
+  const a = await accessory('20.00');
+  const o = await quote(bike);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [a, a] })).status, 400);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: ['x'] })).status, 400);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: Array.from({ length: 21 }, (_, i) => i + 1) })).status, 400);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: 'all' })).status, 400);
+});
+
+test('4.8 at Ready to collect nothing changes: not the accessories, not the provider', async () => {
+  const bike = await framedBike(1);
+  const a = await accessory('20.00');
+  const o = await quote(bike);
+  await own(`/api/c2w/orders/${o.id}/certificate`, { method: 'POST', body: { number: '[certificate number]', amountPence: o.totalPence, ready: true } });
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [a] })).body.code, 'wrong_stage');
+  assert.equal((await change(o.id, { what: 'provider', providerId: other.id })).body.code, 'wrong_stage');
+});
+
+test('4.8 accessories changed after the certificate: the difference follows the new total', async () => {
+  const bike = await framedBike(1, '1000.00');
+  const a = await accessory('100.00');
+  const o = await quote(bike);
+  await own(`/api/c2w/orders/${o.id}/certificate`, { method: 'POST', body: { number: '[certificate number]', amountPence: 100000 } });
+  assert.equal((await order(o.id)).differenceChoice, null);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [a] })).status, 200);
+  const now = await order(o.id);
+  assert.deepEqual([now.totalPence, now.differenceChoice, now.providerPaysPence, now.customerPaysPence], [110000, 'keep', 100000, 10000]);
+  assert.equal((await change(o.id, { what: 'accessories', accessoryIds: [] })).status, 200);
+  assert.equal((await order(o.id)).differenceChoice, null);
+});
+
+test('4.8 after the certificate, a bike with none free lets the firm hold go: the order needs one ordering in (logged)', async () => {
+  const before = await framedBike(1);
+  const none = await framedBike(0);
+  const o = await quote(before);
+  await own(`/api/c2w/orders/${o.id}/certificate`, { method: 'POST', body: { number: '[certificate number]', amountPence: o.totalPence } });
+  assert.equal((await change(o.id, { what: 'bike', productId: none })).status, 200);
+  assert.equal((await frames(before))[0].state, 'in_stock', 'the old bike is back on sale');
+  const now = await order(o.id);
+  assert.deepEqual([now.stage, now.held, now.frameId, now.events.at(-1).detail.held], ['certificate', false, null, false]);
+});
+
+test('4.8 the hold keeps its date, even one already pushed back with Hold longer; stock counts never move', async () => {
+  const before = await framedBike(1);
+  const after = await framedBike(1);
+  const o = await quote(before);
+  assert.equal((await own(`/api/c2w/orders/${o.id}/hold-longer`, { method: 'POST', body: {} })).status, 200);
+  const longer = (await order(o.id)).holdUntil;
+  assert.equal(longer, '2026-09-15');
+  const qty = () => inShop(async () => prepare('SELECT id, stock_qty FROM products WHERE id = ANY(?::int[]) ORDER BY id').all([before, after]));
+  const was = await qty();
+  assert.equal((await change(o.id, { what: 'bike', productId: after })).status, 200);
+  assert.equal((await order(o.id)).holdUntil, longer);
+  assert.deepEqual(await qty(), was, 'a hold is not a sale: stock_qty stays');
+});
+
+test('4.8 a released order whose bike changes stays let go, and no longer says its old bike has been sold', async () => {
+  const before = await framedBike(1);
+  const after = await framedBike(1);
+  const o = await quote(before);
+  assert.equal((await own(`/api/c2w/orders/${o.id}/release`, { method: 'POST', body: {} })).status, 200);
+  await inShop(async () => prepare("UPDATE stock_frames SET state = 'sold' WHERE product_id = ? RETURNING id").get(before));
+  assert.equal((await order(o.id)).releasedSold, true);
+  assert.equal((await change(o.id, { what: 'bike', productId: after })).status, 200);
+  const now = await order(o.id);
+  assert.deepEqual([now.held, now.releasedSold], [false, false]);
+  assert.ok(!('held' in now.events.at(-1).detail), 'let go, so no hold was wanted');
+});
+
+test('4.8 the revised quote dates the change itself, not a later revision', async () => {
+  const before = await framedBike(1);
+  const after = await framedBike(1);
+  const o = await quote(before);
+  await change(o.id, { what: 'bike', productId: after });
+  // A later revision (the certificate's "change it to match") moves quote_revised_at.
+  await inShop(async () => prepare("UPDATE c2w_orders SET quote_revised_at = '2026-09-05T10:00:00Z' WHERE id = ? RETURNING id").get(o.id));
+  const q = (await own(`/api/c2w/orders/${o.id}/quote`)).body.quote;
+  assert.deepEqual(q.revision, { what: 'bike', on: '2026-09-01', sent: false });
 });

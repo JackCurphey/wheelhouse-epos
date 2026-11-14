@@ -233,7 +233,7 @@ export function register(route) {
     const tz = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
     const day = (t) => (t ? new Date(t).toLocaleDateString('en-CA', { timeZone: tz }) : null);
     // cw-quote-revised: the latest change, and whether the quote has been emailed since.
-    const change = await db.prepare(`SELECT e.detail->>'what' AS what, EXISTS (SELECT 1 FROM c2w_order_events m
+    const change = await db.prepare(`SELECT e.detail->>'what' AS what, e.detail->>'at' AS at, EXISTS (SELECT 1 FROM c2w_order_events m
       WHERE m.order_id = e.order_id AND m.kind = 'quote_emailed' AND m.id > e.id) AS sent
       FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'changed' ORDER BY e.id DESC LIMIT 1`).get(row.id);
     sendJson(res, 200, {
@@ -241,7 +241,7 @@ export function register(route) {
         shop: { name: shop.name, address: shop.address, phone: shop.phone, email: shop.email, vatNumber: shop.vat_number, logoUrl: shop.logo_url ?? null },
         quoteRef: quoteRef(row.quote_number), givenOn: day(row.quote_given_at), revisedOn: day(row.quote_revised_at), validUntil: row.valid_until_day,
         customerName: row.customer_name, providerName: row.provider_name,
-        revision: change ? { what: change.what, on: day(row.quote_revised_at), sent: change.sent } : null,
+        revision: change ? { what: change.what, on: day(change.at), sent: change.sent } : null,
         items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row, settings.order_rule), howToApply: settings.how_to_apply,
       },
     });
@@ -378,21 +378,22 @@ export function register(route) {
       const providerId = what === 'provider' ? wholeId(body.providerId, 'the scheme provider') : null;
       const accessoryIds = what === 'accessories' ? accessoryList(body.accessoryIds) : null;
       const now = currentMoment().toISOString();
-      const detail = { what };
+      const detail = { what, at: now };
       await takeStep(id, 'changed', who, async (row) => {
         const fields = { quote_revised_at: now };
         if (what === 'provider') {
           // The certificate names the provider, so it's settled from then on.
           if (row.stage === 'certificate') throw new Refused(409, WRONG_STAGE);
           if (providerId === row.provider_id) throw new Refused(400, SAME_CHOICE);
-          const p = await db.prepare('SELECT name, retired_at FROM c2w_providers WHERE id = ?').get(providerId);
+          const p = await db.prepare('SELECT name, retired_at, (SELECT w.name FROM c2w_providers w WHERE w.id = ?) AS was FROM c2w_providers WHERE id = ?').get(row.provider_id, providerId);
           if (!p) throw new ValidationError('Choose the scheme provider');
           if (p.retired_at) throw new Refused(400, RETIRED_PROVIDER);
-          const was = await db.prepare('SELECT name FROM c2w_providers WHERE id = ?').get(row.provider_id);
-          Object.assign(detail, { from: was.name, to: p.name });
+          Object.assign(detail, { from: p.was, to: p.name });
           return { ...fields, provider_id: providerId };
         }
         if (what === 'accessories') {
+          const ids = (list) => [...list].sort((x, y) => x - y).join(',');
+          if (ids(accessoryIds) === ids(row.accessories.map((a) => a.productId))) throw new Refused(400, SAME_CHOICE);
           const extras = await priceAccessories(row.accessories, accessoryIds);
           const had = new Set(row.accessories.map((a) => a.productId));
           const has = new Set(accessoryIds);

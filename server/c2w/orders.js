@@ -128,7 +128,9 @@ export const ORDER_SELECT = `SELECT o.*, ${['valid_until', 'hold_until', 'certif
   (SELECT s.name FROM suppliers s WHERE btrim(pr.supplier) <> '' AND lower(btrim(s.name)) = lower(btrim(pr.supplier)) ORDER BY s.id LIMIT 1) AS bike_supplier,
   -- cw-certificate-released "and has since been sold": the frame the order last released has gone.
   (SELECT sf.state = 'sold' FROM (SELECT e.detail->>'frameId' AS fid FROM c2w_order_events e
-    WHERE e.order_id = o.id AND e.kind = 'released' ORDER BY e.id DESC LIMIT 1) last
+    WHERE e.order_id = o.id AND e.kind = 'released' AND NOT EXISTS (SELECT 1 FROM c2w_order_events c
+      WHERE c.order_id = o.id AND c.kind = 'changed' AND c.detail->>'what' = 'bike' AND c.id > e.id)
+    ORDER BY e.id DESC LIMIT 1) last
     JOIN stock_frames sf ON sf.id::text = last.fid) AS released_sold
   FROM c2w_orders o
   JOIN customers c ON c.id = o.customer_id
