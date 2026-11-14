@@ -210,6 +210,36 @@ test('4.8 refusals: the same bike or provider, a stage past the certificate, and
   assert.equal((await change(ordered.id, { what: 'accessories', accessoryIds: [await accessory('20.00')] })).status, 200, 'the accessories can still change');
 });
 
+test('4.8 a product taken off sale can’t be picked: not as the bike, not as an added accessory; one already on the order can stay', async () => {
+  const bike = await framedBike(1);
+  const a = await accessory('20.00');
+  const o = await quote(bike, { accessoryIds: [a] });
+  const offSale = (id) => inShop(async () => prepare('UPDATE products SET active = 0 WHERE id = ? RETURNING id').get(id));
+  const gone = await framedBike(1);
+  const goneAcc = await accessory('30.00');
+  await offSale(gone);
+  await offSale(goneAcc);
+  const asBike = await change(o.id, { what: 'bike', productId: gone });
+  assert.equal(asBike.status, 400, 'a bike taken off sale is refused');
+  assert.equal(asBike.body.error, 'Choose the bike');
+  const asAcc = await change(o.id, { what: 'accessories', accessoryIds: [a, goneAcc] });
+  assert.equal(asAcc.status, 400, 'an accessory taken off sale is refused');
+  assert.equal(asAcc.body.error, 'Choose the accessories from the shop’s products');
+  const still = await order(o.id);
+  assert.equal(still.productId, bike, 'the bike is as it was');
+  assert.deepEqual(still.accessories.map((x) => x.productId), [a], 'the accessories are as they were');
+  assert.deepEqual((await frames(gone)).map((f) => f.state), ['in_stock'], 'nothing of the refused bike is held');
+  // The certificate's "change it to match" picks accessories the same way.
+  const matched = await own(`/api/c2w/orders/${o.id}/certificate`, { method: 'POST', body: { number: '[certificate number]', amountPence: o.totalPence - 100, difference: 'match', accessoryIds: [goneAcc] } });
+  assert.equal(matched.status, 400, 'the certificate can’t add an accessory taken off sale either');
+  assert.equal(matched.body.error, 'Choose the accessories from the shop’s products');
+  assert.equal((await order(o.id)).stage, 'quote', 'the certificate was not taken');
+  // The order's own accessory taken off sale since the quote stays on it.
+  await offSale(a);
+  const kept = await change(o.id, { what: 'accessories', accessoryIds: [a, await accessory('40.00')] });
+  assert.equal(kept.status, 200, JSON.stringify(kept.body));
+});
+
 test('4.8 the quote says what changed and whether it has been emailed since (cw-quote-revised)', async () => {
   const before = await framedBike(1);
   const after = await framedBike(1);

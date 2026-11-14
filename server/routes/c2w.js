@@ -66,12 +66,14 @@ const settingsRow = async () => {
 };
 // The order's accessories: ones it had keep their quoted price; added ones take
 // the shop's price now (the certificate's "change it to match", and Change).
+// An added one must still be on sale, as the pickers offer (decided while
+// building, 14 Nov); a kept one taken off sale since stays.
 async function priceAccessories(quoted, ids) {
   const kept = new Map(quoted.map((a) => [a.productId, a]));
   const out = [];
   for (const pid of ids) {
     if (kept.has(pid)) { out.push(kept.get(pid)); continue; }
-    const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(pid);
+    const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ? AND active = 1').get(pid);
     if (!p) throw new ValidationError('Choose the accessories from the shop’s products');
     out.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
   }
@@ -408,7 +410,8 @@ export function register(route) {
           return withDifference(row, { ...fields, accessories: JSON.stringify(extras), total_pence: total });
         }
         if (productId === row.product_id) throw new Refused(400, SAME_CHOICE);
-        const bike = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(productId);
+        // Still on sale, as the picker offers (decided while building, 14 Nov).
+        const bike = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ? AND active = 1').get(productId);
         if (!bike) throw new ValidationError('Choose the bike');
         // A bike coming from the supplier is that bike: undo the supplier order first.
         if ((await loadOrder(row.id)).on_order) throw new Refused(409, ON_ORDER_NOW);
