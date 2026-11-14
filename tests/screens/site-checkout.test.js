@@ -1,9 +1,9 @@
 // The website's checkout, up to where paying starts (openspec/changes/
 // website-buy-online, tasks 12.1, 12.2 and 12.5; on-checkout,
 // on-checkout-errors, on-checkout-credit and on-checkout-covered in
-// online.mjs). The wallets and the card form come with paying (tasks 5.0b–e);
-// until then the server answers a checkout that passes every check with 501
-// paying_not_built, and the page says so beside the button.
+// online.mjs). The wallets and the card form come with paying's screens (task
+// 12.3); until then the server makes the order (task 4.5) and the page says
+// paying online isn't ready yet beside the button.
 //
 // Example data from the drawings: Shimano brake pads B05S-RX at £28.00 × 2,
 // "[Product]", Bolton, North Street Cycles, Maya Patel, maya@example.test,
@@ -38,7 +38,8 @@ const basket = (extra = {}) => ({
   changed: null, blocked: null, you: null, credit: null, ...extra,
 });
 const CHANGED = 'Something in your basket changed. Sort the lines marked below before checking out.';
-const NOT_BUILT = { status: 501, body: { error: 'Paying online isn’t ready yet', code: 'paying_not_built', totalPence: 6600, creditPence: 0, leftToPayPence: 6600 } };
+// The server's answer once the order is made (task 4.5): its private link and the held card part.
+const NOT_BUILT = { status: 200, body: { ref: '[order link]', totalPence: 6600, creditPence: 0, cardPence: 6600, payment: { provider: 'pretend', ref: '[payment ref]' } } };
 
 // `pay` answers POST /api/site/checkout: a { status, body } or a function of the body sent.
 const serving = (answer, pay = NOT_BUILT) => (pathname, { body }) => {

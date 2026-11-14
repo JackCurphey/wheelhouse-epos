@@ -21,11 +21,13 @@ import { askCheckout, hasDetails, useBasket, useSiteContext, type BasketAnswer }
  * on-checkout-credit and on-checkout-covered in online.mjs): How you'll get
  * it, Your details (signed in, or boxes to fill), the store credit box, Your
  * order, and the Pay button with the terms. The wallets and the card form come
- * with paying (tasks 5.0b–e); until then the server answers 501 and its words
- * show beside the button. On a phone the order sits at the top and Pay stays
+ * with paying's screens (task 12.3); until then the server makes the order
+ * (task 4.5) and "Paying online isn’t ready yet" shows beside the button. On a phone the order sits at the top and Pay stays
  * in a bar along the bottom (decision 10); on a computer the order and Pay sit
  * in a column on the right that stays in view.
  */
+const PAYING_NOT_READY = 'Paying online isn’t ready yet';
+
 export function CheckoutPage() {
   usePageTitle('Checkout');
   const { address, chosen, basket } = useSiteContext();
@@ -94,6 +96,8 @@ function Form({ answer, refreshing }: { answer: BasketAnswer; refreshing: boolea
       return askCheckout(address, { ...ask, requestKey: keyFor.current.key });
     },
     onMutate: () => { setSaid(null); setSummary(null); setFields({}); },
+    // The order is made and its card part held; the card form comes with paying's screens (task 12.3).
+    onSuccess: () => { setSaid(PAYING_NOT_READY); },
     onError: (error) => {
       const body = error instanceof ApiError ? (error.body as { error?: string; fields?: Fields; basket?: BasketAnswer } | null) : null;
       if (error instanceof ApiError && error.status >= 400 && error.status < 500) keyFor.current = null;

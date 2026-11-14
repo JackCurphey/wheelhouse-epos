@@ -179,9 +179,18 @@ export type CheckoutAsk = {
   requestKey: string;
 };
 
-/** POST /api/site/checkout (server/online-orders/checkout.js). Until paying is built it answers 501 paying_not_built. */
+/** The order checkout made (task 4.5): its private link and, for a card part, the held payment. */
+export type CheckoutAnswer = {
+  ref: string;
+  totalPence: number;
+  creditPence: number;
+  cardPence: number;
+  payment: { provider: string; ref: string } | null;
+};
+
+/** POST /api/site/checkout (server/online-orders/checkout.js): makes the order at awaiting payment. */
 export const askCheckout = (address: SiteAddress, ask: CheckoutAsk) =>
-  apiMutate<never>(apiPath(address, '/api/site/checkout'), ask);
+  apiMutate<CheckoutAnswer>(apiPath(address, '/api/site/checkout'), ask);
 
 const askBasket = (address: SiteAddress, shopId: number | null, lines: BasketLine[]) =>
   apiMutate<BasketAnswer>(apiPath(address, '/api/site/basket'), { shop: shopId, lines });
