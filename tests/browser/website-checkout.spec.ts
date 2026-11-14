@@ -90,6 +90,13 @@ test('on a phone: the order at the top, Pay in a bar along the bottom, and the s
   await page.getByRole('textbox', { name: 'Name' }).fill('Maya Patel');
   await page.getByRole('textbox', { name: 'Phone' }).fill('07700 900 142');
   await page.getByRole('textbox', { name: 'Email' }).fill('maya@example.test');
+  // A box the keyboard moves to isn't left under the bar.
+  await page.getByRole('textbox', { name: 'Phone' }).focus();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('textbox', { name: 'Email' })).toBeFocused();
+  const email = (await page.getByRole('textbox', { name: 'Email' }).boundingBox())!;
+  expect(email.y + email.height).toBeLessThanOrEqual((await page.locator('[data-pay-bar]').boundingBox())!.y);
   await pay.click();
   await expect(page.locator('[data-pay-bar]').getByRole('alert')).toHaveText('Paying online isn’t ready yet');
   if (process.env.WH_SHOTS) await page.screenshot({ path: `${process.env.WH_SHOTS}/website-checkout-390.png` });

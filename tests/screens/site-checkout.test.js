@@ -14,7 +14,7 @@
 // for the server (server/online-orders/basket.js and checkout.js).
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderWebsite, BASE, ONE_SHOP, PARTS } from '../helpers/site-screen.js';
+import { renderWebsite, BASE, ONE_SHOP, TWO_SHOPS, PARTS } from '../helpers/site-screen.js';
 
 const realFetch = globalThis.fetch;
 let r;
@@ -134,9 +134,93 @@ test('on-checkout, signed in: the account’s name, email and phone, with Not yo
   const [sent] = checkoutAsks();
   assert.equal('name' in sent, false);
   assert.equal('email' in sent, false);
+  assert.equal('phone' in sent, false);
 });
 
 // ---------- 12.2 on-checkout-errors ----------
+
+test('the boxes come before Pay for the keyboard and screen readers, and Enter in a box presses Pay', async () => {
+  r = await openCheckout();
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('region', { name: 'Your order' });
+  const pay = ui.getByRole('button', { name: 'Pay £66.00' });
+  for (const label of ['Name', 'Phone', 'Email']) {
+    assert.ok(ui.getByRole('textbox', { name: label }).compareDocumentPosition(pay) & Node.DOCUMENT_POSITION_FOLLOWING, `${label} before Pay`);
+  }
+  await typeIn(ui, 'Name', MAYA.name);
+  const form = ui.getByRole('textbox', { name: 'Email' }).closest('form');
+  assert.ok(form !== null, 'the boxes and Pay are one form');
+  assert.ok(form.contains(pay));
+  fireEvent.submit(form);
+  await ui.findByRole('alert');
+  assert.equal(checkoutAsks().length, 1);
+});
+
+test('Pay pressed again with nothing changed keeps its request key; unticking the credit makes a new one', async () => {
+  r = await openCheckout({ answer: basket({ you: MAYA, credit: { availablePence: 1000, usePence: 1000, leftToPayPence: 5600, coversAll: null } }) });
+  const { ui } = r;
+  const { fireEvent, waitFor } = await rtl();
+  await ui.findByRole('region', { name: 'Your order' });
+  fireEvent.click(ui.getByRole('button', { name: 'Pay £56.00' }));
+  await ui.findByRole('alert');
+  await waitFor(() => assert.ok(!ui.getByRole('button', { name: 'Pay £56.00' }).disabled));
+  fireEvent.click(ui.getByRole('button', { name: 'Pay £56.00' }));
+  await waitFor(() => assert.equal(checkoutAsks().length, 2));
+  await waitFor(() => assert.ok(!ui.getByRole('button', { name: 'Pay £56.00' }).disabled));
+  fireEvent.click(ui.getByRole('checkbox', { name: /Use my store credit/ }));
+  fireEvent.click(ui.getByRole('button', { name: 'Pay £66.00' }));
+  await waitFor(() => assert.equal(checkoutAsks().length, 3));
+  const [first, again, unticked] = checkoutAsks();
+  assert.equal(again.requestKey, first.requestKey);
+  assert.notEqual(unticked.requestKey, first.requestKey);
+});
+
+test('with several shops and none chosen, How you’ll get it asks for a shop instead of choosing one', async () => {
+  r = await openCheckout({ site: TWO_SHOPS, cookie: 'wh_basket=101:2.102:1', answer: basket({ shop: null }) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('region', { name: 'Your order' });
+  assert.ok(ui.queryByRole('radio') === null);
+  fireEvent.click(ui.getByRole('button', { name: 'Choose a shop' }));
+  assert.ok(await ui.findByRole('dialog', { name: 'Which shop will you collect from?' }));
+});
+
+test('an account missing its phone shows only the Phone box, and sends only the phone', async () => {
+  r = await openCheckout({ answer: basket({ you: { ...MAYA, phone: null } }) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('region', { name: 'Your order' });
+  assert.ok(ui.getByText('maya@example.test'));
+  assert.ok(ui.queryByRole('textbox', { name: 'Name' }) === null);
+  assert.ok(ui.queryByRole('textbox', { name: 'Email' }) === null);
+  await typeIn(ui, 'Phone', MAYA.phone);
+  fireEvent.click(ui.getByRole('button', { name: 'Pay £66.00' }));
+  await ui.findByRole('alert');
+  const [sent] = checkoutAsks();
+  assert.equal(sent.phone, MAYA.phone);
+  assert.equal('name' in sent, false);
+  assert.equal('email' in sent, false);
+});
+
+test('a refusal with no boxes to mark shows the server’s words beside Pay', async () => {
+  r = await openCheckout({ pay: { status: 400, body: { error: 'Choose which shop to collect from' } } });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('region', { name: 'Your order' });
+  fireEvent.click(ui.getByRole('button', { name: 'Pay £66.00' }));
+  const said = await ui.findByRole('alert');
+  assert.equal(said.textContent, 'Choose which shop to collect from');
+  assert.ok(said.closest('[data-pay-bar]') !== null);
+});
+
+test('a basket that changed before checkout opened goes straight to the basket page', async () => {
+  r = await openCheckout({ answer: basket({ changed: CHANGED, lines: [LINES[0], { ...LINES[1], gone: true, linePence: 0, note: 'No longer in stock at Bolton — remove it to carry on' }], blocked: 'Remove the item that’s no longer in stock first.' }) });
+  const { ui } = r;
+  await ui.findByRole('heading', { level: 1, name: 'Your basket' });
+  assert.ok(ui.queryByRole('button', { name: /^Pay/ }) === null);
+});
+
 
 test('on-checkout-errors: “Check the 2 boxes marked below.” above the boxes, each box’s own message, and focus on the summary', async () => {
   const refused = { status: 400, body: { error: 'Check the 2 boxes marked below.', fields: { name: 'Enter your name', email: 'Check your email address — it needs an @ and a dot, like name@example.com' } } };
@@ -149,6 +233,8 @@ test('on-checkout-errors: “Check the 2 boxes marked below.” above the boxes,
   fireEvent.click(ui.getByRole('button', { name: 'Pay £66.00' }));
   const summary = await ui.findByText('Check the 2 boxes marked below.');
   await waitFor(() => assert.ok(document.activeElement === summary.closest('[tabindex]')));
+  // Read out as soon as it shows, not only when focus lands on it.
+  assert.equal(summary.closest('[tabindex]').getAttribute('role'), 'alert');
   const name = ui.getByRole('textbox', { name: 'Name' });
   assert.equal(name.getAttribute('aria-invalid'), 'true');
   assert.equal(document.getElementById(name.getAttribute('aria-describedby')).textContent, 'Enter your name');

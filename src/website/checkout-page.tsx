@@ -9,7 +9,7 @@ import { Field, FieldError, Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api/client.ts';
 import { penceText } from '@/lib/money.ts';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
-import { EmptyBasket } from './basket-page.tsx';
+import { EmptyBasket, nameOf } from './basket-page.tsx';
 import { usePageTitle } from './pages.tsx';
 import { Box, Failed, H1, todayText } from './parts.tsx';
 import { StockBox } from './product.tsx';
@@ -41,7 +41,7 @@ export function CheckoutPage() {
         // What the customer pays for is what they saw: a changed basket is sorted on the basket page first.
         <Navigate to="/basket" replace />
       ) : priced.data ? (
-        <Form answer={priced.data} />
+        <Form answer={priced.data} refreshing={priced.isPlaceholderData || priced.isFetching} />
       ) : null}
     </>
   );
@@ -51,8 +51,8 @@ type Details = { name: string; phone: string; email: string };
 type Fields = Partial<Record<keyof Details, string>>;
 const SOMETHING_WRONG = 'Something went wrong — try again';
 
-function Form({ answer }: { answer: BasketAnswer }) {
-  const { address, chosen, basket, site } = useSiteContext();
+function Form({ answer, refreshing }: { answer: BasketAnswer; refreshing: boolean }) {
+  const { address, chosen, several, openChooser, basket, site } = useSiteContext();
   const navigate = useNavigate();
   const client = useQueryClient();
   const [typed, setTyped] = useState<Details>({ name: '', phone: '', email: '' });
@@ -61,8 +61,11 @@ function Form({ answer }: { answer: BasketAnswer }) {
   const [said, setSaid] = useState<string | null>(null);
   const [useCredit, setUseCredit] = useState(true);
   const [termsOpen, setTermsOpen] = useState(false);
-  // One key for this checkout, so a second tap on Pay is the same request.
-  const [requestKey] = useState(newRequestKey);
+  // Pressing Pay again with the same details, basket and credit is the same request, so it keeps its key;
+  // anything changed, or a refusal from the server, gets a new one.
+  const keyFor = useRef<{ what: string; key: string } | null>(null);
+  const [barHeight, setBarHeight] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const orderId = useId();
   const payId = useId();
@@ -77,31 +80,52 @@ function Form({ answer }: { answer: BasketAnswer }) {
   const missing = (k: keyof Details) => !you || !you[k];
 
   const pay = useMutation({
-    mutationFn: () => askCheckout(address, {
-      shop: chosen?.id ?? null,
-      lines: basket,
-      ...(missing('name') ? { name: typed.name } : {}),
-      ...(missing('phone') ? { phone: typed.phone } : {}),
-      ...(missing('email') ? { email: typed.email } : {}),
-      useCredit: creditOn,
-      requestKey,
-    }),
+    mutationFn: () => {
+      const ask = {
+        shop: chosen?.id ?? null,
+        lines: basket,
+        ...(missing('name') ? { name: typed.name } : {}),
+        ...(missing('phone') ? { phone: typed.phone } : {}),
+        ...(missing('email') ? { email: typed.email } : {}),
+        useCredit: creditOn,
+      };
+      const what = JSON.stringify(ask);
+      if (keyFor.current?.what !== what) keyFor.current = { what, key: newRequestKey() };
+      return askCheckout(address, { ...ask, requestKey: keyFor.current.key });
+    },
     onMutate: () => { setSaid(null); setSummary(null); setFields({}); },
     onError: (error) => {
       const body = error instanceof ApiError ? (error.body as { error?: string; fields?: Fields; basket?: BasketAnswer } | null) : null;
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) keyFor.current = null;
       if (error instanceof ApiError && error.status === 400 && body?.fields) {
         setFields(body.fields);
         setSummary(body.error ?? null);
       } else if (error instanceof ApiError && error.status === 409 && body?.basket) {
         // The basket changed: the basket page says how, from a fresh answer.
         void client.invalidateQueries({ queryKey: ['site', address.base, 'basket'] });
-        navigate('/basket');
+        navigate('/basket', { replace: true });
       } else {
         setSaid(error instanceof ApiError && error.hasServerMessage && body?.error ? body.error : SOMETHING_WRONG);
       }
     },
   });
   useEffect(() => { if (summary) summaryRef.current?.focus(); }, [summary]);
+  // On a phone the page leaves room under its content for the pay bar, however tall the bar grows.
+  useEffect(() => {
+    const bar = barRef.current;
+    if (!bar || typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(() => setBarHeight(getComputedStyle(bar).position === 'fixed' ? bar.offsetHeight : 0));
+    watch.observe(bar);
+    return () => watch.disconnect();
+  }, []);
+  // ...and a box the keyboard moves to isn't left under it.
+  const clearOfBar = (target: EventTarget) => {
+    const bar = barRef.current;
+    if (!barHeight || !bar || !(target instanceof HTMLElement) || bar.contains(target)) return;
+    const over = target.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 16;
+    if (over > 16) window.scrollBy(0, over);
+  };
+  const busy = pay.isPending || refreshing;
 
   const type = (k: keyof Details) => (value: string) => {
     setTyped((t) => ({ ...t, [k]: value }));
@@ -112,7 +136,7 @@ function Form({ answer }: { answer: BasketAnswer }) {
   const howSub = ['Free', shop && todayText(shop), shop?.address].filter(Boolean).join(' · ');
 
   const rows: [string, string, boolean?][] = [
-    ...answer.lines.map((l): [string, string] => [l.qty > 1 ? `${l.name} × ${l.qty}` : (l.name ?? ''), penceText(l.linePence)]),
+    ...answer.lines.map((l): [string, string] => [l.qty > 1 ? `${nameOf(l)} × ${l.qty}` : nameOf(l), penceText(l.linePence)]),
     ...(answer.shop ? [[`Collect from ${answer.shop.name}`, 'Free'] as [string, string]] : []),
     ['Total (includes VAT)', penceText(answer.totalPence), true],
     ...(creditOn ? [['Store credit', `−${penceText(credit.usePence)}`], ['Left to pay', penceText(leftToPay), true]] as [string, string, boolean?][] : []),
@@ -126,102 +150,115 @@ function Form({ answer }: { answer: BasketAnswer }) {
   );
 
   return (
-    <div className="grid items-start gap-5 pb-40 md:grid-cols-[minmax(0,1fr)_340px] md:gap-8 md:pb-0">
-      <aside className="flex flex-col gap-3 md:sticky md:top-4 md:col-start-2 md:row-start-1">
-        <section aria-labelledby={orderId}>
-          <Box>
-            <h2 id={orderId} className="m-0 text-[18px] font-bold">Your order</h2>
-            <dl className="m-0 flex flex-col gap-2 text-size-15">
-              {rows.map(([what, amount, bold]) => (
-                <div key={what} className={bold ? 'flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2 font-bold' : 'flex justify-between gap-3'}>
-                  <dt>{what}</dt><dd className="m-0 font-mono">{amount}</dd>
-                </div>
-              ))}
-            </dl>
-            <div data-pay-bar className="fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pb-4 pt-3 md:static md:border-0 md:p-0">
-              {!answer.taking ? (
-                <StockBox tone="grey"><strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this</StockBox>
-              ) : (
-                <>
-                  {said && <p role="alert" className="m-0 flex items-start gap-2 rounded-lg bg-[var(--wh-danger-bg)] px-3 py-2.5 text-size-15 font-semibold text-[var(--wh-danger)]"><CircleAlert aria-hidden className="mt-0.5 size-[18px] shrink-0" />{said}</p>}
-                  <Button variant="accent" className="min-h-12 w-full text-size-15" disabled={pay.isPending} onClick={() => pay.mutate()}>{label}</Button>
-                  {creditOn && <p className="m-0 text-size-13 text-[var(--wh-muted)]">Your store credit is only used once the order is paid.</p>}
-                </>
-              )}
-            </div>
-            {terms}
-          </Box>
-        </section>
-      </aside>
-
-      <div className="flex min-w-0 flex-col gap-5 md:col-start-1 md:row-start-1">
-        <Part title="How you’ll get it">
-          <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
-            <legend className="sr-only">How you’ll get it</legend>
-            <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] p-3.5">
-              <input type="radio" name="how" defaultChecked className="mt-0.5 size-[22px] accent-[var(--wh-ink)]" />
-              <span className="flex flex-col gap-0.5">
-                <span className="text-[16px] font-bold">Collect from {site.name}, {answer.shop?.name ?? shop?.name}</span>
-                <span className="text-size-14 leading-snug text-[var(--wh-muted)]">{howSub}</span>
-              </span>
-            </label>
-          </fieldset>
-        </Part>
-
-        <Part title="Your details">
-          {summary && (
-            <div ref={summaryRef} tabIndex={-1} className="flex items-start gap-2 rounded-lg bg-[var(--wh-danger-bg)] px-3 py-2.5 text-size-15 font-semibold text-[var(--wh-danger)]">
-              <CircleAlert aria-hidden className="mt-0.5 size-[18px] shrink-0" /><span role="status">{summary}</span>
-            </div>
-          )}
-          {you && (
-            <>
-              <p className="m-0 text-size-15 leading-relaxed">
-                {you.name && <><strong>{you.name}</strong><br /></>}
-                {[you.email, you.phone].filter(Boolean).length === 2
-                  ? <>{you.email} · <span className="font-mono">{you.phone}</span></>
-                  : you.email ?? <span className="font-mono">{you.phone}</span>}
+    <>
+      <form
+        noValidate
+        onSubmit={(e) => { e.preventDefault(); if (!busy) pay.mutate(); }}
+        onFocus={(e) => clearOfBar(e.target)}
+        className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_340px] md:gap-8"
+        style={{ paddingBottom: barHeight || undefined }}
+      >
+        <div className="flex min-w-0 flex-col gap-5 md:col-start-1 md:row-start-1">
+          <Part title="How you’ll get it">
+            {several && !chosen ? (
+              // No shop chosen yet: the same box the basket opens (decided while building).
+              <p className="m-0 flex flex-wrap items-center gap-3 text-size-15">
+                <span>Choose which shop to collect from.</span>
+                <Button type="button" variant="default" className="min-h-11 text-size-15" onClick={(e) => openChooser(e.currentTarget)}>Choose a shop</Button>
               </p>
+            ) : (
+              <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
+                <legend className="sr-only">How you’ll get it</legend>
+                <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border-2 border-[var(--wh-ink)] bg-[var(--wh-panel)] p-3.5">
+                  <input type="radio" name="how" defaultChecked className="mt-0.5 size-[22px] accent-[var(--wh-ink)]" />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[16px] font-bold">Collect from {site.name}, {answer.shop?.name ?? shop?.name}</span>
+                    <span className="text-size-14 leading-snug text-[var(--wh-muted)]">{howSub}</span>
+                  </span>
+                </label>
+              </fieldset>
+            )}
+          </Part>
+
+          <Part title="Your details">
+            {summary && (
+              <div ref={summaryRef} tabIndex={-1} role="alert" className="flex items-start gap-2 rounded-lg bg-[var(--wh-danger-bg)] px-3 py-2.5 text-size-15 font-semibold text-[var(--wh-danger)]">
+                <CircleAlert aria-hidden className="mt-0.5 size-[18px] shrink-0" /><span>{summary}</span>
+              </div>
+            )}
+            {you && (
+              <>
+                <p className="m-0 text-size-15 leading-relaxed">
+                  {you.name && <><strong>{you.name}</strong><br /></>}
+                  {you.email}{you.email && you.phone && ' · '}{you.phone && <span className="font-mono">{you.phone}</span>}
+                </p>
+                <p className="m-0 text-size-14 text-[var(--wh-muted)]">
+                  Signed in · <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Not you?</a> · <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Change</a>
+                </p>
+              </>
+            )}
+            {(missing('name') || missing('phone')) && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {missing('name') && <TextField label="Name" autoComplete="name" value={typed.name} error={fields.name} onChange={type('name')} />}
+                {missing('phone') && <TextField label="Phone" type="tel" autoComplete="tel" value={typed.phone} error={fields.phone} onChange={type('phone')} />}
+              </div>
+            )}
+            {missing('email') && <TextField label="Email" type="email" autoComplete="email" value={typed.email} error={fields.email} hint="For your receipt and to tell you when it’s ready." onChange={type('email')} />}
+            {!you && (
               <p className="m-0 text-size-14 text-[var(--wh-muted)]">
-                Signed in · <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Not you?</a> · <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Change</a>
-              </p>
-            </>
-          )}
-          {(missing('name') || missing('phone')) && (
-            <div className="grid gap-3 md:grid-cols-2">
-              {missing('name') && <TextField label="Name" autoComplete="name" value={typed.name} error={fields.name} onChange={type('name')} />}
-              {missing('phone') && <TextField label="Phone" type="tel" autoComplete="tel" value={typed.phone} error={fields.phone} onChange={type('phone')} />}
-            </div>
-          )}
-          {missing('email') && <TextField label="Email" type="email" autoComplete="email" value={typed.email} error={fields.email} hint="For your receipt and to tell you when it’s ready." onChange={type('email')} />}
-          {!you && (
-            <p className="m-0 text-size-14 text-[var(--wh-muted)]">
-              Bought here before? <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Sign in</a> to fill this in.
-            </p>
-          )}
-        </Part>
-
-        {credit && (
-          <section aria-labelledby={payId} className="flex flex-col gap-3">
-            <h2 id={payId} className="m-0 text-[18px] font-bold">Pay</h2>
-            <label className="flex min-h-11 cursor-pointer items-start gap-3">
-              <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-px size-[22px] accent-[var(--wh-ink)]" />
-              <span className="flex flex-col gap-0.5">
-                <span className="text-size-15 font-semibold">Use my store credit · <span className="font-mono">{penceText(credit.availablePence)}</span></span>
-                {!credit.coversAll && <span className="text-size-13 text-[var(--wh-muted)]">Ticked for you. The rest goes on your card.</span>}
-              </span>
-            </label>
-            {covered && (
-              <p className="m-0 flex items-start gap-2 rounded-lg bg-[var(--wh-ok-bg)] px-3 py-2.5 text-size-15 text-[var(--wh-state-ready-ink)]">
-                <Check aria-hidden className="mt-0.5 size-[18px] shrink-0" /><span>{credit.coversAll}</span>
+                Bought here before? <a href={`/book/${encodeURIComponent(address.slug)}/account`} className="text-[var(--wh-ink)]">Sign in</a> to fill this in.
               </p>
             )}
-          </section>
-        )}
-      </div>
+          </Part>
 
+          {credit && (
+            <section aria-labelledby={payId} className="flex flex-col gap-3">
+              <h2 id={payId} className="m-0 text-[18px] font-bold">Pay</h2>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3">
+                <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-px size-[22px] accent-[var(--wh-ink)]" />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-size-15 font-semibold">Use my store credit · <span className="font-mono">{penceText(credit.availablePence)}</span></span>
+                  {!credit.coversAll && <span className="text-size-13 text-[var(--wh-muted)]">Ticked for you. The rest goes on your card.</span>}
+                </span>
+              </label>
+              {covered && (
+                <p className="m-0 flex items-start gap-2 rounded-lg bg-[var(--wh-ok-bg)] px-3 py-2.5 text-size-15 text-[var(--wh-state-ready-ink)]">
+                  <Check aria-hidden className="mt-0.5 size-[18px] shrink-0" /><span>{credit.coversAll}</span>
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+
+        <aside className="order-first flex flex-col gap-3 md:sticky md:top-4 md:order-none md:col-start-2 md:row-start-1">
+          <section aria-labelledby={orderId}>
+            <Box>
+              <h2 id={orderId} className="m-0 text-[18px] font-bold">Your order</h2>
+              <dl className="m-0 flex flex-col gap-2 text-size-15">
+                {rows.map(([what, amount, bold], i) => (
+                  <div key={i} className={bold ? 'flex justify-between gap-3 border-t border-[var(--wh-border)] pt-2 font-bold' : 'flex justify-between gap-3'}>
+                    <dt>{what}</dt><dd className="m-0 font-mono">{amount}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div ref={barRef} data-pay-bar className="fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pb-4 pt-3 md:static md:border-0 md:p-0">
+                {!answer.taking ? (
+                  <StockBox tone="grey"><strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this</StockBox>
+                ) : (
+                  <>
+                    {said && <p role="alert" className="m-0 flex items-start gap-2 rounded-lg bg-[var(--wh-danger-bg)] px-3 py-2.5 text-size-15 font-semibold text-[var(--wh-danger)]"><CircleAlert aria-hidden className="mt-0.5 size-[18px] shrink-0" />{said}</p>}
+                    <Button type="submit" variant="accent" className="min-h-12 w-full text-size-15" disabled={busy}>{label}</Button>
+                    {creditOn && <p className="m-0 text-size-13 text-[var(--wh-muted)]">Your store credit is only used once the order is paid.</p>}
+                  </>
+                )}
+              </div>
+              {terms}
+            </Box>
+          </section>
+        </aside>
+      </form>
       <TermsDialog open={termsOpen} onOpenChange={setTermsOpen} text={site.parts.collectionReturns} />
-    </div>
+    </>
   );
 }
 

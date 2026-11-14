@@ -70,7 +70,7 @@ export function EmptyBasket() {
 }
 
 // A product the shop no longer sells has no name from the server (decided while building).
-const nameOf = (line: BasketAnswerLine) => line.name ?? 'An item no longer sold';
+export const nameOf = (line: BasketAnswerLine) => line.name ?? 'An item no longer sold';
 const itemsText = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`;
 
 type Step = (productId: number, by: number, most: number) => void;
