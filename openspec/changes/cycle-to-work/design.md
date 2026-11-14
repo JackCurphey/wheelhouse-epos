@@ -192,7 +192,8 @@ item 4), and pull request 7 goes ahead under the risky-area rules.
   tampered share.
 - **Stock.** A held frame sold by mistake leaves a customer without a bike.
   Mitigation: available stock counts `in_stock` frames only, and the till
-  refuses a held frame for any sale but its own order's.
+  warns about a held frame in any sale but its own order's (`till-serial-held`:
+  warned, never blocked).
 - **The public link.** Mitigation: the existing code-link pattern and an
   allowed-fields list, with tests that a wrong code shows nothing.
 - **Mark's work.** Pull request 11 builds on Mark's till deposit. If his
