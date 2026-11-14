@@ -29,12 +29,18 @@ their options and trade-offs, are questions 8–12 in the overnight file
 
 ## Waiting for Jack
 
-9. **When an online order becomes a sale, and when stock goes down.** This
+9. **When an online order becomes a sale, and when stock goes down.**
+   **Jack's answer (14 Nov), relayed by the Front desk: option 1.** The order becomes a sale and the stock count drops
+   when the customer pays. The item shows as "for an online order" until
+   it's handed over, and the till warns on it. VAT is counted on the payment
+   day, and a cancelled order is refunded like any sale. What follows is the
+   question as it was put to him: this
    is money, so it waits. The plan is written as the recommendation: a sale
    and the stock drop at payment, VAT on the day the money came in, and the
    item showing as "for an online order" until it's handed over. Pull
    requests 5–7 (paying, staff steps, refunds) and the refund tables moved
-   from pull request 1 aren't built until he answers.
+   from pull request 1 aren't built until he answers. Now answered, so they
+   can be built; the staff steps (6) still wait for question 11.
 11. **Handing over before the till's Collect screen (WP-3.1) exists.** This
     is the till, so it waits. The plan is written as a Hand over step on the
     staff order page, which the till's screen reuses later. Pull requests 6

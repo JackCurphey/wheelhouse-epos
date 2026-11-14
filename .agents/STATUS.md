@@ -22,7 +22,9 @@ order messages (#758), the settings screen (#773, #775) and the order
 emails' review fixes (#776) and the basket and checkout's server half
 (#777, stopping where paying would start) are in; the basket screens are
 being built (claude/buy-online-5-basket-screens), checkout's screen up to
-paying next; paying, staff steps and refunds wait for Jack's answers 9 and 11
+paying next. Jack answered question 9 (14 Nov, option 1: a sale and the
+stock drop at payment), so paying and refunds can be built; the staff steps
+wait for his answer 11
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
@@ -75,9 +77,8 @@ minutes to exit (#675).
 2. A deposit taken at the till (`till-job-deposit`, waiting for Mark's yes).
 3. Roles and the settings store (WP-1.1, WP-1.2).
 
-**Waiting on Jack:** Buy online questions 9 (when an online order becomes
-a sale and stock goes down) and 11 (handing over before the till's Collect
-screen), in `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`;
+**Waiting on Jack:** Buy online question 11 (handing over before the
+till's Collect screen; question 9 answered 14 Nov, option 1), in `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`;
 defaults taken overnight for you to overrule, in the 12 and 13 Nov
 `*-defaults-taken.md` files and
 `docs/decisions/decided-while-building/2026-11-jack.md`; who may edit a supplier (#543); stock take, sales

@@ -38,7 +38,7 @@ the till, real accounts, recorded decisions or design changes), 8, 10 and
    at checkout, no Gift cards switch in Paying online. `on-checkout-gift-code`
    and `on-checkout-gift` wait for the gift cards piece.
 2. **The sale and the stock drop happen at payment** (question 9;
-   waiting for Jack: money and the till; written as the recommendation, and nothing that depends on it is built until he answers). An online order becomes a `sales` row and
+   Jack's answer (14 Nov), relayed by the Front desk: option 1, as recommended; `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). An online order becomes a `sales` row and
    `stock_qty` drops when it is paid; VAT counts on the day the money came
    in. Until it is handed over, its items show as "for an online order", so
    the till warns. Cancelling refunds it the way it was paid: card through
