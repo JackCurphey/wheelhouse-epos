@@ -77,18 +77,14 @@ export async function heldHere(productId, siteId) {
   return (await prepare(`SELECT count(*)::int AS n FROM c2w_orders WHERE product_id = ? AND site_id = ? AND held_at IS NOT NULL AND stage IN ${OPEN}`).get(productId, siteId)).n;
 }
 // How many of each product are held for open orders, across the shop (task 5.4): its held
-// frames, or, for a bike with no frame numbers, the open orders holding it as a count.
+// frames, plus the open orders holding one as a count (no frame). A frame hold always sets the
+// order's frame_id, so nothing is counted twice, and a product can have both kinds.
 export async function heldCounts(ids) {
   const held = new Map();
   if (!ids.length) return held;
-  const framed = new Set();
-  for (const f of await prepare("SELECT product_id, count(*) FILTER (WHERE state = 'held')::int AS n FROM stock_frames WHERE product_id = ANY(?::int[]) GROUP BY product_id").all(ids)) {
-    framed.add(f.product_id);
-    if (f.n) held.set(f.product_id, f.n);
-  }
-  for (const h of await prepare(`SELECT product_id, count(*)::int AS n FROM c2w_orders WHERE product_id = ANY(?::int[]) AND held_at IS NOT NULL AND stage IN ${OPEN} GROUP BY product_id`).all(ids)) {
-    if (!framed.has(h.product_id)) held.set(h.product_id, h.n);
-  }
+  const add = (rows) => { for (const r of rows) held.set(r.product_id, (held.get(r.product_id) ?? 0) + r.n); };
+  add(await prepare("SELECT product_id, count(*)::int AS n FROM stock_frames WHERE product_id = ANY(?::int[]) AND state = 'held' GROUP BY product_id").all(ids));
+  add(await prepare(`SELECT product_id, count(*)::int AS n FROM c2w_orders WHERE product_id = ANY(?::int[]) AND held_at IS NOT NULL AND frame_id IS NULL AND stage IN ${OPEN} GROUP BY product_id`).all(ids));
   return held;
 }
 export async function freeHere(productId, siteId) {

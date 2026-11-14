@@ -100,6 +100,33 @@ test('5.4 a quote without the hold leaves the bike free at the till', async () =
   assert.equal((await inTill(bike)).freeQty, 1);
 });
 
+test('5.4 a bike held by count stays held after frames of the same bike are booked in, and is counted once', async () => {
+  const bike = await countedBike(1);
+  assert.equal((await quote(bike)).body.order.held, true);
+  // One more of the same bike arrives, with a frame number, and a second quote holds that frame.
+  await inShop(async () => {
+    const key = `[FRAME-${tag()}]`;
+    await prepare('INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key) VALUES (?, ?, ?, ?) RETURNING id').get(bike, site, key, key);
+    await prepare('UPDATE products SET stock_qty = stock_qty + 1 WHERE id = ?').run(bike);
+    await prepare('UPDATE product_stock SET qty = qty + 1 WHERE product_id = ? AND site_id = ?').run(bike, site);
+  });
+  assert.equal((await inTill(bike)).freeQty, 1, 'the counted hold still counts once a frame is booked in');
+  await inShop(async () => prepare("UPDATE stock_frames SET state = 'held' WHERE product_id = ? RETURNING id").get(bike));
+  assert.equal((await inTill(bike)).freeQty, 0, 'a held frame and a counted hold add up');
+});
+
+test('5.4 a collected bike no longer counts as held: the sale has already lowered the figure', async () => {
+  const bike = await countedBike(2);
+  const held = (await quote(bike)).body.order;
+  assert.equal((await inTill(bike)).freeQty, 1);
+  await inShop(async () => {
+    await prepare("UPDATE c2w_orders SET stage = 'collected' WHERE id = ?").run(held.id);
+    await prepare('UPDATE products SET stock_qty = stock_qty - 1 WHERE id = ?').run(bike);
+  });
+  assert.equal((await inTill(bike)).freeQty, 1);
+});
+
+// Already true before this piece (Stock's list counts in-stock frames only); kept so it stays true.
 test('5.4 Stock’s row for a bike counts only the frames free to sell', async () => {
   const bike = await framedBike(2);
   await quote(bike);

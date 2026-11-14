@@ -136,6 +136,11 @@ test('cw-more: a bike not held has no Release the bike', async () => {
   assert.deepEqual(itemsOf(await menuOf(ui, fireEvent)), ['Change the bike or size', 'Change the accessories', 'Change the provider', 'Cancel the order…']);
 });
 
+test('cw-more: once the certificate is in, the hold is firm and there is no Release the bike', async () => {
+  const { ui, fireEvent } = await open({ theOrder: order({ stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 100000, certificateReceivedOn: day(3), next: 'ready' }) });
+  assert.ok(!itemsOf(await menuOf(ui, fireEvent)).includes('Release the bike'));
+});
+
 test('cw-more: once the certificate is in, the provider can’t change', async () => {
   const { ui, fireEvent } = await open({ theOrder: order({ stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 100000, certificateReceivedOn: day(3), next: 'ready' }) });
   assert.deepEqual(itemsOf(await menuOf(ui, fireEvent)), ['Change the bike or size', 'Change the accessories', 'Cancel the order…']);

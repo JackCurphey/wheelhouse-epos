@@ -67,7 +67,7 @@ afterEach(async () => {
   rendered = false;
 });
 
-async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theOrder = order(), emailFails = false, providers = [PROVIDER], ordering = [200, { order: {}, purchaseOrderId: 77, supplier: '[Supplier]' }], events = EVENTS } = {}) {
+async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theOrder = order(), emailFails = false, providers = [PROVIDER], ordering = [200, { order: {}, purchaseOrderId: 77, supplier: '[Supplier]' }], events = EVENTS, holdFails = false } = {}) {
   let emails = 0;
   calls = [];
   globalThis.fetch = async (url, init = {}) => {
@@ -96,6 +96,7 @@ async function open(path, { me = JO, list = LIST, stock = 2, quote = QUOTE, theO
     if (p === '/api/c2w/orders/10/order' && method === 'POST') return reply(...ordering);
     if (p === '/api/c2w/orders/10/order/undo' && method === 'POST') return reply(200, { order: {} });
     if (p === '/api/c2w/orders/9/quote') return reply(200, { quote });
+    if (p === '/api/c2w/orders/9/hold-longer' && method === 'POST' && holdFails) return reply(500, { error: 'Internal server error' });
     if (p === '/api/c2w/orders/9/hold-longer' && method === 'POST') return reply(200, { order: { ...theOrder, holdUntil: day(8) } });
     if (p === '/api/c2w/orders/9/hold-longer/undo' && method === 'POST') return reply(200, { order: theOrder });
     if (p === '/api/c2w/orders/9/release' && method === 'POST') return reply(200, { order: { ...theOrder, holdUntil: null } });
@@ -599,4 +600,23 @@ test('cw-hold-ending: a reminder that was not sent (switched off) is not claimed
   t.fireEvent.click(t.within(await t.ui.findByRole('region', { name: 'Next: the certificate' })).getByRole('button', { name: 'Hold longer' }));
   const dialog = t.within(await t.ui.findByRole('dialog', { name: HOLD_TITLE }));
   assert.ok(dialog.queryByText(/has been sent “Your hold ends on/) === null);
+});
+
+test('cw-hold-ending: a hold that has already ended leaves out "If nobody chooses by", and Hold longer counts from today', async () => {
+  const t = await open('/workshop/c2w/9', { theOrder: order({ holdUntil: day(-2) }) });
+  t.fireEvent.click(t.within(await t.ui.findByRole('region', { name: 'Next: the certificate' })).getByRole('button', { name: 'Hold longer' }));
+  const dialog = t.within(await t.ui.findByRole('dialog', { name: `Maya Patel’s hold ends on ${long(day(-2))}` }));
+  assert.ok(dialog.queryByText(/If nobody chooses by/) === null);
+  const longer = dialog.getByRole('radio', { name: 'Hold longer' });
+  assert.ok(document.getElementById(longer.getAttribute('aria-describedby')).textContent.startsWith(`Until ${long(day(7))} — another 7 days.`));
+});
+
+test('cw-hold-ending: when saving fails the popup stays open and says so', async () => {
+  const t = await open('/workshop/c2w/9', { holdFails: true });
+  t.fireEvent.click(t.within(await t.ui.findByRole('region', { name: 'Next: the certificate' })).getByRole('button', { name: 'Hold longer' }));
+  const dialog = t.within(await t.ui.findByRole('dialog', { name: HOLD_TITLE }));
+  t.fireEvent.click(dialog.getByRole('button', { name: 'Save' }));
+  assert.ok(await dialog.findByText('Wheelhouse couldn’t save that. Try again in a moment.'));
+  assert.ok(t.ui.queryByRole('dialog', { name: HOLD_TITLE }));
+  assert.equal(dialog.getByRole('button', { name: 'Save' }).disabled, false);
 });
