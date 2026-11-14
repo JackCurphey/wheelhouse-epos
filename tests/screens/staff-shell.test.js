@@ -86,10 +86,16 @@ test('staff do not see Reports, Website or Settings', async () => {
 });
 
 test('each page is titled with its name and shows the placeholder until it is built', async () => {
-  // Online orders: not built yet (Website is, since website-management).
+  // Every sidebar page is built since Online orders (website-buy-online group 8),
+  // so the placeholder shows only on an edge screen with no screen yet.
   const { ui } = await renderAt('/workshop/orders', OWNER);
   assert.ok(await ui.findByRole('heading', { level: 1, name: 'Online orders' }));
-  assert.ok(ui.getByText('Not built yet: orders'));
+  assert.ok(ui.queryByText('Not built yet: orders') === null);
+});
+
+test('an edge screen with no screen yet shows the placeholder', async () => {
+  const { ui } = await renderAt('/workshop/service-status', OWNER);
+  assert.ok(await ui.findByText('Not built yet: service-status'));
 });
 
 test('the owner lands on Today', async () => {
