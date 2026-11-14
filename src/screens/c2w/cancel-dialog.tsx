@@ -4,12 +4,15 @@ import { apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import { Msg, dayOf, firstName, longDate, type C2wEvent, type C2wOrder } from './c2w-bits.tsx';
+import { CHANGE_TITLE, type ChangeWhat } from './change-dialog.tsx';
 
 /**
  * More… on the order (c2w.mjs `more`, `moreMenu`, cw-more) and Cancel the order
  * (cw-cancel, cw-cancel-ordered; openspec/changes/cycle-to-work task 8.5's screen).
- * The menu holds only the steps that are built: changing the bike, accessories
- * or provider, and Release the bike, join it with their pull requests (logged).
+ * The changes (task 4.8, change-dialog.tsx) are offered while they can still
+ * change the quote: the bike and accessories until the bike is ready, the
+ * provider until the certificate is in (logged). Release the bike joins it with
+ * its pull request (5b).
  * No deposit line until deposits are built (pull request 11).
  */
 const SUB = 'text-size-13 text-[var(--wh-muted)]';
@@ -18,7 +21,7 @@ const SAVE_FAILED = 'Wheelhouse couldn’t save that. Try again in a moment.';
 const canSay = (err: unknown): err is ApiError => err instanceof ApiError && err.status < 500 && err.hasServerMessage;
 
 /** A real menu, as Reports' "…": it opens on its first item, the arrows move, Escape or a click away closes it. */
-export function MoreMenu({ o, onCancel }: { o: C2wOrder; onCancel: () => void }) {
+export function MoreMenu({ o, onCancel, onChange }: { o: C2wOrder; onCancel: () => void; onChange: (what: ChangeWhat) => void }) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -38,13 +41,17 @@ export function MoreMenu({ o, onCancel }: { o: C2wOrder; onCancel: () => void })
     else if (e.key === 'ArrowUp') { e.preventDefault(); items[(at - 1 + items.length) % items.length]?.focus(); }
   }
   const choose = (act: () => void) => () => { setOpen(false); button.current?.focus(); act(); };
+  const changes: ChangeWhat[] = o.stage === 'quote' || o.stage === 'waiting' ? ['bike', 'accessories', 'provider'] : o.stage === 'certificate' ? ['bike', 'accessories'] : [];
   return (
     <div className="relative">
       <Button ref={button} variant="default" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>More…</Button>
       {open ? (
         <div ref={menu} role="menu" aria-label={label} onKeyDown={keys}
           className="absolute left-0 top-[50px] z-10 flex w-[300px] flex-col rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1.5 shadow-modal md:left-auto md:right-0 md:w-[280px]">
+          {changes.map((w) => <button key={w} type="button" role="menuitem" className={ITEM} onClick={choose(() => onChange(w))}>{CHANGE_TITLE[w]}</button>)}
+          {changes.length ? <span role="separator" className="mx-1.5 my-1 h-px bg-[var(--wh-border)]" /> : null}
           <button type="button" role="menuitem" className={`${ITEM} text-[var(--wh-danger)]`} onClick={choose(onCancel)}>Cancel the order…</button>
+          {changes.length ? <p className="mx-3 mb-2 mt-1.5 text-size-13 leading-[1.45] text-[var(--wh-muted)]">A change after the quote is sent makes a revised quote; nothing is sent until you press Email.</p> : null}
         </div>
       ) : null}
     </div>

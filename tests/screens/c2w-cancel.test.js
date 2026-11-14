@@ -1,6 +1,6 @@
-// Front desk › Cycle to Work › the order: More… and Cancel the order
-// (openspec/changes/cycle-to-work task 8.5's screen, PR 8c; c2w.mjs cw-more,
-// cw-cancel, cw-cancel-ordered). Deposits aren't built yet (pull request 11), so
+// Front desk › Cycle to Work › the order: More…, its changes and Cancel the order
+// (openspec/changes/cycle-to-work tasks 8.5 and 4.8's screens; c2w.mjs cw-more,
+// cw-quote-revised, cw-cancel, cw-cancel-ordered). Deposits aren't built yet (pull request 11), so
 // no deposit line shows. Example data from the drawing: North Street Cycles,
 // Bolton, Jo Taylor, Maya Patel. Providers, bikes, suppliers and certificate
 // numbers stay bracketed; dates are visibly test values.
@@ -12,6 +12,11 @@ const SHELL = new URL('../../.test-build/staff/app-shell.js', import.meta.url).h
 const JO = { id: 2, name: 'Jo Taylor', email: 'jo@example.com', isOwner: false, shopName: 'North Street Cycles', shopSlug: 'north-street' };
 const BIKE = { id: 21, name: '[Bike] · [Size]', sku: null, pricePence: 100000, price: 1000, supplier: '[Supplier]' };
 const PROVIDER = { id: 3, name: '[Provider]', paysInDays: 30, accessoriesInside: true, handoverNote: '', handoverChecks: [], retiredAt: null };
+const OTHER_PROVIDER = { ...PROVIDER, id: 4, name: '[Second provider]' };
+const OTHER_BIKE = { id: 23, name: '[Different bike] · [Size]', sku: null, pricePence: 125000 };
+const LOCK = { id: 22, name: '[Accessory]', sku: null, pricePence: 4000 };
+const LIGHTS = { id: 24, name: '[Second accessory]', sku: null, pricePence: 3000 };
+const SHOP = { name: 'North Street Cycles', address: '[Shop address]', phone: '[shop phone]', email: null, vatNumber: '[VAT number]', logoUrl: null };
 const SETTINGS = { holdDays: 7, remindDays: 2, quoteValidDays: 30, orderRule: 'certificate', depositKind: 'percent', depositValue: null, depositOnCertificate: 'refund', depositOnPullOut: 'refund', howToApply: '[The shop’s own words]', todayLines: false, noCertificateDays: null, paymentLateDays: null };
 
 const TODAY = '2026-09-14';
@@ -30,6 +35,10 @@ const order = (over = {}) => ({
 // Ordered from [Supplier] on day 2, then the certificate came (cw-cancel-ordered).
 const ORDERED = { stage: 'certificate', inStock: false, held: false, holdUntil: null, frameId: null, onOrder: true, orderedFrom: '[Supplier]', purchaseOrderId: 77, certificateNumber: '[certificate number]', certificatePence: 100000, certificateReceivedOn: day(3), next: null };
 const QUOTE_EV = { kind: 'quote_given', by: 'Jo Taylor', at: `${day(0)}T10:00:00.000Z`, reason: null, detail: { quoteRef: 'CW-1', closing: '' } };
+const quote = (revision) => ({
+  shop: SHOP, quoteRef: 'CW-1', givenOn: day(0), revisedOn: revision ? revision.on : null, validUntil: day(30), customerName: 'Maya Patel', providerName: '[Provider]',
+  items: [{ productId: 21, name: '[Bike] · [Size]', pricePence: 100000 }], totalPence: 100000, closing: '', howToApply: '[The shop’s own words]', revision,
+});
 const ORDERED_EV = { kind: 'ordered', by: 'Jo Taylor', at: `${day(2)}T11:00:00.000Z`, reason: null, detail: { supplier: '[Supplier]', purchaseOrderId: '77' } };
 
 const realFetch = globalThis.fetch;
@@ -49,9 +58,9 @@ afterEach(async () => {
 });
 
 /** `on` answers a POST to /api/c2w/orders/9<end> with [status, body] (or a promise of it); it may change `state`, which the page then reloads. */
-async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
+async function open({ theOrder = order(), events = [QUOTE_EV], on = {}, providers = [PROVIDER], products = [] } = {}) {
   calls = [];
-  state = { order: theOrder, events };
+  state = { order: theOrder, events, revision: null };
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -61,8 +70,10 @@ async function open({ theOrder = order(), events = [QUOTE_EV], on = {} } = {}) {
     if (p === '/api/auth/me') return reply(200, JO);
     if (p === '/api/c2w/count') return reply(200, { count: 1 });
     if (p === '/api/c2w/settings') return reply(200, { settings: SETTINGS });
-    if (p === '/api/c2w/providers') return reply(200, { providers: [PROVIDER] });
+    if (p === '/api/c2w/providers') return reply(200, { providers });
     if (p === '/api/products/21') return reply(200, BIKE);
+    if (p === '/api/products') return reply(200, products);
+    if (p === '/api/c2w/orders/9/quote') return reply(200, { quote: quote(state.revision) });
     if (method === 'POST' && p.startsWith('/api/c2w/orders/9/')) {
       const end = p.slice('/api/c2w/orders/9'.length);
       if (on[end]) { const [status, b] = await on[end](body); return reply(status, b); }
@@ -95,15 +106,123 @@ const cancelled = (body) => {
   return [200, { order: state.order }];
 };
 
-test('cw-more: More… opens a menu with Cancel the order…, and only the steps that are built', async () => {
+const menuOf = async (ui, fireEvent) => {
+  fireEvent.click(await ui.findByRole('button', { name: 'More for Maya Patel’s order' }));
+  return ui.findByRole('menu', { name: 'More for Maya Patel’s order' });
+};
+const itemsOf = (menu) => [...menu.querySelectorAll('[role="menuitem"]')].map((m) => m.textContent);
+const NOTE = 'A change after the quote is sent makes a revised quote; nothing is sent until you press Email.';
+
+test('cw-more: More… opens the drawn menu: the three changes, a line, Cancel the order…, and the note', async () => {
   const { ui, fireEvent } = await open();
   const more = await ui.findByRole('button', { name: 'More for Maya Patel’s order' });
   assert.equal(more.getAttribute('aria-haspopup'), 'menu');
   assert.equal(more.textContent, 'More…');
-  fireEvent.click(more);
-  const menu = await ui.findByRole('menu', { name: 'More for Maya Patel’s order' });
-  const items = [...menu.querySelectorAll('[role="menuitem"]')].map((m) => m.textContent);
-  assert.deepEqual(items, ['Cancel the order…']);
+  const menu = await menuOf(ui, fireEvent);
+  assert.deepEqual(itemsOf(menu), ['Change the bike or size', 'Change the accessories', 'Change the provider', 'Cancel the order…']);
+  assert.ok(menu.querySelector('[role="separator"]'), 'a line before Cancel');
+  assert.equal(menu.querySelector('p')?.textContent, NOTE);
+});
+
+test('cw-more: once the certificate is in, the provider can’t change', async () => {
+  const { ui, fireEvent } = await open({ theOrder: order({ stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 100000, certificateReceivedOn: day(3), next: 'ready' }) });
+  assert.deepEqual(itemsOf(await menuOf(ui, fireEvent)), ['Change the bike or size', 'Change the accessories', 'Cancel the order…']);
+});
+
+test('cw-more: when the bike is ready to collect, only Cancel is left', async () => {
+  const { ui, fireEvent } = await open({ theOrder: order({ stage: 'ready', certificateNumber: '[certificate number]', certificatePence: 100000, next: 'collect' }) });
+  const menu = await menuOf(ui, fireEvent);
+  assert.deepEqual(itemsOf(menu), ['Cancel the order…']);
+  assert.ok(menu.querySelector('[role="separator"]') === null);
+});
+
+const changed = (detail, over = {}) => (body) => {
+  state.order = { ...state.order, quoteRevisedAt: `${TODAY}T15:00:00.000Z`, ...over };
+  state.events = [...state.events, { kind: 'changed', by: 'Jo Taylor', at: `${TODAY}T15:00:00.000Z`, reason: null, detail: { what: body.what, ...detail } }];
+  state.revision = { what: body.what, on: TODAY, sent: false };
+  return [200, { order: state.order }];
+};
+const openChange = async (ui, fireEvent, item, title) => {
+  fireEvent.click((await menuOf(ui, fireEvent)).querySelectorAll('[role="menuitem"]')[item - 1]);
+  return ui.findByRole('dialog', { name: title });
+};
+
+test('cw-more › Change the bike or size: pick the new bike and save; the revised quote opens, saying the bike changed and Maya hasn’t been sent it', async () => {
+  const { ui, within, fireEvent } = await open({ products: [OTHER_BIKE], on: { '/change': changed({ from: BIKE.name, to: OTHER_BIKE.name, held: true }, { productId: 23, bike: OTHER_BIKE.name }) } });
+  const box = within(await openChange(ui, fireEvent, 1, 'Change the bike or size'));
+  assert.ok(box.getByText('Quote CW-1 · Maya Patel'));
+  assert.ok(box.getByText('Now: [Bike] · [Size]'));
+  fireEvent.change(box.getByRole('combobox', { name: 'Bike' }), { target: { value: 'Di' } });
+  fireEvent.click(await box.findByRole('option', { name: OTHER_BIKE.name }));
+  assert.ok(box.getByRole('group', { name: 'Bike' }).textContent.includes(OTHER_BIKE.name));
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  assert.ok(await ui.findByRole('heading', { level: 2, name: 'The revised quote' }));
+  assert.deepEqual(posts('/change').map((c) => c.body), [{ what: 'bike', productId: 23 }]);
+  assert.ok(ui.getByText(para(`Revised quote. The bike changed on ${long(TODAY)} — it’s in the order’s history. Maya hasn’t been sent it yet.`)));
+  assert.ok(ui.queryByRole('dialog', { name: 'Change the bike or size' }) === null);
+});
+
+test('cw-more › Change the bike or size: Save waits for a new bike', async () => {
+  const { ui, within, fireEvent } = await open({ on: { '/change': changed({}) } });
+  const box = within(await openChange(ui, fireEvent, 1, 'Change the bike or size'));
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  assert.equal(posts('/change').length, 0);
+  assert.equal(box.getByRole('button', { name: 'Save the change' }).disabled, true);
+});
+
+test('cw-more › Change the accessories: the order’s accessories are listed; take one off, add another, and save', async () => {
+  const theOrder = order({ accessories: [{ productId: 22, name: '[Accessory]', pricePence: 4000 }], totalPence: 104000 });
+  const { ui, within, fireEvent } = await open({ theOrder, products: [LIGHTS], on: { '/change': changed({ added: [LIGHTS.name], removed: [LOCK.name] }) } });
+  const box = within(await openChange(ui, fireEvent, 2, 'Change the accessories'));
+  const chosen = box.getByRole('list', { name: 'Accessories chosen' });
+  assert.deepEqual(within(chosen).getAllByRole('listitem').map((l) => l.textContent.replace('✕', '')), ['[Accessory]']);
+  fireEvent.click(box.getByRole('button', { name: 'Remove [Accessory]' }));
+  fireEvent.change(box.getByRole('combobox', { name: 'Accessories' }), { target: { value: 'Se' } });
+  fireEvent.click(await box.findByRole('option', { name: LIGHTS.name }));
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  assert.ok(await ui.findByText(para(`Revised quote. The accessories changed on ${long(TODAY)} — it’s in the order’s history. Maya hasn’t been sent it yet.`)));
+  assert.deepEqual(posts('/change').map((c) => c.body), [{ what: 'accessories', accessoryIds: [24] }]);
+});
+
+test('cw-more › Change the provider: choose another provider and save', async () => {
+  const { ui, within, fireEvent } = await open({ providers: [PROVIDER, OTHER_PROVIDER], on: { '/change': changed({ from: '[Provider]', to: '[Second provider]' }, { providerId: 4, providerName: '[Second provider]' }) } });
+  const box = within(await openChange(ui, fireEvent, 3, 'Change the provider'));
+  const pick = box.getByRole('combobox', { name: 'Scheme provider' });
+  await box.findByRole('option', { name: '[Second provider]' });
+  await box.findByRole('option', { name: '[Second provider]' });
+  assert.equal(pick.value, '3');
+  fireEvent.change(pick, { target: { value: '4' } });
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  assert.ok(await ui.findByText(para(`Revised quote. The provider changed on ${long(TODAY)} — it’s in the order’s history. Maya hasn’t been sent it yet.`)));
+  assert.deepEqual(posts('/change').map((c) => c.body), [{ what: 'provider', providerId: 4 }]);
+});
+
+test('cw-more › a change the server refuses says why, and the popup stays open', async () => {
+  const said = 'This bike is on order from the supplier. Undo that order first, then change the bike.';
+  const { ui, within, fireEvent } = await open({ products: [OTHER_BIKE], on: { '/change': () => [409, { error: said, code: 'on_order' }] } });
+  const box = within(await openChange(ui, fireEvent, 1, 'Change the bike or size'));
+  fireEvent.change(box.getByRole('combobox', { name: 'Bike' }), { target: { value: 'Di' } });
+  fireEvent.click(await box.findByRole('option', { name: OTHER_BIKE.name }));
+  fireEvent.click(box.getByRole('button', { name: 'Save the change' }));
+  assert.equal((await box.findByRole('alert')).textContent, said);
+  assert.ok(ui.getByRole('dialog', { name: 'Change the bike or size' }));
+});
+
+test('cw-more: What’s happened says what each change did', async () => {
+  const at = `${day(1)}T09:00:00.000Z`;
+  const ev = (detail) => ({ kind: 'changed', by: 'Jo Taylor', at, reason: null, detail });
+  const { ui } = await open({ events: [QUOTE_EV,
+    ev({ what: 'bike', from: '[Bike] · [Size]', to: '[Different bike] · [Size]', held: true }),
+    ev({ what: 'bike', from: '[Different bike] · [Size]', to: '[Bike] · [Size]', held: false }),
+    ev({ what: 'bike', from: '[Bike] · [Size]', to: '[Different bike] · [Size]' }),
+    ev({ what: 'accessories', added: ['[Second accessory]'], removed: ['[Accessory]'] }),
+    ev({ what: 'accessories', added: [], removed: ['[Second accessory]'] }),
+    ev({ what: 'provider', from: '[Provider]', to: '[Second provider]' })] });
+  assert.equal((await ui.findAllByText('changed the bike from [Bike] · [Size] to [Different bike] · [Size]')).length, 2, 'no hold note when it was held, or when the order wasn’t holding');
+  assert.ok(ui.getByText('changed the bike from [Different bike] · [Size] to [Bike] · [Size] · none free to hold, so one needs ordering in'));
+  assert.ok(ui.getByText('changed the accessories · added [Second accessory] · took off [Accessory]'));
+  assert.ok(ui.getByText('changed the accessories · took off [Second accessory]'));
+  assert.ok(ui.getByText('changed the provider from [Provider] to [Second provider]'));
 });
 
 test('cw-cancel: the popup for a held bike, Keep the order closes it, and nothing is sent', async () => {

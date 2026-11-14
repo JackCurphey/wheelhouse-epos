@@ -18,6 +18,7 @@ import { QuoteDoc, getQuote, quoteKey, useEmailQuote } from './quote-page.tsx';
 import { AppliedDialog, CertificateDialog } from './certificate-dialog.tsx';
 import { HandOverDialog } from './hand-over-dialog.tsx';
 import { CancelDialog, MoreMenu } from './cancel-dialog.tsx';
+import { ChangeDialog, type ChangeWhat } from './change-dialog.tsx';
 import { MarkPaidDialog, owedOf } from './mark-paid-dialog.tsx';
 
 /**
@@ -207,6 +208,17 @@ function NextStep({ o, rule, remindDays, now, act, money }: { o: Full; rule: str
   return <Box label="cw-next">{head('Next: the certificate')}{row(addCertificate('primary'))}</Box>;
 }
 
+const listOf = (v: unknown) => (Array.isArray(v) ? (v as string[]) : []);
+/** A change from More… (task 4.8; not drawn, logged): what it changed, and a bike with none free to hold. */
+function changedLine(e: C2wEvent) {
+  const d = e.detail as Record<string, unknown>;
+  if (d.what === 'bike') return `changed the bike from ${String(d.from)} to ${String(d.to)}${d.held === false ? ' · none free to hold, so one needs ordering in' : ''}`;
+  if (d.what === 'provider') return `changed the provider from ${String(d.from)} to ${String(d.to)}`;
+  const added = listOf(d.added);
+  const removed = listOf(d.removed);
+  return ['changed the accessories', added.length ? `added ${added.join(', ')}` : null, removed.length ? `took off ${removed.join(', ')}` : null].filter(Boolean).join(' · ');
+}
+
 /** Each line of "What's happened" in the drawn words (c2w.mjs EV); a quote and its email together are one line,
  *  even with the hold the server records between them (quote, held, emailed). */
 function lines(o: Full): { at: string; by: string; text: string }[] {
@@ -245,7 +257,8 @@ function lines(o: Full): { at: string; by: string; text: string }[] {
       const got = Number(e.detail.amountPence);
       paidSoFar += got;
       text = [`closed it with ${pounds(Number(e.detail.shortfallPence))} not paid${got ? `: ${pounds(got)} received ${longDate(e.detail.receivedOn)}` : ''}`, e.reason].filter(Boolean).join(' · ');
-    } else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
+    } else if (e.kind === 'changed') text = changedLine(e);
+    else if (e.kind === 'applied') text = [`marked ${firstName(o.customerName)} as applied`, e.detail.employer ? `employer ${e.detail.employer}` : null, e.detail.reference ? `reference ${e.detail.reference}` : null].filter(Boolean).join(' · ');
     if (!text) return;
     const line = { at: e.at, by: e.by ?? 'Wheelhouse', text };
     out.push(line);
@@ -345,6 +358,7 @@ function OrderBody() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<'applied' | 'certificate' | 'hand-over' | 'cancel' | 'paid' | 'close' | null>(null);
   const [stepping, setStepping] = useState(false);
+  const [changing, setChanging] = useState<ChangeWhat | null>(null);
   const shown = useRef(false);
   // The note New order sends (cw-order-held), shown once: the address is cleared
   // of it, so a reload or Back doesn't show it again. An email that didn't go
@@ -402,7 +416,7 @@ function OrderBody() {
           <h2 className="m-0 text-size-22 font-bold md:text-size-26">{`${o.customerName} · Cycle to Work`}</h2>
           <p className={note}>{`Quote ${o.quoteRef} · ${o.siteName && o.siteName !== shop ? `${shop}, ${o.siteName}` : shop}`}</p>
         </div>
-        {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} /> : null}
+        {OPEN_STAGES.has(o.stage) ? <MoreMenu o={o} onCancel={() => setOpen('cancel')} onChange={setChanging} /> : null}
       </div>
       {o.stage === 'cancelled' || o.stage === 'closed' ? null : <Stages o={o} />}
       <div className="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[minmax(0,1fr)_420px]">
@@ -412,6 +426,7 @@ function OrderBody() {
       {open === 'applied' ? <AppliedDialog o={o} today={today} rule={settings?.orderRule} supplier={o.supplier ?? null} onClose={() => setOpen(null)} /> : null}
       {open === 'certificate' ? <CertificateDialog o={o} today={today} onClose={() => setOpen(null)} /> : null}
       {open === 'hand-over' ? <HandOverDialog o={o} provider={provider} onClose={() => setOpen(null)} /> : null}
+      {changing ? <ChangeDialog o={o} what={changing} onClose={() => setChanging(null)} /> : null}
       {open === 'cancel' ? <CancelDialog o={o} events={o.events} shop={shop} onClose={() => setOpen(null)} /> : null}
       {open === 'paid' || open === 'close' ? <MarkPaidDialog o={o} today={today} closing={open === 'close'} onClose={() => setOpen(null)} onSaved={(text) => show({ text })} /> : null}
     </Page>

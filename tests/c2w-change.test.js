@@ -121,7 +121,9 @@ test('4.8 an order not held stays unheld when its bike changes before the certif
   const after = await framedBike(1);
   const loose = await quote(before, { hold: false });
   assert.equal((await change(loose.id, { what: 'bike', productId: after })).status, 200);
-  assert.equal((await order(loose.id)).held, false, '"Don’t hold" stays as chosen');
+  const unheld = await order(loose.id);
+  assert.equal(unheld.held, false, '"Don’t hold" stays as chosen');
+  assert.ok(!('held' in unheld.events.at(-1).detail), 'no hold wanted, so the history says nothing about holding');
   assert.equal((await frames(after))[0].state, 'in_stock');
   // Quoted when none was free (the hold wanted): the new bike, free, is held.
   const gone = await framedBike(0);

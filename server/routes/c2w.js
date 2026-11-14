@@ -417,7 +417,8 @@ export function register(route) {
         const wanted = Boolean(row.held_at) || firm || (row.hold_wanted && !row.released_at);
         if (row.held_at) await releaseHold(row);
         const got = wanted ? await takeHold(row.id, productId, row.site_id) : null;
-        Object.assign(detail, { from: was.name, to: bike.name, held: Boolean(got) });
+        // "held" only when a hold was wanted: false then means none was free to hold.
+        Object.assign(detail, { from: was.name, to: bike.name, ...(wanted ? { held: Boolean(got) } : {}) });
         let until = null;
         if (got && !firm) {
           if (row.hold_until_day) until = row.hold_until_day;

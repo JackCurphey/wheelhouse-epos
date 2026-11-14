@@ -18,7 +18,7 @@ import { Kv, addDays, closingFor, longDate, mono, orderHref, plural, pounds, use
  * order with the drawn note.
  */
 type Person = { id: number; name: string; phone: string | null; email: string | null };
-type Product = { id: number; name: string; sku: string | null; pricePence: number };
+export type Product = { id: number; name: string; sku: string | null; pricePence: number };
 type ProductPage = { stockAtShops: { id: number; name: string; qty: number; here: boolean }[] };
 
 const LABEL = 'text-sm font-semibold';
@@ -33,7 +33,7 @@ const focusById = (id: string) => document.getElementById(id)?.focus();
  * Deliveries' New order lists products): the arrow keys move through them,
  * Enter picks, and Escape closes the list without closing New order.
  */
-function Search<T extends { id: number }>({ id, label, path, show, name, onPick }: { id: string; label: string; path: string; show: (t: T) => ReactNode; name: (t: T) => string; onPick: (t: T) => void }) {
+export function Search<T extends { id: number }>({ id, label, path, show, name, onPick }: { id: string; label: string; path: string; show: (t: T) => ReactNode; name: (t: T) => string; onPick: (t: T) => void }) {
   const [term, setTerm] = useState('');
   const [open, setOpen] = useState(true);
   const [active, setActive] = useState(0);
@@ -85,7 +85,7 @@ function Search<T extends { id: number }>({ id, label, path, show, name, onPick 
 }
 
 /** A picked value with Change, in the place of its search (New job's customer, new-job-dialog.tsx). */
-function Picked({ id, labelId, children, onChange, what }: { id: string; labelId: string; children: ReactNode; onChange: () => void; what: string }) {
+export function Picked({ id, labelId, children, onChange, what }: { id: string; labelId: string; children: ReactNode; onChange: () => void; what: string }) {
   return (
     <div role="group" aria-labelledby={labelId} className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] pl-3 text-sm">
       <span className="min-w-0">{children}</span>
@@ -95,7 +95,7 @@ function Picked({ id, labelId, children, onChange, what }: { id: string; labelId
 }
 
 /** A field's label: on its box while there's one to type in, else naming the picked value's group. */
-function Field({ id, label, sub, picked = false, children }: { id: string; label: string; sub?: ReactNode; picked?: boolean; children: ReactNode }) {
+export function Field({ id, label, sub, picked = false, children }: { id: string; label: string; sub?: ReactNode; picked?: boolean; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       {picked ? <span id={`${id}-l`} className={LABEL}>{label}</span> : <label id={`${id}-l`} htmlFor={id} className={LABEL}>{label}</label>}

@@ -432,6 +432,20 @@ test('cw-quote-revised: the revised heading, Revised [date] and Email the revise
   assert.ok(main.getByRole('button', { name: 'Email the revised quote to Maya' }));
 });
 
+test('cw-quote-revised: the grey message says what changed until the revised quote is emailed', async () => {
+  const { ui, within } = await open('/workshop/c2w/9/quote', { quote: { ...QUOTE, revisedOn: day(0), revision: { what: 'bike', on: day(0), sent: false } } });
+  const main = within(await ui.findByRole('main'));
+  await main.findByRole('heading', { level: 2, name: 'The revised quote' });
+  assert.ok(main.getByText((_, el) => el?.tagName === 'P' && el.textContent === `Revised quote. The bike changed on ${long(day(0))} — it’s in the order’s history. Maya hasn’t been sent it yet.`));
+});
+
+test('cw-quote-revised: once it’s been emailed, the grey message has gone', async () => {
+  const { ui, within } = await open('/workshop/c2w/9/quote', { quote: { ...QUOTE, revisedOn: day(0), revision: { what: 'bike', on: day(0), sent: true } } });
+  const main = within(await ui.findByRole('main'));
+  await main.findByRole('heading', { level: 2, name: 'The revised quote' });
+  assert.ok(main.queryByText(/hasn’t been sent it yet/) === null);
+});
+
 // ---- 4.4 The order ----
 
 test('cw-order-held: heading, stages, the hold, What’s happened, The order, Who pays what and Customer', async () => {
