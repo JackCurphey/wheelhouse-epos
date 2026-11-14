@@ -123,6 +123,44 @@ test('pushInventoryLevel is a no-op for a product with no Shopify mapping', asyn
   }
 });
 
+// The older Shopify connection (shopify_connections; decision 9 keeps it) is
+// sent the stock less bikes held for Cycle to Work, as the newer sync is
+// (openspec/changes/cycle-to-work task 5.6; decided-while-building 14 Nov).
+// Codes and prices are made-up test values.
+test('pushInventoryLevel sends the stock less held frames and bikes held by count, never below nought', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const restoreConnect = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({ locations: [{ id: 42 }] }) }));
+      try {
+        await saveShopifyConnection({ shopDomain: 'fake.myshopify.com', accessToken: 'tok', storefrontApiToken: 'store-tok' });
+      } finally {
+        restoreConnect();
+      }
+      const bike = (await prepare("INSERT INTO products (sku, name, price, cost, stock_qty, vat_rate_bp, shopify_inventory_item_id) VALUES ('[SKU-HELD]', '[Bike]', '900.00', 0, 3, 2000, '777') RETURNING id").get()).id;
+      const site = null; // a test shop has no site; both columns allow none
+      const customer = (await prepare("INSERT INTO customers (name) VALUES ('[Customer]') RETURNING id").get()).id;
+      const provider = (await prepare("INSERT INTO c2w_providers (name) VALUES ('[Provider]') RETURNING id").get()).id;
+      await prepare("INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, state) VALUES (?, ?, '[FRAME-1]', '[FRAME-1]', 'held') RETURNING id").get(bike, site);
+      await prepare("INSERT INTO c2w_orders (customer_id, provider_id, product_id, site_id, held_at, stage, quote_number, total_pence, customer_code) VALUES (?, ?, ?, ?, now(), 'waiting', 1, 90000, ?) RETURNING id")
+        .get(customer, provider, bike, site, `[code-${shop.id}]`);
+
+      const sent = [];
+      const restore = stubFetch(async (url, opts) => { sent.push(JSON.parse(opts.body).available); return { ok: true, status: 200, json: async () => ({}) }; });
+      try {
+        const product = await prepare('SELECT * FROM products WHERE id = ?').get(bike);
+        await pushInventoryLevel(product, 3);
+        await pushInventoryLevel(product, 1);
+      } finally {
+        restore();
+      }
+      assert.deepEqual(sent, [1, 0], 'a held frame and a count hold are each left out, and the figure stops at nought');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test.after(async () => {
   await pool.end();
 });
