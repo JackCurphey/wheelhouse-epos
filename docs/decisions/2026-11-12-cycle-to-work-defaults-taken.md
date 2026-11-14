@@ -37,5 +37,19 @@ Jack answered both questions that were waiting (relayed by the Front desk,
 With those answers, pull requests 7 (the hand-over at the till) and 8 (the
 provider's money) go ahead, under the risky-area rules.
 
+## The owed and paid report (`rp-c2w`) — Jack's answer, 14 Nov
+
+Pull request #770 built the report and left two questions for Jack (until
+now written only in that pull request and an overnight note outside the
+repo).
+
+5. **Money received on an order closed with a reason — leave as built
+   (option 1).** Jack's answer, 14 Nov, relayed by the Front desk. Settled:
+   such money is not counted in Paid. No code changes.
+6. **`paid_on` is the day the money was received, not the day the bike was
+   marked paid** (as #770 put it) — still open; the Front desk is putting it
+   to Jack next.
+
 Status: items 1–2 defaults taken; items 3–4 answered by Jack on 12 Nov;
-pull requests 7–8 going ahead.
+pull requests 7–8 going ahead. Item 5 answered by Jack on 14 Nov; item 6
+open.

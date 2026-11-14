@@ -47,22 +47,65 @@ after(async () => {
   await pool.end();
 });
 
-/** The text a PDF shows, one line per text run, read from its (deflated) content streams. */
+/**
+ * The text a PDF shows, one line per text run, read from its (deflated) content
+ * streams. An embedded font writes glyph numbers, read back through the font's
+ * ToUnicode map; a built-in font writes Windows-1252 bytes.
+ */
 function pdfText(buf) {
   const raw = buf.toString('latin1');
-  const lines = [];
-  const streams = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
-  for (let m = streams.exec(raw); m; m = streams.exec(raw)) {
-    let body;
-    try {
-      body = inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1');
-    } catch {
+  // Each object in turn; a stream is read by its /Length, so a font file's bytes
+  // are never searched.
+  const objs = new Map();
+  const head = /(\d+) 0 obj/g;
+  for (let m = head.exec(raw); m; m = head.exec(raw)) {
+    const end = raw.indexOf('endobj', head.lastIndex);
+    const opens = raw.indexOf('stream', head.lastIndex);
+    if (opens === -1 || opens > end) {
+      objs.set(m[1], { dict: raw.slice(head.lastIndex, end), body: null });
       continue;
     }
-    const runs = /\[((?:<[0-9a-fA-F]*>|[\s\d.-])*)\]\s*TJ/g;
-    for (let r = runs.exec(body); r; r = runs.exec(body)) {
-      const hex = [...r[1].matchAll(/<([0-9a-fA-F]*)>/g)].map((h) => h[1]).join('');
-      lines.push(new TextDecoder('windows-1252').decode(Buffer.from(hex, 'hex')));
+    const dict = raw.slice(head.lastIndex, opens);
+    const from = raw.indexOf('\n', opens) + 1;
+    const data = raw.slice(from, from + Number(/\/Length (\d+)/.exec(dict)[1]));
+    let body = null;
+    try {
+      body = inflateSync(Buffer.from(data, 'latin1')).toString('latin1');
+    } catch {
+      // not deflated
+    }
+    objs.set(m[1], { dict, body });
+    head.lastIndex = from + data.length;
+  }
+  const toUnicode = (id) => {
+    const map = new Map();
+    for (const r of (objs.get(id)?.body ?? '').matchAll(/<([0-9a-f]{4})>\s*<[0-9a-f]{4}>\s*\[([^\]]*)\]/gi)) {
+      const first = parseInt(r[1], 16);
+      // An entry can be several letters, such as a joined “fi”.
+      [...r[2].matchAll(/<([0-9a-f ]+)>/gi)].forEach((u, i) => map.set(first + i, String.fromCharCode(...u[1].replace(/ /g, '').match(/.{4}/g).map((c) => parseInt(c, 16)))));
+    }
+    return map;
+  };
+  const fonts = new Map();
+  for (const { dict } of objs.values()) {
+    for (const f of dict.matchAll(/\/(F\d+) (\d+) 0 R/g)) {
+      const map = /\/ToUnicode (\d+) 0 R/.exec(objs.get(f[2])?.dict ?? '');
+      fonts.set(f[1], map ? toUnicode(map[1]) : null);
+    }
+  }
+  const lines = [];
+  for (const { body } of objs.values()) {
+    if (!body?.includes('TJ')) continue;
+    let font = null;
+    for (const op of body.matchAll(/\/(F\d+) [\d.]+ Tf|\[((?:<[0-9a-fA-F]*>|[\s\d.-])*)\]\s*TJ/g)) {
+      if (op[1]) {
+        font = fonts.get(op[1]) ?? null;
+        continue;
+      }
+      const hex = [...op[2].matchAll(/<([0-9a-fA-F]*)>/g)].map((h) => h[1]).join('');
+      lines.push(font
+        ? (hex.match(/.{4}/g) ?? []).map((g) => font.get(parseInt(g, 16)) ?? '�').join('')
+        : new TextDecoder('windows-1252').decode(Buffer.from(hex, 'hex')));
     }
   }
   return lines.join(' ').replace(/\s+/g, ' ');
@@ -101,6 +144,17 @@ test('a revised quote says Revised and its date instead of Given; no address, ph
   assert.ok(!text.includes('VAT ['), text);
   assert.ok(!text.includes('How to apply'), text);
   assert.ok(!text.includes(' · [Shop'), text);
+});
+
+test('the PDF embeds Noto Sans, so a name such as Łukasz prints as written', async () => {
+  const buf = await quotePdf({ ...QUOTE, customerName: 'Łukasz Wiśniewski' });
+  const text = pdfText(buf);
+  assert.ok(text.includes('For Łukasz Wiśniewski · scheme provider [Provider]'), text);
+  const pdfRaw = buf.toString('latin1');
+  assert.match(pdfRaw, /\/BaseFont \/[A-Z]{6}\+NotoSans-Regular/, 'Noto Sans for the text');
+  assert.match(pdfRaw, /\/BaseFont \/[A-Z]{6}\+NotoSans-Bold/, 'Noto Sans Bold for the headings');
+  assert.match(pdfRaw, /\/FontFile2 /, 'the font goes in the file');
+  assert.doesNotMatch(pdfRaw, /\/BaseFont \/Helvetica/, 'no built-in font left');
 });
 
 test('the shop’s uploaded PNG or JPEG logo goes in; a WebP, a logo held elsewhere or a missing file leaves the space empty', async () => {
