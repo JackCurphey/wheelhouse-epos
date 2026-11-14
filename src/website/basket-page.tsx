@@ -49,16 +49,23 @@ export function BasketPage() {
         {removed && <><span>Removed {removed.name}.</span> <Button variant="ghost" className="min-h-11 text-size-15 underline" onClick={undo}>Undo</Button></>}
       </p>
       {basket.length === 0 ? (
-        <Box className="max-w-[640px]">
-          <p className="m-0 text-size-17">Your basket is empty.</p>
-          <span><Link to="/shop" className={linkButton('default')}>Carry on shopping</Link></span>
-        </Box>
+        <EmptyBasket />
       ) : priced.error && (!priced.data || priced.isPlaceholderData) ? (
         <Failed onRetry={() => { void priced.refetch(); }} />
       ) : priced.data ? (
         <Priced answer={priced.data} onStep={step} onRemove={remove} />
       ) : null}
     </>
+  );
+}
+
+/** on-basket-empty's box; checkout shows it too when there's nothing to check out. */
+export function EmptyBasket() {
+  return (
+    <Box className="max-w-[640px]">
+      <p className="m-0 text-size-17">Your basket is empty.</p>
+      <span><Link to="/shop" className={linkButton('default')}>Carry on shopping</Link></span>
+    </Box>
   );
 }
 
