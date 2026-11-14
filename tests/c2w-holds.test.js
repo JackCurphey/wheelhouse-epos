@@ -69,7 +69,10 @@ const counts = async () => (await own('/api/c2w/orders')).body.counts;
 const setHoldUntil = (id, day) => inShop(async () => prepare('UPDATE c2w_orders SET hold_until = ? WHERE id = ? RETURNING id').get(day, id));
 
 // A till of its own at the shop, signed in as the Owner, with nobody checked in.
+// Till 9 is set up once, so each test after the first reuses it.
+let nobodyIn;
 async function tillNobodyIn() {
+  if (nobodyIn) return nobodyIn;
   const jar = new Map();
   const cookieOwn = await staffFreshCookie(owner.loginId);
   const send = async (path, body) => {
@@ -83,6 +86,7 @@ async function tillNobodyIn() {
     return { status: res.status, body: text ? JSON.parse(text) : null };
   };
   assert.equal((await send('/api/till-setup', { siteId: site, number: 9 })).status, 201);
+  nobodyIn = send;
   return send;
 }
 
@@ -285,4 +289,38 @@ test('the stock check names the sites, oldest first, with what is free and held 
   assert.equal(typeof stock.sites[0].siteName, 'string');
   assert.equal((await own('/api/c2w/stock?productId=nope')).status, 400);
   assert.equal((await own('/api/c2w/stock?productId=999999999')).status, 404);
+});
+
+test('10.4 Undo on Hold longer puts the date back, says who undid it, and only undoes the latest once (cw-today-held)', async () => {
+  const bike = await framedBike(1);
+  const held = (await quote(bike)).body.order;
+  assert.equal((await own(`/api/c2w/orders/${held.id}/hold-longer`, { method: 'POST', body: {} })).body.order.holdUntil, '2026-09-15');
+  const undone = await own(`/api/c2w/orders/${held.id}/hold-longer/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  assert.equal(undone.body.order.holdUntil, '2026-09-08', 'back to the date before Hold longer');
+  assert.equal(undone.body.order.held, true, 'still held');
+  const events = (await order(held.id)).events;
+  const longer = await inShop(async () => prepare("SELECT id FROM c2w_order_events WHERE order_id = ? AND kind = 'hold_longer'").get(held.id));
+  const line = events.find((e) => e.kind === 'hold_longer_undone');
+  assert.equal(line.by, 'Jack Lewis');
+  assert.deepEqual(line.detail, { undid: longer.id, from: '2026-09-15', until: '2026-09-08' }, 'which Hold longer it undid, and the dates');
+  const twice = await own(`/api/c2w/orders/${held.id}/hold-longer/undo`, { method: 'POST', body: {} });
+  assert.deepEqual([twice.status, twice.body.code], [409, 'nothing_to_undo']);
+  assert.equal((await order(held.id)).holdUntil, '2026-09-08', 'a second Undo changes nothing');
+});
+
+test('10.4 Undo on Hold longer is refused once the date has moved on since, or with nobody checked in', async () => {
+  const bike = await countedBike(1);
+  const held = (await quote(bike)).body.order;
+  assert.equal((await own(`/api/c2w/orders/${held.id}/hold-longer`, { method: 'POST', body: {} })).status, 200);
+  const till = await tillNobodyIn();
+  const noOne = await till(`/api/c2w/orders/${held.id}/hold-longer/undo`, {});
+  assert.deepEqual([noOne.status, noOne.body.code], [409, 'check_in_first']);
+  await setHoldUntil(held.id, '2026-09-20');
+  const moved = await own(`/api/c2w/orders/${held.id}/hold-longer/undo`, { method: 'POST', body: {} });
+  assert.deepEqual([moved.status, moved.body.code], [409, 'nothing_to_undo']);
+  assert.equal((await order(held.id)).holdUntil, '2026-09-20', 'nothing changed');
+  const never = (await quote(await countedBike(1))).body.order;
+  const none = await own(`/api/c2w/orders/${never.id}/hold-longer/undo`, { method: 'POST', body: {} });
+  assert.deepEqual([none.status, none.body.code], [409, 'nothing_to_undo']);
 });

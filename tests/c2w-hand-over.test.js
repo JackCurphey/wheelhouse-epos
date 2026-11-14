@@ -398,3 +398,24 @@ test('7.2 the amount due refuses what the sale would refuse, before the card: an
   assert.deepEqual([gone.status, gone.body.code], [409, 'wrong_stage']);
   assert.equal((await due(999999)).status, 404);
 });
+
+test('10.4 after the hand over, her page shows the sale’s number on the order and the bike in her Bikes, bought on Cycle to Work (cs-page-c2w-collected)', async () => {
+  const o = await readyOrder();
+  // One size of a bike with sizes, as drawn: "[Bike] · [Size]".
+  await inShop(async () => {
+    const group = await prepare("INSERT INTO product_groups (name) VALUES ('[Bike]') RETURNING id").get();
+    await prepare("UPDATE products SET name = '[Bike]', group_id = ?, size = '[Size]' WHERE id = ?").run(group.id, o.bike);
+  });
+  const sale = (await sell({ c2wOrderId: o.id, cardAmount: 240, c2wChecks: ['[Check one]'] })).body;
+  const item = (await own(`/api/customers/${maya.id}/history`)).body.items.find((i) => i.kind === 'c2w_order' && i.id === o.id);
+  assert.equal(item.saleId, sale.id, 'the hand-over sale, by its number');
+  // A bike of her own, not from Cycle to Work, says nothing of it.
+  assert.equal((await own(`/api/customers/${maya.id}/bikes`, { method: 'POST', body: { make: '[Make]', model: '[Model]' } })).status < 300, true);
+  const bikes = (await own(`/api/customers/${maya.id}/bikes`)).body;
+  const frame = await inShop(async () => prepare('SELECT customer_bike_id, frame_number FROM stock_frames WHERE id = ?').get(o.frameId));
+  const c2w = bikes.find((b) => b.id === frame.customer_bike_id);
+  assert.deepEqual([c2w.model, c2w.size, c2w.cycleToWork, c2w.serialNumber], ['[Bike]', '[Size]', true, frame.frame_number]);
+  assert.ok(c2w.boughtHereOn, 'its bought-here date');
+  const own2 = bikes.find((b) => b.model === '[Model]');
+  assert.deepEqual([own2.cycleToWork, own2.size], [false, null]);
+});

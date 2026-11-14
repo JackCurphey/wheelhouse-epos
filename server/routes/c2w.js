@@ -38,6 +38,7 @@ const NO_SUPPLIER = { error: 'This bike has no supplier in Settings › Supplier
 const NOTHING_ON_ORDER = { error: 'Nothing is on order for this bike. Refresh to see where it is now.', code: 'not_on_order' };
 const ORDER_SENT = { error: 'The supplier order has been sent, so this can’t be undone here. Change it on the purchase order.', code: 'order_sent' };
 const RETURN_NOT_BUILT = { error: 'Sending a bike back to the supplier isn’t built yet. Keep it as shop stock, or leave the order open for now.', code: 'return_not_built' };
+const NOTHING_TO_UNDO = { error: 'There’s no Hold longer to undo now. Refresh to see the hold’s date.', code: 'nothing_to_undo' };
 const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
 // BEGIN, the change, COMMIT; a refusal rolls back.
@@ -275,6 +276,30 @@ export function register(route) {
         return { hold_until: until };
       }, { detail });
       await queueC2wMessage(id, 'c2w_put_aside', { req, loginId: who.loginId });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Its Undo (cw-today-held): the latest Hold longer, while the hold still ends on
+  // the date it set, goes back to the date before, and its waiting "Your bike is
+  // put aside" is stopped. No time limit, like Mark ready's Undo.
+  route('POST', '/api/c2w/orders/:id/hold-longer/undo', async (req, res, params) => {
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const detail = {};
+      await takeStep(id, 'hold_longer_undone', who, async (row) => {
+        const last = await db.prepare(`SELECT e.id, e.detail->>'from' AS "from", e.detail->>'until' AS until
+          FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'hold_longer'
+           AND NOT EXISTS (SELECT 1 FROM c2w_order_events u WHERE u.order_id = e.order_id
+             AND u.kind = 'hold_longer_undone' AND u.detail->>'undid' = e.id::text)
+          ORDER BY e.created_at DESC, e.id DESC LIMIT 1`).get(row.id);
+        if (!row.held_at || !last || last.until !== row.hold_until_day) throw new Refused(409, NOTHING_TO_UNDO);
+        Object.assign(detail, { undid: Number(last.id), from: last.until, until: last.from });
+        return { hold_until: last.from };
+      }, { detail });
+      await undoReadyMessage(id, 'c2w_put_aside');
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });

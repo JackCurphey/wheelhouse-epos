@@ -27,6 +27,8 @@ export const STEPS = {
   // docs/decisions/2026-10-02-cycle-to-work-review.md): no end date to move, and
   // nothing to release.
   hold_longer: { from: ['quote', 'waiting'], to: null },
+  // Its Undo (cw-today-held), while the date is still the one it set.
+  hold_longer_undone: { from: ['quote', 'waiting'], to: null },
   released: { from: ['quote', 'waiting'], to: null },
   // The certificate (cw-certificate); with the "bike is ready" tick the route
   // moves it on to ready in the same step.

@@ -35,8 +35,11 @@ export async function holdsEnded(today) {
 // when the quote was given (decided while building, 12 Nov, PR 10b item 6).
 export async function noCertificate(today, tz, days) {
   if (!days) return [];
+  // A Hold longer that was undone doesn't count (cw-today-held).
   const rows = await prepare(`SELECT x.*, (SELECT max(e.created_at) FROM c2w_order_events e
-      WHERE e.order_id = x.id AND e.kind = 'hold_longer') AS held_longer_at
+      WHERE e.order_id = x.id AND e.kind = 'hold_longer'
+        AND NOT EXISTS (SELECT 1 FROM c2w_order_events u WHERE u.order_id = e.order_id
+          AND u.kind = 'hold_longer_undone' AND u.detail->>'undid' = e.id::text)) AS held_longer_at
     FROM (${ORDER_SELECT} WHERE o.stage IN ('quote', 'waiting') AND NOT (${HOLD_ENDED})) x
     ORDER BY x.quote_given_at, x.id`).all(today);
   const daysSince = (t) => daysFrom(shopToday(tz, new Date(t)), today);

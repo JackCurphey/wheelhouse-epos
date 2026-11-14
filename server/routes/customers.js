@@ -500,7 +500,13 @@ export function register(route) {
     if (query.get('all') !== '1') sql += ' AND active = 1';
     sql += ' ORDER BY make, model';
     const rows = await db.prepare(sql).all(...args);
-    sendJson(res, 200, await bikesWithWarranty(rows, shopToday(await shopZone()), serializeBike));
+    // A bike handed over on Cycle to Work says so, with its size (cs-page-c2w-collected).
+    const c2w = new Map((await db.prepare(`SELECT f.customer_bike_id, p.size FROM stock_frames f
+      JOIN c2w_orders o ON o.id = f.c2w_order_id AND o.sale_id IS NOT NULL
+      JOIN products p ON p.id = f.product_id
+      WHERE f.customer_bike_id = ANY(?::int[])`).all(rows.map((r) => r.id))).map((r) => [r.customer_bike_id, r.size ?? null]));
+    const bikes = await bikesWithWarranty(rows, shopToday(await shopZone()), serializeBike);
+    sendJson(res, 200, bikes.map((b) => ({ ...b, cycleToWork: c2w.has(b.id), size: c2w.get(b.id) ?? null })));
   });
 
   route('POST', '/api/customers/:id/bikes', async (req, res, params) => {

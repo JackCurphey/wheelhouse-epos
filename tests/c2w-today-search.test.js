@@ -297,12 +297,25 @@ test('10.2 the customer’s page lists their orders, open and collected, each wi
   const mine = (id) => items.find((i) => i.id === id);
   assert.deepEqual(mine(open.id), {
     kind: 'c2w_order', id: open.id, stage: 'quote', open: true, quoteRef: open.quoteRef, bike: '[Bike] · [Size]', providerName: '[Provider]',
-    holdUntil: day(7), holdEnded: false, certificateNumber: null, collectedAt: null, at: open.quoteGivenAt,
+    holdUntil: day(7), holdEnded: false, certificateNumber: null, collectedAt: null, saleId: null, at: open.quoteGivenAt,
   });
   assert.deepEqual(mine(collected.id), {
     kind: 'c2w_order', id: collected.id, stage: 'collected', open: false, quoteRef: collected.quoteRef, bike: '[Bike] · [Size]', providerName: '[Provider]',
-    holdUntil: null, holdEnded: false, certificateNumber: '[CERT-1]', collectedAt, at: collectedAt,
+    holdUntil: null, holdEnded: false, certificateNumber: '[CERT-1]', collectedAt, saleId: null, at: collectedAt,
   });
   const { n } = await inShop(async () => prepare('SELECT count(*)::int AS n FROM c2w_orders WHERE customer_id = ?').get(sam.id));
   assert.equal(items.length, n, 'only theirs');
+});
+
+test('10.4 Today: Undo on Hold longer brings the “no certificate yet” line straight back', async () => {
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: 5 } })).status, 200);
+  const made = await quote();
+  await set(made.id, { quote_given_at: `${day(-9)}T12:00:00.000Z` });
+  const mine = async () => (await c2wLines()).filter((l) => l.orderId === made.id);
+  assert.equal((await own(`/api/c2w/orders/${made.id}/hold-longer`, { method: 'POST', body: {} })).status, 200);
+  assert.deepEqual(await mine(), []);
+  const undone = await own(`/api/c2w/orders/${made.id}/hold-longer/undo`, { method: 'POST', body: {} });
+  assert.equal(undone.status, 200, JSON.stringify(undone.body));
+  assert.deepEqual((await mine()).map((l) => l.kind), ['c2w_no_certificate'], 'back as if Hold longer was never pressed');
+  assert.equal((await own('/api/c2w/settings', { method: 'PUT', body: { noCertificateDays: null } })).status, 200);
 });

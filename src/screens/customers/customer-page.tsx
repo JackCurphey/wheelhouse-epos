@@ -43,13 +43,13 @@ type Customer = {
 };
 type Twin = { id: number; name: string; phone: string | null; email: string | null; address: string | null; postcode: string | null; notes: string | null; reason: 'phone' | 'email'; jobs: number; sales: number; createdAt: string };
 type Merge = { id: number; otherName: string; mergedAt: string; undoUntil: string };
-type Bike = { id: number; make: string | null; model: string | null; colour?: string | null; warranty?: BikeWarranty | null };
+type Bike = { id: number; make: string | null; model: string | null; colour?: string | null; warranty?: BikeWarranty | null; serialNumber?: string | null; boughtHereOn?: string | null; cycleToWork?: boolean; size?: string | null };
 export type Item =
   | { kind: 'job'; id: number; reference: string; title: string; jobDate: string | null; bookingState: string; custodyState: string; workState: string; mechanicName: string | null; open: boolean; at: string }
   | { kind: 'sale'; source: 'old' | 'till'; id: number; receiptNumber: number | null; total: number; what: string; at: string }
   | { kind: 'message'; id: number; name: string; channel: string; to: string | null; at: string }
   | { kind: 'store_credit'; id: number; change: string; changePence: number; reason: string | null; by: string | null; undone: boolean; at: string }
-  | { kind: 'c2w_order'; id: number; stage: Stage; open: boolean; quoteRef: string; bike: string; providerName: string; holdUntil: string | null; holdEnded?: boolean; certificateNumber: string | null; collectedAt: string | null; at: string }
+  | { kind: 'c2w_order'; id: number; stage: Stage; open: boolean; quoteRef: string; bike: string; providerName: string; holdUntil: string | null; holdEnded?: boolean; certificateNumber: string | null; collectedAt: string | null; saleId?: number | null; at: string }
   | { kind: 'account'; id: number; change: 'bank_transfer' | 'undo'; changePence: number; reference: string | null; receivedOn: string | null; reason: string | null; by: string | null; undone: boolean; at: string };
 type Filter = 'Everything' | 'Jobs' | 'Sales' | 'Messages';
 const KIND: Record<Filter, Item['kind'] | null> = { Everything: null, Jobs: 'job', Sales: 'sale', Messages: 'message' };
@@ -132,7 +132,9 @@ export function HistoryRow({ item, onOpenSale, onUndo }: { item: Item; onOpenSal
     const hold = !item.holdUntil ? null : item.holdEnded ? `hold ended ${longDate(item.holdUntil)} — choose` : `held until ${longDate(item.holdUntil)}`;
     const parts: React.ReactNode[] = item.open
       ? [<>Quote {num(item.quoteRef)}</>, item.providerName, hold]
-      : [<>Quote {num(item.quoteRef)}</>, item.certificateNumber ? <>certificate {num(item.certificateNumber)}</> : null, item.collectedAt ? `collected ${longDate(dayOf(item.collectedAt))}` : null];
+      : [<>Quote {num(item.quoteRef)}</>, item.certificateNumber ? <>certificate {num(item.certificateNumber)}</> : null, item.collectedAt ? `collected ${longDate(dayOf(item.collectedAt))}` : null,
+        // The hand-over sale by its number (logged: an old sale has no till receipt number).
+        item.saleId ? <>Sale {num(String(item.saleId))}</> : null];
     const sub = parts.filter(Boolean).map((p, i) => <Fragment key={i}>{i ? ' · ' : ''}{p}</Fragment>);
     return (
       <li className="border-t border-[var(--wh-border)]">
@@ -526,8 +528,11 @@ export function CustomerPage() {
                   <li key={b.id} className="border-t border-[var(--wh-border)]">
                     {/* Each bike opens its own page (bike-page; mockup/links/j07.mjs:142). */}
                     <Link to={ROUTES['cs-bike'].replace(':id', String(b.id))} className="flex flex-col gap-1 py-2.5 text-[var(--wh-ink)] no-underline hover:bg-[var(--wh-hover)]">
-                      <span className="text-size-15 font-semibold underline">{[b.make, b.model].filter(Boolean).join(' ') || 'A bike'}</span>
-                      {b.colour || b.warranty ? <span className="text-size-13 text-[var(--wh-muted)]">{[b.colour, b.warranty ? `bought here ${dayYear(b.warranty.boughtHereOn)}` : null].filter(Boolean).join(' · ')}</span> : null}
+                      <span className="text-size-15 font-semibold underline">{[[b.make, b.model].filter(Boolean).join(' ') || 'A bike', b.cycleToWork ? b.size : null].filter(Boolean).join(' · ')}</span>
+                      {/* A bike handed over on Cycle to Work: its frame number and how it was bought (cs-page-c2w-collected). */}
+                      {b.cycleToWork ? (
+                        <span className="text-size-13 text-[var(--wh-muted)]">{b.colour ? `${b.colour} · ` : ''}{b.serialNumber ? <>Frame <span className={mono}>{b.serialNumber}</span> · </> : null}{b.boughtHereOn ? `bought here on Cycle to Work ${dayYear(b.boughtHereOn)}` : 'bought here on Cycle to Work'}</span>
+                      ) : b.colour || b.warranty ? <span className="text-size-13 text-[var(--wh-muted)]">{[b.colour, b.warranty ? `bought here ${dayYear(b.warranty.boughtHereOn)}` : null].filter(Boolean).join(' · ')}</span> : null}
                       {/* As drawn on cs-page, with each line (finish-customers, design 6; question 19). */}
                       {warrantyText(b.warranty) ? <span className={`inline-flex items-center gap-1 self-start rounded-full px-2.5 py-0.5 text-size-13 font-bold ${b.warranty?.running ? 'bg-[var(--wh-ok-bg)] text-[var(--wh-status-complete-ink)]' : 'bg-[var(--wh-surface-muted)] text-[var(--wh-muted)]'}`}>{warrantyText(b.warranty)}</span> : null}
                     </Link>
