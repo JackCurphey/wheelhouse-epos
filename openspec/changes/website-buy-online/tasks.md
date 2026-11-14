@@ -77,16 +77,16 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 5.0a `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
 - [x] 5.0b Before any code writes an order payment: `server/payments/refund.js`'s provider-wide sweep (`refundOwed()` with no `jobId`) would refund order payments too, and it can only refund in full
 - [x] 5.0c Before any code writes an order payment: `server/shop-data-copy.js` (the Refund rows, about lines 125–133) labels every refunded online payment as a deposit for a job ("Online deposit for job …")
-- [ ] 5.0d Before any code writes an order payment: take the order number (`nextOrderNumber()`) last, just before COMMIT, with no provider calls after it, because the counter's row lock holds the shop's settings and other orders' payments until the commit
+- [x] 5.0d Before any code writes an order payment: take the order number (`nextOrderNumber()`) last, just before COMMIT, with no provider calls after it, because the counter's row lock holds the shop's settings and other orders' payments until the commit
 - [x] 5.0e Before any code writes an order payment: the public deposit card route (`server/routes/deposit-payments.js`, the `UPDATE online_payments SET status = ?` matched on `provider_ref` alone, about line 82) needs `AND purpose = 'deposit'`, or an order's pretend `ref` posted to it would set that order payment's status (found by the risky-area review of pull request 1)
 
-- [ ] 5.1 Test: a card that works — in one transaction stock is checked and comes off the collecting shop, store credit is spent, one sale is recorded with "Paid online" and "Store credit" lines, the order gets its number and moves to To get ready, the payment is taken, and Order confirmation is queued
-- [ ] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
-- [ ] 5.3 Test: declined — nothing taken, credit unchanged, another card can be tried and pays once
+- [x] 5.1 Test: a card that works — in one transaction stock is checked and comes off the collecting shop, store credit is spent, one sale is recorded with "Paid online" and "Store credit" lines, the order gets its number and moves to To get ready, the payment is taken, and Order confirmation is queued
+- [x] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
+- [x] 5.3 Test: declined — nothing taken, credit unchanged, another card can be tried and pays once
 - [ ] 5.4 Test: the pretend bank's check (`checking`): approved pays; "Cancel and go back" takes nothing
-- [ ] 5.5 Test: no answer (`unknown`): the order waits; `settleOrders()` asks again; went through finishes the order and sends Order confirmation; didn't go through takes nothing and sends the one-off "didn't go through" email (draft wording)
+- [ ] 5.5 Test: no answer (`unknown`): the order waits; `settleOrders()` asks again; went through finishes the order and sends Order confirmation; didn't go through takes nothing and sends the one-off "didn't go through" email (draft wording). `settleOrders()` also retries an order payment left with a refund owed (`refund_due_reason` set, the order not paid), and lets go of the holds on orders left at awaiting payment past the hold's life (found in review of 5.1–5.3)
 - [ ] 5.6 Test: Apple Pay and Google Pay (pretend wallet) pay as the card does, and are refused when the shop's switch is off; Place order with credit covering it all takes no card
-- [ ] 5.7 Test: a commit that fails after the take marks a refund owed, made once; the money joins `ONLINE_TENDERS`, so close the day leaves it out of the till's takings
+- [x] 5.7 Test: a commit that fails after the take marks a refund owed, made once; the money joins `ONLINE_TENDERS`, so close the day leaves it out of the till's takings
 - [ ] 5.8 Extend `server/payments/pretend.js` (bank's check, no answer, wallets; Stripe's published test cards where one exists) and write `server/online-orders/pay.js` to pass 5.1–5.7
 - [ ] 5.9 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 

@@ -19,7 +19,7 @@ import { ownerOnly } from '../lib/owner-only.js';
 import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
 import { closeEntryNow, entryFor } from '../lib/close-entry.js';
 import { currentShopTimeZone } from '../workshop/jobs.js';
-import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { ONLINE_TENDERS } from '../accounts/online-tenders.js';
 import { C2W_TENDER } from '../c2w/hand-over.js';
 import { isPence, MAX_PENCE } from './float-check.js';
 import { afterClose } from '../accounts/send.js';
@@ -52,10 +52,6 @@ async function floatStartOn(day) {
   };
 }
 
-// Online money, not the till's (Jack's answer 7, 27 Oct): the old record's
-// tenders for a Shopify order (server.js) and a deposit paid online
-// (workshop/counted-deposit.js). It has its own line on the report.
-const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
 // A Cycle to Work hand-over's provider share ("Cycle to Work · Cyclescheme", server/c2w/hand-over.js):
 // owed by the provider, not in the drawer, so a figure of its own, not Other (UX walk-through 5 H3),
 // beside the takings and not in them, like the online money (Jack, 14 Nov, merge-c2w Q1 option 2).

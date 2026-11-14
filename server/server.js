@@ -592,8 +592,17 @@ async function dispatch(req, res) {
         return serveWebsitePage(res, 404);
       }
       if (siteApi) {
-        const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff));
-        if (!answered) notFound(res, 'Unknown website route');
+        // Work for once the connection is back in the pool (a paid order's
+        // Shopify stock pushes), run even if the answer failed after it was queued.
+        const afterRelease = [];
+        try {
+          const answered = await runWithShop(storefrontShop.id, () => handleSiteRequest(req, res, sitePathname, storefrontShop, staff, afterRelease));
+          if (!answered) notFound(res, 'Unknown website route');
+        } finally {
+          for (const work of afterRelease) {
+            try { work(); } catch (err) { console.error('Post-release work failed', err); }
+          }
+        }
         return;
       }
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));

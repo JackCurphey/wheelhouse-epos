@@ -175,9 +175,10 @@ test('closing the day keeps its figures: the count, the difference, the banking 
   const owner = await shop();
   await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 74, card: 20, extra: [{ tenderType: 'Cyclescheme', amount: 6 }] });
   await tillSale(owner, '2026-09-01T12:00:00Z', [{ method: 'cash', pence: 1000 }, { method: 'card', pence: 300 }, { method: 'gift_card', pence: 500 }]);
-  // Online money is not till money (Jack's answer 7): a Shopify order and a deposit paid online.
+  // Online money is not till money (Jack's answer 7): a Shopify order, a deposit paid online and an online order's card part.
   await oldSale(owner, '2026-09-01T11:00:00Z', { extra: [{ tenderType: 'Shopify', amount: 30 }] });
   await oldSale(owner, '2026-09-01T11:30:00Z', { card: 15, extra: [{ tenderType: 'Deposit paid online', amount: 10 }] });
+  await oldSale(owner, '2026-09-01T11:45:00Z', { extra: [{ tenderType: 'Paid online', amount: 12 }] });
   assert.equal((await post(owner, '/api/paid-outs', { amountPence: 500, reason: 'Other' })).status, 201);
   // Expected: 150.00 + 84.00 − 5.00 = 229.00; counted £2.10 short.
   const res = await post(owner, '/api/close-the-day', { countedPence: 22690, expectedPence: 22900, reason: '  change given wrongly ' });
@@ -191,7 +192,7 @@ test('closing the day keeps its figures: the count, the difference, the banking 
     // A normal close: nothing banked for an earlier day, no morning count for it (unclosed-day).
     earlierBankedPence: 0, carriedPence: 0, countedBy: null,
     // Takings is card + cash + other, so it always adds up (review fix 5).
-    takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, c2wPence: 0, onlinePence: 4000,
+    takingsPence: 3800 + 8400 + 1100, cardPence: 3800, otherPence: 1100, c2wPence: 0, onlinePence: 5200,
   });
   assert.equal(close.floatStart.at, (await day(owner)).floatStart.at);
   // Today now shows the close; the figures stay as they were after a later sale.

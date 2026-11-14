@@ -182,6 +182,14 @@ export function firePendingShopifyPushes(shopId, pushes) {
   }
 }
 
+// A sale that rolled back: its stock pushes mustn't reach Shopify, and its
+// place in the shutdown wait is freed (settling twice is harmless).
+export function discardPendingShopifyPushes(pushes) {
+  pushes._pendingPushSettle?.();
+  delete pushes._pendingPushSettle;
+  pushes.length = 0;
+}
+
 // For a stock change outside a sale (a product's stock adjustment, booking in
 // a purchase order): the same as createSale's deferShopifyPushesTo path. The
 // pushes are registered for graceful shutdown now, and fired from a fresh
@@ -465,7 +473,8 @@ export async function loadDocumentLine(it, { checkStock, evenIfOffSale = false }
 // behaviour runs unchanged, which is what every direct createSale() caller
 // that doesn't care about pool-connection lifetime (tests, the Shopify
 // webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {}, evenIfOffSale = false }, { deferShopifyPushesTo } = {}) {
+// `noGroupDiscount`: an online order, priced at checkout with none (online-orders/pay.js).
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false, movedBy = {}, evenIfOffSale = false, noGroupDiscount = false }, { deferShopifyPushesTo } = {}) {
   // sellPastStock: the new till sells past zero stock and says so on the
   // line (journey 11 decision 5); everything else still refuses.
   const loaded = [];
@@ -473,7 +482,7 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock, evenIfOffSale }));
   }
 
-  const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId });
+  const { subtotal, discount: flatDiscount, groupDiscount, total } = await computeOrderTotals({ items: loaded, discount, customerId: noGroupDiscount ? null : customerId });
 
   const cash = Math.max(0, Number(cashAmount) || 0);
   const card = Math.max(0, Number(cardAmount) || 0);
