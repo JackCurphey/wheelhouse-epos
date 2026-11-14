@@ -173,11 +173,12 @@ export function register(route) {
       const provider = await db.prepare('SELECT retired_at FROM c2w_providers WHERE id = ?').get(providerId);
       if (!provider) throw new ValidationError('Choose the scheme provider');
       if (provider.retired_at) throw new Refused(400, RETIRED_PROVIDER);
-      const bike = await db.prepare('SELECT id, price_pence FROM products WHERE id = ?').get(productId);
+      // Only products on sale, as the pickers offer (decided-while-building 14 Nov).
+      const bike = await db.prepare('SELECT id, price_pence FROM products WHERE id = ? AND active = 1').get(productId);
       if (!bike) throw new ValidationError('Choose the bike');
       const extras = [];
       for (const id of accessoryIds) {
-        const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(id);
+        const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ? AND active = 1').get(id);
         if (!p) throw new ValidationError('Choose the accessories from the shop’s products');
         extras.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
       }

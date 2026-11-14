@@ -284,3 +284,24 @@ test('3.7 a retired provider can’t be picked; merging customers moves their or
   assert.equal(undone.status, 200, JSON.stringify(undone.body));
   assert.equal((await raw(theirs.id)).customer_id, twin.id);
 });
+
+// ---------- 4.8 follow-up ----------
+
+// The New order pickers only offer products on sale; the server refuses one
+// taken off sale too, as Change does, and no quote number is used up.
+test('a bike or accessory taken off sale can’t be quoted, and no quote number is used', async () => {
+  const offBike = await seedProduct(owner.shop.id, { name: '[Bike] · [Size]', price: '1000.00', stock: 1 });
+  const offLock = await seedProduct(owner.shop.id, { name: '[Lock]', price: '40.00', stock: 1 });
+  await inShop(async () => prepare('UPDATE products SET active = 0 WHERE id IN (?, ?)').run(offBike, offLock));
+  const next = async () => inShop(async () => (await prepare('SELECT next_quote_number FROM c2w_settings').get()).next_quote_number);
+  const before = await next();
+  const noBike = await quote({ productId: offBike });
+  assert.equal(noBike.status, 400, JSON.stringify(noBike.body));
+  assert.equal(noBike.body.error, 'Choose the bike');
+  const noLock = await quote({ accessoryIds: [lock, offLock] });
+  assert.equal(noLock.status, 400, JSON.stringify(noLock.body));
+  assert.equal(noLock.body.error, 'Choose the accessories from the shop’s products');
+  assert.equal(await next(), before, 'no quote number is used');
+  const fine = await quote({ accessoryIds: [lock] });
+  assert.equal(fine.status, 201, JSON.stringify(fine.body));
+});
