@@ -16,8 +16,10 @@
 LOCK TABLE online_orders, online_order_lines, sales, employees IN SHARE ROW EXCLUSIVE MODE;
 LOCK TABLE store_credit_entries, stock_movements IN ACCESS EXCLUSIVE MODE;
 
--- The order's lines carry their shop in links, as the orders do (154).
-CREATE UNIQUE INDEX IF NOT EXISTS idx_online_order_lines_id_shop ON online_order_lines (id, shop_id);
+-- A refund's links name the order too, so a refund can only point at its own
+-- order's sale and lines (in the shop, as 154's links do).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_orders_id_sale_shop ON online_orders (id, sale_id, shop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_order_lines_id_order_shop ON online_order_lines (id, order_id, shop_id);
 
 CREATE TABLE IF NOT EXISTS online_order_refunds (
   id SERIAL PRIMARY KEY,
@@ -43,9 +45,12 @@ CREATE TABLE IF NOT EXISTS online_order_refunds (
   CONSTRAINT online_order_refunds_card_state_check CHECK ((card_pence > 0) = (card_refund_state IS NOT NULL)),
   CONSTRAINT online_order_refunds_made_check CHECK ((card_refund_state IS NOT DISTINCT FROM 'made') = (card_refunded_at IS NOT NULL)),
   FOREIGN KEY (order_id, shop_id) REFERENCES online_orders (id, shop_id),
-  FOREIGN KEY (sale_id, shop_id) REFERENCES sales (id, shop_id)
+  FOREIGN KEY (sale_id, shop_id) REFERENCES sales (id, shop_id),
+  -- The sale is the one this order became.
+  FOREIGN KEY (order_id, sale_id, shop_id) REFERENCES online_orders (id, sale_id, shop_id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_online_order_refunds_id_shop ON online_order_refunds (id, shop_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_online_order_refunds_id_order_shop ON online_order_refunds (id, order_id, shop_id);
 CREATE INDEX IF NOT EXISTS idx_online_order_refunds_order ON online_order_refunds (order_id);
 -- Owed card refunds, which settling orders looks for.
 CREATE INDEX IF NOT EXISTS idx_online_order_refunds_owed ON online_order_refunds (shop_id, id) WHERE card_refund_state = 'owed';
@@ -54,11 +59,13 @@ CREATE TABLE IF NOT EXISTS online_order_refund_lines (
   id SERIAL PRIMARY KEY,
   shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
   refund_id INTEGER NOT NULL,
+  -- The refund's order, which the line must be on.
+  order_id INTEGER NOT NULL,
   order_line_id INTEGER NOT NULL,
   qty INTEGER NOT NULL CHECK (qty > 0),
   CONSTRAINT online_order_refund_lines_once UNIQUE (refund_id, order_line_id),
-  FOREIGN KEY (refund_id, shop_id) REFERENCES online_order_refunds (id, shop_id),
-  FOREIGN KEY (order_line_id, shop_id) REFERENCES online_order_lines (id, shop_id)
+  FOREIGN KEY (refund_id, order_id, shop_id) REFERENCES online_order_refunds (id, order_id, shop_id),
+  FOREIGN KEY (order_line_id, order_id, shop_id) REFERENCES online_order_lines (id, order_id, shop_id)
 );
 CREATE INDEX IF NOT EXISTS idx_online_order_refund_lines_line ON online_order_refund_lines (order_line_id);
 

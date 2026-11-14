@@ -77,6 +77,10 @@ export function register(route) {
     const provider = payments();
     if (provider?.name !== 'pretend') return notFound(res, 'Not found');
     const { cardNumber } = (await readJsonBody(req)) ?? {};
+    // Deposits only: an online order's payment is paid through its own route,
+    // so its ref isn't found here and the provider's record isn't moved (website-buy-online 5.0e).
+    const order = await prepare("SELECT 1 FROM online_payments WHERE provider = ? AND provider_ref = ? AND purpose <> 'deposit'").get('pretend', params.ref);
+    if (order) return notFound(res, 'Payment not found');
     try {
       const { status } = await provider.card(params.ref, cardNumber);
       await prepare("UPDATE online_payments SET status = ?, updated_at = now() WHERE provider = ? AND provider_ref = ? AND purpose = 'deposit'").run(status, 'pretend', params.ref);

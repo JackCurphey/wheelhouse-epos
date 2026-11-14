@@ -74,11 +74,13 @@ test('5.0b: making owed deposit refunds leaves an order payment marked owed alon
   assert.deepEqual({ ...(await paymentRow(p.id)) }, { status: 'taken', refund_due_reason: '[reason]' });
 });
 
-test('5.0e: the pretend card route doesn’t change an order payment’s status', async () => {
+test('5.0e: the pretend card route is for deposits: an order payment’s ref is not found, and neither record moves', async () => {
   const p = await orderPayment('waiting');
   const res = await fetch(`${server.baseUrl}/api/portal/${owner.shop.slug}/pretend-payments/${p.ref}/card`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cardNumber: '4242424242424242' }),
   });
   await res.text();
+  assert.equal(res.status, 404);
   assert.equal((await paymentRow(p.id)).status, 'waiting');
+  assert.equal(await pretendStatus(p.ref), 'waiting', 'the provider’s own record is left as it was too');
 });

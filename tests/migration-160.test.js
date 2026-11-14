@@ -111,9 +111,20 @@ test('160 makes an order’s refunds and their lines the shop’s own, names ord
     await refund(c, a, { reason: 'x'.repeat(500) });
 
     // ---- Its lines: which of the order's lines, how many, each once ----
-    await insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_line_id: a.line, qty: 1 });
-    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_line_id: a.line, qty: 1 }), /unique|duplicate/i);
-    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: credit.id, order_line_id: a.line, qty: 0 }), /check/i);
+    await insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_id: a.order, order_line_id: a.line, qty: 1 });
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_id: a.order, order_line_id: a.line, qty: 1 }), /unique|duplicate/i);
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: credit.id, order_id: a.order, order_line_id: a.line, qty: 0 }), /check/i);
+
+    // ---- Only its own order's lines, and only that order's sale ----
+    const sale2 = (await one(c, "INSERT INTO sales (subtotal, total, payment_method) VALUES (28, 28, 'Paid online') RETURNING id")).id;
+    const order2 = (await insert(c, 'online_orders', { site_id: (await one(c, 'SELECT site_id FROM online_orders WHERE id = $1', [a.order])).site_id,
+      name: 'Maya Patel', email: 'maya@example.test', total_pence: 2800, card_pence: 2800, order_code: '[code other]', request_key_hash: '[key other]',
+      number: 2, paid_at: new Date(), stage: 'to_get_ready', sale_id: sale2 })).rows[0].id;
+    const line2 = (await insert(c, 'online_order_lines', { order_id: order2, product_id: a.product, qty: 1, unit_pence: 2800 })).rows[0].id;
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_id: a.order, order_line_id: line2, qty: 1 }), /foreign key/i, 'another order’s line');
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_id: order2, order_line_id: line2, qty: 1 }), /foreign key/i, 'another order’s refund');
+    await assert.rejects(refund(c, { ...a, sale: sale2 }), /foreign key/i, 'another order’s sale');
+    await assert.rejects(refund(c, { ...a, sale: a.sale, order: order2 }), /foreign key/i, 'an order with another sale');
 
     // ---- Store credit names its order; stock names the refund ----
     const spent = (await insert(c, 'store_credit_entries', { customer_id: a.customer, change_pence: -500, kind: 'spent', online_order_id: a.order })).rows[0];
@@ -131,8 +142,8 @@ test('160 makes an order’s refunds and their lines the shop’s own, names ord
     await assert.rejects(refund(c, { ...b, sale: a.sale }), /foreign key/i, 'another shop’s sale');
     await assert.rejects(c.query("INSERT INTO online_order_refunds (shop_id, order_id, sale_id, kind, credit_pence) VALUES ($1, $2, $3, 'shop_cancel', 1)", [a.id, a.order, a.sale]), /row-level security/i);
     const theirs = (await refund(c, b)).rows[0];
-    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: theirs.id, order_line_id: a.line, qty: 1 }), /foreign key/i, 'another shop’s line');
-    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_line_id: b.line, qty: 1 }), /foreign key/i, 'another shop’s refund');
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: theirs.id, order_id: b.order, order_line_id: a.line, qty: 1 }), /foreign key/i, 'another shop’s line');
+    await assert.rejects(insert(c, 'online_order_refund_lines', { refund_id: owed.id, order_id: b.order, order_line_id: b.line, qty: 1 }), /foreign key/i, 'another shop’s refund');
     await assert.rejects(insert(c, 'store_credit_entries', { customer_id: b.customer, change_pence: 1, kind: 'refund', online_order_id: a.order }), /foreign key/i);
     await assert.rejects(insert(c, 'stock_movements', { product_id: b.product, change_qty: 1, type: 'return', online_order_refund_id: owed.id }), /foreign key/i);
 

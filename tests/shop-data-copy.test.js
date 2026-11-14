@@ -318,7 +318,7 @@ test('Sales: a refunded online order payment isn’t a row saying “Online depo
        VALUES (?, 'Maya Patel', 'maya@example.test', 3100, 3100, '[order code]', 'k-' || gen_random_uuid()) RETURNING id`
     ).get(site);
     await prepare(`INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, purpose, online_order_id, created_at, refunded_at, refund_reason)
-                   VALUES ('pretend', 'ref-order', 3100, 'refunded', 'k-' || gen_random_uuid(), 'order', ?, '2026-08-18T09:00:00Z', '2026-08-19T09:00:00Z', '[reason]') RETURNING id`).get(order.id);
+                   VALUES ('pretend', 'ref-order', 3100, 'refunded', 'k-' || gen_random_uuid(), 'order', ?, '2026-09-18T09:00:00Z', '2026-09-19T09:00:00Z', '[reason]') RETURNING id`).get(order.id);
   });
   const rows = await salesRows(t);
   assert.equal(rows.filter((r) => r['Line total (£)'] === '-31.00').length, 0);
