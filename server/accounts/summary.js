@@ -7,10 +7,9 @@
 // the old record, which keeps none) the summary says so in `notRecorded`; it never guesses.
 import { prepare } from '../db.js';
 import { accountLines, OTHER_SALES } from './lines.js';
-import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { ONLINE_TENDERS } from './online-tenders.js';
 import { C2W_TENDER } from '../c2w/hand-over.js';
 
-const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
 const MONEY = { cash: 'Cash', card: 'Card', accounts: 'Customer accounts', gift: 'Gift cards', c2w: 'Cycle to Work (owed by providers)', online: 'Online sales (paid on the website)' };
 
 // How a payment other than cash and card is booked: online money has its own line; so does a Cycle to Work

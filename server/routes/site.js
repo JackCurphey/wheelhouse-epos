@@ -17,6 +17,8 @@ import { JOIN } from '../lib/categories.js';
 import { NotFound, homeAnswer, productsAnswer, productAnswer, searchAnswer, suggestAnswer } from '../site-products.js';
 import { BasketError, basketAnswer, linesFrom } from '../online-orders/basket.js';
 import { CheckoutRefused, checkout } from '../online-orders/checkout.js';
+import { payOrder } from '../online-orders/pay.js';
+import { firePendingShopifyPushes, runRequestWithPushSlotCleanup } from '../lib/sales.js';
 
 export const SITE_OFF = 'This website isn’t available';
 export const SITE_FAILED = 'Something went wrong — try again';
@@ -236,18 +238,21 @@ function trackingAnswer(tools, yes) {
 // ---- The basket and checkout (website-buy-online, design 2) ----------------
 
 // screens: on-basket, on-basket-changed, on-checkout, on-checkout-errors, on-checkout-credit, on-checkout-credit-all
+// screens: on-confirmed, on-checkout-sold-out, on-checkout-declined (Pay, design 3)
 const BUYING = { '/api/site/basket': 'basket', '/api/site/checkout': 'checkout' };
+const PAY_PATH = /^\/api\/site\/orders\/([0-9a-f]{64})\/pay$/;
+const buyingKind = (path) => (Object.hasOwn(BUYING, path) ? BUYING[path] : PAY_PATH.test(path) ? 'pay' : null);
 // A customer checks out once or twice; thirty an hour from one address is
 // someone trying details or baskets (decided while building, Jack's November file).
 const checkoutLimiter = makeRateLimiter(30, 60 * 60 * 1000);
 const BASKET_BYTES = 20_000;
 
 /** What a website POST needs of its body, for the dispatcher's readBodyFirst. */
-export const siteBodyNeeds = (path) => (Object.hasOwn(BUYING, path) ? { maxBody: BASKET_BYTES, answerOverflow: true } : {});
+export const siteBodyNeeds = (path) => (buyingKind(path) ? { maxBody: BASKET_BYTES, answerOverflow: true } : {});
 
-async function buyingRequest(req, res, kind, shop) {
+async function buyingRequest(req, res, kind, shop, path) {
   res.setHeader('Cache-Control', 'no-store');
-  if (kind === 'checkout' && !checkoutLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries — try again in an hour' }), true;
+  if (kind !== 'basket' && !checkoutLimiter.check(clientIp(req))) return sendJson(res, 429, { error: 'Too many tries — try again in an hour' }), true;
   let body;
   try { body = await readJsonBody(req, BASKET_BYTES, { answerOverflow: true }); } catch (err) {
     if (err instanceof SyntaxError) return sendJson(res, 400, { error: 'That basket can’t be read' }), true;
@@ -258,6 +263,12 @@ async function buyingRequest(req, res, kind, shop) {
   try {
     const website = await prepare('SELECT kind FROM website').get();
     if (website?.kind === 'shopify') return sendJson(res, 404, { error: SITE_OFF }), true;
+    if (kind === 'pay') {
+      const pushes = [];
+      const { status, body: answer } = await runRequestWithPushSlotCleanup(() => payOrder({ req, ref: PAY_PATH.exec(path)[1], body, pushes }));
+      firePendingShopifyPushes(shop.id, pushes);
+      return sendJson(res, status, answer), true;
+    }
     const answer = kind === 'checkout'
       ? await checkout({ req, res, shop, body })
       : (await basketAnswer({ req, res, shop, lines: linesFrom(body.lines), shopId: body.shop })).answer;
@@ -279,7 +290,7 @@ const ACTIONS = { '/api/site/turn-on': 'on', '/api/site/turn-off': 'off' };
 // finds `staff` there alone). The Owner only, until roles (WP-1.1), using the
 // Website page's own code; everyone else gets what a customer would.
 async function siteActionRequest(req, res, path, shop, staff) {
-  if (req.method === 'POST' && Object.hasOwn(BUYING, path)) return buyingRequest(req, res, BUYING[path], shop);
+  if (req.method === 'POST' && buyingKind(path)) return buyingRequest(req, res, buyingKind(path), shop, path);
   if (req.method !== 'POST' || !Object.hasOwn(ACTIONS, path)) return false;
   res.setHeader('Cache-Control', 'no-store');
   if (staff?.shop.id !== shop.id) return sendJson(res, 404, { error: SITE_OFF }), true;
