@@ -1,14 +1,14 @@
 // The website's basket and checkout, the server half (openspec/changes/
-// website-buy-online, tasks 4.1–4.4; design 2 and 3; drawings on-basket,
+// website-buy-online, tasks 4.1–4.5; design 2 and 3; drawings on-basket,
 // on-basket-changed, on-checkout, on-checkout-errors, on-checkout-credit,
 // on-checkout-credit-all). The basket is only "which and how many": every
 // price, total and stock line is worked out here. Checkout checks the details
-// and works out store credit; making the order waits for paying (task 4.5).
+// and works out store credit, and makes the order and its held payment (task 4.5).
 import '../server/load-env.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -303,7 +303,7 @@ test('4.3 checkout answers each box’s message and the count, and makes nothing
   assert.equal(one.status, 400);
   assert.equal(one.body.error, 'Check the box marked below.');
   assert.deepEqual(one.body.fields, { phone: 'Enter your phone number' });
-  const long = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: 'x'.repeat(201), phone: '1'.repeat(201), email: `${'x'.repeat(200)}@example.test`, requestKey: randomUUID() });
+  const long = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: 'x'.repeat(201), phone: '1'.repeat(201), email: `${'x'.repeat(250)}@example.test`, requestKey: randomUUID() });
   assert.deepEqual(long.body.fields, { name: 'That name is too long', phone: 'That phone number is too long', email: EMAIL_BAD });
   // The details first (spec: "Pay SHALL check the details first"), then the basket.
   const both = await checkout({ shop: bolton, lines: [{ productId: P.cable, qty: 1 }], ...guest, name: '', requestKey: randomUUID() });
@@ -328,14 +328,128 @@ test('4.3 checkout prices and checks stock again: a changed basket is sent back,
   assert.deepEqual(await counts(), before);
 });
 
-test('4.3 a checkout that passes every check stops where paying would start, and makes nothing yet', async () => {
+test('4.3 a name or phone longer than an order keeps is refused by its box, before anything is made', async () => {
   const before = await counts();
-  const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 2 }], ...guest, requestKey: randomUUID() });
-  assert.equal(res.status, 501, JSON.stringify(res.body));
-  assert.equal(res.body.code, 'paying_not_built');
-  assert.equal(res.body.totalPence, 5600);
-  assert.equal(res.body.leftToPayPence, 5600);
-  assert.deepEqual(await counts(), before, 'no order, payment or customer until paying is built');
+  const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, name: 'x'.repeat(61), phone: '1'.repeat(61), requestKey: randomUUID() });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.deepEqual(res.body.fields, { name: 'That name is too long', phone: 'That phone number is too long' });
+  assert.deepEqual(await counts(), before);
+});
+
+// ---- 4.5 Checkout makes the order and its held payment ----------------------
+
+const creditOn = () => inNorth(() => prepare('INSERT INTO payment_settings (store_credit_on) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET store_credit_on = true RETURNING shop_id').run());
+const orderOf = (ref) => inNorth(async () => {
+  const order = await prepare('SELECT * FROM online_orders WHERE order_code = ?').get(ref);
+  return order && {
+    order,
+    lines: await prepare('SELECT product_id, qty, unit_pence FROM online_order_lines WHERE order_id = ? ORDER BY id').all(order.id),
+    payments: await prepare('SELECT * FROM online_payments WHERE online_order_id = ?').all(order.id),
+    customer: order.customer_id && await prepare('SELECT id, name, phone FROM customers WHERE id = ?').get(order.customer_id),
+  };
+});
+
+test('4.5 checkout makes one order at awaiting_payment, its lines at today’s price, a new customer for a guest, and the card part held', async () => {
+  const before = await counts();
+  const answer = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 2 }, { productId: P.jersey, qty: 1 }], ...guest, requestKey: randomUUID() }));
+  assert.equal(typeof answer.ref, 'string');
+  assert.ok(answer.ref.length >= 32, 'the order’s private link can’t be guessed');
+  assert.equal(answer.totalPence, 10600);
+  assert.equal(answer.creditPence, 0);
+  assert.equal(answer.cardPence, 10600);
+  assert.equal(answer.payment.provider, 'pretend');
+  assert.match(answer.payment.ref, /^pretend_/);
+  assert.ok(!('customer' in answer) && !('id' in answer));
+  assert.deepEqual(await counts(), { orders: before.orders + 1, payments: before.payments + 1, customers: before.customers + 1 });
+
+  const { order, lines, payments, customer } = await orderOf(answer.ref);
+  assert.equal(order.stage, 'awaiting_payment');
+  assert.equal(order.number, null, 'the number is given when it’s paid');
+  assert.equal(order.paid_at, null);
+  assert.equal(order.site_id, bolton);
+  assert.deepEqual([order.name, order.email, order.phone], [guest.name, guest.email, guest.phone]);
+  assert.deepEqual([order.total_pence, order.credit_pence, order.card_pence], [10600, 0, 10600]);
+  assert.deepEqual(lines, [{ product_id: P.pads, qty: 2, unit_pence: 2800 }, { product_id: P.jersey, qty: 1, unit_pence: 5000 }]);
+  assert.deepEqual(customer, { id: order.customer_id, name: guest.name, phone: guest.phone });
+  assert.equal(payments.length, 1);
+  assert.equal(payments[0].purpose, 'order');
+  assert.equal(payments[0].status, 'waiting');
+  assert.equal(payments[0].amount_pence, 10600);
+  assert.equal(payments[0].provider_ref, answer.payment.ref);
+  const held = await inNorth(() => prepare('SELECT status, amount_pence FROM pretend_payments WHERE ref = ?').get(answer.payment.ref));
+  assert.deepEqual(held, { status: 'waiting', amount_pence: 10600 });
+});
+
+test('4.5 Pay sent twice gives the same order and hold; a guest is never matched on typed details', async () => {
+  const requestKey = randomUUID();
+  const before = await counts();
+  const first = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey }));
+  const again = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey }));
+  assert.deepEqual(again, first);
+  assert.deepEqual(await counts(), { orders: before.orders + 1, payments: before.payments + 1, customers: before.customers + 1 });
+  const other = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey: randomUUID() }));
+  assert.notEqual(other.ref, first.ref);
+  const [a, b] = [await orderOf(first.ref), await orderOf(other.ref)];
+  assert.notEqual(a.order.customer_id, b.order.customer_id, 'the same typed details make a second customer, never a match');
+});
+
+test('4.5 two presses at once make one order and one hold', async () => {
+  const requestKey = randomUUID();
+  const before = await counts();
+  const heldBefore = await inNorth(() => prepare('SELECT count(*)::int AS n FROM pretend_payments').get());
+  const body = { shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey };
+  const [a, b] = await Promise.all([checkout(body), checkout(body)]);
+  assert.deepEqual(ok(a), ok(b));
+  assert.deepEqual(await counts(), { orders: before.orders + 1, payments: before.payments + 1, customers: before.customers + 1 });
+  const heldAfter = await inNorth(() => prepare('SELECT count(*)::int AS n FROM pretend_payments').get());
+  assert.equal(heldAfter.n, heldBefore.n + 1, 'one hold on the card, not two');
+});
+
+test('4.5 Pay pressed again after the last one sold at the till still gets its order', async () => {
+  await setStock(P.tube, bolton, 1);
+  const requestKey = randomUUID();
+  const body = { shop: bolton, lines: [{ productId: P.tube, qty: 1 }], ...guest, requestKey };
+  const first = ok(await checkout(body));
+  await setStock(P.tube, bolton, 0);
+  assert.deepEqual(ok(await checkout(body)), first);
+});
+
+test('4.5 a request key a deposit already used still makes the order', async () => {
+  const requestKey = 'k'.repeat(40);
+  const keyHash = createHash('sha256').update(requestKey).digest('hex');
+  await inNorth(() => prepare("INSERT INTO online_payments (provider, provider_ref, amount_pence, request_key_hash) VALUES ('pretend', '[deposit ref]', 2000, ?) RETURNING id").get(keyHash));
+  const answer = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey }));
+  assert.equal(answer.cardPence, 2800);
+  assert.equal((await orderOf(answer.ref)).payments.length, 1);
+});
+
+test('4.5 a signed-in customer’s order is theirs, with the credit part recorded and only the rest held', async () => {
+  await creditOn();
+  const maya = await signedIn({ credit: 1000 });
+  const before = await counts();
+  const answer = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: '[typed]', useCredit: true, requestKey: randomUUID() }, { cookie: maya.cookie }));
+  assert.deepEqual([answer.totalPence, answer.creditPence, answer.cardPence], [2800, 1000, 1800]);
+  assert.deepEqual(await counts(), { orders: before.orders + 1, payments: before.payments + 1, customers: before.customers });
+  const { order, payments } = await orderOf(answer.ref);
+  assert.equal(order.customer_id, maya.customerId);
+  assert.deepEqual([order.name, order.email], ['Maya Patel', maya.email]);
+  assert.equal(payments[0].amount_pence, 1800);
+  const held = await inNorth(() => prepare('SELECT amount_pence FROM pretend_payments WHERE ref = ?').get(answer.payment.ref));
+  assert.equal(held.amount_pence, 1800, 'only the card part is held on the card');
+  const balance = await inNorth(() => prepare('SELECT COALESCE(sum(change_pence), 0)::int AS n FROM store_credit_entries WHERE customer_id = ?').get(maya.customerId));
+  assert.equal(balance.n, 1000, 'credit is spent when it’s paid, not at checkout');
+});
+
+test('4.5 credit that covers it all makes the order with no card payment', async () => {
+  await creditOn();
+  const maya = await signedIn({ credit: 10000 });
+  const before = await counts();
+  const answer = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], useCredit: true, requestKey: randomUUID() }, { cookie: maya.cookie }));
+  assert.deepEqual([answer.totalPence, answer.creditPence, answer.cardPence, answer.payment], [2800, 2800, 0, null]);
+  assert.deepEqual(await counts(), { ...before, orders: before.orders + 1 });
+  const { order, payments } = await orderOf(answer.ref);
+  assert.equal(order.stage, 'awaiting_payment');
+  assert.equal(payments.length, 0);
 });
 
 // ---- 4.4 A signed-in customer -------------------------------------------------
@@ -349,13 +463,13 @@ test('4.4 a signed-in customer’s details and store credit come from their acco
   assert.deepEqual(answer.credit, { availablePence: 1000, usePence: 1000, leftToPayPence: 1800, coversAll: null });
   // Typed details are ignored for her; credit can be left unticked.
   const res = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], name: '', email: 'x', phone: '', useCredit: true, requestKey: randomUUID() }, { cookie: maya.cookie });
-  assert.equal(res.status, 501, JSON.stringify(res.body));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.creditPence, 1000);
-  assert.equal(res.body.leftToPayPence, 1800);
+  assert.equal(res.body.cardPence, 1800);
   assert.ok(!('customer' in res.body));
   const without = await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], useCredit: false, requestKey: randomUUID() }, { cookie: maya.cookie });
   assert.equal(without.body.creditPence, 0);
-  assert.equal(without.body.leftToPayPence, 2800);
+  assert.equal(without.body.cardPence, 2800);
 });
 
 test('4.4 credit that covers the whole order says so, and uses only what the order needs', async () => {

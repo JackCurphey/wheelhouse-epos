@@ -21,10 +21,10 @@ order tables and settings on the server (#753, migration 154) and the six
 order messages (#758), the settings screen (#773, #775) and the order
 emails' review fixes (#776) and the basket and checkout's server half
 (#777, stopping where paying would start) and the basket screens (#797) are
-in, and checkout's screen up to paying (#801); paying on the server
-(group 5: first the guards 5.0a–c and 5.0e with migration 160, then 5.0d
-with paying), behind the pretend provider, is being built
-(claude/buy-online-7-paying), then refunds (group 7). Jack answered questions 9 and 11 (14 Nov, option 1 each: a
+in, and checkout's screen up to paying (#801); paying's guards and
+migration 160 (#805) are in; paying on the server (group 5: 5.0d and
+5.1–5.8), behind the pretend provider, is being built
+(claude/buy-online-8-pay), then refunds (group 7). Jack answered questions 9 and 11 (14 Nov, option 1 each: a
 sale and the stock drop at payment; a Hand over button on the staff order
 page), so paying, the staff steps and refunds follow the screens
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). The

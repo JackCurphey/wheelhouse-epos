@@ -11,7 +11,7 @@ import { runWithShop, prepare } from '../../server/db.js';
 // server (openspec/changes/website-buy-online, task 12.6; drawings on-checkout
 // and on-checkout-errors): from the basket to checkout, the order priced by
 // the server, the boxes' messages from the server, the terms over the page,
-// and the server's "not ready yet" beside Pay, which on a phone stays in a bar
+// and "Paying online isn’t ready yet" beside Pay, which on a phone stays in a bar
 // along the bottom. Payments are connected with the pretend provider; no real
 // account, and nothing is paid: paying comes in a later pull request.
 // Example data from the drawings: Shimano brake pads B05S-RX at £28.00,
