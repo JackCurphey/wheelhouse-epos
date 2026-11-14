@@ -154,11 +154,13 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 12. Checkout, paying and confirmation screens (pull request 12, about 600 lines — waits for WP-6.2's website app, its pull request 3)
 
+Split in two (14 Nov): pull request 12a is the checkout screen up to Pay, ending with the server's "Paying online isn’t ready yet"; the wallets, the card form and the pretend-card browser test come with paying (pull request 5 of the money pieces). 12.1 and 12.6 are ticked when those parts are in.
+
 - [ ] 12.1 Screen test: `on-checkout` — How you'll get it with one choice, Your details, Pay with the wallets and the card form, Your order, the terms line; no gift card box (question 8); no "ready in about [n] days" (decided while planning 11)
-- [ ] 12.2 Screen test: `on-checkout-errors`, `on-checkout-credit`, `on-checkout-covered`
+- [x] 12.2 Screen test: `on-checkout-errors`, `on-checkout-credit`, `on-checkout-covered`
 - [ ] 12.3 Screen test: `on-checkout-paying`, `on-checkout-bank`, `on-checkout-declined`, `on-checkout-unsure`, `on-checkout-sold-out`; "[payment provider]" never named
 - [ ] 12.4 Screen test: `on-confirmed` and `on-save-details`; "Not right? Change email"
-- [ ] 12.5 Screen test: "our terms" opens the shop's Collection and returns words over checkout, as the booking site's terms open
+- [x] 12.5 Screen test: "our terms" opens the shop's Collection and returns words over checkout, as the booking site's terms open
 - [ ] 12.6 Build to pass 12.1–12.5; on a phone the order sits at the top and Pay in a bar along the bottom (decision 10); browser test of paying with the pretend card on a phone and a computer
 - [ ] 12.7 Self-review with `reviewer`; full check
 

@@ -50,6 +50,16 @@ their options and trade-offs, are questions 8–12 in the overnight file
     and 8 aren't built until he answers; 9 and 10 follow them. Now answered,
     so they can be built.
 
+## Answered after it was built
+
+13. **Migration 156 and "Started with every product online on [date]".**
+    **Jack's answer (14 Nov), relayed by the Front desk: option 1.** Keep
+    migration 156 and the line. The migration was built before he was asked
+    (13 Nov, `docs/decisions/decided-while-building/2026-11-jack.md`,
+    "Online orders settings, Showing products", item 1), though the build
+    plan didn't list it. A migration the plan doesn't list waits for Jack's
+    yes before it is built.
+
 ## Not a question
 
 - **The "Order ready to collect" email waits a few seconds with Undo,** as
