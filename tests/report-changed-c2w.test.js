@@ -64,8 +64,10 @@ before(async () => {
   // Paid on 10 September (the same days last month) and 25 September (neither).
   await s.order(a, { stage: 'paid', certificate_pence: 50000, expected_pence: 47500, paid_pence: 47500, paid_on: '2026-09-10', collected_at: '2026-09-02T10:00:00Z' });
   await s.order(a, { stage: 'paid', certificate_pence: 50000, expected_pence: 47500, paid_pence: 47500, paid_on: '2026-09-25', collected_at: '2026-09-21T10:00:00Z' });
-  // Collected on 16 October, still owed.
-  await s.order(a, { stage: 'collected', certificate_pence: 40000, expected_pence: 40000, collected_at: '2026-10-16T10:00:00Z', expected_by: '2026-11-01' });
+  // Collected at 00:30 on 17 October in Bolton (23:30 on the 16th in UTC), still owed: a shop day, not a UTC one.
+  await s.order(a, { stage: 'collected', certificate_pence: 40000, expected_pence: 40000, collected_at: '2026-10-16T23:30:00Z', expected_by: '2026-11-01' });
+  // Collected at 00:30 on 18 September in Bolton: just after the same days last month, so not in them.
+  await s.order(a, { stage: 'collected', certificate_pence: 40000, expected_pence: 40000, collected_at: '2026-09-17T23:30:00Z', expected_by: '2026-11-01' });
   // [Provider B] paid today with no certificate amount: paid, no commission counted; collected 3 October.
   await s.order(b, { stage: 'paid', expected_pence: 30000, paid_pence: 30000, paid_on: '2026-10-17', collected_at: '2026-10-03T10:00:00Z' });
   // Part paid, collected 2 October: in no Paid figure.
@@ -130,12 +132,12 @@ test('Commission by Provider: the certificate less what the provider was expecte
   assert.equal(body.total.value, 5000);
 });
 
-test('Bikes collected by Day: each bike on the day it was collected, against the same days last month', async () => {
+test('Bikes collected by Day: each bike on the shop day it was collected, against the same days last month', async () => {
   const res = await changed('measure=bikes&split=day');
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const { body } = res;
   const counted = body.rows.filter((r) => r.value > 0).map((r) => [r.key, r.value]);
-  assert.deepEqual(counted, [['2026-10-02', 1], ['2026-10-03', 1], ['2026-10-16', 1]]);
+  assert.deepEqual(counted, [['2026-10-02', 1], ['2026-10-03', 1], ['2026-10-17', 1]]);
   assert.deepEqual(body.figures, { value: 3, beforeValue: 2, diffValue: 1 });
   assert.deepEqual(body.columns, ['Day', 'Bikes collected']);
 });
@@ -193,6 +195,19 @@ test('nobody who can’t see costs gets the Cycle to Work base', async () => {
     const res = await fetch(`${server.baseUrl}${path}?base=c2w&period=this-month`, { headers: { cookie: tillCookie } });
     assert.equal(res.status, 403, `${path} on a till`);
   }
+  // Saving one there is refused, and one saved where costs can be seen isn't listed there.
+  const saved = await as(owner)('/api/reports/saved', { method: 'POST', body: { name: 'Commission kept back', base: 'c2w', measure: 'commission', split: 'provider', only: [], supplier: '', period: 'this-month', shared: false } });
+  assert.equal(saved.status, 201, JSON.stringify(saved.body));
+  const keptSales = await as(owner)('/api/reports/saved', { method: 'POST', body: { name: 'Sales kept', base: 'sales', measure: 'takings', split: 'day', only: [], supplier: '', period: 'this-month', shared: false } });
+  assert.equal(keptSales.status, 201, JSON.stringify(keptSales.body));
+  const save = await fetch(`${server.baseUrl}/api/reports/saved`, { method: 'POST', headers: { cookie: tillCookie, 'content-type': 'application/json' }, body: JSON.stringify({ name: 'On the till', base: 'c2w', measure: 'paid', split: 'provider', only: [], supplier: '', period: 'this-month', shared: false }) });
+  assert.equal(save.status, 403, 'saving a Cycle to Work report on a till');
+  assert.equal((await save.json()).error, "Only the shop's owner can see reports");
+  const listed = await (await fetch(`${server.baseUrl}/api/reports/saved`, { headers: { cookie: tillCookie } })).json();
+  assert.ok(listed.reports.some((r) => r.name === 'Sales kept'), 'the till still lists the owner’s other saved reports');
+  assert.deepEqual(listed.reports.filter((r) => r.base === 'c2w').map((r) => r.name), []);
+  const ownList = (await as(owner)('/api/reports/saved')).body.reports;
+  assert.ok(ownList.some((r) => r.name === 'Commission kept back'));
   // The same till still gets Sales changed: only the Cycle to Work base is held back.
   const sales = await fetch(`${server.baseUrl}/api/reports/changed?base=sales&period=this-month`, { headers: { cookie: tillCookie } });
   assert.equal(sales.status, 200);

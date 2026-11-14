@@ -360,7 +360,9 @@ export function register(route) {
   route('GET', '/api/reports/saved', async (req, res) => {
     if (await ownerOnly(req, res, OWNER_ONLY)) return;
     const ctx = await currentSession(req);
-    sendJson(res, 200, { reports: await listSaved(ctx.login.id) });
+    // A saved Cycle to Work report isn't listed where costs can't be seen (it couldn't be opened there).
+    const costs = await canSeeCosts(req);
+    sendJson(res, 200, { reports: (await listSaved(ctx.login.id)).filter((r) => costs || r.base !== 'c2w') });
   });
   // screens: rp-save, rp-save-taken
   route('POST', '/api/reports/saved', async (req, res) => {
@@ -369,6 +371,7 @@ export function register(route) {
     try {
       const body = await readJsonBody(req);
       if (!body || typeof body !== 'object' || Array.isArray(body)) return sendJson(res, 400, { error: 'Send the report as an object' });
+      if (body.base === 'c2w' && !(await canSeeCosts(req))) return sendJson(res, 403, { error: OWNER_ONLY });
       sendJson(res, 201, await createSaved(ctx.login.id, body));
     } catch (err) {
       if (err instanceof ValidationError) return sendJson(res, 400, { error: err.message });
