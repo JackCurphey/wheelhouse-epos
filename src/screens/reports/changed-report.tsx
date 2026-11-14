@@ -31,14 +31,16 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 // The graph and table are named by what they show, as the drawing has it ("Items sold by product"), without the report's name.
 const shortTitle = (report: ChangedReport) => report.title.replace(/^[^:]+: /, '').replace(/^./, (c) => c.toUpperCase());
 
-const money_ = (r: ChangedReport) => r.measure === 'takings' || r.measure === 'margin';
+// Takings, Margin, and Cycle to Work's Paid and Commission are in pounds; the rest are counts.
+const MONEY = new Set(['takings', 'margin', 'paid', 'commission']);
+const money_ = (r: ChangedReport) => MONEY.has(r.measure);
 
 const spokenFor = (report: ChangedReport): string => {
   const reached = report.rows.filter((r) => !r.notReached && r.value !== null);
   const top = reached.reduce<(typeof reached)[number] | null>((best, r) => (best === null || (r.value ?? 0) > (best.value ?? 0) ? r : best), null);
   const parts: string[] = [];
   if (top && (top.value ?? 0) > 0) {
-    parts.push(report.measure === 'items' ? `most sold ${top.label}` : report.measure === 'hours' ? `most hours ${top.label}` : report.measure === 'jobs' ? `most jobs ${top.label}` : report.split === 'day' || report.split === 'week' ? `busiest ${report.split} ${top.label}` : `biggest ${top.label}`);
+    parts.push(report.measure === 'items' ? `most sold ${top.label}` : report.measure === 'hours' ? `most hours ${top.label}` : report.measure === 'jobs' ? `most jobs ${top.label}` : report.measure === 'bikes' && report.split === 'provider' ? `most bikes ${top.label}` : report.measure === 'paid' && report.split === 'provider' ? `most paid by ${top.label}` : report.measure === 'commission' && report.split === 'provider' ? `most commission from ${top.label}` : report.split === 'day' || report.split === 'week' ? `busiest ${report.split} ${top.label}` : `biggest ${top.label}`);
   }
   const diff = report.figures.diffValue;
   if (diff !== null) {
@@ -84,7 +86,7 @@ export function ChangedReportPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ name: string; query: string } | null>(null);
   const raw = params.get('base');
-  const base: Base = raw === 'takings' || raw === 'workshop' ? raw : 'sales';
+  const base: Base = raw === 'takings' || raw === 'workshop' || raw === 'c2w' ? raw : 'sales';
   const period = params.get('period') ?? 'this-week';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
