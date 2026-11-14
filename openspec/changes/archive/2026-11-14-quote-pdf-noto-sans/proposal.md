@@ -2,7 +2,7 @@ WP: none (Cycle to Work follow-up from `message-attachments`: the quote PDF's He
 
 ## Why
 
-The Cycle to Work quote PDF used pdfkit's built-in Helvetica, which only covers Western European letters. A customer called Łukasz Wiśniewski got a quote with their name printed as garbage. Names are the customer's own, so the PDF must print them as written.
+The Cycle to Work quote PDF used pdfkit's built-in Helvetica, which only covers Western European letters. A name such as "Łukasz Wiśniewski" printed wrongly: Ł has no letter in Helvetica. Names are the customer's own, so the PDF must print them as written.
 
 ## What Changes
 
