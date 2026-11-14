@@ -23,6 +23,6 @@ None.
 
 ## Touches
 
-- `src/screens/reports/c2w-report.tsx`, `tests/screens/reports-c2w.test.js`, `docs/design/user-journeys/generator/reports.mjs`, comments in `server/lib/report-c2w.js`, `server/lib/report-changed-c2w.js` and `server/routes/reports.js`.
+- `src/screens/reports/c2w-report.tsx`, `tests/screens/reports-c2w.test.js`, `docs/design/user-journeys/generator/reports.mjs`, comments in `server/lib/report-c2w.js` and `server/lib/report-changed-c2w.js`. A comment in `server/routes/reports.js` still says "marked paid"; it is left alone, as it names the same date and the file is in a risky area.
 - Not a risky area; the server edits are comments only.
 - The published claude.ai canvas of the drawings is not republished by this change.
