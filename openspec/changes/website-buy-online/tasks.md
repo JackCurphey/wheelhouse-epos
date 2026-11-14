@@ -99,7 +99,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 6.5 Test: the collecting shop's figure falling below open orders' lines marks the newest order's line "Not on the shelf any more" and turns its Mark ready off
 - [x] 6.6 Test: the till's stock lookup says how many are "for an online order", with the order number
 - [x] 6.7 Write `server/online-orders/orders.js` and `server/routes/online-orders.js` to pass 6.1–6.6
-- [ ] 6.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 6.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 7. Refunds — server (pull request 7, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
