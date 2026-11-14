@@ -340,6 +340,13 @@ export async function sendDueForShop(shopId) {
       console.error(`Messages: message ${m.id} could not be recorded`, err);
     }
   }
+  // Files are read only when a message is claimed, and a message that has left
+  // the queue (sent, failed, unknown or undone) is never claimed again, so its
+  // files go now; the message stays (openspec/changes/clear-sent-files).
+  await runWithShop(shopId, () => prepare(
+    `DELETE FROM customer_message_attachments a USING customer_messages m
+      WHERE m.id = a.message_id AND m.intent_state NOT IN ('intended', 'sending')`
+  ).run());
 }
 
 async function sendOne(shopId, m) {

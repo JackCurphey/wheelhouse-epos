@@ -100,3 +100,37 @@ test('a message’s files go with it, and another shop can’t read them', async
   await inShop(() => prepare('DELETE FROM customer_messages WHERE id = ?').run(id));
   assert.equal((await filesOf(id)).length, 0);
 });
+
+// openspec/changes/clear-sent-files: once a message has left the queue, nothing
+// reads its files again, so the sending round clears them; the message stays.
+test('a sent message’s files are cleared by the round that sends it; the message stays', async () => {
+  const id = await inShop(() => sendEmailTo({ to: 'cleared@example.test', subject: 'S', body: 'B', attachments: [PDF] }));
+  assert.equal((await filesOf(id)).length, 1, 'kept while it waits');
+  const given = (await sendWatching()).filter((m) => m.to === 'cleared@example.test');
+  assert.equal(given[0].attachments.length, 1, 'the sender still gets the file');
+  assert.equal((await filesOf(id)).length, 0, 'gone once sent');
+  assert.equal((await inShop(() => prepare('SELECT status FROM customer_messages WHERE id = ?').get(id))).status, 'sent');
+});
+
+test('a failed send’s files are cleared too (a failed message is never sent again)', async () => {
+  const id = await inShop(() => sendEmailTo({ to: 'failed@example.test', subject: 'S', body: 'B', attachments: [PDF] }));
+  const sender = senderFor('email');
+  const spy = mock.method(sender, 'send', async () => ({ ok: false, error: 'refused' }));
+  try {
+    await sendDueForShop(shop.id);
+  } finally {
+    spy.mock.restore();
+  }
+  assert.equal((await inShop(() => prepare('SELECT status FROM customer_messages WHERE id = ?').get(id))).status, 'failed');
+  assert.equal((await filesOf(id)).length, 0);
+});
+
+test('an undone message’s files are cleared by the next round; a message still waiting keeps its own', async () => {
+  const c = await customer({ email: 'undone-files@example.test', channel: 'email' });
+  const undone = await inShop(() => queueMessage({ customerId: c, key: 'bike_ready', vars: VARS, delayMs: 60_000, attachments: [PDF] }));
+  const waiting = await inShop(() => queueMessage({ customerId: c, key: 'bike_ready', vars: VARS, delayMs: 60_000, attachments: [PDF] }));
+  assert.equal(await inShop(() => undoMessage(undone.id)), true);
+  await sendWatching();
+  assert.equal((await filesOf(undone.id)).length, 0, 'undone, so never needed');
+  assert.equal((await filesOf(waiting.id)).length, 1, 'still in its minute, so kept');
+});
