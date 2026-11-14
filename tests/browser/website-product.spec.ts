@@ -4,6 +4,7 @@ import { test, expect } from './fixtures.js';
 import { startLiveServer } from '../helpers/liveServer.js';
 import { staffSignup, staffRequest } from '../helpers/staff.js';
 import { deleteTestShop } from '../helpers/testShop.js';
+import { connectPayments } from '../helpers/payments.js';
 import { runWithShop, prepare } from '../../server/db.js';
 
 // Choosing a colour and size on a phone, in a real browser against the real
@@ -46,7 +47,11 @@ test.beforeAll(async () => {
         if (!(size === 'M' && colour === '[Colour 1]')) await prepare('INSERT INTO product_stock (site_id, product_id, qty) VALUES (?, ?, 2) RETURNING product_id').get(bolton, id);
       }
     }
+    // Taking orders, so the stock lines show (on-product-off replaces them); payments with the pretend provider.
+    await prepare('INSERT INTO online_order_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
+    await prepare('UPDATE online_order_settings SET buying_online = true').run();
   });
+  await connectPayments(owner.shop.id);
 });
 
 test.afterAll(async () => {
@@ -90,8 +95,6 @@ test('on a phone: nothing chosen to start, the stock line once colour and size a
 
   await size.getByRole('radio', { name: 'L', exact: true }).click();
   await expect(line).toHaveText('Ready today at Bolton · 2 in stock');
-  // This shop hasn't switched buying online on (website-basket.spec.ts buys).
-  await expect(page.getByText('Not taking online orders right now.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add to basket' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add to basket' })).toBeEnabled();
   if (process.env.WH_SHOTS) await page.screenshot({ path: `${process.env.WH_SHOTS}/website-product-390.png` });
 });

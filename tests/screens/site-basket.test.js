@@ -148,7 +148,38 @@ test('not taking online orders (on-product-off): the drawn line, and no Add to b
   assert.equal(line.tagName, 'STRONG');
   assert.equal(line.parentElement.textContent, 'Not taking online orders right now. Ask in the shop, or call us, to buy this');
   assert.ok(ui.queryByRole('button', { name: 'Add to basket' }) === null);
+  assert.ok(ui.queryByText(/Ready today at/) === null, 'the line takes the stock line’s place');
   assert.ok(ui.getByRole('button', { name: 'Ask the shop about this' }));
+});
+
+test('a basket of 50 different things: Add to basket says it’s full instead of "Added"', async () => {
+  const fifty = Array.from({ length: 50 }, (_, i) => `${1000 + i}:1`).join('.');
+  r = await openProduct(PADS, { cookie: `wh_shop=1; wh_basket=${fifty}` });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('button', { name: 'Add to basket' }));
+  assert.ok(await ui.findByText('Your basket is full: it holds 50 different things. Remove one to add this.'));
+  assert.ok(ui.queryByText(/^Added/) === null);
+  assert.equal(basketCookie(), fifty);
+});
+
+test('with 98 in the basket, adding 2 says "Added 1" — 99 of one thing at most', async () => {
+  r = await openProduct(PADS, { cookie: 'wh_shop=1; wh_basket=101:98' });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('button', { name: 'One more Shimano brake pads B05S-RX' }));
+  fireEvent.click(ui.getByRole('button', { name: 'Add to basket' }));
+  assert.ok(await ui.findByText('Added 1 × Shimano brake pads B05S-RX'));
+  fireEvent.click(ui.getByRole('button', { name: 'Add to basket' }));
+  assert.ok(await ui.findByText('Your basket already has 99 of these, the most for one order.'));
+  assert.equal(basketCookie(), '101:99');
+});
+
+test('the header’s count asks the server nothing: only the basket page does', async () => {
+  r = await openProduct(PADS, { cookie: 'wh_shop=1; wh_basket=101:2.102:1' });
+  await r.ui.findByRole('link', { name: 'Basket, 3 items' });
+  await new Promise((done) => setTimeout(done, 50));
+  assert.deepEqual(basketAsks().map((a) => a.lines.length), [0], 'one ask, with an empty basket, for whether the shop is taking orders');
 });
 
 // ---------- 11.3 on-product-no-shop, on-choose-shop ----------
@@ -221,6 +252,57 @@ test('changing a quantity on the basket asks again with the new number', async (
   fireEvent.click(await ui.findByRole('button', { name: 'One more Shimano brake pads B05S-RX' }));
   await waitFor(() => assert.equal(ui.getByRole('region', { name: 'Your order' }).querySelector('dl > div:last-child dd').textContent, '£56.00'));
   assert.equal(basketCookie(), '101:2');
+});
+
+test('two quick taps on One more both count, before the server has answered the first', async () => {
+  r = await renderWebsite({ url: '/basket', cookie: 'wh_shop=1; wh_basket=101:1', answer: serving(basketServer()) });
+  const { ui } = r;
+  const { fireEvent, waitFor } = await rtl();
+  const more = await ui.findByRole('button', { name: 'One more Shimano brake pads B05S-RX' });
+  fireEvent.click(more);
+  fireEvent.click(more);
+  assert.equal(basketCookie(), '101:3');
+  await waitFor(() => assert.equal(ui.getByRole('region', { name: 'Your order' }).querySelector('dl > div:last-child dd').textContent, '£84.00'));
+});
+
+test('Go to checkout takes the server’s cut quantity, and the header counts what the server priced (decided while building 2 and 10)', async () => {
+  // Bolton has 3; the cookie asks for 5.
+  r = await renderWebsite({ url: '/basket', cookie: 'wh_shop=1; wh_basket=101:5', answer: serving(basketServer()) });
+  const { ui } = r;
+  const { fireEvent, waitFor } = await rtl();
+  assert.ok(await ui.findByText('Only 3 left at Bolton — we’ve changed it to 3'));
+  await waitFor(() => assert.ok(ui.getByRole('link', { name: 'Basket, 3 items' })));
+  fireEvent.click(ui.getByRole('link', { name: 'Go to checkout' }));
+  assert.equal(basketCookie(), '101:3');
+});
+
+test('Go to checkout straight after One more keeps the new number, not the answer still on screen', async () => {
+  r = await renderWebsite({ url: '/basket', cookie: 'wh_shop=1; wh_basket=101:1', answer: serving(basketServer()) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  fireEvent.click(await ui.findByRole('button', { name: 'One more Shimano brake pads B05S-RX' }));
+  fireEvent.click(ui.getByRole('link', { name: 'Go to checkout' }));
+  assert.equal(basketCookie(), '101:2');
+});
+
+test('a change made in another tab isn’t lost when this tab removes a line', async () => {
+  r = await renderWebsite({ url: '/basket', cookie: 'wh_shop=1; wh_basket=101:2', answer: serving(basketServer()) });
+  const { ui } = r;
+  const { fireEvent } = await rtl();
+  await ui.findByRole('heading', { level: 2, name: 'Shimano brake pads B05S-RX' });
+  document.cookie = `wh_basket=101:2.102:1; Path=${BASE}`;
+  fireEvent.click(ui.getByRole('button', { name: 'Remove Shimano brake pads B05S-RX' }));
+  assert.equal(basketCookie(), '102:1');
+});
+
+test('a line of one shows its price; a line of more shows its total with the price each beneath (basketLine)', async () => {
+  r = await renderWebsite({ url: '/basket', cookie: 'wh_shop=1; wh_basket=101:2.102:1', answer: serving(basketServer()) });
+  const { ui } = r;
+  const { within } = await rtl();
+  const other = (await ui.findByRole('heading', { level: 2, name: '[Product]' })).closest('li');
+  assert.ok(within(other).getByText('£10.00'));
+  assert.ok(within(other).queryByText(/each/) === null);
+  assert.ok(within(other).getByRole('img', { name: 'Photo of [Product]' }), 'the stand-in for a missing photo is named as the drawing names it');
 });
 
 test('a changed basket (on-basket-changed): the banner, each line’s note, One more held, and Go to checkout held', async () => {

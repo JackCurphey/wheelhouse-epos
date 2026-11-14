@@ -52,4 +52,11 @@ export function addTo(lines: BasketLine[], productId: number, qty: number): Bask
   return lines.length >= MOST_LINES ? lines : [...lines, { productId, qty: Math.min(MOST_OF_ONE, qty) }];
 }
 
+/**
+ * How many of `productId` adding `qty` really added: fewer at 99 of one
+ * thing, none when the basket already holds 50 different things.
+ */
+export const addedBy = (before: BasketLine[], after: BasketLine[], productId: number) =>
+  (after.find((l) => l.productId === productId)?.qty ?? 0) - (before.find((l) => l.productId === productId)?.qty ?? 0);
+
 export const basketCount = (lines: BasketLine[]) => lines.reduce((n, l) => n + l.qty, 0);

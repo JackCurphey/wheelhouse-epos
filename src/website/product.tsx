@@ -9,7 +9,7 @@ import { penceText } from '@/lib/money.ts';
 import { AskTheShop, Crumbs } from './category.tsx';
 import { NotFoundPage, usePageTitle } from './pages.tsx';
 import { Button } from '@/components/ui/button';
-import { addTo, readBasket } from './basket.ts';
+import { MOST_LINES, MOST_OF_ONE, addTo, addedBy, readBasket } from './basket.ts';
 import { Failed, H1, H2, priceText } from './parts.tsx';
 import { useCategories, useProduct, useSiteContext, useTaking, type PageStock, type Product } from './site-query.ts';
 
@@ -113,7 +113,10 @@ function ProductView({ product }: { product: Product }) {
           {size && sizeOut(size) && <span id={outId} className="text-size-13">{size} isn’t in stock at {chosen?.name}{inColour}.</span>}
         </div>
       )}
-      {stock === null ? (
+      {taking.data === false ? (
+        // on-product-off: the line takes the stock line's place, and nothing can be added.
+        <StockBox tone="grey"><strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this</StockBox>
+      ) : stock === null ? (
         <StockBox tone="grey">Choose a {[hasColours && 'colour', hasSizes && 'size'].filter(Boolean).join(' and ')} to see when it’s ready</StockBox>
       ) : stock.line === 'ready' ? (
         <StockBox tone="ok"><strong>Ready today at {stock.shop}</strong> · {stock.qty} in stock</StockBox>
@@ -131,9 +134,7 @@ function ProductView({ product }: { product: Product }) {
           )}
         </>
       ) : null}
-      {taking.data === false ? (
-        <StockBox tone="grey"><strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this</StockBox>
-      ) : buy && <Buy name={product.name} productId={sized ? (item?.id ?? null) : product.id} />}
+      {taking.data !== false && buy && <Buy name={product.name} productId={sized ? (item?.id ?? null) : product.id} />}
       <AskTheShop label="Ask the shop about this" />
     </div>
   );
@@ -212,14 +213,18 @@ export function StockBox({ tone, children }: { tone: 'ok' | 'warn' | 'grey'; chi
 function Buy({ name, productId }: { name: string; productId: number | null }) {
   const { setBasket, chosen, several, openChooser } = useSiteContext();
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState<number | null>(null);
+  // What the last add did, for the product it was for (a size chosen since says nothing).
+  const [added, setAdded] = useState<{ productId: number; n: number; full: boolean } | null>(null);
   // Read from the cookie at the moment of adding, so an add that waits for the
   // shop box adds to the basket as it is then (another tab may have changed it).
   const add = () => {
     if (productId === null) return;
-    setBasket(addTo(readBasket(), productId, qty));
-    setAdded(qty);
+    const before = readBasket();
+    const after = addTo(before, productId, qty);
+    if (after !== before) setBasket(after);
+    setAdded({ productId, n: addedBy(before, after, productId), full: after === before && before.length >= MOST_LINES });
   };
+  const said = added?.productId === productId ? added : null;
   const step = 'inline-flex size-11 items-center justify-center border-0 bg-[var(--wh-panel)] text-[var(--wh-ink)]';
   return (
     <div className="flex flex-col gap-3">
@@ -239,7 +244,9 @@ function Buy({ name, productId }: { name: string; productId: number | null }) {
         </Button>
       </div>
       <p role="status" className="m-0 text-size-15">
-        {added !== null && <><span>Added {added} × {name}</span> <Link to="/basket" className="font-semibold text-[var(--wh-ink)]">View basket</Link></>}
+        {said && (said.n > 0
+          ? <><span>Added {said.n} × {name}</span> <Link to="/basket" className="font-semibold text-[var(--wh-ink)]">View basket</Link></>
+          : <span>{said.full ? `Your basket is full: it holds ${MOST_LINES} different things. Remove one to add this.` : `Your basket already has ${MOST_OF_ONE} of these, the most for one order.`}</span>)}
       </p>
     </div>
   );

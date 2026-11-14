@@ -4,7 +4,7 @@ import { CircleAlert, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { penceText } from '@/lib/money.ts';
-import { MOST_OF_ONE, type BasketLine } from './basket.ts';
+import { MOST_OF_ONE, readBasket, type BasketLine } from './basket.ts';
 import { usePageTitle } from './pages.tsx';
 import { Box, Failed, H1, linkButton } from './parts.tsx';
 import { StockBox } from './product.tsx';
@@ -23,18 +23,24 @@ export function BasketPage() {
   const priced = useBasket(address, chosen?.id ?? null, basket);
   const [removed, setRemoved] = useState<{ line: BasketLine; at: number; name: string } | null>(null);
 
+  // Every change starts from the cookie as it is now, not as this page last
+  // saw it: another tab may have changed it, or a tap may be waiting on its answer.
   const remove = (line: BasketAnswerLine) => {
-    const at = basket.findIndex((l) => l.productId === line.productId);
+    const now = readBasket();
+    const at = now.findIndex((l) => l.productId === line.productId);
     if (at < 0) return;
-    setBasket(basket.filter((_, i) => i !== at));
-    setRemoved({ line: basket[at], at, name: nameOf(line) });
+    setBasket(now.filter((_, i) => i !== at));
+    setRemoved({ line: now[at], at, name: nameOf(line) });
   };
   const undo = () => {
     if (!removed) return;
-    setBasket([...basket.slice(0, removed.at), removed.line, ...basket.slice(removed.at)]);
+    const now = readBasket();
+    if (!now.some((l) => l.productId === removed.line.productId)) setBasket([...now.slice(0, removed.at), removed.line, ...now.slice(removed.at)]);
     setRemoved(null);
   };
-  const setQty = (productId: number, qty: number) => setBasket(basket.map((l) => (l.productId === productId ? { productId, qty } : l)));
+  const step = (productId: number, by: number, most: number) => {
+    setBasket(readBasket().map((l) => (l.productId === productId ? { productId, qty: Math.max(1, Math.min(most, MOST_OF_ONE, l.qty + by)) } : l)));
+  };
 
   return (
     <>
@@ -47,10 +53,10 @@ export function BasketPage() {
           <p className="m-0 text-size-17">Your basket is empty.</p>
           <span><Link to="/shop" className={linkButton('default')}>Carry on shopping</Link></span>
         </Box>
-      ) : priced.error && !priced.data ? (
+      ) : priced.error && (!priced.data || priced.isPlaceholderData) ? (
         <Failed onRetry={() => { void priced.refetch(); }} />
       ) : priced.data ? (
-        <Priced answer={priced.data} onQty={setQty} onRemove={remove} basket={basket} />
+        <Priced answer={priced.data} onStep={step} onRemove={remove} />
       ) : null}
     </>
   );
@@ -60,15 +66,20 @@ export function BasketPage() {
 const nameOf = (line: BasketAnswerLine) => line.name ?? 'An item no longer sold';
 const itemsText = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`;
 
-function Priced({ answer, basket, onQty, onRemove }: { answer: BasketAnswer; basket: BasketLine[]; onQty: (productId: number, qty: number) => void; onRemove: (line: BasketAnswerLine) => void }) {
+type Step = (productId: number, by: number, most: number) => void;
+
+function Priced({ answer, onStep, onRemove }: { answer: BasketAnswer; onStep: Step; onRemove: (line: BasketAnswerLine) => void }) {
   const { setBasket, chosen, several, openChooser } = useSiteContext();
   const orderId = useId();
   const blockedId = useId();
   const [changedHead, ...changedRest] = (answer.changed ?? '').split('. ');
-  // Going on takes what the server priced: a line cut to the stock left goes to checkout cut.
+  // Going on takes what the server cut: a line cut to the stock left goes to
+  // checkout cut. Anything else stays as the cookie has it now, which may be
+  // newer than the answer on screen (a tap still waiting on its answer).
   const accept = () => {
-    const priced = new Map(answer.lines.filter((l) => !l.gone).map((l) => [l.productId, l.qty]));
-    setBasket(basket.filter((l) => priced.has(l.productId)).map((l) => ({ productId: l.productId, qty: priced.get(l.productId)! })));
+    const gone = new Set(answer.lines.filter((l) => l.gone).map((l) => l.productId));
+    const cut = new Map(answer.lines.filter((l) => l.note && !l.gone).map((l) => [l.productId, l.qty]));
+    setBasket(readBasket().filter((l) => !gone.has(l.productId)).map((l) => ({ productId: l.productId, qty: Math.min(l.qty, cut.get(l.productId) ?? l.qty) })));
   };
   return (
     <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_340px] md:gap-8">
@@ -83,7 +94,7 @@ function Priced({ answer, basket, onQty, onRemove }: { answer: BasketAnswer; bas
           </p>
         )}
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {answer.lines.map((line) => <Line key={line.productId} line={line} onQty={onQty} onRemove={onRemove} />)}
+          {answer.lines.map((line) => <Line key={line.productId} line={line} onStep={onStep} onRemove={onRemove} />)}
         </ul>
       </div>
       <section aria-labelledby={orderId}>
@@ -119,7 +130,7 @@ function Priced({ answer, basket, onQty, onRemove }: { answer: BasketAnswer; bas
 
 const step = (held: boolean) => cn('inline-flex size-11 items-center justify-center border-0 bg-[var(--wh-panel)] text-[var(--wh-ink)]', held && 'text-[var(--wh-muted)] opacity-50');
 
-function Line({ line, onQty, onRemove }: { line: BasketAnswerLine; onQty: (productId: number, qty: number) => void; onRemove: (line: BasketAnswerLine) => void }) {
+function Line({ line, onStep, onRemove }: { line: BasketAnswerLine; onStep: Step; onRemove: (line: BasketAnswerLine) => void }) {
   const name = nameOf(line);
   const stockLeft = line.stock?.line === 'ready' ? line.stock.qty : Infinity;
   const moreHeld = line.gone || line.qty >= stockLeft || line.qty >= MOST_OF_ONE;
@@ -129,7 +140,7 @@ function Line({ line, onQty, onRemove }: { line: BasketAnswerLine; onQty: (produ
     <li className="flex gap-3.5 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-3.5 md:p-4">
       {line.photo
         ? <img src={line.photo} alt={`Photo of ${name}`} className="size-20 shrink-0 rounded-lg object-cover" />
-        : <span aria-hidden className="flex size-20 shrink-0 items-center justify-center rounded-lg bg-[var(--wh-surface-muted)] p-1 text-center text-size-13 font-semibold">{name}</span>}
+        : <span role="img" aria-label={`Photo of ${name}`} className="flex size-20 shrink-0 items-center justify-center rounded-lg bg-[var(--wh-surface-muted)] p-1 text-center text-size-13 font-semibold">{name}</span>}
       <div className="flex min-w-0 grow flex-col gap-1.5">
         <h2 className="m-0 text-[16px] font-bold">{name}</h2>
         {line.code && <span className="font-mono text-size-13 text-[var(--wh-muted)]">{line.code}</span>}
@@ -139,16 +150,21 @@ function Line({ line, onQty, onRemove }: { line: BasketAnswerLine; onQty: (produ
           : line.stock?.line === 'ready' && <span className="text-size-13 text-[var(--wh-state-ready-ink)]">Ready today at {line.stock.shop}</span>}
         <div className="flex flex-wrap items-center gap-3">
           <div role="group" aria-label={`Quantity of ${name}`} className="inline-flex items-center overflow-hidden rounded-lg border border-[var(--wh-input-border)]">
-            <button type="button" aria-label={`One fewer ${name}`} aria-disabled={fewerHeld || undefined} onClick={() => { if (!fewerHeld) onQty(line.productId, line.qty - 1); }} className={step(fewerHeld)}><Minus aria-hidden className="size-4" /></button>
+            <button type="button" aria-label={`One fewer ${name}`} aria-disabled={fewerHeld || undefined} onClick={() => { if (!fewerHeld) onStep(line.productId, -1, stockLeft); }} className={step(fewerHeld)}><Minus aria-hidden className="size-4" /></button>
             <span aria-live="polite" className="min-w-10 text-center text-[16px] font-bold">{line.qty}</span>
-            <button type="button" aria-label={`One more ${name}`} aria-disabled={moreHeld || undefined} onClick={() => { if (!moreHeld) onQty(line.productId, line.qty + 1); }} className={step(moreHeld)}><Plus aria-hidden className="size-4" /></button>
+            <button type="button" aria-label={`One more ${name}`} aria-disabled={moreHeld || undefined} onClick={() => { if (!moreHeld) onStep(line.productId, 1, stockLeft); }} className={step(moreHeld)}><Plus aria-hidden className="size-4" /></button>
           </div>
           <Button variant="ghost" aria-label={`Remove ${name}`} className="min-h-11 text-size-15 underline" onClick={() => onRemove(line)}>Remove</Button>
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-        {line.pricePence !== null && <span className="text-size-13 text-[var(--wh-muted)]">{penceText(line.pricePence)} each</span>}
-        {!line.gone && <span className="font-mono text-[16px] font-bold">{penceText(line.linePence)}</span>}
+        {/* basketLine: more than one shows the line's total, the price each beneath; one shows its price. */}
+        {line.qty > 1 && !line.gone ? (
+          <>
+            <span className="font-mono text-[16px] font-bold">{penceText(line.linePence)}</span>
+            <span className="text-size-13 text-[var(--wh-muted)]">{penceText(line.pricePence!)} each</span>
+          </>
+        ) : line.pricePence !== null && <span className="font-mono text-[16px] font-bold">{penceText(line.pricePence)}</span>}
       </div>
     </li>
   );

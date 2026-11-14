@@ -177,14 +177,18 @@ export function useBasket(address: SiteAddress, shopId: number | null, lines: Ba
     queryKey: ['site', address.base, 'basket', shopId, lines.map((l) => `${l.productId}:${l.qty}`).join('.')],
     queryFn: () => askBasket(address, shopId, lines),
     enabled: ask && lines.length > 0,
-    placeholderData: ask ? keepPreviousData : undefined,
+    // While a new answer comes, the last one stays on screen, but only for the same shop.
+    placeholderData: ask ? (previous: BasketAnswer | undefined, query?: { queryKey: readonly unknown[] }) => (query?.queryKey[3] === shopId ? previous : undefined) : undefined,
     ...once,
   });
 }
 
+// Asked once per few minutes, not on every product page; checkout asks again anyway.
+const TAKING_FOR = 5 * 60_000;
+
 /** Whether the shop takes online orders now (design 2), asked with an empty basket. */
 export function useTaking(address: SiteAddress) {
-  return useQuery({ queryKey: ['site', address.base, 'taking'], queryFn: () => askBasket(address, null, []), select: (a) => a.taking, ...once });
+  return useQuery({ queryKey: ['site', address.base, 'taking'], queryFn: () => askBasket(address, null, []), select: (a) => a.taking, staleTime: TAKING_FOR, ...once });
 }
 
 const detailIdsKey = (address: SiteAddress, categoryId: number) => ['site', address.base, 'detail-ids', categoryId] as const;
