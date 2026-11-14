@@ -301,9 +301,9 @@ export async function pushInventoryLevel(product, quantity) {
   // sync failed" - not "give up permanently"). Only a connection that was
   // never established at all is skipped.
   if (!connection || connection.status === 'not_connected') return;
-  const available = await lessHeld(product, quantity);
 
   try {
+    const available = await lessHeld(product, quantity);
     await withRetry(() => shopifyAdminRequest(connection, 'POST', '/inventory_levels/set.json', {
       location_id: connection.location_id,
       inventory_item_id: product.shopify_inventory_item_id,
