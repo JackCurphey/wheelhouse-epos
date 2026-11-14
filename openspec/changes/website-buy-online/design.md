@@ -324,7 +324,11 @@ Each goes into the builder's own month file in
     and on each product (which can differ from its category). New products
     follow their category." "Started with every product online on [date]"
     reads `website.set_up_at`; Change asks set-up step 3's question again,
-    using WP-6.1's own `setUp` code (`server/website.js:506`).
+    using WP-6.1's own `setUp` code (`server/website.js:506`). Remembering
+    set-up's answer took a second migration (156,
+    `server/migrations/156_website_started_with.sql`), which the plan didn't
+    list. **Jack's answer (14 Nov, Buy online question 13), relayed by the
+    Front desk: option 1.** Keep migration 156 and the line.
 16. **Today's online order lines are the Owner's until roles.** Followed
     "Needs attention lists what's waiting on the Owner" (`openspec/specs/today/spec.md`)
     and Cycle to Work's "Today's Cycle to Work lines | Owner".
