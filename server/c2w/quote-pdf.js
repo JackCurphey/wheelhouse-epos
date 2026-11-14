@@ -2,9 +2,10 @@
 // emails (openspec/changes/message-attachments, design 4–7; cw-quote,
 // cw-quote-revised, cw-email, cw-email-certificate-revised). The PDF is the
 // paper version of QuoteDoc (src/screens/c2w/quote-page.tsx): black on white,
-// A4 and Helvetica (neither is drawn; logged as defaults). Made with pdfkit.
+// A4 and Noto Sans (neither is drawn; logged as defaults). Made with pdfkit.
 // Inside the shop's runWithShop.
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import PDFDocument from 'pdfkit';
 import { prepare } from '../db.js';
@@ -65,8 +66,11 @@ export async function logoFor(url) {
   return isPng(bytes) || isJpeg(bytes) ? bytes : null;
 }
 
-const REGULAR = 'Helvetica';
-const BOLD = 'Helvetica-Bold';
+// Noto Sans (SIL Open Font License 1.1), embedded so names with letters such
+// as Ł or ś print as written; Helvetica only covers Western European letters.
+const font = createRequire(import.meta.url);
+const REGULAR = font.resolve('@expo-google-fonts/noto-sans/400Regular/NotoSans_400Regular.ttf');
+const BOLD = font.resolve('@expo-google-fonts/noto-sans/700Bold/NotoSans_700Bold.ttf');
 
 /** The quote as a PDF (a Buffer), laid out as the printed quote is. */
 export function quotePdf(q, { logo = null } = {}) {
