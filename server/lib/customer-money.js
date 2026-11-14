@@ -135,11 +135,11 @@ export const serializeCreditEntry = (r) => ({
 });
 
 /** Writes one store credit entry; the caller has locked the customer and checked the balance. */
-export async function writeCreditEntry(customerId, { changePence, kind, reason = null, undoesEntryId = null }, who = {}) {
+export async function writeCreditEntry(customerId, { changePence, kind, reason = null, undoesEntryId = null, onlineOrderId = null }, who = {}) {
   const row = await prepare(
-    `INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason, undoes_entry_id, login_id, who_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, change_pence, kind, reason, who_name, created_at, undoes_entry_id`
-  ).get(customerId, changePence, kind, reason, undoesEntryId, who.loginId ?? null, who.name ?? null);
+    `INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason, undoes_entry_id, login_id, who_name, online_order_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, change_pence, kind, reason, who_name, created_at, undoes_entry_id`
+  ).get(customerId, changePence, kind, reason, undoesEntryId, who.loginId ?? null, who.name ?? null, onlineOrderId);
   return serializeCreditEntry({ ...row, undone: false });
 }
 

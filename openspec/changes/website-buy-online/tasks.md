@@ -84,7 +84,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 5.2 Test: sold out just before paying — the hold is released, nothing is taken from card or credit, no sale, the answer names the product
 - [x] 5.3 Test: declined — nothing taken, credit unchanged, another card can be tried and pays once
 - [ ] 5.4 Test: the pretend bank's check (`checking`): approved pays; "Cancel and go back" takes nothing
-- [ ] 5.5 Test: no answer (`unknown`): the order waits; `settleOrders()` asks again; went through finishes the order and sends Order confirmation; didn't go through takes nothing and sends the one-off "didn't go through" email (draft wording)
+- [ ] 5.5 Test: no answer (`unknown`): the order waits; `settleOrders()` asks again; went through finishes the order and sends Order confirmation; didn't go through takes nothing and sends the one-off "didn't go through" email (draft wording). `settleOrders()` also retries an order payment left with a refund owed (`refund_due_reason` set, the order not paid), and lets go of the holds on orders left at awaiting payment past the hold's life (found in review of 5.1–5.3)
 - [ ] 5.6 Test: Apple Pay and Google Pay (pretend wallet) pay as the card does, and are refused when the shop's switch is off; Place order with credit covering it all takes no card
 - [x] 5.7 Test: a commit that fails after the take marks a refund owed, made once; the money joins `ONLINE_TENDERS`, so close the day leaves it out of the till's takings
 - [ ] 5.8 Extend `server/payments/pretend.js` (bank's check, no answer, wallets; Stripe's published test cards where one exists) and write `server/online-orders/pay.js` to pass 5.1–5.7

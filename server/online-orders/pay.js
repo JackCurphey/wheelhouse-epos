@@ -7,13 +7,14 @@
 // confirmation queued. Nothing is taken when any of it fails: a failure after
 // the take is let go or refunded once the transaction has rolled back.
 import { dbExec, prepare } from '../db.js';
-import { createSale } from '../lib/sales.js';
+import { createSale, discardPendingShopifyPushes } from '../lib/sales.js';
 import { lockStock } from '../lib/stock.js';
-import { creditOf, lockCustomer } from '../lib/customer-money.js';
+import { creditOf, lockCustomer, writeCreditEntry } from '../lib/customer-money.js';
 import { payments, PaymentError } from '../payments/index.js';
 import { ORDER_TENDER } from '../accounts/online-tenders.js';
 import { nextOrderNumber, orderReference } from './numbers.js';
 import { queueOrderMessage } from './messages.js';
+import { NOT_TAKING, takingOrders } from './basket.js';
 
 export { ORDER_TENDER };
 export const CREDIT_TENDER = 'Store credit';
@@ -55,6 +56,19 @@ export async function payOrder({ req, ref, body, pushes }) {
     // Pay pressed again after it paid: the paid order, and nothing more taken.
     if (order.paid_at) return await done('ROLLBACK', 200, paidAnswer(order));
     if (order.stage !== 'awaiting_payment') return await done('ROLLBACK', 409, { error: CANT_PAY });
+    // Buying online switched off, or payments disconnected, since checkout.
+    if (!(await takingOrders()).taking) {
+      if (order.card_pence > 0 && provider) {
+        payment = await prepare("SELECT * FROM online_payments WHERE online_order_id = ? AND purpose = 'order' ORDER BY id DESC LIMIT 1 FOR UPDATE").get(order.id);
+        if (payment && payment.provider === provider.name) {
+          const { status } = await provider.status(payment.provider_ref);
+          cardHeld = status === 'waiting' || status === 'held';
+        }
+      }
+      await letGoInTransaction(order, payment, provider, cardHeld);
+      cardHeld = false;
+      return await done('COMMIT', 409, { error: NOT_TAKING });
+    }
 
     if (order.card_pence > 0) {
       payment = await prepare("SELECT * FROM online_payments WHERE online_order_id = ? AND purpose = 'order' ORDER BY id DESC LIMIT 1 FOR UPDATE").get(order.id);
@@ -83,14 +97,15 @@ export async function payOrder({ req, ref, body, pushes }) {
 
     // The collecting shop's own stock, not the business's (design 3).
     const lines = await prepare(
-      'SELECT l.product_id, l.qty, l.unit_pence, p.name FROM online_order_lines l JOIN products p ON p.id = l.product_id WHERE l.order_id = ? ORDER BY l.id'
+      'SELECT l.product_id, l.qty, l.unit_pence, p.name, p.active FROM online_order_lines l JOIN products p ON p.id = l.product_id WHERE l.order_id = ? ORDER BY l.id'
     ).all(order.id);
     await lockStock(lines.map((l) => l.product_id));
     const wanted = new Map();
     for (const l of lines) wanted.set(l.product_id, (wanted.get(l.product_id) ?? 0) + l.qty);
     const here = new Map((await prepare('SELECT product_id, qty FROM product_stock WHERE site_id = ? AND product_id = ANY(?::int[])')
       .all(order.site_id, [...wanted.keys()])).map((r) => [r.product_id, r.qty]));
-    const short = lines.find((l) => (here.get(l.product_id) ?? 0) < wanted.get(l.product_id));
+    // A product taken off sale since checkout is sold out to the customer too (gap log).
+    const short = lines.find((l) => !l.active || (here.get(l.product_id) ?? 0) < wanted.get(l.product_id));
     if (short) {
       const site = (await prepare('SELECT name FROM sites WHERE id = ?').get(order.site_id))?.name ?? '';
       await letGoInTransaction(order, payment, provider, cardHeld);
@@ -105,9 +120,7 @@ export async function payOrder({ req, ref, body, pushes }) {
         cardHeld = false;
         return await done('COMMIT', 409, { error: CREDIT_SHORT });
       }
-      await prepare(
-        "INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason, online_order_id) VALUES (?, ?, 'spent', 'Online order', ?) RETURNING id"
-      ).get(order.customer_id, -order.credit_pence, order.id);
+      await writeCreditEntry(order.customer_id, { changePence: -order.credit_pence, kind: 'spent', reason: 'Online order', onlineOrderId: order.id });
     }
 
     // Priced at checkout with no group discount, so none is added here (gap log).
@@ -126,6 +139,9 @@ export async function payOrder({ req, ref, body, pushes }) {
       movedBy: { siteId: order.site_id },
       noGroupDiscount: true,
     }, { deferShopifyPushesTo: pushes });
+    // lockStock's two-second wait was for the stock rows; the take and the
+    // number wait as long as any other lock does.
+    await dbExec('SET LOCAL lock_timeout TO DEFAULT');
 
     if (cardHeld) {
       await provider.take(payment.provider_ref);
@@ -145,13 +161,19 @@ export async function payOrder({ req, ref, body, pushes }) {
   } catch (err) {
     await dbExec('ROLLBACK');
     // The sale rolled back, so its stock pushes mustn't go to Shopify.
-    if (pushes) { pushes._pendingPushSettle?.(); pushes.length = 0; }
+    if (pushes) discardPendingShopifyPushes(pushes);
     console.error('an online order couldn’t be paid', err);
-    await notPaid(ref);
+    // Each step on its own, so one failing (the database is often why we're
+    // here) doesn't stop the payment being let go.
+    await notPaid(ref).catch((e) => console.error(`online order ${ref}: couldn’t be marked not paid`, e));
     if (cardHeld) {
-      await prepare('UPDATE online_payments SET refund_due_reason = ?, updated_at = now() WHERE id = ? AND refund_due_reason IS NULL RETURNING id')
-        .get(took ? FAILED_AFTER_TAKE : FAILED, payment.id);
-      await settleFailedTake(payment.id, provider).catch((e) => console.error(`order payment ${payment.id}: couldn’t be let go yet`, e));
+      try {
+        await prepare('UPDATE online_payments SET refund_due_reason = ?, updated_at = now() WHERE id = ? AND refund_due_reason IS NULL RETURNING id')
+          .get(took ? FAILED_AFTER_TAKE : FAILED, payment.id);
+        await settleFailedTake(payment.id, provider);
+      } catch (e) {
+        console.error(`order payment ${payment.id} (${payment.provider_ref}): ${took ? 'taken' : 'held'}, couldn’t be let go yet`, e);
+      }
     }
     return { status: 503, body: { error: NOT_FINISHED } };
   }
@@ -185,9 +207,17 @@ export async function settleFailedTake(paymentId, provider = payments()) {
   await dbExec('BEGIN');
   try {
     const p = await prepare(
-      "SELECT id, provider_ref, amount_pence FROM online_payments WHERE id = ? AND purpose = 'order' AND refund_due_reason IS NOT NULL FOR UPDATE"
+      `SELECT p.id, p.provider_ref, p.amount_pence, o.paid_at FROM online_payments p LEFT JOIN online_orders o ON o.id = p.online_order_id
+        WHERE p.id = ? AND p.purpose = 'order' AND p.refund_due_reason IS NOT NULL FOR UPDATE OF p`
     ).get(paymentId);
-    if (!p || !provider) return await done('COMMIT');
+    if (!p) return await done('COMMIT');
+    // A commit that answered with an error but went through: the order is paid,
+    // so its payment stands and nothing is owed back.
+    if (p.paid_at) {
+      await prepare('UPDATE online_payments SET refund_due_reason = NULL, updated_at = now() WHERE id = ? RETURNING id').get(p.id);
+      return await done('COMMIT');
+    }
+    if (!provider) return await done('COMMIT');
     const { status } = await provider.status(p.provider_ref);
     let to = status;
     if (status === 'taken') {

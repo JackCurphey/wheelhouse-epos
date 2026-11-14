@@ -24,6 +24,11 @@ import { runWithShop, prepare, pool } from '../server/db.js';
 import { signupCustomer, createCustomerSession } from '../server/customer-auth.js';
 import { moneyBucket } from '../server/accounts/summary.js';
 import { ORDER_TENDER, CREDIT_TENDER, settleFailedTake } from '../server/online-orders/pay.js';
+import { NOT_TAKING } from '../server/online-orders/basket.js';
+import { discardPendingShopifyPushes, pendingShopifyPushes } from '../server/lib/sales.js';
+import { Readable } from 'node:stream';
+import { handleSiteRequest } from '../server/routes/site.js';
+import { saveShopifyConnection } from '../server/shopify.js';
 
 let server;
 let north;
@@ -58,6 +63,7 @@ before(async () => {
     await add('pads', 'Shimano brake pads', 'B05S-RX', 28);
     await add('lever', '[Brake lever]', '[sku lever]', 40);
     await add('cable', '[Brake cable]', '[sku cable]', 6);
+    await add('bell', '[Bell]', '[sku bell]', 5);
     await prepare("INSERT INTO online_order_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id").run();
     await prepare('UPDATE online_order_settings SET buying_online = true').run();
     await prepare('INSERT INTO payment_settings (store_credit_on) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET store_credit_on = true RETURNING shop_id').run();
@@ -65,6 +71,7 @@ before(async () => {
   await setStock(P.pads, bolton, 50);
   await setStock(P.lever, bolton, 1);
   await setStock(P.cable, bolton, 50);
+  await setStock(P.bell, bolton, 50);
   assert.equal((await staffRequest(server.baseUrl, north.cookie, '/api/website')).status, 200);
   assert.equal((await staffRequest(server.baseUrl, north.cookie, '/api/website/turn-on', { method: 'POST' })).status, 200);
   await connectPayments(north.shop.id);
@@ -124,6 +131,7 @@ const paymentRow = (orderId) => inNorth(() => prepare("SELECT * FROM online_paym
 const pretendStatus = (providerRef) => inNorth(async () => (await prepare('SELECT status FROM pretend_payments WHERE ref = ?').get(providerRef)).status);
 const creditOf = (customerId) => inNorth(async () => Number((await prepare('SELECT COALESCE(sum(change_pence), 0) AS s FROM store_credit_entries WHERE customer_id = ?').get(customerId)).s));
 const salesFor = (customerId) => inNorth(() => prepare('SELECT * FROM sales WHERE customer_id = ?').all(customerId));
+const nextNumber = () => inNorth(async () => (await prepare('SELECT next_order_number FROM online_order_settings').get()).next_order_number);
 const messagesTo = (email) => inNorth(() => prepare('SELECT template_key FROM customer_messages WHERE to_address = ? ORDER BY id').all(email));
 
 // ---- 5.1 A card that works ------------------------------------------------
@@ -230,9 +238,11 @@ test('5.2 sold out just before paying: the hold is released, nothing taken from 
   const made = await order([{ productId: P.lever, qty: 1 }], { who: maya, useCredit: true });
   // The last one sells at the till.
   await setStock(P.lever, bolton, 0);
+  const numberBefore = await nextNumber();
 
   const res = await pay(made.ref);
   assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(await nextNumber(), numberBefore, 'a sold-out order spends no number');
   assert.equal(res.body.error, '[Brake lever] has just sold out at Bolton. Nothing has been taken. Remove it from your order to carry on.');
   assert.deepEqual(res.body.soldOut, { productId: P.lever, name: '[Brake lever]', site: 'Bolton' });
 
@@ -246,6 +256,45 @@ test('5.2 sold out just before paying: the hold is released, nothing taken from 
   assert.equal((await salesFor(maya.customerId)).length, 0);
   assert.equal(await stockAt(P.lever, bolton), 0);
   assert.deepEqual(await messagesTo(made.email), []);
+});
+
+test('5.2 a product taken off sale since checkout is sold out too: the hold let go, nothing taken', async () => {
+  const made = await order([{ productId: P.bell, qty: 1 }]);
+  await inNorth(() => prepare('UPDATE products SET active = 0 WHERE id = ? RETURNING id').get(P.bell));
+  let res;
+  try {
+    res = await pay(made.ref);
+  } finally {
+    await inNorth(() => prepare('UPDATE products SET active = 1 WHERE id = ? RETURNING id').get(P.bell));
+  }
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.error, '[Bell] has just sold out at Bolton. Nothing has been taken. Remove it from your order to carry on.');
+  const row = await orderRow(made.ref);
+  assert.equal(row.stage, 'not_paid');
+  const payment = await paymentRow(row.id);
+  assert.equal(payment.status, 'released');
+  assert.equal(await pretendStatus(payment.provider_ref), 'released');
+  assert.equal((await salesFor(row.customer_id)).length, 0);
+});
+
+test('pay when the shop has stopped taking orders since checkout: the hold let go, nothing taken', async () => {
+  const made = await order([{ productId: P.cable, qty: 1 }]);
+  await inNorth(() => prepare('UPDATE online_order_settings SET buying_online = false RETURNING shop_id').get());
+  let res;
+  try {
+    res = await pay(made.ref);
+  } finally {
+    await inNorth(() => prepare('UPDATE online_order_settings SET buying_online = true RETURNING shop_id').get());
+  }
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.error, NOT_TAKING);
+  const row = await orderRow(made.ref);
+  assert.equal(row.stage, 'not_paid');
+  assert.ok(row.number === null && row.sale_id === null);
+  const payment = await paymentRow(row.id);
+  assert.equal(payment.status, 'released');
+  assert.equal(await pretendStatus(payment.provider_ref), 'released');
+  assert.equal((await salesFor(row.customer_id)).length, 0);
 });
 
 // ---- 5.3 Declined ------------------------------------------------------------
@@ -348,4 +397,90 @@ test('5.7 a refund owed on a taken payment is made once, however many times it i
 
 test('5.7 the money paid online is online money, not the till’s', () => {
   assert.equal(moneyBucket(ORDER_TENDER), 'online');
+});
+
+test('5.7 a payment whose order did pay (a commit that answered with an error but went through) is never refunded', async () => {
+  const made = await order([{ productId: P.cable, qty: 1 }]);
+  assert.equal((await pay(made.ref)).status, 200);
+  const row = await orderRow(made.ref);
+  const payment = await paymentRow(row.id);
+  await inNorth(() => prepare("UPDATE online_payments SET refund_due_reason = 'The order couldn’t be saved after the payment was taken' WHERE id = ? RETURNING id").get(payment.id));
+  const calls = [];
+  const provider = {
+    name: 'pretend',
+    status: async () => ({ status: 'taken', amountPence: payment.amount_pence }),
+    refund: async (ref, pence) => { calls.push(['refund', ref, pence]); },
+    release: async (ref) => { calls.push(['release', ref]); },
+  };
+  await inNorth(() => settleFailedTake(payment.id, provider));
+  assert.deepEqual(calls, [], 'a paid order’s payment is not refunded');
+  const after = await paymentRow(row.id);
+  assert.equal(after.status, 'taken');
+  assert.equal(after.refund_due_reason, null);
+  assert.equal(after.refunded_at, null);
+});
+
+test('a sale that rolled back sends none of its stock pushes, and frees its place in the shutdown wait', () => {
+  let settled = 0;
+  const pushes = [{ product: {}, newQty: 1 }, { product: {}, newQty: 2 }];
+  pushes._pendingPushSettle = () => { settled += 1; };
+  discardPendingShopifyPushes(pushes);
+  assert.equal(pushes.length, 0);
+  assert.equal(settled, 1);
+  assert.equal(pushes._pendingPushSettle, undefined);
+});
+
+// ---- Shopify stock pushes after Pay ----------------------------------------
+
+// A Pay request driven in-process, as server.js's website branch runs it: inside
+// the shop's own database scope, with a list for work to run once it is released.
+function payInProcess(ref, afterRelease) {
+  const text = JSON.stringify({ card: ACCEPTED });
+  const req = Object.assign(Readable.from([Buffer.from(text)]), {
+    method: 'POST', url: `/api/site/orders/${ref}/pay`, socket: { remoteAddress: nextVisitor() },
+    headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(text)) },
+  });
+  const res = {
+    headersSent: false, destroyed: false, setHeader() {},
+    writeHead(status) { this.statusCode = status; this.headersSent = true; },
+    end(body) { this.body = body; },
+  };
+  return { req, res, run: () => handleSiteRequest(req, res, req.url, north.shop, null, afterRelease) };
+}
+
+test('a paid order’s Shopify stock push runs once the request’s database connection is back, never on it', async () => {
+  const calls = [];
+  const original = globalThis.fetch;
+  const provider = process.env.PAYMENTS_PROVIDER;
+  // The pretend provider, as the live server has it (liveServer.js).
+  process.env.PAYMENTS_PROVIDER = 'pretend';
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/locations.json')) return { ok: true, status: 200, json: async () => ({ locations: [{ id: 42 }] }) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  try {
+    await inNorth(() => saveShopifyConnection({ shopDomain: 'fake.myshopify.com', accessToken: 'tok', storefrontApiToken: 'store-tok' }));
+    await inNorth(() => prepare("UPDATE products SET shopify_inventory_item_id = '888' WHERE id = ? RETURNING id").get(P.bell));
+    const made = await order([{ productId: P.bell, qty: 1 }]);
+    calls.length = 0;
+    const afterRelease = [];
+    const { res, run } = payInProcess(made.ref, afterRelease);
+    await inNorth(async () => {
+      await run();
+      assert.equal(res.statusCode, 200, res.body);
+      assert.equal(afterRelease.length, 1, 'the push waits for the connection to be released');
+    });
+    assert.deepEqual(calls, [], 'nothing reached Shopify while the request held its connection');
+    for (const work of afterRelease) work();
+    await Promise.all([...pendingShopifyPushes]);
+    assert.ok(calls.some((u) => u.includes('inventory_levels/set.json')), JSON.stringify(calls));
+  } finally {
+    globalThis.fetch = original;
+    if (provider === undefined) delete process.env.PAYMENTS_PROVIDER; else process.env.PAYMENTS_PROVIDER = provider;
+    await inNorth(async () => {
+      await prepare('UPDATE products SET shopify_inventory_item_id = NULL WHERE id = ? RETURNING id').get(P.bell);
+      await prepare('DELETE FROM shopify_connections RETURNING shop_id').get();
+    });
+  }
 });
