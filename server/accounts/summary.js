@@ -8,18 +8,22 @@
 import { prepare } from '../db.js';
 import { accountLines, OTHER_SALES } from './lines.js';
 import { DEPOSIT_TENDER } from '../workshop/counted-deposit.js';
+import { C2W_TENDER } from '../c2w/hand-over.js';
 
 const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
-const MONEY = { cash: 'Cash', card: 'Card', accounts: 'Customer accounts', gift: 'Gift cards', online: 'Online sales (paid on the website)' };
+const MONEY = { cash: 'Cash', card: 'Card', accounts: 'Customer accounts', gift: 'Gift cards', c2w: 'Cycle to Work (owed by providers)', online: 'Online sales (paid on the website)' };
 
-// How a payment other than cash and card is booked: online money has its own line; a customer account is
-// Customer accounts; store credit and gift cards go to Gift cards. A way to pay Wheelhouse can't place goes to Gift
-// cards too, as the report's "Other" tile words it ("Gift cards, store credit and customer accounts").
+// How a payment other than cash and card is booked: online money has its own line; so does a Cycle to Work
+// hand-over's provider share ("Cycle to Work · [provider]"), owed by the provider (Jack, 14 Nov, merge-c2w Q1
+// option 2), checked before accounts so a provider's name never moves it; a customer account is Customer
+// accounts; store credit and gift cards go to Gift cards. A way to pay Wheelhouse can't place goes to Gift cards
+// too, as the report's "Other" tile words it ("Gift cards, store credit and customer accounts").
 export function moneyBucket(tender) {
   const t = String(tender ?? '').trim().toLowerCase();
   if (t === 'cash') return 'cash';
   if (t === 'card') return 'card';
   if (ONLINE_TENDERS.some((o) => o.toLowerCase() === t)) return 'online';
+  if (t.startsWith(C2W_TENDER.toLowerCase())) return 'c2w';
   if (t.includes('account')) return 'accounts';
   return 'gift';
 }
@@ -66,13 +70,16 @@ export async function buildSummary(closeId) {
     grossPence += r.gross;
   }
 
-  const money = { cash: 0, card: 0, accounts: 0, gift: 0, online: 0 };
+  const money = { cash: 0, card: 0, accounts: 0, gift: 0, c2w: 0, online: 0 };
   const add = (tender, pence) => { money[moneyBucket(tender)] += Number(pence); };
+  // A hand-over is saved in the old record, never the till's: close-the-day counts a till payment that isn't cash
+  // or card as Other, whatever it is called, so it goes to Gift cards here too and Xero matches the report.
+  const addTill = (tender, pence) => { const b = moneyBucket(tender); money[b === 'c2w' ? 'gift' : b] += Number(pence); };
   const old = await prepare('SELECT COALESCE(SUM(ROUND(cash_amount * 100)), 0)::bigint::float8 AS cash, COALESCE(SUM(ROUND(card_amount * 100)), 0)::bigint::float8 AS card FROM sales WHERE day_close_id = ?').get(closeId);
   money.cash += old.cash;
   money.card += old.card;
   for (const r of await prepare('SELECT p.tender_type AS tender, SUM(ROUND(p.amount * 100))::bigint::float8 AS pence FROM sale_payments p JOIN sales s ON s.id = p.sale_id WHERE s.day_close_id = ? GROUP BY 1').all(closeId)) add(r.tender, r.pence);
-  for (const r of await prepare('SELECT p.method AS tender, SUM(p.amount_pence)::bigint::float8 AS pence FROM till_sale_payments p JOIN till_sales t ON t.id = p.till_sale_id WHERE t.day_close_id = ? GROUP BY 1').all(closeId)) add(r.tender, r.pence);
+  for (const r of await prepare('SELECT p.method AS tender, SUM(p.amount_pence)::bigint::float8 AS pence FROM till_sale_payments p JOIN till_sales t ON t.id = p.till_sale_id WHERE t.day_close_id = ? GROUP BY 1').all(closeId)) addTill(r.tender, r.pence);
   const totalPence = Object.values(money).reduce((n, v) => n + v, 0);
 
   const lines = [

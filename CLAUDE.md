@@ -63,7 +63,11 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 1. Build exactly what the drawings and decisions show, taking pieces in this
    week's theme.
-2. Make the database changes the plan lists.
+2. Make the database changes needed to build what the piece's drawings and
+   decisions show. A change that deletes or alters existing data, goes
+   beyond its piece, or that the builder's own notes say needs Jack's yes,
+   waits for that yes (Jack, 14 Nov,
+   `docs/decisions/2026-11-14-database-change-check.md`).
 3. Where a drawing is silent, follow the closest pattern already built, log
    it in your own month's file in `docs/decisions/decided-while-building/`,
    and carry on.
