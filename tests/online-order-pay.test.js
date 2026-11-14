@@ -23,7 +23,7 @@ import { adminUrlFrom } from '../scripts/dev/new-db.mjs';
 import { runWithShop, prepare, pool } from '../server/db.js';
 import { signupCustomer, createCustomerSession } from '../server/customer-auth.js';
 import { moneyBucket } from '../server/accounts/summary.js';
-import { ORDER_TENDER, CREDIT_TENDER, settleFailedTake } from '../server/online-orders/pay.js';
+import { ORDER_TENDER, CREDIT_TENDER, CREDIT_SHORT, settleFailedTake } from '../server/online-orders/pay.js';
 import { NOT_TAKING } from '../server/online-orders/basket.js';
 import { discardPendingShopifyPushes, pendingShopifyPushes } from '../server/lib/sales.js';
 import { Readable } from 'node:stream';
@@ -275,6 +275,30 @@ test('5.2 a product taken off sale since checkout is sold out too: the hold let 
   assert.equal(payment.status, 'released');
   assert.equal(await pretendStatus(payment.provider_ref), 'released');
   assert.equal((await salesFor(row.customer_id)).length, 0);
+});
+
+test('5.2 store credit spent at the till since checkout: the hold let go, nothing taken from card or credit, no sale, no number', async () => {
+  const maya = await signedIn({ credit: 500 });
+  const made = await order([{ productId: P.bell, qty: 2 }], { who: maya, useCredit: true });
+  assert.equal(made.creditPence, 500);
+  // Some of the credit is spent at the till before Pay is pressed.
+  await inNorth(() => prepare("INSERT INTO store_credit_entries (customer_id, change_pence, kind, reason) VALUES (?, -200, 'spent', '[reason]')").run(maya.customerId));
+  const numberBefore = await nextNumber();
+  const stockBefore = await stockAt(P.bell, bolton);
+
+  const res = await pay(made.ref);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.equal(res.body.error, CREDIT_SHORT);
+  assert.equal(await nextNumber(), numberBefore, 'no number spent');
+  const row = await orderRow(made.ref);
+  assert.equal(row.stage, 'not_paid');
+  assert.ok(row.number === null && row.sale_id === null);
+  const payment = await paymentRow(row.id);
+  assert.equal(payment.status, 'released');
+  assert.equal(await pretendStatus(payment.provider_ref), 'released');
+  assert.equal(await creditOf(maya.customerId), 300, 'only the till spend is gone');
+  assert.equal((await salesFor(maya.customerId)).length, 0);
+  assert.equal(await stockAt(P.bell, bolton), stockBefore);
 });
 
 test('pay when the shop has stopped taking orders since checkout: the hold let go, nothing taken', async () => {
