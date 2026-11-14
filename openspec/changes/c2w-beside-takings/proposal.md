@@ -26,5 +26,5 @@ None.
 ## Impact
 
 - `server/routes/close-the-day.js` (`takingsIn`): money, so a risky area.
-- `tests/close-the-day.test.js`.
+- `tests/close-the-day.test.js` and `tests/unclosed-day.test.js` (closing an earlier day).
 - Records: `docs/decisions/decided-while-building/2026-11-jack.md` and `openspec/changes/cycle-to-work/tasks.md`.

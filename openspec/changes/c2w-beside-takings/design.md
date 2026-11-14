@@ -14,7 +14,7 @@
 ## Decisions
 
 1. **One line in `takingsIn`:** `takingsPence = card + cash + other`. Every close path and the "so far" figure use it, so they all follow. The `c2w_pence` figure is still saved and shown as before.
-2. **Days already closed are not worked out again** (default, logged). A close's figures stay as they were at the close (close-the-day spec, "One close a day, with its report"). No migration. A day closed between pull request 10d and this change keeps its Cycle to Work money in its takings, unless it is reopened and closed again, which works its figures out afresh. That follows item 3 of the 13 Nov entry for days closed before 10d.
+2. **Days already closed are not worked out again** (default, logged). A close's figures stay as they were at the close (close-the-day spec, "One close a day, with its report"). No migration. A day closed between pull request 10d and this change keeps its Cycle to Work money in its takings, unless it is reopened and closed again, which works its figures out afresh. That follows item 3 of the 13 Nov entry for days closed before 10d, whose Cycle to Work money is in Other and so in their takings; closing one of those again now takes the money out of Other and out of its takings, so item 3's "its takings don't change" no longer holds (noted in the 14 Nov entry).
 3. **Screens unchanged.** The drawings already put the Cycle to Work figure beside the takings, between Other and Online on the Takings report, and after Gift cards on the end-of-day report.
 
 ## Risks / Trade-offs
