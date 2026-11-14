@@ -1,7 +1,7 @@
 // The lines of a day's summary, each with an account chosen for it (reports-accounts-and-reopen design 6; the
 // drawing's "Which Xero account each line goes to"): Sales go to (the shop's Stockroom categories, Labour, and
-// sales with no category), Money taken goes to (how it was paid, with the online money and Cycle to Work money apart), and Everything else
-// goes to. `recorded` is false for a line Wheelhouse doesn't record yet (refunds and discounts given, WP-3.1): it
+// sales with no category), Money taken goes to (how it was paid, with the online money and Cycle to Work money
+// apart), and Everything else goes to. `recorded` is false for a line Wheelhouse doesn't record yet (refunds and discounts given, WP-3.1): it
 // can be chosen now but never holds a day up (Jack's answer 2 of 12 Nov).
 import { onlyChoices } from '../lib/report-changed.js';
 

@@ -208,6 +208,30 @@ test('Cycle to Work money goes to its own line, not Gift cards', async () => {
   assert.deepEqual(['cycle to work · bike2work', ' Cycle to Work · Acme Account ', 'Customer account', 'Gift card'].map(moneyBucket), ['c2w', 'c2w', 'accounts', 'gift']);
 });
 
+// A hand-over is saved in the old record; the till record's payments are never one. Close-the-day counts a till
+// payment that isn't cash or card as Other, so the summary files it under Gift cards, whatever it is called, and
+// Xero and the end-of-day report agree.
+test('a till payment called Cycle to Work goes where close-the-day counts it, Gift cards', async () => {
+  const owner = await shop();
+  await tillSale(owner, { lines: [{ product: owner.chain.id, name: 'Chain', gross: 2000, vat: 333 }], payments: [{ method: 'Cycle to Work · Cyclescheme', pence: 2000 }] });
+  const close = await closeToday(owner, FLOAT);
+  assert.deepEqual([close.otherPence, close.c2wPence], [2000, 0]);
+  const lines = Object.fromEntries((await pretendSummaries(owner))[0].summary.lines.map((l) => [l.key, l.amountPence]));
+  assert.deepEqual([lines['money:gift'], lines['money:c2w']], [2000, undefined]);
+});
+
+// The line is recorded, so a day with Cycle to Work money waits until an account is chosen for it.
+test('a day with Cycle to Work money and no account chosen for its line is not sent, saying which', async () => {
+  const owner = await shop({ choose: false });
+  for (const line of ['sales:Drivetrain', 'money:gift', 'other:vat']) await chooseOne(owner, line);
+  await oldSale(owner, '2026-09-01T10:00:00Z', { extra: [{ tenderType: 'Cycle to Work · Cyclescheme', amount: 880 }], lines: [{ product: owner.chain.id, name: 'Bike', total: 880 }] });
+  await closeToday(owner, FLOAT);
+  const [row] = await sends(owner);
+  assert.deepEqual([row.status, row.reason, row.failed_line], ['failed', 'Cycle to Work (owed by providers) has no Xero account chosen', 'money:c2w']);
+  await chooseOne(owner, 'money:c2w');
+  assert.equal((await sends(owner))[0].status, 'sent', 'choosing the account sends the day');
+});
+
 test('labour and a sale with no category have their own lines', async () => {
   const owner = await shop();
   await oldSale(owner, '2026-09-01T10:00:00Z', { cash: 15, lines: [{ name: 'Fit tyre', total: 15, type: 'labour' }] });

@@ -16,7 +16,7 @@
 1. **`moneyBucket` returns `c2w`** for a tender that, trimmed and lower-cased, starts with "cycle to work · ", the same test `hand-over.js` uses. It is checked before the "account" test, so a provider named "… Account" still goes to Cycle to Work.
 2. **The line is `money:c2w`, "Cycle to Work (owed by providers)"**, listed after Gift cards and before Online sales. The drawing lists it after Gift cards and has no online row, so the built online row stays last.
 3. **No migration.** A new line key is new rows only. A connected shop is told one more line needs an account, through the existing "No Xero account chosen" pattern. No existing row or sent day changes, so the 14 Nov rule about database changes that alter existing data doesn't apply.
-4. **Recorded and required like the other money lines** (`recorded: true`): a day with Cycle to Work money waits for its account, as a day with online money does.
+4. **Recorded and required like the other money lines** (`recorded: true`): a day with Cycle to Work money and no account chosen for the line is not sent, marked with the line that needs one, and goes once it is chosen, as a day with online money is. Only old-record payments (where hand-overs are saved) go to the line; a till payment called "Cycle to Work · …" goes to Gift cards, because close-the-day counts it as Other.
 
 ## Risks / Trade-offs
 

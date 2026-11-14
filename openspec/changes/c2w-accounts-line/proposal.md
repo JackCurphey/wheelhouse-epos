@@ -8,7 +8,7 @@ A Cycle to Work hand-over's provider share is owed by the provider, not taken in
 
 - The accounts summary files the "Cycle to Work · [provider]" ways to pay under a new money line, `money:c2w`, "Cycle to Work (owed by providers)", instead of Gift cards.
 - "Which Xero account each line goes to" lists the new line under "Money taken goes to", after Gift cards, where the drawing puts it. The screen draws whatever lines the server lists, so the row appears with no screen code change.
-- A shop already connected sees one more line with no account chosen. A day with Cycle to Work money waits ("Cycle to Work (owed by providers) has no Xero account chosen") until one is chosen, as any line does.
+- A shop already connected sees one more line with no account chosen. A day with Cycle to Work money is not sent ("Cycle to Work (owed by providers) has no Xero account chosen") until one is chosen, then goes, as with any line.
 - No database change: account choices are rows keyed by the line's name, so the new line is new rows only, and no existing row changes.
 - Not changed: days already sent (a sent summary is kept as it was sent); the "Cycle to Work commission" and "Cycle to Work shortfalls" rows of the cycle-to-work spec, which stay with that change.
 
