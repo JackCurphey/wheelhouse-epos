@@ -13,6 +13,7 @@ import { ShopPageRoute, ShopsPage } from './shops.tsx';
 import { CookiesPage } from './cookies.tsx';
 import { CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
 import { BasketPage } from './basket-page.tsx';
+import { CheckoutPage } from './checkout-page.tsx';
 
 /**
  * The customer website app (openspec/changes/website-browse, design 3): the
@@ -44,6 +45,7 @@ export const websiteRoutes: RouteObject[] = [
       { path: 'privacy', Component: PrivacyPage },
       { path: 'cookies', Component: CookiesPage },
       { path: 'basket', Component: BasketPage },
+      { path: 'checkout', Component: CheckoutPage },
       { path: 'shops', Component: ShopsPage },
       { path: 'shops/:id', Component: ShopPageRoute },
       { path: '*', Component: NotFoundPage },

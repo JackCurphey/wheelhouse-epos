@@ -163,7 +163,25 @@ export type BasketAnswer = {
   totalPence: number;
   changed: string | null;
   blocked: string | null;
+  /** A signed-in customer's details, taken over anything typed at checkout. */
+  you: { name: string | null; email: string | null; phone: string | null } | null;
+  /** A signed-in customer's store credit, when the shop takes it online; `coversAll` is the words when it covers the order. */
+  credit: { availablePence: number; usePence: number; leftToPayPence: number; coversAll: string | null } | null;
 };
+
+export type CheckoutAsk = {
+  shop: number | null;
+  lines: BasketLine[];
+  name?: string;
+  phone?: string;
+  email?: string;
+  useCredit: boolean;
+  requestKey: string;
+};
+
+/** POST /api/site/checkout (server/online-orders/checkout.js). Until paying is built it answers 501 paying_not_built. */
+export const askCheckout = (address: SiteAddress, ask: CheckoutAsk) =>
+  apiMutate<never>(apiPath(address, '/api/site/checkout'), ask);
 
 const askBasket = (address: SiteAddress, shopId: number | null, lines: BasketLine[]) =>
   apiMutate<BasketAnswer>(apiPath(address, '/api/site/basket'), { shop: shopId, lines });
