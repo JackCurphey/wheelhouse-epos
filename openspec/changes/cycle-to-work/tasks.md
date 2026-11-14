@@ -58,7 +58,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 4.4 Screen test: `cw-order-held` — heading, stages, the next step's message, Who pays what, Email the quote again and Print the quote, "What's happened", Customer; the owner's provider line with its commission (from `cw-more`). The next-step buttons come with the pull requests that build their steps (5–8); the More… menu is 4.8
 - [x] 4.5 Build `src/screens/c2w/` to pass 4.1–4.4, with the sidebar count
 - [x] 4.6 Log decided-while-building 1, 3 and 4 (design) in your own month file
-- [ ] 4.7 Self-review with `reviewer`; full check
+- [x] 4.7 Self-review with `reviewer`; full check (done in #721)
 - [ ] 4.8 More… menu and the Change steps (`cw-more`, and `cw-quote-revised`'s message): change the bike or size, the accessories or the provider, each making a revised quote that is sent only on Email. Left open for whoever builds the revised quote; the drawn menu also lists "Release the bike" (5.3, also a button on the order page) and "Cancel the order…" (8.5)
 
 ## 5. Holding bikes and stock (pull request 5, about 450 lines, risky: stock)
@@ -77,9 +77,9 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 6.2 Test (server; the screens come in 6c): less and more than the order give the drawn choices and change Who pays what; late certificate warns; released order takes a free frame again
 - [x] 6.3 Test (server; the screens come in 6c): the ordering rule decides when "Order from [supplier]" shows; ordering adds a supplier order line linked to the order, with Undo; "Order now anyway…" refused without a reason, logged with it
 - [x] 6.4 Test (server; the screens come in 6c): booking the bike in holds its frame for the order and moves it to Ready to collect when the certificate is in
-- [ ] 6.5 Screen test: `cw-applied`, `cw-certificate` with `-diff`, `-more`, `-late`, `-released`, `cw-certificate-match`, `cw-order-anyway`, `cw-ordered`, `cw-order-on-order`, `cw-order-get-ready`, `cw-marked-ready`, `cw-order-ready`; `rs-receive-c2w`, `rs-frame-c2w`, `rs-booked-c2w`
-- [ ] 6.6 Build to pass 6.1–6.5
-- [ ] 6.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 6.5 Screen test: `cw-applied`, `cw-certificate` with `-diff`, `-more`, `-late`, `-released`, `cw-certificate-match`, `cw-order-anyway`, `cw-ordered`, `cw-order-on-order`, `cw-order-get-ready`, `cw-marked-ready`, `cw-order-ready`; `rs-receive-c2w`, `rs-frame-c2w`, `rs-booked-c2w` (built in #723, #726, #728, #731 and #733)
+- [x] 6.6 Build to pass 6.1–6.5 (built in #723, #726, #728, #731 and #733)
+- [x] 6.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI (done in #723, #726, #728, #731 and #733)
 
 ## 7. Hand-over at the till (pull request 7, about 550 lines, risky: money)
 
@@ -96,15 +96,15 @@ The declined card in 7.4 (edge 6b) is the till's basket, so it is tested in 7b
 - [x] 7.6 Build to pass 7.1–7.5
 - [x] 7.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
-## 8. The provider's money and cancelling (pull request 8, about 550 lines, risky: money — waiting for Jack)
+## 8. The provider's money and cancelling (pull request 8, about 550 lines, risky: money — Jack answered 12 Nov, see the top)
 
 - [x] 8.1 Test: Mark paid equal to expected moves to Paid by the provider; a difference offers Close with a reason and Save as part paid; Mark the rest paid
 - [x] 8.2 Test: Record a payment over several ticked bikes; the Expected, Received and Difference rows
 - [x] 8.3 Test: the Owed lists, late payments, Download as spreadsheet
 - [x] 8.4 Test: the money steps are refused for non-Owners and logged with who and why
 - [x] 8.5 Test: cancelling frees the frame and keeps the order; Staff can cancel with no deposit
-- [ ] 8.6 Screen test: `cw-order-owed`, `-part-paid`, `-paid`, `cw-mark-paid`, `-diff`, `cw-record-payment`, `-more`, `cw-owed`, `cw-owed-reports`, `cw-owed-provider`, `cw-cancel`, `cw-cancel-ordered` (the two cancel screens are in, PR 8c; the order page's money boxes and Mark paid popup in PR 8d; Record a payment and the Owed pages follow in PR 8e)
-- [ ] 8.7 Build to pass 8.1–8.6. When Cancel turns on "Your order is cancelled" (found in PR 9e's review): fill `Shop phone` and `Deposit amount`, send it with no link (`queueC2wMessage` refuses one without a link today), let Settings › Messages edit both deposit wordings (it shows one `partOf` wording), and check switching it off stops all three
+- [x] 8.6 Screen test: `cw-order-owed`, `-part-paid`, `-paid`, `cw-mark-paid`, `-diff`, `cw-record-payment`, `-more`, `cw-owed`, `cw-owed-reports`, `cw-owed-provider`, `cw-cancel`, `cw-cancel-ordered` (the two cancel screens are in, PR 8c; the order page's money boxes and Mark paid popup in PR 8d; Record a payment and the Owed pages follow in PR 8e) (built in #767, #768 and #769)
+- [ ] 8.7 Build to pass 8.1–8.6. When Cancel turns on "Your order is cancelled" (found in PR 9e's review): fill `Shop phone` and `Deposit amount`, send it with no link (`queueC2wMessage` refuses one without a link today), let Settings › Messages edit both deposit wordings (it shows one `partOf` wording), and check switching it off stops all three (in #763: "Shop phone", sent with no link, and switching it off stops it; left: "Deposit amount" and both deposit wordings in Settings › Messages, which wait for section 11's deposits)
 - [ ] 8.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 9. Messages and the customer's view (pull request 9, about 500 lines, risky: messaging and public route)
@@ -116,17 +116,17 @@ four messages (9.1 and the message parts of 9.4); 9e the two more Jack chose
 on 12 Nov ("Your bike is no longer put aside", sent on Release; "Your order is
 cancelled", its three drawn wordings, sent by pull request 8's Cancel).
 
-- [ ] 9.1 Test: the six message keys (the decision's four, and "Your bike is no longer put aside" and "Your order is cancelled", Jack 12 Nov), with the drawn wording; each sent at its step only when on
-- [ ] 9.2 Test: `GET /api/portal/c2w-links/:code` gives the allowed fields only; a wrong code gives nothing; rate limited
-- [ ] 9.3 Test: the signed-in account lists only the customer's own orders, with "What you pay at collection"
-- [ ] 9.4 Screen test: `cw-messages`, `cw-email`, `cw-email-certificate-revised`, `cw-texts-certificate`, `cw-texts-hold`, `cw-texts-cancelled`, `cw-customer-view` with `-released` and `-cancelled`, `ac-account-c2w`, `-collected`
-- [ ] 9.5 Build to pass 9.1–9.4
-- [ ] 9.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 9.1 Test: the six message keys (the decision's four, and "Your bike is no longer put aside" and "Your order is cancelled", Jack 12 Nov), with the drawn wording; each sent at its step only when on (built in #730 (four) and #738 (two))
+- [x] 9.2 Test: `GET /api/portal/c2w-links/:code` gives the allowed fields only; a wrong code gives nothing; rate limited (built in #730)
+- [x] 9.3 Test: the signed-in account lists only the customer's own orders, with "What you pay at collection" (built in #720 and #730)
+- [x] 9.4 Screen test: `cw-messages`, `cw-email`, `cw-email-certificate-revised`, `cw-texts-certificate`, `cw-texts-hold`, `cw-texts-cancelled`, `cw-customer-view` with `-released` and `-cancelled`, `ac-account-c2w`, `-collected` (built in #708, #719, #720, #723, #730 and #738; the revised quote with "Certificate received" is tested in the certificate tests, #723)
+- [x] 9.5 Build to pass 9.1–9.4 (built in #719, #720, #730 and #738)
+- [x] 9.6 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI (done in #719, #720, #730 and #738)
 
 ## 10. Today, search, customer page and the report (pull request 10, about 450 lines)
 
-- [ ] 10.1 Test: the Today source gives the hold and late-payment lines, Owner only, and only when "On Today" is on
-- [ ] 10.2 Test: header search finds orders by name and quote number; the customer page lists their orders
+- [x] 10.1 Test: the Today source gives the hold and late-payment lines, Owner only, and only when "On Today" is on (built in #725, #734 and #770)
+- [x] 10.2 Test: header search finds orders by name and quote number; the customer page lists their orders (built in #725; at archive, add "certificate number" to the header search spec)
 - [x] 10.3 Test: the `rp-c2w` report — tiles and the by-provider table, counted on the day marked paid
 - [ ] 10.4 Screen test: `cw-today`, `cw-today-held`, `op-today-c2w`, `cs-search-c2w`, `cs-page-c2w`, `-collected`, `rp-c2w`; the Takings report counts Cycle to Work money in
 - [ ] 10.5 Build to pass 10.1–10.4
