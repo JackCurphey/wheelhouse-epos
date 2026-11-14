@@ -27,7 +27,9 @@ sale and the stock drop at payment; a Hand over button on the staff order
 page), so paying, the staff steps and refunds follow the screens
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). The
 staff's online orders on the server (group 6: the list, Mark ready, Not
-ready after all, Hand over) are in (#803); paying (group 5) and refunds (group 7)
+ready after all, Hand over) are in (#803); their screens (group 8) are in
+(claude/buy-online-staff-screens), all but Can't supply and Cancel and
+refund on the order, which wait for refunds (group 7); paying (group 5) and refunds (group 7)
 are taken by the checkout screen's builder. Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),

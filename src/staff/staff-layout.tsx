@@ -40,19 +40,30 @@ const ITEM_ON = 'bg-[var(--sidebar-primary)] font-bold shadow-[inset_3px_0_0_var
  * drawn on the full sidebar only). Nothing shows at none. Asked again each
  * minute and on coming back to the window, as Today's lists are.
  */
-function useC2wCount(on: boolean): number | null {
-  const count = useQuery({ queryKey: ['c2w-count'], queryFn: () => apiGet<{ count: number }>('/api/c2w/count'), enabled: on, refetchInterval: 60_000, refetchOnWindowFocus: true }).data?.count;
-  return on && typeof count === 'number' && count > 0 ? count : null;
+/**
+ * Online orders' count likewise: the orders to get ready (online.mjs countIn,
+ * audit M11), its hidden words " to get ready".
+ */
+const COUNTS: Partial<Record<NavItem['key'], { key: string; path: string; words: string }>> = {
+  c2w: { key: 'c2w-count', path: '/api/c2w/count', words: 'due or late' },
+  orders: { key: 'online-order-count', path: '/api/online-order-count', words: 'to get ready' },
+};
+
+function useNavCount(item: NavItem): { count: number; words: string } | null {
+  const c = COUNTS[item.key];
+  const count = useQuery({ queryKey: [c?.key ?? 'no-count'], queryFn: () => apiGet<{ count: number }>(c?.path ?? ''), enabled: Boolean(c), refetchInterval: 60_000, refetchOnWindowFocus: true }).data?.count;
+  return c && typeof count === 'number' && count > 0 ? { count, words: c.words } : null;
 }
 
 function SideItem({ item, onPick }: { item: NavItem; onPick?: () => void }) {
-  const count = useC2wCount(item.key === 'c2w');
+  const counted = useNavCount(item);
+  const count = counted?.count ?? null;
   return (
     <NavLink
       to={NAV_ROUTES[item.key]}
       onClick={onPick}
       // Read as "Cycle to Work, 3 due or late"; the drawing's hidden words, in one name.
-      aria-label={count ? `${item.label}, ${count} due or late` : undefined}
+      aria-label={counted ? `${item.label}, ${counted.count} ${counted.words}` : undefined}
       className={({ isActive }) =>
         `flex min-h-[30px] items-center gap-3 rounded-md px-3 text-sm font-medium text-[var(--sidebar-foreground)] no-underline hover:bg-[var(--sidebar-accent)] ${isActive ? ITEM_ON : ''}`
       }

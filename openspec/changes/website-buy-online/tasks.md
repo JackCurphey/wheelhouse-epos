@@ -114,12 +114,14 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 8. Online orders for staff — screens (pull request 8, about 600 lines — waits for Jack's answer to question 11)
 
-- [ ] 8.1 Screen test: `on-orders` — the three groups with their hints and rows ("Waiting at [Shelf name]", "Email didn’t arrive · [phone]", "Not collected · [n] days", "by Jo Taylor"); the sidebar count
-- [ ] 8.2 Screen test: `on-orders-ready` — "Ready. The email goes to [Customer] in [n] seconds" with Undo; `on-orders-sold-at-till`
-- [ ] 8.3 Screen test: `on-order-staff` and `on-order-staff-ready` — items, How, how it was paid, the customer, and each stage's buttons; Hand over on the ready order (question 11)
+- [x] 8.1 Screen test: `on-orders` — the three groups with their hints and rows ("Waiting at [Shelf name]", "Email didn’t arrive · [phone]", "Not collected · [n] days", "by Jo Taylor"); the sidebar count
+- [x] 8.2 Screen test: `on-orders-ready` — "Ready. The email goes to [Customer] in [n] seconds" with Undo; `on-orders-sold-at-till`
+- [x] 8.3 Screen test: `on-order-staff` and `on-order-staff-ready` — items, How, how it was paid, the customer, and each stage's buttons; Hand over on the ready order (question 11)
 - [ ] 8.4 Screen test: `on-not-ready`, `on-cant-supply`, `on-cancel-refund` — every drawn line, the needed reasons, Keep buttons; the refunded staff-side states follow not-drawn rows 84 and 85 (`on-order-staff` with the item refunded)
-- [ ] 8.5 Build `src/screens/online-orders/` and the `orders` route in `src/staff/routes.ts` to pass 8.1–8.4
-- [ ] 8.6 Self-review with `reviewer`; full check
+  - [x] `on-not-ready` built and tested; `on-cant-supply` and `on-cancel-refund` (and the refunded staff-side rows) wait for refunds, group 7
+- [x] 8.5 Build `src/screens/online-orders/` and the `orders` route in `src/staff/routes.ts` to pass 8.1–8.4
+  - The `orders` route was already in `routes.ts`; the screen is joined to it in `src/staff/app-shell.tsx`
+- [x] 8.6 Self-review with `reviewer`; full check
 
 ## 9. Not collected and Today (pull request 9, about 450 lines, risky: messaging core — waits for Jack's answer to questions 9 and 11, through pull request 7)
 
