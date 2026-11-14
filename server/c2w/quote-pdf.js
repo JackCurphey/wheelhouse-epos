@@ -25,9 +25,11 @@ export async function quoteFor(orderId) {
   // cw-quote-revised: the latest change, and whether the quote has been emailed since,
   // on its own or with the certificate that changed the order to match (cw-certificate:
   // "The revised quote goes to Maya with the “Certificate received” email").
+  // A message stopped before it went (Undo of Ready, cancelling) didn't carry it.
   const change = await prepare(`SELECT e.detail->>'what' AS what, e.detail->>'at' AS at, EXISTS (SELECT 1 FROM c2w_order_events m
     WHERE m.order_id = e.order_id AND m.id > e.id
-      AND m.kind IN ('quote_emailed', 'revised_quote_sent')) AS sent
+      AND (m.kind = 'quote_emailed' OR (m.kind = 'revised_quote_sent' AND NOT EXISTS (SELECT 1 FROM customer_messages cm
+        WHERE cm.id = (m.detail->>'messageId')::int AND cm.status = 'undone')))) AS sent
     FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'changed' ORDER BY e.id DESC LIMIT 1`).get(row.id);
   return {
     shop: { name: shop.name, address: shop.address, phone: shop.phone, email: shop.email, vatNumber: shop.vat_number, logoUrl: shop.logo_url ?? null },
