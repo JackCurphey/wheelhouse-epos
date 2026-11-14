@@ -5,19 +5,20 @@ import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
 import { printPaperWhenLoaded } from '@/screens/till/receipt.tsx';
-import { Back, Page, firstName, longDate, mono, note, orderHref, pounds, type C2wOrder } from './c2w-bits.tsx';
+import { Back, Msg, Page, firstName, longDate, mono, note, orderHref, pounds, type C2wOrder } from './c2w-bits.tsx';
 
 /**
  * The quote, to print or email (c2w.mjs quoteDoc; cw-quote, cw-quote-revised;
  * decision 6). The shop's own logo when it has one, else the drawn "LOGO"
  * placeholder: never a made-up mark. Print puts the quote on its own paper,
- * as receipts and bike tags print, once its logo has loaded (printPaperWhenLoaded). The revised quote's grey
- * message, which names what changed, comes with the change steps (logged).
+ * as receipts and bike tags print, once its logo has loaded (printPaperWhenLoaded). A revised quote's grey
+ * message names what changed until it has been emailed (task 4.8).
  */
 export type Quote = {
   shop: { name: string; address: string | null; phone: string | null; vatNumber: string | null; logoUrl: string | null };
   quoteRef: string; givenOn: string; revisedOn: string | null; validUntil: string; customerName: string; providerName: string;
   items: { productId: number; name: string; pricePence: number }[]; totalPence: number; closing: string; howToApply: string | null;
+  revision?: { what: 'bike' | 'accessories' | 'provider'; on: string; sent: boolean } | null;
 };
 export const quoteKey = (id: number) => ['c2w-quote', id];
 export const getQuote = (id: number) => apiGet<{ quote: Quote }>(`/api/c2w/orders/${id}/quote`);
@@ -135,6 +136,9 @@ function QuoteBody() {
             : null}
         </span>
       </div>
+      {q.revision && !q.revision.sent
+        ? <Msg><strong>Revised quote.</strong>{` The ${q.revision.what} changed on ${longDate(q.revision.on)} — it’s in the order’s history. ${name} hasn’t been sent it yet.`}</Msg>
+        : null}
       <div className="flex justify-center pt-1.5 pb-5"><QuoteDoc q={q} /></div>
     </Page>
   );

@@ -15,7 +15,7 @@ import { EMAIL_RE } from '../auth.js';
 import { badRequest, notFound, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
 import { sendEmailTo } from '../messaging/engine.js';
 import { queueC2wMessage, queueCertificateMessage, queueReleasedMessage, stopMessagesForCancel, undoReadyMessage } from '../c2w/messages.js';
-import { oldestSite } from '../lib/stock.js';
+import { lockStock, oldestSite } from '../lib/stock.js';
 import { handOverDue } from '../c2w/hand-over.js';
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { ownerOnly } from '../lib/owner-only.js';
@@ -24,7 +24,7 @@ import { csvOf } from '../lib/csv.js';
 import { markPaid, owedByProvider, owedOrders, recordPayment } from '../c2w/money.js';
 import {
   GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
-  nextFor, notInStock, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep,
+  nextFor, notInStock, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep, WRONG_STAGE,
 } from '../c2w/orders.js';
 
 const db = { prepare, exec: dbExec };
@@ -39,6 +39,9 @@ const NOTHING_ON_ORDER = { error: 'Nothing is on order for this bike. Refresh to
 const ORDER_SENT = { error: 'The supplier order has been sent, so this can’t be undone here. Change it on the purchase order.', code: 'order_sent' };
 const RETURN_NOT_BUILT = { error: 'Sending a bike back to the supplier isn’t built yet. Keep it as shop stock, or leave the order open for now.', code: 'return_not_built' };
 const NOTHING_TO_UNDO = { error: 'There’s no Hold longer to undo now. Refresh to see the hold’s date.', code: 'nothing_to_undo' };
+const SAME_CHOICE = { error: 'That’s what the order has already. Choose a different one.', code: 'same_choice' };
+const ON_ORDER_NOW = { error: 'This bike is on order from the supplier. Undo that order first, then change the bike.', code: 'on_order' };
+const RETIRED_PROVIDER = { error: 'This provider is retired. Choose another.', code: 'retired_provider' };
 const TOO_MANY = { error: 'This customer has been sent five Cycle to Work quotes in the last hour. Try again later.', code: 'too_many' };
 
 // BEGIN, the change, COMMIT; a refusal rolls back.
@@ -61,6 +64,32 @@ const settingsRow = async () => {
   await db.prepare('INSERT INTO c2w_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
   return db.prepare('SELECT * FROM c2w_settings').get();
 };
+// The order's accessories: ones it had keep their quoted price; added ones take
+// the shop's price now (the certificate's "change it to match", and Change).
+async function priceAccessories(quoted, ids) {
+  const kept = new Map(quoted.map((a) => [a.productId, a]));
+  const out = [];
+  for (const pid of ids) {
+    if (kept.has(pid)) { out.push(kept.get(pid)); continue; }
+    const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(pid);
+    if (!p) throw new ValidationError('Choose the accessories from the shop’s products');
+    out.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
+  }
+  return out;
+}
+const accessoriesPence = (list) => list.reduce((sum, a) => sum + a.pricePence, 0);
+function accessoryList(ids) {
+  if (!Array.isArray(ids) || ids.length > 20) throw new ValidationError('Choose up to 20 accessories');
+  ids.forEach((a) => wholeId(a, 'an accessory'));
+  if (new Set(ids).size !== ids.length) throw new ValidationError('Choose each accessory once');
+  return ids;
+}
+// After the certificate, a new total leaves the difference as "keep the order"
+// (the customer pays any extra at collection), or none when the two match.
+function withDifference(row, fields) {
+  if (row.certificate_pence === null) return fields;
+  return { ...fields, difference_choice: fields.total_pence === row.certificate_pence ? null : 'keep' };
+}
 const loadOrder = (id) => (Number.isInteger(id) ? db.prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(id) : null);
 
 function wholeId(v, label) {
@@ -141,7 +170,7 @@ export function register(route) {
       if (!(await db.prepare('SELECT 1 FROM customers WHERE id = ? AND active <> 0').get(customerId))) throw new ValidationError('Choose the customer');
       const provider = await db.prepare('SELECT retired_at FROM c2w_providers WHERE id = ?').get(providerId);
       if (!provider) throw new ValidationError('Choose the scheme provider');
-      if (provider.retired_at) throw new Refused(400, { error: 'This provider is retired. Choose another.', code: 'retired_provider' });
+      if (provider.retired_at) throw new Refused(400, RETIRED_PROVIDER);
       const bike = await db.prepare('SELECT id, price_pence FROM products WHERE id = ?').get(productId);
       if (!bike) throw new ValidationError('Choose the bike');
       const extras = [];
@@ -203,11 +232,16 @@ export function register(route) {
     const settings = await settingsRow();
     const tz = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
     const day = (t) => (t ? new Date(t).toLocaleDateString('en-CA', { timeZone: tz }) : null);
+    // cw-quote-revised: the latest change, and whether the quote has been emailed since.
+    const change = await db.prepare(`SELECT e.detail->>'what' AS what, e.detail->>'at' AS at, EXISTS (SELECT 1 FROM c2w_order_events m
+      WHERE m.order_id = e.order_id AND m.kind = 'quote_emailed' AND m.id > e.id) AS sent
+      FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'changed' ORDER BY e.id DESC LIMIT 1`).get(row.id);
     sendJson(res, 200, {
       quote: {
         shop: { name: shop.name, address: shop.address, phone: shop.phone, email: shop.email, vatNumber: shop.vat_number, logoUrl: shop.logo_url ?? null },
         quoteRef: quoteRef(row.quote_number), givenOn: day(row.quote_given_at), revisedOn: day(row.quote_revised_at), validUntil: row.valid_until_day,
         customerName: row.customer_name, providerName: row.provider_name,
+        revision: change ? { what: change.what, on: day(change.at), sent: change.sent } : null,
         items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row, settings.order_rule), howToApply: settings.how_to_apply,
       },
     });
@@ -321,6 +355,86 @@ export function register(route) {
         return { frame_id: null, held_at: null, hold_until: null, released_at: currentMoment().toISOString() };
       }, { detail });
       await queueReleasedMessage(id, { req, loginId: who.loginId });
+      return { order: serializeOrder(await loadOrder(id)) };
+    });
+  });
+
+  // Change the bike or size, the accessories or the provider (cw-more): the
+  // quote is revised, and nothing is sent until someone presses Email
+  // (cw-quote-revised). A new bike moves the hold: the old one goes back on sale
+  // and a free one of the new bike is held at the order's site, under the stock
+  // lock; with none free, the order needs one ordering in. Anyone checked in,
+  // like Release. The defaults taken where the drawings are silent are logged in
+  // docs/decisions/decided-while-building/2026-11-jack.md.
+  route('POST', '/api/c2w/orders/:id/change', async (req, res, params) => {
+    const body = await readJsonBody(req);
+    const who = await whoIsBooking(req);
+    if (!who) return sendJson(res, 409, CHECK_IN_FIRST);
+    const id = Number(params.id);
+    await save(res, 200, async () => {
+      const { what } = body;
+      if (!['bike', 'accessories', 'provider'].includes(what)) throw new ValidationError('Change the bike, the accessories or the provider');
+      const productId = what === 'bike' ? wholeId(body.productId, 'the bike') : null;
+      const providerId = what === 'provider' ? wholeId(body.providerId, 'the scheme provider') : null;
+      const accessoryIds = what === 'accessories' ? accessoryList(body.accessoryIds) : null;
+      const now = currentMoment().toISOString();
+      const detail = { what, at: now };
+      await takeStep(id, 'changed', who, async (row) => {
+        const fields = { quote_revised_at: now };
+        if (what === 'provider') {
+          // The certificate names the provider, so it's settled from then on.
+          if (row.stage === 'certificate') throw new Refused(409, WRONG_STAGE);
+          if (providerId === row.provider_id) throw new Refused(400, SAME_CHOICE);
+          const p = await db.prepare('SELECT name, retired_at, (SELECT w.name FROM c2w_providers w WHERE w.id = ?) AS was FROM c2w_providers WHERE id = ?').get(row.provider_id, providerId);
+          if (!p) throw new ValidationError('Choose the scheme provider');
+          if (p.retired_at) throw new Refused(400, RETIRED_PROVIDER);
+          Object.assign(detail, { from: p.was, to: p.name });
+          return { ...fields, provider_id: providerId };
+        }
+        if (what === 'accessories') {
+          const ids = (list) => [...list].sort((x, y) => x - y).join(',');
+          if (ids(accessoryIds) === ids(row.accessories.map((a) => a.productId))) throw new Refused(400, SAME_CHOICE);
+          const extras = await priceAccessories(row.accessories, accessoryIds);
+          const had = new Set(row.accessories.map((a) => a.productId));
+          const has = new Set(accessoryIds);
+          Object.assign(detail, {
+            added: extras.filter((a) => !had.has(a.productId)).map((a) => a.name),
+            removed: row.accessories.filter((a) => !has.has(a.productId)).map((a) => a.name),
+          });
+          const total = row.total_pence - accessoriesPence(row.accessories) + accessoriesPence(extras);
+          return withDifference(row, { ...fields, accessories: JSON.stringify(extras), total_pence: total });
+        }
+        if (productId === row.product_id) throw new Refused(400, SAME_CHOICE);
+        const bike = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(productId);
+        if (!bike) throw new ValidationError('Choose the bike');
+        // A bike coming from the supplier is that bike: undo the supplier order first.
+        if ((await loadOrder(row.id)).on_order) throw new Refused(409, ON_ORDER_NOW);
+        const was = await db.prepare('SELECT name FROM products WHERE id = ?').get(row.product_id);
+        // Both bikes' stock in one call (lockStock takes them in id order), so two
+        // changes the other way round queue rather than deadlock.
+        await lockStock([row.product_id, productId]);
+        // Held now, firm from the certificate, or wanted when quoted and never let go.
+        const firm = row.stage === 'certificate';
+        const wanted = Boolean(row.held_at) || firm || (row.hold_wanted && !row.released_at);
+        if (row.held_at) await releaseHold(row);
+        const got = wanted ? await takeHold(row.id, productId, row.site_id) : null;
+        // "held" only when a hold was wanted: false then means none was free to hold.
+        Object.assign(detail, { from: was.name, to: bike.name, ...(wanted ? { held: Boolean(got) } : {}) });
+        let until = null;
+        if (got && !firm) {
+          if (row.hold_until_day) until = row.hold_until_day;
+          else {
+            const s = await settingsRow();
+            if (s.hold_days === null) throw new Refused(409, SETTINGS_NEEDED);
+            until = addDays(await shopDay(), s.hold_days);
+          }
+        }
+        Object.assign(fields, {
+          product_id: productId, total_pence: bike.price_pence + accessoriesPence(row.accessories),
+          frame_id: got ? got.frameId : null, held_at: got ? (row.held_at ?? now) : null, hold_until: until,
+        });
+        return withDifference(row, fields);
+      }, { detail });
       return { order: serializeOrder(await loadOrder(id)) };
     });
   });
@@ -441,10 +555,7 @@ export function register(route) {
       if (difference !== null && !['keep', 'match'].includes(difference)) throw new ValidationError('Keep the order or change it to match');
       let accessoryIds = null;
       if (difference === 'match') {
-        accessoryIds = body.accessoryIds;
-        if (!Array.isArray(accessoryIds) || accessoryIds.length > 20) throw new ValidationError('Choose up to 20 accessories');
-        accessoryIds.forEach((a) => wholeId(a, 'an accessory'));
-        if (new Set(accessoryIds).size !== accessoryIds.length) throw new ValidationError('Choose each accessory once');
+        accessoryIds = accessoryList(body.accessoryIds);
       }
       const detail = { number, certificatePence: amount };
       let notReady = null;
@@ -455,17 +566,8 @@ export function register(route) {
         else if (difference === null && amount < row.total_pence) throw new Refused(400, CHOOSE_DIFFERENCE);
         else fields.difference_choice = difference ?? 'keep';
         if (fields.difference_choice === 'match') {
-          // Kept accessories keep their quoted price; added ones take the shop's price now.
-          const quoted = new Map(row.accessories.map((a) => [a.productId, a]));
-          const extras = [];
-          for (const pid of accessoryIds) {
-            if (quoted.has(pid)) { extras.push(quoted.get(pid)); continue; }
-            const p = await db.prepare('SELECT id, name, price_pence FROM products WHERE id = ?').get(pid);
-            if (!p) throw new ValidationError('Choose the accessories from the shop’s products');
-            extras.push({ productId: p.id, name: p.name, pricePence: p.price_pence });
-          }
-          const bikePence = row.total_pence - row.accessories.reduce((sum, a) => sum + a.pricePence, 0);
-          const total = bikePence + extras.reduce((sum, a) => sum + a.pricePence, 0);
+          const extras = await priceAccessories(row.accessories, accessoryIds);
+          const total = row.total_pence - accessoriesPence(row.accessories) + accessoriesPence(extras);
           if (total > amount) throw new ValidationError('The new total is more than the certificate. Take more off, or keep the order.');
           Object.assign(fields, { accessories: JSON.stringify(extras), total_pence: total, quote_revised_at: currentMoment().toISOString() });
         }
