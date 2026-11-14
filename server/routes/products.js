@@ -18,6 +18,7 @@ import { limitLockWait, lockStock, moveStock, oldestSite } from '../lib/stock.js
 import { CHECK_IN_FIRST, siteHere, whoIsBooking } from './purchase-orders.js';
 import { MAX_PRICE_PENCE, PRICE_IN_POUNDS, penceToPounds, poundsOf, wholePence } from '../lib/pence.js';
 import { newestFirst, priceChangesOf, recordPriceChanges } from '../lib/price-changes.js';
+import { heldCounts } from '../c2w/orders.js';
 import { bikeKinds, isBike } from '../lib/bikes.js';
 import { productWarranty } from '../lib/warranties.js';
 
@@ -76,7 +77,14 @@ async function listProducts({ search, category, activeOnly }, costs) {
   sql += ' ORDER BY category, name';
   const rows = await db.prepare(sql).all(...params);
   const kinds = await bikeKinds();
-  return rows.map((row) => serializeProduct(row, costs, kinds));
+  // What's free to sell: the stock figure less what Cycle to Work orders hold, which the
+  // figure itself keeps until the bike is collected (task 5.4). Never below the figure's own
+  // shortfall, so a figure already short stays as it was.
+  const held = await heldCounts(rows.map((r) => r.id));
+  return rows.map((row) => {
+    const h = held.get(row.id) ?? 0;
+    return { ...serializeProduct(row, costs, kinds), freeQty: h ? Math.max(Math.min(row.stock_qty, 0), row.stock_qty - h) : row.stock_qty };
+  });
 }
 
 // ---------- Products ----------
@@ -212,11 +220,15 @@ export function register(route) {
     // openspec/changes/frame-numbers, design 4).
     const kinds = await bikeKinds();
     const frames = isBike(row.category, kinds) ? (await db.prepare(
-      `SELECT f.id, f.frame_number, f.state, f.received_at, f.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier
+      `SELECT f.id, f.frame_number, f.state, f.received_at, f.delivery_id, COALESCE(d.supplier_name, sp.name) AS supplier,
+              o.id AS order_id, o.customer_id, c.name AS customer_name, to_char(o.hold_until, 'YYYY-MM-DD') AS hold_until
          FROM stock_frames f LEFT JOIN deliveries d ON d.id = f.delivery_id LEFT JOIN suppliers sp ON sp.id = d.supplier_id
+         LEFT JOIN c2w_orders o ON o.id = f.c2w_order_id AND f.state = 'held' LEFT JOIN customers c ON c.id = o.customer_id
         WHERE f.product_id = ?
         ORDER BY CASE f.state WHEN 'in_stock' THEN 0 WHEN 'held' THEN 1 ELSE 2 END, f.received_at DESC, f.id DESC LIMIT 500`
-    ).all(id)).map((f) => ({ id: f.id, frameNumber: f.frame_number, state: f.state, bookedInAt: f.received_at, deliveryId: f.delivery_id, supplierName: f.supplier ?? null })) : undefined;
+    ).all(id)).map((f) => ({ id: f.id, frameNumber: f.frame_number, state: f.state, bookedInAt: f.received_at, deliveryId: f.delivery_id, supplierName: f.supplier ?? null,
+      // A held frame says whose order it's for and until when ("Held for [Customer] until [date]", task 5.4).
+      heldFor: f.order_id === null ? null : { orderId: f.order_id, customerId: f.customer_id, customerName: f.customer_name, until: f.hold_until } })) : undefined;
     sendJson(res, 200, {
       ...serializeProduct(row, costs, kinds),
       frames,

@@ -26,6 +26,7 @@ let a11y;
 let emailReply;
 let customerReply;
 let checkedIn;
+let products;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -50,13 +51,14 @@ function stubServer(employee) {
     if (u.pathname === '/api/your-settings' && a11y) return reply(200, { accessibility: a11y });
     if (u.pathname === '/api/employees') return reply(200, CASHIERS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
-    if (u.pathname === '/api/products') return reply(200, [PADS]);
+    if (u.pathname === '/api/products') return reply(200, products ?? [PADS]);
     return reply(404, { error: 'Not found' });
   };
 }
 
 async function openTill({ employee = JO, accessibility = null, serving = { id: 21, name: 'Jo Taylor' } } = {}) {
   checkedIn = serving;
+  products = null;
   saleReply = null;
   emailReply = null;
   customerReply = null;
@@ -122,6 +124,35 @@ test('a scanned part shows its SKU; more than the stock says so but still sells'
   assert.ok(has(t.sale.queryByText('£28.00 each')));
   assert.ok(has(t.sale.queryByRole('button', { name: 'Take payment · £56.00' })));
   t.fireEvent.click(t.sale.getByRole('button', { name: 'One fewer Shimano brake pads' }));
+  assert.equal(has(t.sale.queryByText(/sold anyway/)), false);
+});
+
+// A bike held for a Cycle to Work order is in the stock figure but not free to sell
+// (openspec/changes/cycle-to-work task 5.4). The till warns, never blocks (till-serial-held;
+// walk-throughs 2 M6 and 5 M4).
+const BIKE = { id: 41, sku: '[Supplier code]', barcode: null, name: '[Bike] · [Size]', price: 1000, stockQty: 1, freeQty: 0, active: true };
+
+test('5.4 a bike held for Cycle to Work shows as held in the search, and selling it warns but still sells', async () => {
+  const t = await openTill();
+  products = [BIKE];
+  const box = await t.ui.findByLabelText('Search products or services, or scan a barcode');
+  t.fireEvent.change(box, { target: { value: '[Bike]' } });
+  const hit = await t.ui.findByRole('button', { name: /^\[Bike\] · \[Size\]/ });
+  assert.equal(hit.textContent, '[Bike] · [Size] · £1,000.00None free · 1 held for Cycle to Work');
+  t.fireEvent.click(hit);
+  assert.ok(has(await t.sale.findByText('Stock says 0 — sold anyway')));
+  assert.ok(has(t.sale.queryByRole('button', { name: 'Take payment · £1,000.00' })));
+});
+
+test('5.4 a bike with one free and one held says both', async () => {
+  const t = await openTill();
+  products = [{ ...BIKE, stockQty: 2, freeQty: 1 }];
+  const box = await t.ui.findByLabelText('Search products or services, or scan a barcode');
+  t.fireEvent.change(box, { target: { value: '[Bike]' } });
+  const hit = await t.ui.findByRole('button', { name: /^\[Bike\] · \[Size\]/ });
+  assert.match(hit.textContent, /£1,000\.001 free · 1 held for Cycle to Work$/);
+  t.fireEvent.click(hit);
+  await t.waitFor(() => assert.ok(has(t.sale.queryByText('Part · [Supplier code]'))));
   assert.equal(has(t.sale.queryByText(/sold anyway/)), false);
 });
 

@@ -8,11 +8,20 @@ import { poundsText } from '@/lib/money.ts';
  * types it, then Enter, which picks the product with that exact barcode or
  * SKU). Used by Add item (the job's work and parts) and Add to quote.
  */
-export type Product = { id: number; name: string; sku: string | null; barcode: string | null; price: number; stockQty: number };
+// freeQty: the stock figure less what Cycle to Work orders hold (task 5.4); the figure keeps them.
+export type Product = { id: number; name: string; sku: string | null; barcode: string | null; price: number; stockQty: number; freeQty?: number };
 export type Service = { id: number; name: string; price: number; minutes: number; active: boolean };
 export type Picked = { type: 'service'; service: Service } | { type: 'product'; product: Product };
 
 const money = (n: number) => poundsText(Number(n));
+// How many are free to sell; a bike held for Cycle to Work isn't (task 5.4).
+export const freeOf = (p: Product) => p.freeQty ?? p.stockQty;
+function stockText(p: Product) {
+  const free = freeOf(p);
+  const held = p.stockQty - free;
+  if (held <= 0) return free > 0 ? `${free} in stock` : 'None in stock';
+  return `${free > 0 ? `${free} free` : 'None free'} · ${held} held for Cycle to Work`;
+}
 
 export function ItemSearch({ id, disabled, onPick }: { id: string; disabled?: boolean; onPick: (p: Picked) => void }) {
   const [search, setSearch] = useState('');
@@ -56,7 +65,7 @@ export function ItemSearch({ id, disabled, onPick }: { id: string; disabled?: bo
         {(products.data ?? []).map((p) => (
           <button key={`p${p.id}`} type="button" disabled={disabled} onClick={() => onPick({ type: 'product', product: p })} className="flex min-h-11 items-center justify-between gap-3 rounded-md px-2.5 text-left text-sm hover:bg-[var(--wh-hover)]">
             <span>{`${p.name} · ${money(p.price)}`}</span>
-            <span className="text-xs text-[var(--wh-muted)]">{p.stockQty > 0 ? `${p.stockQty} in stock` : 'None in stock'}</span>
+            <span className="text-xs text-[var(--wh-muted)]">{stockText(p)}</span>
           </button>
         ))}
         {term.length >= 2 && products.isSuccess && products.data.length === 0 && serviceHits.length === 0 ? (

@@ -67,9 +67,11 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 5.2 Test: a hold never ends by itself; the reminder day and the end date drive "hold ending soon" and "hold ended — choose"
 - [x] 5.3 Test: Hold longer moves the date; Release the bike frees the frame and keeps the order open
 - [ ] 5.4 (its own pull request, 5b: decided-while-building 12 Nov, PR 5 item 7) Test: a held frame is left out of available stock in the till search, the Stock page and the storefront (sold out when it's the last); the till refuses it in any other sale
-- [ ] 5.5 (with 5.4, in pull request 5b) Screen test: `cw-hold-ending`, `cw-list-hold-ended`; the Stock page's "Held for [Customer] until [date] · Cycle to Work — not for sale"
-- [ ] 5.6 Build to pass 5.1–5.5 (5.1–5.3 built in pull request 5)
-- [ ] 5.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+  - PR 5b: built for the till search (free and held counts), the basket's warning, the Stock page and the products list (`tests/c2w-holds-stock.test.js`); the storefront was already covered (`tests/site-products.test.js`). Left open only for **the till's refusal, which is not built**: it contradicts `till-serial-held` and walk-throughs 2 M6 / 5 M4 (warned, never blocked); left for Jack (2026-11-jack.md, 14 Nov PR 5b item 2).
+- [x] 5.5 (with 5.4, in pull request 5b) Screen test: `cw-hold-ending`, `cw-list-hold-ended`; the Stock page's "Held for [Customer] until [date] · Cycle to Work — not for sale"
+  - PR 5b: `cw-hold-ending` and More › Release in `tests/screens/c2w-orders.test.js` and `c2w-cancel.test.js`; the Stock page line in `stock-list.test.js`. `cw-list-hold-ended` was already covered (`c2w-orders.test.js`, "a hold the server says has ended").
+- [x] 5.6 Build to pass 5.1–5.5 (5.1–5.3 built in pull request 5)
+- [x] 5.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 6. Certificate, applied and ordering in (pull request 6, about 550 lines, risky: stock)
 

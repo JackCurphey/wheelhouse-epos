@@ -113,15 +113,32 @@ const menuOf = async (ui, fireEvent) => {
 const itemsOf = (menu) => [...menu.querySelectorAll('[role="menuitem"]')].map((m) => m.textContent);
 const NOTE = 'A change after the quote is sent makes a revised quote; nothing is sent until you press Email.';
 
-test('cw-more: More… opens the drawn menu: the three changes, a line, Cancel the order…, and the note', async () => {
+test('cw-more: More… opens the drawn menu: the three changes, Release the bike, a line, Cancel the order…, and the note', async () => {
   const { ui, fireEvent } = await open();
   const more = await ui.findByRole('button', { name: 'More for Maya Patel’s order' });
   assert.equal(more.getAttribute('aria-haspopup'), 'menu');
   assert.equal(more.textContent, 'More…');
   const menu = await menuOf(ui, fireEvent);
-  assert.deepEqual(itemsOf(menu), ['Change the bike or size', 'Change the accessories', 'Change the provider', 'Cancel the order…']);
+  assert.deepEqual(itemsOf(menu), ['Change the bike or size', 'Change the accessories', 'Change the provider', 'Release the bike', 'Cancel the order…']);
   assert.ok(menu.querySelector('[role="separator"]'), 'a line before Cancel');
   assert.equal(menu.querySelector('p')?.textContent, NOTE);
+});
+
+test('cw-more › Release the bike opens the hold popup with Release picked (task 5.6)', async () => {
+  const { ui, fireEvent, within } = await open();
+  fireEvent.click(within(await menuOf(ui, fireEvent)).getByRole('menuitem', { name: 'Release the bike' }));
+  const dialog = within(await ui.findByRole('dialog', { name: /^Maya Patel’s hold ends on / }));
+  assert.equal(dialog.getByRole('radio', { name: 'Release the bike' }).checked, true);
+});
+
+test('cw-more: a bike not held has no Release the bike', async () => {
+  const { ui, fireEvent } = await open({ theOrder: order({ held: false, holdUntil: null, frameId: null, inStock: false }) });
+  assert.deepEqual(itemsOf(await menuOf(ui, fireEvent)), ['Change the bike or size', 'Change the accessories', 'Change the provider', 'Cancel the order…']);
+});
+
+test('cw-more: once the certificate is in, the hold is firm and there is no Release the bike', async () => {
+  const { ui, fireEvent } = await open({ theOrder: order({ stage: 'certificate', certificateNumber: '[certificate number]', certificatePence: 100000, certificateReceivedOn: day(3), next: 'ready' }) });
+  assert.ok(!itemsOf(await menuOf(ui, fireEvent)).includes('Release the bike'));
 });
 
 test('cw-more: once the certificate is in, the provider can’t change', async () => {

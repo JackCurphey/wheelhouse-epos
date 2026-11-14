@@ -10,7 +10,7 @@ import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
-import { ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
+import { freeOf, ItemSearch, type Picked, type Service } from '@/screens/diary/item-search.tsx';
 import { PayDialog } from './pay-dialog.tsx';
 import { newRequestKey } from '@/screens/book/details-rules.ts';
 import { FloatCheck } from './float-check.tsx';
@@ -197,7 +197,7 @@ function SaleTill({ onOpenChange, c2w }: { onOpenChange: (open: boolean) => void
     setLines((ls) => {
       const same = ls.find((l) => l.kind === 'part' && l.productId === pr.id);
       if (same) return ls.map((l) => (l === same ? { ...l, qty: l.qty + 1 } : l));
-      return [...ls, { key: nextKey++, kind: 'part', name: pr.name, unitPrice: pr.price, usualPrice: pr.price, qty: 1, productId: pr.id, sku: pr.sku, stockQty: pr.stockQty }];
+      return [...ls, { key: nextKey++, kind: 'part', name: pr.name, unitPrice: pr.price, usualPrice: pr.price, qty: 1, productId: pr.id, sku: pr.sku, stockQty: freeOf(pr) }];
     });
   }
   const change = (key: number, over: Partial<TillLine>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...over } : l)));
