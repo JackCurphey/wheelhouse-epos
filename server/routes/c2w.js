@@ -22,9 +22,10 @@ import { ownerOnly } from '../lib/owner-only.js';
 import { nameKey } from '../lib/restock.js';
 import { csvOf } from '../lib/csv.js';
 import { markPaid, owedByProvider, owedOrders, recordPayment } from '../c2w/money.js';
+import { quoteAttachment, quoteFor, revisedQuoteFiles } from '../c2w/quote-pdf.js';
 import {
   GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
-  nextFor, notInStock, quoteClosing, quoteItems, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep, WRONG_STAGE,
+  nextFor, notInStock, quoteClosing, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep, WRONG_STAGE,
 } from '../c2w/orders.js';
 
 const db = { prepare, exec: dbExec };
@@ -226,31 +227,11 @@ export function register(route) {
     sendJson(res, 200, { order: { ...serializeOrder(row), next, events: await eventsOf(row.id) }, today });
   });
 
-  // What the printed quote shows (cw-quote).
+  // What the printed quote shows (cw-quote); the emailed PDF shows the same (quote-pdf.js).
   route('GET', '/api/c2w/orders/:id/quote', async (req, res, params) => {
-    const row = await loadOrder(Number(params.id));
-    if (!row) return notFound(res);
-    const shop = await db.prepare(`SELECT s.name, s.address, s.phone, s.email, s.vat_number, ss.logo_url
-      FROM shops s LEFT JOIN storefront_settings ss ON ss.shop_id = s.id WHERE s.id = current_setting('app.current_shop_id')::int`).get();
-    const settings = await settingsRow();
-    const tz = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
-    const day = (t) => (t ? new Date(t).toLocaleDateString('en-CA', { timeZone: tz }) : null);
-    // cw-quote-revised: the latest change, and whether the quote has been emailed since,
-    // on its own or with the certificate that changed the order to match (cw-certificate:
-    // "The revised quote goes to Maya with the “Certificate received” email").
-    const change = await db.prepare(`SELECT e.detail->>'what' AS what, e.detail->>'at' AS at, EXISTS (SELECT 1 FROM c2w_order_events m
-      WHERE m.order_id = e.order_id AND m.id > e.id
-        AND m.kind IN ('quote_emailed', 'revised_quote_sent')) AS sent
-      FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'changed' ORDER BY e.id DESC LIMIT 1`).get(row.id);
-    sendJson(res, 200, {
-      quote: {
-        shop: { name: shop.name, address: shop.address, phone: shop.phone, email: shop.email, vatNumber: shop.vat_number, logoUrl: shop.logo_url ?? null },
-        quoteRef: quoteRef(row.quote_number), givenOn: day(row.quote_given_at), revisedOn: day(row.quote_revised_at), validUntil: row.valid_until_day,
-        customerName: row.customer_name, providerName: row.provider_name,
-        revision: change ? { what: change.what, on: day(change.at), sent: change.sent } : null,
-        items: quoteItems(row), totalPence: row.total_pence, closing: quoteClosing(row, settings.order_rule), howToApply: settings.how_to_apply,
-      },
-    });
+    const quote = await quoteFor(Number(params.id));
+    if (!quote) return notFound(res);
+    sendJson(res, 200, { quote });
   });
 
   // What the till asks for at hand-over, before any card is taken (till-c2w-pay):
@@ -286,12 +267,14 @@ export function register(route) {
       settings.how_to_apply ? `How to apply: ${settings.how_to_apply}` : null,
     ].filter(Boolean).join('\n\n');
     const ctx = await currentSession(req);
+    // The quote as it is now goes with it as a PDF (cw-email: "Attached: Quote [n]").
+    const file = await quoteAttachment(row.id);
     await save(res, 200, async () => {
       // Counted under the customer's lock, so two presses at once can't both slip under five.
       await db.prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(row.customer_id);
       const { n } = await db.prepare("SELECT count(*)::int AS n FROM customer_messages WHERE customer_id = ? AND template_key = 'c2w_quote' AND created_at > now() - interval '1 hour'").get(row.customer_id);
       if (n >= EMAILS_PER_HOUR) throw new Refused(429, TOO_MANY);
-      await sendEmailTo({ to, subject: 'Your Cycle to Work quote', body: text, customerId: row.customer_id, loginId: ctx.login.id, templateKey: 'c2w_quote' });
+      await sendEmailTo({ to, subject: 'Your Cycle to Work quote', body: text, customerId: row.customer_id, loginId: ctx.login.id, templateKey: 'c2w_quote', attachments: file ? [file] : [] });
       await addEvent(row.id, 'quote_emailed', who, { detail: { to } });
       return { sent: true, to };
     });
@@ -599,10 +582,14 @@ export function register(route) {
         }
         return fields;
       }, { detail });
-      const told = await queueCertificateMessage(id, { req, loginId: who.loginId });
-      // Changed to match: the revised quote went with that message, if it went at all
-      // (not shown in "What's happened"; it clears cw-quote-revised's grey message).
-      if (detail.revisedQuote && told?.id) await addEvent(id, 'revised_quote_sent', who, { detail: { messageId: told.id } });
+      // Changed to match: the revised quote goes with the message as a PDF
+      // (cw-email-certificate-revised), by email only. A PDF that fails leaves the
+      // message without it rather than failing the certificate.
+      const attachments = detail.revisedQuote ? await revisedQuoteFiles(id) : [];
+      const told = await queueCertificateMessage(id, { req, loginId: who.loginId, attachments });
+      // It went only if that message went by email (not shown in "What's
+      // happened"; it clears cw-quote-revised's grey message).
+      if (attachments.length && told?.id && told.channel === 'email') await addEvent(id, 'revised_quote_sent', who, { detail: { messageId: told.id } });
       // The next step rides along, so the bike-was-released popup offers ordering only when the shop's rule allows it.
       const row = await loadOrder(id);
       const next = nextFor(row, (await settingsRow()).order_rule, today);
