@@ -40,7 +40,8 @@ export async function linkState() {
 export async function productsToSend(ids = null) {
   const rows = await prepare(
     `SELECT p.id, p.sku, p.name, p.category, p.price, p.photo_url,
-            p.stock_qty - (SELECT count(*) FROM stock_frames f WHERE f.product_id = p.id AND f.state = 'held') AS stock_qty
+            p.stock_qty - (SELECT count(*) FROM stock_frames f WHERE f.product_id = p.id AND f.state = 'held')
+                        - (SELECT count(*) FROM c2w_orders o WHERE o.product_id = p.id AND c2w_count_held(o)) AS stock_qty
        FROM products p
       WHERE p.active = 1 AND p.show_online${ids ? ' AND p.id = ANY(?::int[])' : ''} ORDER BY p.id`
   ).all(...(ids ? [ids] : []));

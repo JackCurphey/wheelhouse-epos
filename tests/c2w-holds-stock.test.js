@@ -17,6 +17,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedProduct } from './helpers/till.js';
+import { productsToSend } from '../server/shopify/link.js';
 
 let server;
 let owner;
@@ -143,3 +144,47 @@ test('5.4 the product page says whose order a held frame is for and until when (
   assert.equal(kept.state, 'held');
   assert.deepEqual(kept.heldFor, { orderId: held.id, customerId: maya.id, customerName: 'Maya Patel', until: '2026-09-08' });
 });
+
+// Shopify (ws-shopify-connect; walk-through 5 M4): a held bike is sold out online, by frame or by count.
+const online = async (bike) => inShop(async () => {
+  await prepare('UPDATE products SET show_online = true WHERE id = ?').run(bike);
+  return (await productsToSend([bike]))[0].stock;
+});
+
+test('5.4 Shopify is sent the stock less a bike held by count, and less held frames as well', async () => {
+  const bike = await countedBike(3);
+  assert.equal(await online(bike), 3);
+  assert.equal((await quote(bike)).body.order.held, true);
+  assert.equal(await online(bike), 2, 'a bike held by count is left out of what Shopify sells');
+  await inShop(async () => {
+    const key = `[FRAME-${tag()}]`;
+    await prepare("INSERT INTO stock_frames (product_id, site_id, frame_number, frame_key, state) VALUES (?, ?, ?, ?, 'held') RETURNING id").get(bike, site, key, key);
+  });
+  assert.equal(await online(bike), 1, 'a held frame and a count hold add up');
+});
+
+test('5.4 an order holding a frame is left out of what Shopify sells once, not twice', async () => {
+  const bike = await framedBike(3);
+  assert.equal(await online(bike), 3);
+  assert.equal((await quote(bike)).body.order.held, true);
+  assert.equal(await online(bike), 2, 'a frame held for an order counts once');
+});
+
+test('5.4 a hold taken or let go by count queues the bike for Shopify, as a held frame does', async () => {
+  const bike = await countedBike(2);
+  await online(bike);
+  // Linked and sent once. No sender serves this provider, so the queue stays put for the test to read.
+  await inShop(async () => prepare("INSERT INTO shopify_link (provider, address, last_sent_at) VALUES ('[no sender]', '[shop].myshopify.com', now()) ON CONFLICT (shop_id) DO UPDATE SET state = 'idle', last_sent_at = now() RETURNING shop_id").get());
+  const queued = async () => inShop(async () => Boolean(await prepare('SELECT 1 FROM shopify_changed WHERE product_id = ?').get(bike)));
+  const clear = async () => inShop(async () => prepare('DELETE FROM shopify_changed WHERE product_id = ?').run(bike));
+  await clear();
+  const held = (await quote(bike)).body.order;
+  assert.equal(held.held, true);
+  assert.equal(await queued(), true, 'the hold queues the bike');
+  await clear();
+  await inShop(async () => prepare("UPDATE c2w_orders SET stage = 'waiting' WHERE id = ?").run(held.id));
+  assert.equal(await queued(), false, 'a change that leaves the hold as it was queues nothing');
+  await inShop(async () => prepare("UPDATE c2w_orders SET stage = 'cancelled' WHERE id = ?").run(held.id));
+  assert.equal(await queued(), true, 'letting the hold go queues the bike');
+});
+
