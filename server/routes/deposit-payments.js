@@ -79,7 +79,7 @@ export function register(route) {
     const { cardNumber } = (await readJsonBody(req)) ?? {};
     try {
       const { status } = await provider.card(params.ref, cardNumber);
-      await prepare('UPDATE online_payments SET status = ?, updated_at = now() WHERE provider = ? AND provider_ref = ?').run(status, 'pretend', params.ref);
+      await prepare("UPDATE online_payments SET status = ?, updated_at = now() WHERE provider = ? AND provider_ref = ? AND purpose = 'deposit'").run(status, 'pretend', params.ref);
       if (status === 'declined') return sendJson(res, 402, { error: 'The card didn’t go through.', code: 'card_declined' });
       sendJson(res, 200, { status });
     } catch (err) {
