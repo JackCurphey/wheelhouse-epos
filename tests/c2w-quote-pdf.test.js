@@ -7,7 +7,7 @@
 // The server clock is pinned to 1 Sep 2026 (WHEELHOUSE_TEST_CLOCK).
 // Needs the compose Postgres up (npm run docker:up) or it hangs with no output.
 import '../server/load-env.js';
-import test, { before, after } from 'node:test';
+import test, { before, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
@@ -18,7 +18,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedProduct } from './helpers/till.js';
-import { quotePdf, logoFor } from '../server/c2w/quote-pdf.js';
+import { quotePdf, logoFor, pdf, revisedQuoteFiles, LOGO_MAX_BYTES } from '../server/c2w/quote-pdf.js';
 import { UPLOADS_DIR } from '../server/lib/uploads.js';
 
 let server;
@@ -121,6 +121,8 @@ test('the shop’s uploaded PNG or JPEG logo goes in; a WebP, a logo held elsewh
   assert.equal(await logoFor('/api/uploaded-images/../../package.json'), null, 'only an upload’s own name');
   assert.equal(await logoFor(`/api/uploaded-images/${randomBytes(24).toString('hex')}`), null, 'a missing file');
   assert.equal(await logoFor(null), null);
+  const big = Buffer.concat([PNG, Buffer.alloc(LOGO_MAX_BYTES)]);
+  assert.ok((await logoFor(await upload(big))) === null, 'a logo too big for an email is left out');
   assert.equal(hasImage(await quotePdf(QUOTE, { logo: PNG })), true, 'the logo is drawn');
 });
 
@@ -199,4 +201,20 @@ test('a certificate that matches, or one kept for more, sends no quote; a text c
   assert.equal((await filesOf(m3.id)).length, 0, 'a text carries no file');
   // No quote went, so none is recorded as sent (it would clear cw-quote-revised's grey message).
   assert.equal(await quoteSent(texted.id), false, 'a text sends no quote');
+});
+
+test('a revised quote PDF that can’t be made is left off, so the certificate still saves', async () => {
+  const o = await quote(await framedBike('1000.00'));
+  const fine = await inShop(() => revisedQuoteFiles(o.id));
+  assert.deepEqual(fine.map((f) => f.filename), [`Revised quote ${o.quoteRef}.pdf`]);
+  const make = mock.method(pdf, 'make', () => Promise.reject(new Error('[pdf failure]')));
+  const quiet = mock.method(console, 'error', () => {});
+  try {
+    assert.deepEqual(await inShop(() => revisedQuoteFiles(o.id)), []);
+    assert.ok(quiet.mock.calls.some((c) => String(c.arguments.join(' ')).includes('[pdf failure]')), 'the failure is logged');
+  } finally {
+    make.mock.restore();
+    quiet.mock.restore();
+  }
+  assert.deepEqual(await inShop(() => revisedQuoteFiles(-1)), [], 'no such order, no file');
 });

@@ -22,7 +22,7 @@ import { ownerOnly } from '../lib/owner-only.js';
 import { nameKey } from '../lib/restock.js';
 import { csvOf } from '../lib/csv.js';
 import { markPaid, owedByProvider, owedOrders, recordPayment } from '../c2w/money.js';
-import { quoteAttachment, quoteFile, quoteFor } from '../c2w/quote-pdf.js';
+import { quoteAttachment, quoteFor, revisedQuoteFiles } from '../c2w/quote-pdf.js';
 import {
   GROUPS, NOT_HELD, ORDER_SELECT, PAID_SHOWN_DAYS, Refused, addDays, addEvent, emailClosing, eventsOf, freeHere, heldHere,
   nextFor, notInStock, quoteClosing, quoteRef, readyToOrder, releaseHold, serializeOrder, shopDay, shopTimeZone, takeHold, takeStep, WRONG_STAGE,
@@ -65,19 +65,6 @@ const settingsRow = async () => {
   await db.prepare('INSERT INTO c2w_settings DEFAULT VALUES ON CONFLICT (shop_id) DO NOTHING RETURNING shop_id').run();
   return db.prepare('SELECT * FROM c2w_settings').get();
 };
-// The revised quote as a PDF for the certificate's message (design 7). The
-// order is read outside the try, so a database error still fails the save; a
-// PDF that can't be made is logged and left off, and the certificate saves.
-async function revisedQuoteFiles(id) {
-  const q = await quoteFor(id);
-  if (!q) return [];
-  try {
-    return [await quoteFile(q, { revised: true })];
-  } catch (err) {
-    console.error(`Cycle to Work: order ${id}'s revised quote PDF couldn't be made, so it went without one:`, err.message);
-    return [];
-  }
-}
 // The order's accessories: ones it had keep their quoted price; added ones take
 // the shop's price now (the certificate's "change it to match", and Change).
 // An added one must still be on sale, as the pickers offer (decided while
@@ -287,7 +274,7 @@ export function register(route) {
       await db.prepare('SELECT id FROM customers WHERE id = ? FOR UPDATE').get(row.customer_id);
       const { n } = await db.prepare("SELECT count(*)::int AS n FROM customer_messages WHERE customer_id = ? AND template_key = 'c2w_quote' AND created_at > now() - interval '1 hour'").get(row.customer_id);
       if (n >= EMAILS_PER_HOUR) throw new Refused(429, TOO_MANY);
-      await sendEmailTo({ to, subject: 'Your Cycle to Work quote', body: text, customerId: row.customer_id, loginId: ctx.login.id, templateKey: 'c2w_quote', attachments: [file] });
+      await sendEmailTo({ to, subject: 'Your Cycle to Work quote', body: text, customerId: row.customer_id, loginId: ctx.login.id, templateKey: 'c2w_quote', attachments: file ? [file] : [] });
       await addEvent(row.id, 'quote_emailed', who, { detail: { to } });
       return { sent: true, to };
     });
@@ -602,7 +589,7 @@ export function register(route) {
       const told = await queueCertificateMessage(id, { req, loginId: who.loginId, attachments });
       // It went only if that message went by email (not shown in "What's
       // happened"; it clears cw-quote-revised's grey message).
-      if (detail.revisedQuote && told?.id && told.channel === 'email') await addEvent(id, 'revised_quote_sent', who, { detail: { messageId: told.id } });
+      if (attachments.length && told?.id && told.channel === 'email') await addEvent(id, 'revised_quote_sent', who, { detail: { messageId: told.id } });
       // The next step rides along, so the bike-was-released popup offers ordering only when the shop's rule allows it.
       const row = await loadOrder(id);
       const next = nextFor(row, (await settingsRow()).order_rule, today);

@@ -48,6 +48,10 @@ const isJpeg = (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] ===
  * space is left empty: the screen's "LOGO" box would read as a missing mark on
  * a customer's file, and a made-up mark is never drawn.
  */
+// A logo bigger than this is left out: the PDF goes in an email, and a shop's
+// upload can be up to 5 MB (logged as a default).
+export const LOGO_MAX_BYTES = 1024 * 1024;
+
 export async function logoFor(url) {
   const key = typeof url === 'string' ? UPLOADED.exec(url)?.[1] : null;
   if (!key) return null;
@@ -57,6 +61,7 @@ export async function logoFor(url) {
   } catch {
     return null;
   }
+  if (bytes.length > LOGO_MAX_BYTES) return null;
   return isPng(bytes) || isJpeg(bytes) ? bytes : null;
 }
 
@@ -155,8 +160,28 @@ export async function quoteAttachment(orderId, { revised = false } = {}) {
   return q ? quoteFile(q, { revised }) : null;
 }
 
+// Made through this, so a test can make it fail.
+export const pdf = { make: quotePdf };
+
 /** quoteAttachment for a quote already read (quoteFor); no database work. */
 export async function quoteFile(q, { revised = false } = {}) {
-  const content = await quotePdf(q, { logo: await logoFor(q.shop.logoUrl) });
+  const content = await pdf.make(q, { logo: await logoFor(q.shop.logoUrl) });
   return { filename: `${revised ? 'Revised quote' : 'Quote'} ${q.quoteRef}.pdf`, contentType: 'application/pdf', content };
+}
+
+/**
+ * The revised quote for the certificate's message (design 7): one file, or none
+ * when there's no such order or the PDF can't be made. The order is read
+ * outside the try, so a database error still fails the save; a PDF that can't
+ * be made is logged and left off, and the certificate saves.
+ */
+export async function revisedQuoteFiles(orderId) {
+  const q = await quoteFor(orderId);
+  if (!q) return [];
+  try {
+    return [await quoteFile(q, { revised: true })];
+  } catch (err) {
+    console.error(`Cycle to Work: order ${orderId}'s revised quote PDF couldn't be made, so it went without one:`, err.message);
+    return [];
+  }
 }
