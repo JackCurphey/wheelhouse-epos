@@ -7,5 +7,5 @@
 ## 2. Before merging (risky area 4)
 
 - [x] 2.1 `/review` and the `risky-area-reviewer` agent: no defects; added from them a test that a stuck message's files go while a held one's stay (mutations caught: keeping 'unknown', sweeping held), the sweep's own error log, and timing wording
-- [ ] 2.2 lint, `npm test`, `npm run test:browser` locally; CI run by hand on the branch, green
-- [ ] 2.3 Archive as the last commit
+- [x] 2.2 lint, `npm test`, `npm run test:browser` passed locally on b5563f4e (after merging main); CI run by hand on the branch (43563404633), green
+- [x] 2.3 Archived as the last commit
