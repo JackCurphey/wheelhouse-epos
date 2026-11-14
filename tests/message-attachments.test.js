@@ -134,3 +134,16 @@ test('an undone message’s files are cleared by the next round; a message still
   assert.equal((await filesOf(undone.id)).length, 0, 'undone, so never needed');
   assert.equal((await filesOf(waiting.id)).length, 1, 'still in its minute, so kept');
 });
+
+test('a stuck message’s files are cleared once it is marked unknown; a held one keeps its own', async () => {
+  const stuck = await inShop(() => sendEmailTo({ to: 'stuck@example.test', subject: 'S', body: 'B', attachments: [PDF] }));
+  const held = await inShop(() => sendEmailTo({ to: 'held@example.test', subject: 'S', body: 'B', attachments: [PDF] }));
+  await inShop(async () => {
+    await prepare("UPDATE customer_messages SET intent_state = 'sending', claimed_at = ? WHERE id = ?").run(new Date(Date.now() - 60 * 60_000).toISOString(), stuck);
+    await prepare("UPDATE customer_messages SET send_after = 'infinity' WHERE id = ?").run(held);
+  });
+  await sendWatching();
+  assert.equal((await inShop(() => prepare('SELECT intent_state FROM customer_messages WHERE id = ?').get(stuck))).intent_state, 'unknown');
+  assert.equal((await filesOf(stuck)).length, 0, 'stuck, so never sent again');
+  assert.equal((await filesOf(held)).length, 1, 'held until Send now, so kept');
+});

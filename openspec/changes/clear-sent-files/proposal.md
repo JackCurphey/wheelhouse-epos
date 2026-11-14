@@ -7,7 +7,7 @@ Since `message-attachments`, an email's files (such as the Cycle to Work quote P
 ## What Changes
 
 - At the end of each round of the message sender (every 5 seconds), the files of every message that has left the queue are deleted: sent, failed, stuck ("unknown") or undone. The message itself stays, with its wording and status, so the outbox is unchanged.
-- A sent message's files go in the same round that sends it. An undone message's files go in the next round.
+- A sent message's files go in the same round that sends it. A message staff undo has its files cleared by the next round.
 - A message still waiting (in its minute, held, or due later) keeps its files, and one being sent keeps them until the sender has finished.
 - No migration: the table and its cascade from the message are unchanged.
 

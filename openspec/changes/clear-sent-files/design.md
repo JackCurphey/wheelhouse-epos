@@ -8,7 +8,7 @@
 
 One statement at the end of each shop's round deletes the files of every message whose `intent_state` is not 'intended' or 'sending'. The alternative, deleting in `recordResult` and at each place a message is undone, touches about a dozen places (the engine's undo and stops, the stuck rule, the held Bike ready rule, the still-needed checks in the round, and Cycle to Work's three stops in `server/c2w/messages.js`), and a future stop would have to remember to do it too. The round's sweep catches every final state, including ones added later, and keeps the state changes as they are.
 
-Timing: the sweep runs after that round's sends are recorded, so a sent or failed message's files go in the same round; an undone or stuck one's go in the next (the sender runs every 5 seconds).
+Timing: the sweep runs after that round's sends are recorded, so a sent or failed message's files go in the same round, as do those of a message the round itself marks stuck or stops. One staff undo between rounds has its files cleared by the next round (the sender runs every 5 seconds).
 
 ### 2. 'sending' keeps its files
 
@@ -16,7 +16,7 @@ A message being sent has its files in the sender's hands, in memory. Its rows ar
 
 ### 3. Inside the shop's scope
 
-The sweep runs in `runWithShop(shopId, …)`, like the rest of the round, so row-level security limits it to that shop's rows. A failure is logged with the shop's round (`sendDue`'s catch) and tried again next round; nothing depends on it.
+The sweep runs in `runWithShop(shopId, …)`, like the rest of the round, so row-level security limits it to that shop's rows. A failure is logged on its own line (its own catch, like the shop's own-messages and hold-ending rounds) and tried again next round; nothing depends on it.
 
 ### 4. No migration, no index
 
@@ -24,7 +24,7 @@ The table holds only files of messages still waiting, at most a few per shop, so
 
 ## Risks / Trade-offs
 
-- A failed email's file is gone, so if a re-send were ever built it would have to make the file again (it would anyway: the quote route makes a fresh PDF each time, design 6 of `message-attachments`).
+- A failed email's file is gone, so if a re-send were ever built (the `messageIntent` state machine allows failed → sending on a deliberate retry, but no code does it today) it would have to make the file again (it would anyway: the quote route makes a fresh PDF each time, design 6 of `message-attachments`).
 - The sweep runs every 5 seconds for each shop. The table only ever holds the files of messages still waiting, so it is a small join on a near-empty table.
 
 ## Contract
