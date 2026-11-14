@@ -2,7 +2,7 @@
 // task 10.4's follow-up; rp-c2w's "Change what's shown"): the figures rp-c2w
 // counts for a period, by Day, Week or Provider. Bikes collected counts each
 // order on the shop day it was collected; Paid and Commission count on the day
-// it was marked paid, as rp-c2w does (server/lib/report-c2w.js). Only is the
+// the payment was received (paid_on), as rp-c2w does (server/lib/report-c2w.js). Only is the
 // shop's providers. Owed now and Late are right-now figures, not a period's, so
 // they stay on the report and the Owed page. Read through the request's shop
 // (row-level security).
@@ -18,7 +18,7 @@ export async function providerNames() {
 
 export async function c2wRead({ measure, split, from, to, tz, only }) {
   const bikes = measure === 'bikes';
-  // Bikes by the shop day collected; money by the day marked paid (a date, so no time zone).
+  // Bikes by the shop day collected; money by the day the payment was received (a date, so no time zone).
   const day = bikes ? 'o.collected_at AT TIME ZONE ?' : 'o.paid_on';
   const dayArgs = bikes ? [tz] : [];
   const [key, label, keyArgs] = split === 'provider'
