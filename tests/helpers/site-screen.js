@@ -5,20 +5,22 @@
 // how many times (a number, or the app's own rule), with no wait between. `url` is the page's
 // path under the shop, e.g. '/' or '/shop'.
 //
-// Every fetch is answered at once and recorded in `requests` ({url, method}).
+// Every fetch is answered at once and recorded in `requests` ({url, method,
+// body}, the body as sent, a string or undefined).
 // `site`, `categories`, `home`, `products`, `product`, `search` and `suggest`
 // answer GET /api/site, /api/site/categories, /api/site/home,
 // /api/site/products, /api/site/products/<id>, /api/site/search and
 // /api/site/suggest; each is a
 // body (sent with 200) or a function (url) => ({ status, body }). Anything
 // else answers 404. `answer`, when given, is asked first:
-// (pathname, {url, method}) => ({ status, body }), or undefined to fall
+// (pathname, {url, method, body}) => ({ status, body }), or undefined to fall
 // through (the staff banner's Turn it on, for example). The native dialog's
 // showModal and close, missing in jsdom, are stubbed.
 //
 // `media(query)` says which media queries match, as a phone or tablet would
 // answer them; left out, nothing matches (a computer). `cookie` is set on
-// the page before it renders (the chosen shop, `wh_shop=<id>`).
+// the page before it renders, each one for the site's address (`wh_shop=1;
+// wh_basket=101:2`).
 //
 // Example data comes from the drawings (browse.mjs): North Street Cycles,
 // Bolton, "[Second site]", Shimano brake pads B05S-RX at £28.00, Bearings and
@@ -81,16 +83,18 @@ export async function renderWebsite({ url = '/', site = TWO_SHOPS, categories = 
   const listeners = new Set();
   if (media) window.matchMedia = (q) => ({ get matches() { return matching(q); }, media: q, addEventListener(_, f) { listeners.add(f); }, removeEventListener(_, f) { listeners.delete(f); } });
   const setMedia = (fn) => { matching = fn; for (const f of [...listeners]) f(); };
-  if (cookie) document.cookie = cookie;
+  // Each cookie set for the site's own address, as the website writes them.
+  for (const one of (cookie ?? '').split(';').map((c) => c.trim()).filter(Boolean)) document.cookie = `${one}; Path=${BASE}`;
   window.scrollTo = () => {};
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() { this.open = false; this.dispatchEvent(new window.Event('close')); };
   const requests = [];
   globalThis.fetch = async (input, init) => {
     const address = String(input);
-    requests.push({ url: address, method: init?.method ?? 'GET' });
+    const asked = { url: address, method: init?.method ?? 'GET', body: init?.body };
+    requests.push(asked);
     const { pathname } = new URL(address, 'http://localhost');
-    const own = answer && (await answer(pathname, { url: address, method: init?.method ?? 'GET' }));
+    const own = answer && (await answer(pathname, asked));
     if (own) return new Response(JSON.stringify(own.body), { status: own.status, headers: { 'content-type': 'application/json' } });
     const source = pathname === `${BASE}/api/site` ? site
       : pathname === `${BASE}/api/site/categories` ? categories

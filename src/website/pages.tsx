@@ -5,9 +5,8 @@ import { Box, CategoryCard, Failed, Grid, H1, ShopCards, linkButton, topCategori
 
 /**
  * The website's pages other than home (website-browse tasks 3.6-3.9): Shop
- * (wb-shop), not found (wb-not-found), the footer pages and the basket's
- * "can't take orders online yet" (written line 1). Each is an h1 and its
- * content in the shell, the pattern the drawings use for every page.
+ * (wb-shop), not found (wb-not-found) and the footer pages. (The basket is
+ * basket-page.tsx.) Each is an h1 and its content in the shell, the pattern the drawings use for every page.
  */
 
 /** "<page> · <shop>", or the shop's name alone on the home page. */
@@ -88,21 +87,6 @@ export function ContactPage() {
     <>
       <H1>Contact us</H1>
       <ShopCards email book={false} />
-    </>
-  );
-}
-
-/** The basket's path until WP-6.3 builds the basket (written line 1). */
-export function BasketPage() {
-  usePageTitle('Basket');
-  const { site } = useSiteContext();
-  return (
-    <>
-      <H1>Basket</H1>
-      <Box className="max-w-[640px]">
-        <p className={words}>{site.name} can’t take orders online yet.</p>
-        <span><Link to="/contact" className={linkButton('default')}>Contact us</Link></span>
-      </Box>
     </>
   );
 }

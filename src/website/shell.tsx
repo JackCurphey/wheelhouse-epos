@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { bookPath, chosenShopCookie, rememberChosenShop, siteAddress } from './address.ts';
-import { SiteContext, hasDetails, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
+import { basketCount, readBasket, writeBasket, type BasketLine } from './basket.ts';
+import { SiteContext, hasDetails, useBasket, useSite, useSiteContext, type ShopEntry, type Site, type SiteContextValue } from './site-query.ts';
 import { H1, todayText } from './parts.tsx';
 import { SearchCombo } from './search.tsx';
 import { CookieChoices, CookieChoicesButton } from './cookies.tsx';
@@ -80,18 +81,27 @@ export function SiteLayout() {
   const site = useSite(address);
   // The wh_shop cookie as read once, then as the visitor chooses (design 4).
   const [cookieId, setCookieId] = useState(() => chosenShopCookie());
-  // "Which shop will you collect from?": the control that opened it while open.
-  const [opener, setOpener] = useState<HTMLElement | null>(null);
+  // The wh_basket cookie as read once, then as the visitor changes it (task 11.5).
+  const [basket, setBasketLines] = useState(() => readBasket());
+  const setBasket = useCallback((lines: BasketLine[]) => {
+    writeBasket(lines, address);
+    setBasketLines(lines);
+  }, [address]);
+  // "Which shop will you collect from?": the control that opened it, and what to do once one is chosen, while open.
+  const [opener, setOpener] = useState<{ el: HTMLElement; onChosen?: (id: number) => void } | null>(null);
   const choose = useCallback((id: number) => {
     rememberChosenShop(id, address);
     setCookieId(id);
   }, [address]);
-  const openChooser = useCallback((el: HTMLElement) => setOpener(el), []);
+  const openChooser = useCallback((el: HTMLElement, onChosen?: (id: number) => void) => setOpener({ el, onChosen }), []);
   // Closing, with or without a choice: focus goes back to what opened the box.
   const closeChooser = useCallback((id?: number) => {
-    const back = opener;
+    const back = opener?.el;
     flushSync(() => {
-      if (id !== undefined) choose(id);
+      if (id !== undefined) {
+        choose(id);
+        opener?.onChosen?.(id);
+      }
       setOpener(null);
     });
     if (back?.isConnected) back.focus();
@@ -105,13 +115,13 @@ export function SiteLayout() {
   const several = site.data.shops.length > 1;
   // A remembered shop the business doesn't have is ignored: Choose a shop again.
   const chosen = several ? (site.data.shops.find((s) => s.id === cookieId) ?? null) : (site.data.shops[0] ?? null);
-  const value: SiteContextValue = { address, site: site.data, chosen, several, choose, openChooser };
+  const value: SiteContextValue = { address, site: site.data, chosen, several, choose, openChooser, basket, setBasket };
   return (
     <SiteContext.Provider value={value}>
       <CookieChoices>
         <Frame />
       </CookieChoices>
-      {several && opener && <ChooseShop shops={site.data.shops} onClose={closeChooser} />}
+      {several && opener && <ChooseShop shops={site.data.shops} adding={!!opener.onChosen} onClose={closeChooser} />}
     </SiteContext.Provider>
   );
 }
@@ -119,11 +129,12 @@ export function SiteLayout() {
 /**
  * wb-choose-shop, "Choosing the shop: one tap" (browse.mjs `chooseShop`, the
  * popup pattern): a button per shop, tapping one chooses it and closes the
- * box; Cancel, Close and Esc leave the choice as it was. The shared address
+ * box; Cancel, Close and Esc leave the choice as it was. Opened by Add to
+ * basket, it says it will add the item too (on-choose-shop). The shared address
  * and today's hours are on the first shop only (Jack's answer 1). Full screen
  * on a phone, 520px wide above.
  */
-function ChooseShop({ shops, onClose }: { shops: ShopEntry[]; onClose: (id?: number) => void }) {
+function ChooseShop({ shops, adding, onClose }: { shops: ShopEntry[]; adding: boolean; onClose: (id?: number) => void }) {
   const titleId = React.useId();
   const subId = React.useId();
   return (
@@ -139,7 +150,9 @@ function ChooseShop({ shops, onClose }: { shops: ShopEntry[]; onClose: (id?: num
       <div className="flex items-center gap-3 border-b border-[var(--wh-border)] bg-[var(--wh-panel)] py-2.5 pl-4 pr-2 md:py-3.5 md:pl-[22px] md:pr-3.5">
         <div className="flex grow flex-col gap-0.5">
           <h2 id={titleId} className="m-0 text-[18px] font-bold md:text-[20px]">Which shop will you collect from?</h2>
-          <span id={subId} className="text-size-13 text-[var(--wh-muted)]">We’ll remember it, and show when things are ready there</span>
+          <span id={subId} className="text-size-13 text-[var(--wh-muted)]">
+            {adding ? 'We’ll add it to your basket, remember the shop, and show when things are ready there' : 'We’ll remember it, and show when things are ready there'}
+          </span>
         </div>
         <button type="button" aria-label="Close" onClick={() => onClose()} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-[var(--wh-ink)]">
           <X aria-hidden className="size-5" />
@@ -172,6 +185,16 @@ function ChooseShop({ shops, onClose }: { shops: ShopEntry[]; onClose: (id?: num
 
 const iconLink = 'inline-flex size-11 items-center justify-center rounded-lg';
 
+/**
+ * How many things are in the basket: the server's count when it has priced
+ * these lines (a line cut to the stock left counts as cut), else the cookie's.
+ */
+function useBasketCount(): number {
+  const { address, chosen, basket } = useSiteContext();
+  const priced = useBasket(address, chosen?.id ?? null, basket, false);
+  return priced.data?.count ?? basketCount(basket);
+}
+
 /** The collect-from chip (browse.mjs): opens "Which shop will you collect from?" (wb-choose-shop). */
 function Chip({ line }: { line: boolean }) {
   const { site, chosen, openChooser } = useSiteContext();
@@ -199,6 +222,8 @@ function Frame() {
   const phone = useMedia('(max-width: 767px)');
   const narrow = useMedia('(max-width: 1023px)');
   const ocean = oceanColour(site);
+  const count = useBasketCount();
+  const basketLabel = `Basket, ${count} ${count === 1 ? 'item' : 'items'}`;
   const [open, setOpen] = useState(false);
   // The search across the top on a tablet or phone, opened by Search the shop.
   const [searching, setSearching] = useState(false);
@@ -275,7 +300,7 @@ function Frame() {
           {name}
           <span className="ml-auto flex items-center gap-1">
             <button ref={searchButton} type="button" aria-label="Search the shop" aria-expanded={searching} onClick={() => setSearching(true)} className={iconLink}><Search aria-hidden className="size-5" /></button>
-            <Link to="/basket" aria-label="Basket, 0 items" className={iconLink} style={linkColour}><ShoppingBasket aria-hidden className="size-5" /></Link>
+            <Link to="/basket" aria-label={basketLabel} className={iconLink} style={linkColour}><ShoppingBasket aria-hidden className="size-5" /></Link>
             <button
               ref={menuButton}
               type="button"
@@ -308,8 +333,8 @@ function Frame() {
             <a href={`/book/${encodeURIComponent(address.slug)}/account`} aria-label="Your account" className={narrow ? iconLink : 'inline-flex min-h-11 items-center gap-1.5 text-size-15 font-semibold no-underline'} style={linkColour}>
               <User aria-hidden className="size-5" />{!narrow && 'Account'}
             </a>
-            <Link to="/basket" aria-label="Basket, 0 items" className={narrow ? iconLink : 'inline-flex min-h-11 items-center gap-1.5 text-size-15 font-semibold no-underline'} style={linkColour}>
-              <ShoppingBasket aria-hidden className="size-5" />{!narrow && 'Basket'}
+            <Link to="/basket" aria-label={basketLabel} className={narrow ? iconLink : 'inline-flex min-h-11 items-center gap-1.5 text-size-15 font-semibold no-underline'} style={linkColour}>
+              <ShoppingBasket aria-hidden className="size-5" />{!narrow && (count > 0 ? `Basket · ${count}` : 'Basket')}
             </Link>
           </span>
           {bookButton}

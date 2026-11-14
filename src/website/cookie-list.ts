@@ -5,9 +5,10 @@
  * what is really set can't drift apart. A test checks it against the
  * server's own constants (tests/screens/site-cookies.test.js).
  *
- * The basket's cookie joins this list with WP-6.3 (Buy online).
+ * The basket's cookie (WP-6.3) is kept until the browser closes while its
+ * length is Jack's "[n] days" (decided while building): `seconds` is null.
  */
-export type CookieLine = { name: string; purpose: string; seconds: number; length: string };
+export type CookieLine = { name: string; purpose: string; seconds: number | null; length: string };
 
 const DAY = 24 * 60 * 60;
 
@@ -18,7 +19,10 @@ export const CHOSEN_SHOP: CookieLine = { name: 'wh_shop', purpose: 'Remembers th
 /** The visitor's cookie choices (design 4: 6 months), only for a shop with a tracking tool. */
 export const COOKIE_CHOICES: CookieLine = { name: 'wh_cookies', purpose: 'Remembers your cookie choices', seconds: 180 * DAY, length: '6 months' };
 
-export const COOKIES: CookieLine[] = [SIGNED_IN, CHOSEN_SHOP, COOKIE_CHOICES];
+/** What's in the basket (website-buy-online task 11.5: product ids and how many). */
+export const BASKET: CookieLine = { name: 'wh_basket', purpose: 'Remembers what’s in your basket', seconds: null, length: '[n] days' };
+
+export const COOKIES: CookieLine[] = [SIGNED_IN, CHOSEN_SHOP, BASKET, COOKIE_CHOICES];
 
 /** What this shop's website sets: the choices cookie only where there is something to choose. */
 export const cookiesFor = (hasTools: boolean): CookieLine[] => (hasTools ? COOKIES : COOKIES.filter((c) => c !== COOKIE_CHOICES));

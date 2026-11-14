@@ -1,7 +1,7 @@
 // The customer website's other pages (openspec/changes/website-browse, tasks
 // 3.6-3.9): Shop (wb-shop), not found (wb-not-found), switched off (wb-off),
 // the footer pages (Contact us, Collection and returns, Privacy) and the
-// basket's "can't take orders online yet" (written line 1). Example data from
+// header's way into the basket (site-basket.test.js has the rest). Example data from
 // the drawings: North Street Cycles, Bolton, "[Second site]", Bearings and
 // Drivetrain › Derailleurs.
 import test, { afterEach } from 'node:test';
@@ -146,15 +146,15 @@ test('Contact us with one shop names the business', async () => {
   assert.ok(r.ui.getByRole('link', { name: '[shop email]' }));
 });
 
-test('Basket says the shop can’t take orders online yet, until WP-6.3 (written line 1)', async () => {
+test('the header’s Basket link opens the basket, empty to begin with (on-basket)', async () => {
   r = await renderWebsite({ url: '/shop' });
   const { ui } = r;
   const { fireEvent } = await import('@testing-library/react');
   fireEvent.click(await ui.findByRole('link', { name: 'Basket, 0 items' }));
-  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Basket' }));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Your basket' }));
   assert.equal(r.router.state.location.pathname, `${BASE}/basket`);
-  assert.ok(main().textContent.includes('North Street Cycles can’t take orders online yet.'));
-  assert.equal(href(ui.getAllByRole('link', { name: 'Contact us' })[0]), `${BASE}/contact`);
+  assert.ok(main().textContent.includes('Your basket is empty.'));
+  assert.equal(href(ui.getByRole('link', { name: 'Carry on shopping' })), `${BASE}/shop`);
 });
 
 test('each page has its own title', async () => {

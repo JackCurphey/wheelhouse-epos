@@ -1,8 +1,9 @@
 import { createContext, useContext } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, apiMutate } from '@/lib/api/client.ts';
 import { apiPath, type SiteAddress } from './address.ts';
 import { detailIdsOf } from './filters.ts';
+import type { BasketLine } from './basket.ts';
 import type { TrackingTool } from './tracking.ts';
 
 /**
@@ -119,8 +120,16 @@ export type SiteContextValue = {
   several: boolean;
   /** Choose the shop to collect from: sets the wh_shop cookie (design 4) and every page follows. */
   choose: (id: number) => void;
-  /** Open "Which shop will you collect from?" (wb-choose-shop); focus goes back to `opener` when it closes. */
-  openChooser: (opener: HTMLElement) => void;
+  /**
+   * Open "Which shop will you collect from?" (wb-choose-shop); focus goes back
+   * to `opener` when it closes. `onChosen` runs once a shop is chosen, and the
+   * box says it will add to the basket (on-choose-shop).
+   */
+  openChooser: (opener: HTMLElement, onChosen?: (id: number) => void) => void;
+  /** What's in the basket (the wh_basket cookie, task 11.5). */
+  basket: BasketLine[];
+  /** Change the basket: writes the cookie, and every page follows. */
+  setBasket: (lines: BasketLine[]) => void;
 };
 export const SiteContext = createContext<SiteContextValue | null>(null);
 
@@ -128,6 +137,58 @@ export function useSiteContext(): SiteContextValue {
   const value = useContext(SiteContext);
   if (!value) throw new Error('useSiteContext outside the website shell');
   return value;
+}
+
+/** One line of POST /api/site/basket (server/online-orders/basket.js): `name` is null for a product no longer sold. */
+export type BasketAnswerLine = {
+  productId: number;
+  name: string | null;
+  code: string | null;
+  size: string | null;
+  colour: string | null;
+  photo: string | null;
+  pricePence: number | null;
+  qty: number;
+  linePence: number;
+  stock: PageStock | null;
+  note: string | null;
+  gone: boolean;
+};
+export type BasketAnswer = {
+  taking: boolean;
+  notTaking: string | null;
+  shop: { id: number; name: string } | null;
+  lines: BasketAnswerLine[];
+  count: number;
+  totalPence: number;
+  changed: string | null;
+  blocked: string | null;
+};
+
+const askBasket = (address: SiteAddress, shopId: number | null, lines: BasketLine[]) =>
+  apiMutate<BasketAnswer>(apiPath(address, '/api/site/basket'), { shop: shopId, lines });
+
+/**
+ * The basket priced by the server for these lines and this shop. `ask: false`
+ * only reads an answer already had (the header's count), never asking.
+ */
+export function useBasket(address: SiteAddress, shopId: number | null, lines: BasketLine[], ask = true) {
+  return useQuery({
+    queryKey: ['site', address.base, 'basket', shopId, lines.map((l) => `${l.productId}:${l.qty}`).join('.')],
+    queryFn: () => askBasket(address, shopId, lines),
+    enabled: ask && lines.length > 0,
+    // While a new answer comes, the last one stays on screen, but only for the same shop.
+    placeholderData: ask ? (previous: BasketAnswer | undefined, query?: { queryKey: readonly unknown[] }) => (query?.queryKey[3] === shopId ? previous : undefined) : undefined,
+    ...once,
+  });
+}
+
+// Asked once per few minutes, not on every product page; checkout asks again anyway.
+const TAKING_FOR = 5 * 60_000;
+
+/** Whether the shop takes online orders now (design 2), asked with an empty basket. */
+export function useTaking(address: SiteAddress) {
+  return useQuery({ queryKey: ['site', address.base, 'taking'], queryFn: () => askBasket(address, null, []), select: (a) => a.taking, staleTime: TAKING_FOR, ...once });
 }
 
 const detailIdsKey = (address: SiteAddress, categoryId: number) => ['site', address.base, 'detail-ids', categoryId] as const;
@@ -197,6 +258,8 @@ export function useProduct(address: SiteAddress, id: number, shopId: number | nu
     queryKey: ['site', address.base, 'product', id, shopId],
     queryFn: () => apiGet<Product>(apiPath(address, `/api/site/products/${id}`, { shop: shopId == null ? null : String(shopId) })),
     enabled: id > 0,
+    // Choosing another shop keeps the page (its size and "Added …") while the new stock line comes.
+    placeholderData: (previous) => (previous?.id === id ? previous : undefined),
     ...once,
   });
 }
