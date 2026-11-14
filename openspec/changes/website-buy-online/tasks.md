@@ -92,14 +92,14 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 6. Online orders for staff — server (pull request 6, about 500 lines, risky: money and stock — waits for Jack's answers to questions 9 and 11)
 
-- [ ] 6.1 Test: the list in three groups with each row's words; Collected is the last 7 days; the sidebar count is To get ready
-- [ ] 6.2 Test: Mark ready moves the order and queues the ready email with a few seconds' wait; Undo in those seconds moves it back and stops the email; `keep_until` is set from the keep days
-- [ ] 6.3 Test: Not ready after all moves it back and queues "Order not ready after all" only when ticked
-- [ ] 6.4 Test: Hand over moves a ready order to Collected with who and when, takes no money and changes no stock; sent twice collects once; refused from any other stage
-- [ ] 6.5 Test: the collecting shop's figure falling below open orders' lines marks the newest order's line "Not on the shelf any more" and turns its Mark ready off
-- [ ] 6.6 Test: the till's stock lookup says how many are "for an online order", with the order number
-- [ ] 6.7 Write `server/online-orders/orders.js` and `server/routes/online-orders.js` to pass 6.1–6.6
-- [ ] 6.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
+- [x] 6.1 Test: the list in three groups with each row's words; Collected is the last 7 days; the sidebar count is To get ready
+- [x] 6.2 Test: Mark ready moves the order and queues the ready email with a few seconds' wait; Undo in those seconds moves it back and stops the email; `keep_until` is set from the keep days
+- [x] 6.3 Test: Not ready after all moves it back and queues "Order not ready after all" only when ticked
+- [x] 6.4 Test: Hand over moves a ready order to Collected with who and when, takes no money and changes no stock; sent twice collects once; refused from any other stage
+- [x] 6.5 Test: the collecting shop's figure falling below open orders' lines marks the newest order's line "Not on the shelf any more" and turns its Mark ready off
+- [x] 6.6 Test: the till's stock lookup says how many are "for an online order", with the order number
+- [x] 6.7 Write `server/online-orders/orders.js` and `server/routes/online-orders.js` to pass 6.1–6.6
+- [x] 6.8 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 7. Refunds — server (pull request 7, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
