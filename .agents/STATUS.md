@@ -19,9 +19,10 @@ removing the old website and the archive are in the last pull request
 `tasks.md`. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
 order tables and settings on the server (#753, migration 154) and the six
 order messages (#758), the settings screen (#773, #775) and the order
-emails' review fixes (#776) are in; the basket and checkout's server half
-(claude/buy-online-4-basket) stops where paying would start, and their
-screens are next; paying, staff steps and refunds wait for Jack's answers 9 and 11
+emails' review fixes (#776) and the basket and checkout's server half
+(#777, stopping where paying would start) are in; the basket screens are
+being built (claude/buy-online-5-basket-screens), checkout's screen up to
+paying next; paying, staff steps and refunds wait for Jack's answers 9 and 11
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
