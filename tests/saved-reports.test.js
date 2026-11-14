@@ -149,7 +149,7 @@ test('a report that does not fit together, or is not a report, is not saved', as
   const cases = [
     [{ measure: 'items', split: 'payment' }, 'payments aren’t split by item'],
     [{ measure: 'jobs' }, 'workshop only — choose it from the Workshop report'],
-    [{ base: 'nonsense' }, 'Choose Sales, Takings and cash-ups or Workshop'],
+    [{ base: 'nonsense' }, 'Choose Sales, Takings and cash-ups, Workshop or Cycle to Work'],
     [{ period: 'next-year' }, 'Choose Today, This week, This month, Last month, Last 12 months or Pick dates'],
     [{ only: 'Accessories' }, 'Choose what to limit it to again'],
   ];

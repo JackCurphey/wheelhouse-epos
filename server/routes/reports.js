@@ -306,12 +306,22 @@ export function register(route) {
   });
 
 
-  // Change what's shown (Sales, and Takings and cash-ups): another measure, split
-  // and limits, read from the sale lines. A combination that doesn't fit is a 400
+  // Change what's shown (Sales, Takings and cash-ups, Workshop and Cycle to Work):
+  // another measure, split and limits. A combination that doesn't fit is a 400
   // with its reason; the choices route answers any selection with one that fits.
+  // Cycle to Work's figures include Commission, a cost, so its base is behind
+  // canSeeCosts too, as rp-c2w is.
+  const changedOwnerOnly = async (req, res, query) => {
+    if (await ownerOnly(req, res, OWNER_ONLY)) return true;
+    if (query.get('base') === 'c2w' && !(await canSeeCosts(req))) {
+      sendJson(res, 403, { error: OWNER_ONLY });
+      return true;
+    }
+    return false;
+  };
   // screens: rp-change, rp-changed
   route('GET', '/api/reports/changed', async (req, res, params, query) => {
-    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (await changedOwnerOnly(req, res, query)) return;
     const ctx = await currentSession(req);
     try {
       const today = await currentShopToday();
@@ -324,7 +334,7 @@ export function register(route) {
   });
   // screens: rp-change
   route('GET', '/api/reports/changed/choices', async (req, res, params, query) => {
-    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (await changedOwnerOnly(req, res, query)) return;
     try {
       sendJson(res, 200, await changedChoices(query, await currentShopToday(), { canSeeCosts: await canSeeCosts(req) }));
     } catch (err) {
@@ -334,7 +344,7 @@ export function register(route) {
   });
   // screens: rp-changed
   route('GET', '/api/reports/changed.csv', async (req, res, params, query) => {
-    if (await ownerOnly(req, res, OWNER_ONLY)) return;
+    if (await changedOwnerOnly(req, res, query)) return;
     const ctx = await currentSession(req);
     try {
       const report = await changedReport(query, await currentShopToday(), { canSeeCosts: await canSeeCosts(req) });

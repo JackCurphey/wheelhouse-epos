@@ -9,6 +9,7 @@ import { Box, BackToReports, DownloadButton, Note, Page, Refusal } from './repor
 import { compareWords, money } from './reports-format.ts';
 import { ReportGraph } from './report-graph.tsx';
 import { PickDates } from './pick-dates.tsx';
+import { ChangeWhatsShown } from './change-panel.tsx';
 import { Figure, PERIODS } from './sales-report.tsx';
 
 /**
@@ -67,8 +68,8 @@ export function C2wReportPage() {
           <h2 className="m-0 text-xl font-bold">Cycle to Work: owed and paid</h2>
           {report ? <p className="m-0 text-size-15 text-[var(--wh-muted)] max-md:text-sm">{report.shopLine} · {report.period.label}, against {report.period.against}</p> : null}
         </div>
-        {/* "Change what's shown" waits for a Cycle to Work base in changed reports (logged in spec-c2w). */}
         <div className="flex flex-wrap items-start gap-2">
+          <ChangeWhatsShown base="c2w" period={new URLSearchParams(query)} />
           <DownloadButton path={`/api/reports/c2w.csv?${query}`} />
         </div>
       </div>
