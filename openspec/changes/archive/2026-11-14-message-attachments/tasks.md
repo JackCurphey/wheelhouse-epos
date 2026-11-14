@@ -17,6 +17,6 @@
 
 ## 3. Checks
 
-- [ ] 3.1 `/review` and `risky-area-reviewer` on each pull request
-- [ ] 3.2 `npm run full-check` passes; CI run by hand on the branch is green
-- [ ] 3.3 Archive the change as the last commit
+- [x] 3.1 `/review` and `risky-area-reviewer` on each pull request
+- [x] 3.2 `npm run full-check` passes; CI run by hand on the branch is green
+- [x] 3.3 Archive the change as the last commit
