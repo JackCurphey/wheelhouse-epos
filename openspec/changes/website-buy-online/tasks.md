@@ -67,7 +67,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [x] 4.2 Test: the basket answers "not taking online orders" when buying online is off or payments aren't connected, and for a Shopify-kind website
 - [x] 4.3 Test: `POST /api/site/checkout` checks the details and answers each box's message ("Enter your name", the email message) and the count; nothing is made
 - [x] 4.4 Test: a signed-in customer's details and store credit come from their account, when the shop allows credit online; "covers it all" when it does; a guest gets a new customer of their own, never matched on typed details (the guest's customer is made with the order, so it moves to 4.5)
-- [x] 4.5 Test (waits for 5.0b–e and Jack's answer 9; until then checkout answers 501 `paying_not_built` where it would make the order): checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice gives the same order; rate limited
+- [x] 4.5 Test: checkout makes one order at `awaiting_payment` and one held payment per `requestKey`; sent twice, or twice at once, gives the same order; rate limited
 - [x] 4.6 Write `server/online-orders/basket.js`, `checkout.js` and the routes to pass 4.1–4.5 (written to pass 4.1–4.4)
 - [ ] 4.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 

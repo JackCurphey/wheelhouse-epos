@@ -8,7 +8,7 @@ import '../server/load-env.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -391,6 +391,36 @@ test('4.5 Pay sent twice gives the same order and hold; a guest is never matched
   assert.notEqual(other.ref, first.ref);
   const [a, b] = [await orderOf(first.ref), await orderOf(other.ref)];
   assert.notEqual(a.order.customer_id, b.order.customer_id, 'the same typed details make a second customer, never a match');
+});
+
+test('4.5 two presses at once make one order and one hold', async () => {
+  const requestKey = randomUUID();
+  const before = await counts();
+  const heldBefore = await inNorth(() => prepare('SELECT count(*)::int AS n FROM pretend_payments').get());
+  const body = { shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey };
+  const [a, b] = await Promise.all([checkout(body), checkout(body)]);
+  assert.deepEqual(ok(a), ok(b));
+  assert.deepEqual(await counts(), { orders: before.orders + 1, payments: before.payments + 1, customers: before.customers + 1 });
+  const heldAfter = await inNorth(() => prepare('SELECT count(*)::int AS n FROM pretend_payments').get());
+  assert.equal(heldAfter.n, heldBefore.n + 1, 'one hold on the card, not two');
+});
+
+test('4.5 Pay pressed again after the last one sold at the till still gets its order', async () => {
+  await setStock(P.tube, bolton, 1);
+  const requestKey = randomUUID();
+  const body = { shop: bolton, lines: [{ productId: P.tube, qty: 1 }], ...guest, requestKey };
+  const first = ok(await checkout(body));
+  await setStock(P.tube, bolton, 0);
+  assert.deepEqual(ok(await checkout(body)), first);
+});
+
+test('4.5 a request key a deposit already used still makes the order', async () => {
+  const requestKey = 'k'.repeat(40);
+  const keyHash = createHash('sha256').update(requestKey).digest('hex');
+  await inNorth(() => prepare("INSERT INTO online_payments (provider, provider_ref, amount_pence, request_key_hash) VALUES ('pretend', '[deposit ref]', 2000, ?) RETURNING id").get(keyHash));
+  const answer = ok(await checkout({ shop: bolton, lines: [{ productId: P.pads, qty: 1 }], ...guest, requestKey }));
+  assert.equal(answer.cardPence, 2800);
+  assert.equal((await orderOf(answer.ref)).payments.length, 1);
 });
 
 test('4.5 a signed-in customer’s order is theirs, with the credit part recorded and only the rest held', async () => {

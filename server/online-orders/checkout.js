@@ -49,6 +49,10 @@ function detailsFrom(body, customer) {
 export async function checkout({ req, res, shop, body }) {
   const key = readRequestKey(body);
   if (key.error || !key.value) throw new BasketError('That checkout can’t be read — refresh the page and try again');
+  // Pay pressed again gets the order the first press made, before anything is
+  // checked again: the last one selling at the till meanwhile doesn't refuse it.
+  const made = await orderFor(key.value.keyHash);
+  if (made) return made;
   const lines = linesFrom(body.lines);
   if (!lines.length) throw new BasketError('Your basket is empty');
   const { answer: basket, customer } = await basketAnswer({ req, res, shop, lines, shopId: body.shop });
@@ -56,7 +60,8 @@ export async function checkout({ req, res, shop, body }) {
   // "Pay SHALL check the details first" (spec, Checkout).
   const details = detailsFrom(body, customer);
   if (!basket.shop) throw new BasketError('Choose which shop to collect from');
-  // What the customer saw is what they pay for: any line changed sends the basket back.
+  // A line gone or cut since the basket was priced sends the basket back. A
+  // price changed meanwhile isn't caught (gap log, 14 Nov, checkout makes the order, item 5).
   if (basket.changed) throw new CheckoutRefused(409, { error: CHANGED, basket });
   const creditPence = body.useCredit === true && basket.credit ? basket.credit.usePence : 0;
   const cardPence = basket.totalPence - creditPence;
@@ -64,6 +69,18 @@ export async function checkout({ req, res, shop, body }) {
   if (cardPence > 0 && !provider) throw new CheckoutRefused(409, { error: NOT_TAKING });
   return makeOrder({ keyHash: key.value.keyHash, basket, customer, details, creditPence, cardPence, provider });
 }
+
+// The order a request key made, as it stands, or null.
+async function orderFor(keyHash) {
+  const order = await prepare('SELECT * FROM online_orders WHERE request_key_hash = ?').get(keyHash);
+  if (!order) return null;
+  const payment = await prepare("SELECT * FROM online_payments WHERE online_order_id = ? AND purpose = 'order' ORDER BY id DESC LIMIT 1").get(order.id);
+  return answerFor(order, payment);
+}
+
+// An order payment's own key, so it can never meet a deposit's (online_payments
+// allows each key once per shop, deposits included).
+const paymentKey = (keyHash) => `${keyHash}:order`;
 
 const answerFor = (order, payment) => ({
   ref: order.order_code,
@@ -86,10 +103,9 @@ async function makeOrder({ keyHash, basket, customer, details, creditPence, card
     ).get(basket.shop.id, customer?.id ?? null, details.name, details.email, details.phone, basket.totalPence, creditPence, cardPence,
       randomBytes(32).toString('hex'), keyHash);
     if (!order) {
+      // Two presses at once: the other one's order committed while this one waited.
       await dbExec('ROLLBACK');
-      const was = await prepare('SELECT * FROM online_orders WHERE request_key_hash = ?').get(keyHash);
-      const payment = await prepare("SELECT * FROM online_payments WHERE online_order_id = ? AND purpose = 'order' ORDER BY id DESC LIMIT 1").get(was.id);
-      return answerFor(was, payment);
+      return orderFor(keyHash);
     }
     // A guest gets a customer of their own, never matched on what was typed.
     if (!customer) {
@@ -107,7 +123,7 @@ async function makeOrder({ keyHash, basket, customer, details, creditPence, card
       payment = await prepare(
         `INSERT INTO online_payments (provider, provider_ref, amount_pence, request_key_hash, purpose, online_order_id)
          VALUES (?, ?, ?, ?, 'order', ?) RETURNING *`
-      ).get(provider.name, ref, cardPence, keyHash, order.id);
+      ).get(provider.name, ref, cardPence, paymentKey(keyHash), order.id);
     }
     await dbExec('COMMIT');
     made = null;

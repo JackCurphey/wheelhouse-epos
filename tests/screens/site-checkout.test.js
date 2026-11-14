@@ -39,10 +39,10 @@ const basket = (extra = {}) => ({
 });
 const CHANGED = 'Something in your basket changed. Sort the lines marked below before checking out.';
 // The server's answer once the order is made (task 4.5): its private link and the held card part.
-const NOT_BUILT = { status: 200, body: { ref: '[order link]', totalPence: 6600, creditPence: 0, cardPence: 6600, payment: { provider: 'pretend', ref: '[payment ref]' } } };
+const ORDER_MADE = { status: 200, body: { ref: '[order link]', totalPence: 6600, creditPence: 0, cardPence: 6600, payment: { provider: 'pretend', ref: '[payment ref]' } } };
 
 // `pay` answers POST /api/site/checkout: a { status, body } or a function of the body sent.
-const serving = (answer, pay = NOT_BUILT) => (pathname, { body }) => {
+const serving = (answer, pay = ORDER_MADE) => (pathname, { body }) => {
   if (pathname === `${BASE}/api/site/basket`) return { status: 200, body: typeof answer === 'function' ? answer(JSON.parse(body)) : answer };
   if (pathname === `${BASE}/api/site/checkout`) return typeof pay === 'function' ? pay(JSON.parse(body)) : pay;
   return undefined;
