@@ -54,14 +54,14 @@ async function product(qty = 1, name = `[Product ${tag()}]`) {
 const setStock = (productId, qty) => inShop(() => prepare('UPDATE product_stock SET qty = ? WHERE site_id = ? AND product_id = ?').run(qty, site, productId));
 
 // A paid order for Maya, with its own email, at a stage, with lines.
-async function paidOrder({ stage = 'to_get_ready', lines = [], paidAt = ago(0, 2), readyAt = null, collectedAt = null, keepUntil = null } = {}) {
+async function paidOrder({ stage = 'to_get_ready', lines = [], paidAt = ago(0, 2), readyAt = null, collectedAt = null, keepUntil = null, siteId = site } = {}) {
   numbers += 1;
   const email = `maya-${tag()}@example.test`;
   return inShop(async () => {
     const order = await prepare(
       `INSERT INTO online_orders (site_id, name, email, phone, total_pence, card_pence, credit_pence, order_code, request_key_hash, number, paid_at, stage, ready_at, collected_at, keep_until)
-       VALUES (?, 'Maya Patel', ?, '07700 900123', 1500, 1500, 0, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, number`,
-    ).get(site, email, `code-${tag()}`, `key-${tag()}`, numbers, paidAt, stage, readyAt, collectedAt, keepUntil);
+       VALUES (?, 'Maya Patel', ?, '07700 900123', 1500, 1000, 500, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id, number`,
+    ).get(siteId, email, `code-${tag()}`, `key-${tag()}`, numbers, paidAt, stage, readyAt, collectedAt, keepUntil);
     for (const [p, qty] of lines) {
       await prepare('INSERT INTO online_order_lines (order_id, product_id, qty, unit_pence) VALUES (?, ?, ?, 1500)').run(order.id, p.id, qty);
     }
@@ -94,6 +94,7 @@ test('6.1 the list in three groups, with their hints and each row’s words', as
   const ready = await paidOrder({ stage: 'ready', readyAt: ago(0, 1), keepUntil: '2026-09-08', lines: [[pads, 1]] });
   const late = await paidOrder({ stage: 'ready', readyAt: ago(4), keepUntil: '2026-09-04', lines: [[pads, 1]] });
   const notYet = await paidOrder({ stage: 'ready', readyAt: ago(2), keepUntil: '2026-09-06', lines: [[pads, 1]] });
+  const onTheDay = await paidOrder({ stage: 'ready', readyAt: ago(3), keepUntil: '2026-09-05', lines: [[pads, 1]] });
   const collected = await paidOrder({ stage: 'collected', readyAt: ago(3), collectedAt: ago(3), lines: [[pads, 1]] });
   const old = await paidOrder({ stage: 'collected', readyAt: ago(9), collectedAt: ago(8), lines: [[pads, 1]] });
   const unpaid = await inShop(() => prepare(
@@ -124,6 +125,7 @@ test('6.1 the list in three groups, with their hints and each row’s words', as
   assert.equal(r.row.notCollectedDays, null, 'ready today: not late');
   assert.equal(find(list, late).row.notCollectedDays, 4, 'past the reminder day (3): "Not collected · 4 days"');
   assert.equal(find(list, notYet).row.notCollectedDays, null, 'before the reminder day');
+  assert.equal(find(list, onTheDay).row.notCollectedDays, 3, 'on the reminder day itself');
 
   const c = find(list, collected);
   assert.equal(c.group, 'collected');
@@ -189,6 +191,42 @@ test('6.2 Undo puts the order back and stops the email', async () => {
   // Undo of an order not ready changes nothing.
   const twice = await post(`/api/online-orders/${order.id}/ready/undo`);
   assert.deepEqual([twice.status, twice.body.code], [409, 'wrong_stage']);
+});
+
+test('6.2 Undo after the ready email has gone is refused, and the order stays ready', async () => {
+  const order = await paidOrder({ lines: [[await product(2), 1]] });
+  assert.equal((await post(`/api/online-orders/${order.id}/ready`)).status, 200);
+  const { ready_message_id: messageId } = await orderRow(order);
+  for (const state of ['sending', 'delivered']) {
+    await inShop(() => prepare('UPDATE customer_messages SET intent_state = ? WHERE id = ?').run(state, messageId));
+    const late = await post(`/api/online-orders/${order.id}/ready/undo`);
+    assert.deepEqual([late.status, late.body.code], [409, 'too_late'], state);
+    assert.equal((await orderRow(order)).stage, 'ready');
+  }
+  // An order whose ready email was never queued can still be undone.
+  const noEmail = await paidOrder({ stage: 'ready', readyAt: ago(0, 1), keepUntil: '2026-09-08' });
+  assert.equal((await post(`/api/online-orders/${noEmail.id}/ready/undo`)).status, 200);
+});
+
+test('6.3 Not ready after all also stops a ready email still waiting', async () => {
+  const order = await paidOrder({ lines: [[await product(2), 1]] });
+  assert.equal((await post(`/api/online-orders/${order.id}/ready`)).status, 200);
+  assert.equal((await post(`/api/online-orders/${order.id}/not-ready`, { tell: false })).status, 200);
+  assert.deepEqual((await messagesFor(order)).map((m) => [m.template_key, m.intent_state]), [['order_ready', 'undone']]);
+});
+
+test('one order’s page has the customer’s email, how it was paid and the shelf', async () => {
+  const order = await paidOrder({ stage: 'ready', readyAt: ago(0, 1), keepUntil: '2026-09-08' });
+  const res = await own(`/api/online-orders/${order.id}`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.order.email, order.email);
+  assert.deepEqual(res.body.order.paid, { creditPence: 500, cardPence: 1000, totalPence: 1500 });
+  assert.equal(res.body.order.shelfName, '[Shelf name]');
+  // An address that isn't an order's is not found, not a fault.
+  for (const bad of ['abc', '99999999999', '1.5']) {
+    assert.equal((await own(`/api/online-orders/${bad}`)).status, 404, bad);
+    assert.equal((await post(`/api/online-orders/${bad}/hand-over`)).status, 404, bad);
+  }
 });
 
 test('6.3 Not ready after all moves it back and sends the sorry email only when ticked', async () => {
@@ -266,11 +304,57 @@ test('6.5 sold at the till anyway: the newest order’s line is not on the shelf
   assert.deepEqual([refused.status, refused.body.code], [409, 'not_on_shelf']);
   assert.equal((await orderRow(newer)).stage, 'to_get_ready');
   assert.equal((await post(`/api/online-orders/${older.id}/ready`)).status, 200);
-  // Both sold: both lines go, the newest first.
+  // Both sold: both lines go.
   await setStock(pads.id, -2);
   list = await listed();
   assert.equal(find(list, newer).row.items[0].notOnShelf, true);
-  assert.equal(find(list, older).row.items[0].notOnShelf, true, 'a ready order’s line can go too');
+  assert.equal(find(list, older).row.items[0].notOnShelf, true, 'a ready order’s line goes once no order to get ready is left');
+});
+
+test('6.5 the shortfall falls on orders to get ready before ones already set aside as ready', async () => {
+  const pads = await product(0);
+  const toGet = await paidOrder({ paidAt: ago(0, 5), lines: [[pads, 1]] });
+  const bagged = await paidOrder({ stage: 'ready', paidAt: ago(0, 2), readyAt: ago(0, 1), keepUntil: '2026-09-08', lines: [[pads, 1]] });
+  await setStock(pads.id, -1);
+  const list = await listed();
+  assert.equal(find(list, toGet).row.items[0].notOnShelf, true, 'the loose one sold at the till was the one to get ready');
+  assert.equal(find(list, toGet).row.markReadyOff, 'Sold at the till. Open the order to sort it.');
+  assert.equal(find(list, bagged).row.items[0].notOnShelf, false, 'the ready one is on the collection shelf');
+});
+
+test('a refunded line reads “Couldn’t supply · refunded” and waits for nothing; with no shelf named, ready items read “Ready to collect”', async () => {
+  const pads = await product(0);
+  const order = await paidOrder({ lines: [[pads, 1]] });
+  await inShop(() => prepare('UPDATE online_order_lines SET refunded_at = now() WHERE order_id = ?').run(order.id));
+  await setStock(pads.id, -1);
+  const row = find(await listed(), order).row;
+  assert.deepEqual([row.items[0].where, row.items[0].notOnShelf, row.markReadyOff], ['Couldn’t supply · refunded', false, null]);
+
+  const ready = await paidOrder({ stage: 'ready', readyAt: ago(0, 1), keepUntil: '2026-09-08', lines: [[await product(1), 1]] });
+  await inShop(() => prepare('UPDATE online_order_settings SET shelf_name = NULL').run());
+  try {
+    assert.equal(find(await listed(), ready).row.items[0].where, 'Ready to collect');
+  } finally {
+    await inShop(() => prepare("UPDATE online_order_settings SET shelf_name = '[Shelf name]'").run());
+  }
+});
+
+test('on a till, only that shop’s orders: the list, the count and the stock lookup', async () => {
+  const { groupedOrders, toGetReadyCount, forOnlineOrders } = await import('../server/online-orders/orders.js');
+  const other = await inShop(async () => (await prepare("INSERT INTO sites (name, code) VALUES ('[Second site]', 'Z') RETURNING id").get()).id);
+  const pads = await product(1);
+  const here = await paidOrder({ lines: [[pads, 1]] });
+  const there = await paidOrder({ siteId: other, lines: [[pads, 1]] });
+  await inShop(async () => {
+    const ids = async (siteId) => (await groupedOrders({ siteId })).flatMap((g) => g.orders.map((o) => o.id));
+    assert.ok((await ids(site)).includes(here.id));
+    assert.ok(!(await ids(site)).includes(there.id), 'the other shop’s order isn’t on this till');
+    assert.ok((await ids(null)).includes(there.id), 'off a till, every shop’s');
+    assert.equal(await toGetReadyCount({ siteId: other }), 1);
+    assert.equal(await toGetReadyCount({ siteId: null }), (await toGetReadyCount({ siteId: site })) + 1);
+    assert.deepEqual((await forOnlineOrders([pads.id], site)).get(pads.id).map((w) => w.orderId), [here.id]);
+    assert.deepEqual((await forOnlineOrders([pads.id], null)).get(pads.id).map((w) => w.orderId).sort(), [here.id, there.id].sort());
+  });
 });
 
 test('6.5 a shortfall smaller than the newest order’s line marks only that line', async () => {

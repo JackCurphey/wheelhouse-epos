@@ -12,6 +12,8 @@ import { orderEmailProblem } from './messages.js';
 
 export { Refused, WRONG_STAGE };
 export const NOT_ON_SHELF = { error: 'Sold at the till. Open the order to sort it.', code: 'not_on_shelf' };
+// Undo once the ready email has gone: the customer already has it.
+export const TOO_LATE = { error: 'The ready email has gone. Use “Not ready after all” instead.', code: 'too_late' };
 export const OPEN_STAGES = ['to_get_ready', 'ready'];
 const COLLECTED_SHOWN_MS = 7 * 24 * 3600_000;
 
@@ -32,8 +34,9 @@ export async function orderSettings() {
 /**
  * Lines sold at the till anyway (design 5, "Not on the shelf any more"): where
  * a shop's figure for a product is below 0, open orders there wait for more
- * than is on the shelf, as paying took them off. The newest orders' lines are
- * the ones short, newest first, until the shortfall is covered. Returns the
+ * than is on the shelf, as paying took them off. Orders still to get ready
+ * are short first (a ready order's items are already on the collection
+ * shelf), the newest first, until the shortfall is covered. Returns the
  * set of line ids. Lines already refunded (group 7) wait for nothing.
  */
 export async function linesNotOnShelf() {
@@ -43,7 +46,7 @@ export async function linesNotOnShelf() {
      JOIN online_orders o ON o.id = l.order_id
      JOIN product_stock ps ON ps.site_id = o.site_id AND ps.product_id = l.product_id
      WHERE o.stage IN ('to_get_ready', 'ready') AND l.refunded_at IS NULL AND ps.qty < 0
-     ORDER BY o.site_id, l.product_id, o.paid_at DESC, o.id DESC, l.id DESC`,
+     ORDER BY o.site_id, l.product_id, (o.stage = 'ready'), o.paid_at DESC, o.id DESC, l.id DESC`,
   ).all();
   const short = new Set();
   const covered = new Map();
@@ -60,9 +63,10 @@ export async function linesNotOnShelf() {
 /**
  * The orders staff see: paid and open, or collected in the last 7 days. With
  * `siteId` (a till's or workshop computer's own shop), only that shop's.
- * `ids` narrows it to those orders, whatever their stage, for one order's page.
+ * `ids` narrows it to those orders, whatever their stage, for one order's page;
+ * `full` adds the email, how it was paid and the shelf, which only that page shows.
  */
-export async function listOrders({ siteId = null, ids = null } = {}) {
+export async function listOrders({ siteId = null, ids = null, full = false } = {}) {
   const tz = await shopTimeZone();
   const today = await shopDay();
   const settings = await orderSettings();
@@ -73,7 +77,7 @@ export async function listOrders({ siteId = null, ids = null } = {}) {
   const params = [tz, ids ?? since];
   if (siteId) { where.push('o.site_id = ?'); params.push(siteId); }
   const orders = await prepare(
-    `SELECT o.id, o.number, o.stage, o.name, o.phone, o.site_id, o.paid_at, o.ready_at, o.collected_at,
+    `SELECT o.id, o.number, o.stage, o.name, o.phone, o.email, o.credit_pence, o.card_pence, o.total_pence, o.site_id, o.paid_at, o.ready_at, o.collected_at,
             to_char(o.keep_until, 'YYYY-MM-DD') AS keep_until,
             to_char(o.ready_at AT TIME ZONE ?, 'YYYY-MM-DD') AS ready_day, s.name AS site_name
      FROM online_orders o LEFT JOIN sites s ON s.id = o.site_id
@@ -117,6 +121,11 @@ export async function listOrders({ siteId = null, ids = null } = {}) {
       emailProblem: o.stage === 'ready' ? await orderEmailProblem(o.id) : null,
       markReadyOff: o.stage === 'to_get_ready' && items.some((i) => i.notOnShelf) ? NOT_ON_SHELF.error : null,
       items,
+      ...(full ? {
+        email: o.email,
+        paid: { creditPence: o.credit_pence, cardPence: o.card_pence, totalPence: o.total_pence },
+        shelfName: settings.shelfName,
+      } : {}),
     });
   }
   return out;
@@ -144,7 +153,7 @@ export async function toGetReadyCount({ siteId = null } = {}) {
 }
 
 export async function oneOrder(id) {
-  const [row] = await listOrders({ ids: [id] });
+  const [row] = await listOrders({ ids: [id], full: true });
   return row ?? null;
 }
 
@@ -170,11 +179,15 @@ const STEPS = {
 export async function takeStep(orderId, stepName, who, detail = {}) {
   const step = STEPS[stepName];
   const row = Number.isInteger(orderId)
-    ? await prepare('SELECT id, stage FROM online_orders WHERE id = ? AND paid_at IS NOT NULL FOR UPDATE').get(orderId)
+    ? await prepare('SELECT id, stage, ready_message_id FROM online_orders WHERE id = ? AND paid_at IS NOT NULL FOR UPDATE').get(orderId)
     : null;
   if (!row) throw new Refused(404, { error: 'Not found' });
   if (stepName === 'collected' && row.stage === 'collected') return false;
   if (!step.from.includes(row.stage)) throw new Refused(409, WRONG_STAGE);
+  if (stepName === 'ready_undone' && row.ready_message_id) {
+    const message = await prepare('SELECT intent_state FROM customer_messages WHERE id = ?').get(row.ready_message_id);
+    if (message && message.intent_state !== 'intended') throw new Refused(409, TOO_LATE);
+  }
   let fields;
   if (stepName === 'ready') {
     const short = await linesNotOnShelf();
