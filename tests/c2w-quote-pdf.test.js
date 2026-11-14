@@ -218,3 +218,19 @@ test('a revised quote PDF that can’t be made is left off, so the certificate s
   }
   assert.deepEqual(await inShop(() => revisedQuoteFiles(-1)), [], 'no such order, no file');
 });
+
+test('undoing Ready stops the message that carried the revised quote, so the quote shows as not sent again', async () => {
+  const o = await quote(await framedBike('1000.00'));
+  // The order changed (cw-quote-revised), then the certificate changed it to match and marked it ready.
+  const changed = await own(`/api/c2w/orders/${o.id}/change`, { method: 'POST', body: { what: 'accessories', accessoryIds: [await accessory('50.00')] } });
+  assert.equal(changed.status, 200, JSON.stringify(changed.body));
+  assert.equal((await own(`/api/c2w/orders/${o.id}/quote`)).body.quote.revision.sent, false, 'changed, not sent yet');
+  const r = await certify(o.id, { amountPence: 100000, difference: 'match', accessoryIds: [], ready: true });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const msg = await lastMessage(maya.id, ['c2w_ready']);
+  assert.equal((await filesOf(msg.id)).length, 1, 'Ready to collect carries the revised quote');
+  const sentNow = async () => (await own(`/api/c2w/orders/${o.id}/quote`)).body.quote.revision.sent;
+  assert.equal(await sentNow(), true, 'sent while the message is waiting to go');
+  assert.equal((await own(`/api/c2w/orders/${o.id}/ready/undo`, { method: 'POST', body: {} })).status, 200);
+  assert.equal(await sentNow(), false, 'the message was stopped, so the quote didn’t go (cw-quote-revised’s grey message comes back)');
+});
