@@ -30,6 +30,10 @@ export const STEPS = {
   // Its Undo (cw-today-held), while the date is still the one it set.
   hold_longer_undone: { from: ['quote', 'waiting'], to: null },
   released: { from: ['quote', 'waiting'], to: null },
+  // Change the bike, the accessories or the provider (cw-more): a revised quote,
+  // sent only on Email. Not once the bike is ready at the counter (logged); the
+  // provider only before the certificate, which names it (the route checks).
+  changed: { from: ['quote', 'waiting', 'certificate'], to: null },
   // The certificate (cw-certificate); with the "bike is ready" tick the route
   // moves it on to ready in the same step.
   certificate: { from: ['quote', 'waiting'], to: 'certificate' },

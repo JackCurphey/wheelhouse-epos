@@ -433,6 +433,7 @@ POST /api/c2w/orders/:id/email-quote
 POST /api/c2w/orders/:id/hold-longer
 POST /api/c2w/orders/:id/hold-longer/undo
 POST /api/c2w/orders/:id/release
+POST /api/c2w/orders/:id/change
 POST /api/c2w/orders/:id/order
 POST /api/c2w/orders/:id/order/undo
 GET /api/c2w/stock
