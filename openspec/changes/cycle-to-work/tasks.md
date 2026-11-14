@@ -70,7 +70,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
   - PR 5b: built for the till search (free and held counts), the basket's warning, the Stock page and the products list (`tests/c2w-holds-stock.test.js`); the storefront was already covered (`tests/site-products.test.js`). The till warns and never blocks, as `till-serial-held` and walk-throughs 2 M6 / 5 M4 draw it. This line first said the till refuses; it was corrected to the drawing, which is Jack's recorded decision (2026-11-jack.md, 14 Nov, "Task 5.4 matches the drawing").
 - [x] 5.5 (with 5.4, in pull request 5b) Screen test: `cw-hold-ending`, `cw-list-hold-ended`; the Stock page's "Held for [Customer] until [date] · Cycle to Work — not for sale"
   - PR 5b: `cw-hold-ending` and More › Release in `tests/screens/c2w-orders.test.js` and `c2w-cancel.test.js`; the Stock page line in `stock-list.test.js`. `cw-list-hold-ended` was already covered (`c2w-orders.test.js`, "a hold the server says has ended").
-- [x] 5.6 Build to pass 5.1–5.5 (5.1–5.3 built in pull request 5). Follow-up: Shopify is sent the stock less bikes held by count as well as held frames, and queued when a count hold changes (migration 158; decided-while-building 14 Nov)
+- [x] 5.6 Build to pass 5.1–5.5 (5.1–5.3 built in pull request 5). Follow-up: Shopify is sent the stock less bikes held by count as well as held frames, and queued when a count hold changes (migration 158; decided-while-building 14 Nov). The older Shopify push (`server/shopify.js`) takes both kinds of hold off too (decided-while-building 14 Nov)
 - [x] 5.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
 ## 6. Certificate, applied and ordering in (pull request 6, about 550 lines, risky: stock)
