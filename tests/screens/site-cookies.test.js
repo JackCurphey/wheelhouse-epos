@@ -158,6 +158,7 @@ test('wb-cookies-page: the table from the one list in the code, the tools added,
   assert.deepEqual(rows, [
     ['wh_customer_session', 'Keeps you signed in', '30 days'],
     ['wh_shop', 'Remembers the shop you collect from', '1 year'],
+    ['wh_basket', 'Remembers what’s in your basket', '[n] days'],
     ['wh_cookies', 'Remembers your cookie choices', '6 months'],
   ]);
   ui.getByText('These are needed for the site to work, so they don’t need your OK.');
@@ -188,7 +189,7 @@ test('wb-cookies-page-plain: a shop with no tool lists only what the site needs,
   const { ui } = r;
   await ui.findByRole('heading', { level: 1, name: 'Cookies' });
   const rows = [...ui.getByRole('table', { name: 'Cookies this website sets' }).querySelectorAll('tbody tr')].map((tr) => tr.firstElementChild.textContent);
-  assert.deepEqual(rows, ['wh_customer_session', 'wh_shop'], 'no choice cookie for a shop that asks nothing');
+  assert.deepEqual(rows, ['wh_customer_session', 'wh_shop', 'wh_basket'], 'no choice cookie for a shop that asks nothing');
   ui.getByText('This website doesn’t use any other cookies, so there’s nothing for you to choose.');
   assert.ok(ui.queryByRole('button', { name: 'Change cookie choices' }) === null);
 });
@@ -212,6 +213,7 @@ test('the Cookies page’s list matches what the server really sets', async () =
   assert.equal(byName.get(CUSTOMER_SESSION_COOKIE)?.seconds, CUSTOMER_SESSION_MAX_AGE_SECONDS);
   assert.ok(byName.has(COOKIE_CHOICES));
   assert.ok(byName.has('wh_shop'));
+  assert.equal(byName.get('wh_basket')?.seconds, null, 'the basket cookie goes when the browser closes');
 });
 
 async function waitFor(check) {

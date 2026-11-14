@@ -11,7 +11,8 @@ import { ProductPage } from './product.tsx';
 import { SearchPage } from './search.tsx';
 import { ShopPageRoute, ShopsPage } from './shops.tsx';
 import { CookiesPage } from './cookies.tsx';
-import { BasketPage, CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
+import { CollectionReturnsPage, ContactPage, NotFoundPage, PrivacyPage, ShopPage } from './pages.tsx';
+import { BasketPage } from './basket-page.tsx';
 
 /**
  * The customer website app (openspec/changes/website-browse, design 3): the
