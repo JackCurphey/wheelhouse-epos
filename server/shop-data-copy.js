@@ -129,7 +129,7 @@ async function salesFile(zone) {
          FROM online_payments p
          LEFT JOIN workshop_jobs j ON j.id = p.job_id
          LEFT JOIN customers c ON c.id = j.customer_id
-        WHERE p.status = 'refunded'
+        WHERE p.status = 'refunded' AND p.purpose = 'deposit'
        UNION ALL
        SELECT m.created_at, 3, m.id, 0, 'Refund', NULL, NULL, NULL, NULL, NULL,
               pr.name, -m.change_qty, NULL, NULL, NULL, NULL, 'Shopify', 'Shopify refund #' || m.shopify_refund_id

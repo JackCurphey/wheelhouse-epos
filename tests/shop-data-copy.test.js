@@ -307,6 +307,24 @@ test('Sales: an online deposit refund and a Shopify refund are minus rows marked
   assert.deepEqual(dates, [...dates].sort(), 'oldest first');
 });
 
+// website-buy-online 5.0c: an online order's payment shares online_payments; its refund isn't a job's deposit.
+test('Sales: a refunded online order payment isn’t a row saying “Online deposit for job”', async (t) => {
+  await salesSetup();
+  await inShop(async () => {
+    const site = (await prepare('SELECT id FROM sites ORDER BY id LIMIT 1').get())?.id
+      ?? (await prepare("INSERT INTO sites (name, code) VALUES ('[Site]', 'S') RETURNING id").get()).id;
+    const order = await prepare(
+      `INSERT INTO online_orders (site_id, name, email, total_pence, card_pence, order_code, request_key_hash)
+       VALUES (?, 'Maya Patel', 'maya@example.test', 3100, 3100, '[order code]', 'k-' || gen_random_uuid()) RETURNING id`
+    ).get(site);
+    await prepare(`INSERT INTO online_payments (provider, provider_ref, amount_pence, status, request_key_hash, purpose, online_order_id, created_at, refunded_at, refund_reason)
+                   VALUES ('pretend', 'ref-order', 3100, 'refunded', 'k-' || gen_random_uuid(), 'order', ?, '2026-09-18T09:00:00Z', '2026-09-19T09:00:00Z', '[reason]') RETURNING id`).get(order.id);
+  });
+  const rows = await salesRows(t);
+  assert.equal(rows.filter((r) => r['Line total (£)'] === '-31.00').length, 0);
+  assert.equal(rows.filter((r) => r.Refunded.includes('[job removed]')).length, 0);
+});
+
 test('Sales: a deleted customer’s sale keeps its row, with the customer empty', async (t) => {
   await salesSetup();
   const gone = (await staff('/api/customers', { method: 'POST', body: { name: 'Sam Leaving' } })).body;

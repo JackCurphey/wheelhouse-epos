@@ -8,7 +8,7 @@ import '../server/load-env.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
@@ -253,10 +253,14 @@ test('154 on a database at 149 widens the checks and leaves its deposits alone',
   url.pathname = `/${name}`;
   await createAppDatabase(admin, name, appRoleFrom(process.env));
   t.after(() => dropDatabase(admin, name));
-  // Marked as run, so the runner stops at 149; then run by hand below.
+  // Marked as run, so the runner stops at 149; then run by hand below. A
+  // later migration built on 154's order tables (160's refunds) can't run
+  // without it, so it's marked as run too.
+  const later = readdirSync(path.join(ROOT, 'server/migrations'))
+    .filter((f) => f.endsWith('.sql') && f > FILE && /\bonline_order/.test(readFileSync(path.join(ROOT, 'server/migrations', f), 'utf8')));
   await withClient(url.href, async (c) => {
     await c.query('CREATE TABLE schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
-    await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [FILE]);
+    for (const f of [FILE, ...later]) await c.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [f]);
   });
   migrate({ ...process.env, DATABASE_URL: url.href });
   await withClient(url.href, async (c) => {

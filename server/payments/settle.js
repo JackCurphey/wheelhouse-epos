@@ -3,7 +3,8 @@
 // card stays held for a booking that never came; a booked deposit still held
 // (the provider couldn't take it as the booking was saved) is taken. Run when
 // deposits are next held or booked; there's no timer. A refund still owed
-// is made too (deposit-refunds design 2).
+// is made too (deposit-refunds design 2). Deposits only: an online order's
+// payment shares the table and is settled by its own code (website-buy-online 5.0a).
 import { prepare } from '../db.js';
 import { payments } from './index.js';
 import { refundOwed } from './refund.js';
@@ -13,7 +14,7 @@ export async function settleDeposits() {
   if (!provider) return;
   const due = await prepare(
     `SELECT id, provider_ref, job_id FROM online_payments
-      WHERE provider = ? AND provider_ref <> '' AND (
+      WHERE provider = ? AND provider_ref <> '' AND purpose = 'deposit' AND (
         (job_id IS NULL AND status IN ('waiting', 'held') AND updated_at < now() - interval '1 hour')
         OR (job_id IS NOT NULL AND status = 'held'))
       ORDER BY id LIMIT 20`
