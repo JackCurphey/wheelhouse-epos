@@ -5,7 +5,7 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-## Start here (updated 13 Nov 2026)
+## Start here (updated 14 Nov 2026)
 
 Who is on what, and what's next. Change these lines in the pull request
 that takes or finishes a piece. Everything that was here before 11 Nov is in
@@ -14,14 +14,14 @@ that takes or finishes a piece. Everything that was here before 11 Nov is in
 **Jack is on:** the website and Cycle to Work. Website browse (WP-6.2,
 `website-browse`): the plan (#742), the read and product routes (#744, #745)
 and the pages (#750 to #752, #754 to #756) are in; timing the suggestions,
-removing the old website and the archive are in the last pull request
-(#774); the follow-ups found in review are listed at the end of its
-`tasks.md`. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
+removing the old website and the archive went in with the last pull request
+(#774), so website browse is built and archived; the follow-ups found in
+review are listed at the end of its `tasks.md`. Buy online (WP-6.3, `website-buy-online`): the plan (#746), the
 order tables and settings on the server (#753, migration 154) and the six
-order messages (#758), the settings screen (#773, #775) and the order
-emails' review fixes (#776) are in; the basket and checkout's server half
-(claude/buy-online-4-basket) stops where paying would start, and their
-screens are next; paying, staff steps and refunds wait for Jack's answers 9 and 11
+order messages (#758), the settings screen (#773, #775, migration 156),
+the order emails' review fixes (#776) and the basket and checkout's server
+half, which stops where paying would start (#777), are in; their screens
+are next; paying, staff steps and refunds wait for Jack's answers 9 and 11
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
 Work (WP-7.1, `cycle-to-work`): the plan (#703), tables and settings (#706,
 #707), orders and quotes (#708, #721), holding bikes (#718, migration 145),
@@ -29,7 +29,12 @@ the certificate, Ready to collect and ordering the bike (#723, #726, #728,
 #731, #733), the customer's page and messages (#719, #730, #738), Today and
 the header search (#725, #734), hand-over at the till and the provider's
 money on the server (#757, #762) and the customer's account (#720) are in;
-cancelling an order and the rest of the screens (#763, #767 to #772) are open.
+so are cancelling an order (#763, #767), the provider's money on the order
+page (#768), what the providers owe with Record a payment (#769), late
+payments on Today with the owed and paid report (#770), the hand-over at the
+till on screen (#771) and Cycle to Work money as its own figure at close of
+day and in Takings (#772, migration 157). Left: the More menu's Change
+steps, holding bikes' stock lines and the "Your bikes" card (question 7).
 
 Merged 11 to 13 Nov, all Jack's apart from Mark's below: `your-data-download`
 finished and archived, with sales and refunds, workshop jobs (#668), the
@@ -53,11 +58,13 @@ full-check` one run at a time, first come first served (#684, #688, #705),
 and flaky tests fixed (#672, #679, #681, #682, #686, #695, #696, #700).
 Decisions: re-run everything only when main overlaps (#687), and the
 overnight questions answered (#735). Tests that waited too little under load (#747,
-#748, #749); WP-1.5 piece 10 ticked (#759).
+#748, #749); WP-1.5 piece 10 ticked (#759). Late on 13 Nov: Cycle to Work
+#763 and #767 to #772; website browse finished (#774); Buy online's settings
+screen, email fixes and basket server half (#773, #775 to #777).
 
 **Jack next:**
-1. Finish website browse, Buy online and Cycle to Work (the open pull
-   requests above).
+1. Buy online's basket and checkout screens, and what is left of Cycle to
+   Work (above).
 2. Products, stock, sizes and colours (WP-1.5): all in but piece 7, which
    waits for a real Citrus Lime export (piece 10 was built in #632 to #635;
    its box is ticked, #759).
