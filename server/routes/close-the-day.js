@@ -57,7 +57,8 @@ async function floatStartOn(day) {
 // (workshop/counted-deposit.js). It has its own line on the report.
 const ONLINE_TENDERS = ['Shopify', DEPOSIT_TENDER];
 // A Cycle to Work hand-over's provider share ("Cycle to Work · Cyclescheme", server/c2w/hand-over.js):
-// owed by the provider, not in the drawer, so a figure of its own, not Other (UX walk-through 5 H3).
+// owed by the provider, not in the drawer, so a figure of its own, not Other (UX walk-through 5 H3),
+// beside the takings and not in them, like the online money (Jack, 14 Nov, merge-c2w Q1 option 2).
 // Matched without case, like moneyBucket (decided-while-building 2026-11-jack, hand-over item 11).
 const C2W_LIKE = `${C2W_TENDER}%`;
 
@@ -113,7 +114,8 @@ const closedBy = (id) => ({ old: { sql: 's.day_close_id = ?', args: [id] }, till
 // Till money by how it was paid, from both sales records: the old record's
 // cash and card columns and extra tenders (pounds, converted as the all_sales
 // view does), and the till record's payments (pence). Takings is card + cash
-// + other + Cycle to Work, so the report always adds up (review, 27 Oct). `after`, when
+// + other, so the report always adds up (review, 27 Oct); Cycle to Work and
+// online money are beside it, not in it (Jack, 14 Nov). `after`, when
 // given, keeps only sales made after that moment, on the server's clock: a
 // till sale by when the server received it, or by the till's own clock only
 // when it was made offline (third review, 27 Oct: an online till's clock
@@ -137,7 +139,7 @@ async function takingsIn({ old, till }, after = null) {
   const cash = os.cash + ts.cash;
   const card = os.card + ts.card;
   const other = os.other + ts.other;
-  return { takingsPence: card + cash + other + os.c2w, cashPence: cash, cardPence: card, otherPence: other, c2wPence: os.c2w, onlinePence: os.online };
+  return { takingsPence: card + cash + other, cashPence: cash, cardPence: card, otherPence: other, c2wPence: os.c2w, onlinePence: os.online };
 }
 
 // Cash taken out since this morning's float check (Jack's answer 9: the
