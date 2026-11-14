@@ -68,9 +68,9 @@ export async function logoFor(url) {
 
 // Noto Sans (SIL Open Font License 1.1), embedded so names with letters such
 // as Ł or ś print as written; Helvetica only covers Western European letters.
-const font = createRequire(import.meta.url);
-const REGULAR = font.resolve('@expo-google-fonts/noto-sans/400Regular/NotoSans_400Regular.ttf');
-const BOLD = font.resolve('@expo-google-fonts/noto-sans/700Bold/NotoSans_700Bold.ttf');
+const fromPackages = createRequire(import.meta.url);
+const REGULAR = fromPackages.resolve('@expo-google-fonts/noto-sans/400Regular/NotoSans_400Regular.ttf');
+const BOLD = fromPackages.resolve('@expo-google-fonts/noto-sans/700Bold/NotoSans_700Bold.ttf');
 
 /** The quote as a PDF (a Buffer), laid out as the printed quote is. */
 export function quotePdf(q, { logo = null } = {}) {
