@@ -33,14 +33,15 @@ CREATE TABLE IF NOT EXISTS online_order_refunds (
   -- as it was, so a person removed later is still named.
   employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
   who_name TEXT CHECK (char_length(who_name) <= 120),
-  -- The card part: owed inside the transaction, made after the commit.
+  -- The card part: owed inside the transaction, made after the commit. Only
+  -- a card refund made has its time.
   card_refund_state TEXT CHECK (card_refund_state IN ('owed', 'made')),
   card_refunded_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT online_order_refunds_amount_check CHECK (card_pence + credit_pence > 0),
   -- A card part has a state; no card part has none.
   CONSTRAINT online_order_refunds_card_state_check CHECK ((card_pence > 0) = (card_refund_state IS NOT NULL)),
-  CONSTRAINT online_order_refunds_made_check CHECK ((card_refund_state = 'made') = (card_refunded_at IS NOT NULL)),
+  CONSTRAINT online_order_refunds_made_check CHECK ((card_refund_state IS NOT DISTINCT FROM 'made') = (card_refunded_at IS NOT NULL)),
   FOREIGN KEY (order_id, shop_id) REFERENCES online_orders (id, shop_id),
   FOREIGN KEY (sale_id, shop_id) REFERENCES sales (id, shop_id)
 );

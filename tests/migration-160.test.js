@@ -105,6 +105,7 @@ test('160 makes an order’s refunds and their lines the shop’s own, names ord
     await assert.rejects(refund(c, a, { credit_pence: -1 }), /check/i);
     await assert.rejects(refund(c, a, { card_refund_state: null }), /check/i, 'a card part has a state');
     await assert.rejects(refund(c, a, { card_pence: 0, credit_pence: 500 }), /check/i, 'no card part has no state');
+    await assert.rejects(refund(c, a, { card_pence: 0, credit_pence: 500, card_refund_state: null, card_refunded_at: new Date() }), /check/i, 'no card part, no refunded time');
     await assert.rejects(refund(c, a, { card_refund_state: 'maybe' }), /check/i);
     await assert.rejects(refund(c, a, { reason: 'x'.repeat(501) }), /check/i);
     await refund(c, a, { reason: 'x'.repeat(500) });
