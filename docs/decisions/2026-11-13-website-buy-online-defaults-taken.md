@@ -40,11 +40,15 @@ their options and trade-offs, are questions 8–12 in the overnight file
    item showing as "for an online order" until it's handed over. Pull
    requests 5–7 (paying, staff steps, refunds) and the refund tables moved
    from pull request 1 aren't built until he answers. Now answered, so they
-   can be built; the staff steps (6) still wait for question 11.
-11. **Handing over before the till's Collect screen (WP-3.1) exists.** This
+   can be built.
+11. **Handing over before the till's Collect screen (WP-3.1) exists.**
+    **Jack's answer (14 Nov), relayed by the Front desk: option 1.** A "Hand over" button on the staff order page now;
+    the till's Collect screen (WP-3.1) uses the same step when it's built.
+    What follows is the question as it was put to him: this
     is the till, so it waits. The plan is written as a Hand over step on the
     staff order page, which the till's screen reuses later. Pull requests 6
-    and 8 aren't built until he answers; 9 and 10 follow them.
+    and 8 aren't built until he answers; 9 and 10 follow them. Now answered,
+    so they can be built.
 
 ## Not a question
 

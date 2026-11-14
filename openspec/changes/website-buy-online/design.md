@@ -51,7 +51,7 @@ the till, real accounts, recorded decisions or design changes), 8, 10 and
    in the Later section of `tasks.md`. The "in [n] days" and "We order it in"
    product-page lines that WP-6.2 hands to WP-6.3 come with them.
 4. **A Hand over step on the staff order page now** (question 11;
-   waiting for Jack: money and the till; written as the recommendation, and nothing that depends on it is built until he answers). The till's `till-collect` board (WP-3.1)
+   Jack's answer (14 Nov), relayed by the Front desk: option 1, as recommended; `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). The till's `till-collect` board (WP-3.1)
    reuses the same server step when it is built.
 5. **Remind after 3 days, keep for 7** (question 12;
    default taken overnight 13 Nov, Jack can overrule; `docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). The days follow bikes
