@@ -13,13 +13,13 @@ export async function oweRefund(jobId, reason, byLoginId = null) {
   ).run(reason, byLoginId, jobId);
 }
 
-/** Makes a refund owed, for one job or (no job) every one still owed. */
+/** Makes a deposit refund owed, for one job or (no job) every one still owed. Never an order's payment (website-buy-online 5.0b). */
 export async function refundOwed(jobId = null) {
   const provider = payments();
   if (!provider) return;
   const owed = await prepare(
     `SELECT id, provider_ref, status, amount_pence, refund_due_reason FROM online_payments
-      WHERE refund_due_reason IS NOT NULL AND status IN ('held', 'taken') AND provider = ? ${jobId ? 'AND job_id = ?' : ''}
+      WHERE refund_due_reason IS NOT NULL AND status IN ('held', 'taken') AND provider = ? AND purpose = 'deposit' ${jobId ? 'AND job_id = ?' : ''}
       ORDER BY id LIMIT 20`
   ).all(...(jobId ? [provider.name, jobId] : [provider.name]));
   for (const p of owed) {

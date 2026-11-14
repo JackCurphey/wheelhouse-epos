@@ -107,8 +107,9 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 - [ ] 7.1 Test: Cancel and refund needs a reason; store credit goes back as a refund entry naming the order, the card part through the adapter's refund, the items back in stock caused by the refund, Order cancelled queued with the reason
 - [ ] 7.2 Test: Can't supply refunds one line the way it was paid, marks it "Couldn’t supply · refunded", puts its unit back, queues Item we couldn’t supply with the reason; the rest carries on
 - [ ] 7.3 Test: the customer's cancel (`POST /api/portal/:shopSlug/order-links/:code/cancel`) refunds in full while To get ready; just after Mark ready it changes nothing and answers "just marked ready"
-- [ ] 7.4 Test: an owed card refund is retried by `settleOrders()` and made once; never more than was taken
+- [ ] 7.4 Test: an owed card refund is retried by `settleOrders()` and made once; never more than was taken. The adapter's `refund` takes a key (the refund's id), so a retry after the provider refunded but before `made` was saved doesn't refund again (risky-area review of 160)
 - [ ] 7.5 Test: the takings and VAT reports take a refund off on the day made; the sale stays on the day paid
+- [ ] 7.5a Test: the shop data copy's Sales file has a minus row for each order refund (`online_order_refunds`), as it has for a deposit refund (5.0c leaves order payments out of the deposit rows)
 - [ ] 7.6 Write `server/online-orders/refunds.js` to pass 7.1–7.5
 - [ ] 7.7 Self-review with `reviewer`, `/review` and `risky-area-reviewer`; full check; hand-run CI
 
