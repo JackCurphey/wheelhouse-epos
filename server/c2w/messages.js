@@ -22,7 +22,7 @@ const baseFor = (req) => process.env.APP_PUBLIC_URL || (req ? `${isHttpsRequest(
  * is now. `req` gives the link's host when there's no APP_PUBLIC_URL. Returns
  * queueMessage's answer ({ id } or { skipped }).
  */
-export async function queueC2wMessage(orderId, key, { req = null, loginId = null } = {}) {
+export async function queueC2wMessage(orderId, key, { req = null, loginId = null, attachments = [] } = {}) {
   const r = await prepare(`${ORDER_SELECT} WHERE o.id = ?`).get(orderId);
   if (!r) return { skipped: 'no_order' };
   const shop = await prepare("SELECT name, slug, phone FROM shops WHERE id = current_setting('app.current_shop_id')::int").get();
@@ -56,7 +56,7 @@ export async function queueC2wMessage(orderId, key, { req = null, loginId = null
     'Certificate amount': r.certificate_pence === null ? '' : pounds(r.certificate_pence),
     'Amount to pay': r.certificate_pence === null ? '' : pounds(r.total_pence - providerPays(r)),
   };
-  const queued = await queueMessage({ customerId: r.customer_id, key, vars, delayMs: UNDO_MS, loginId });
+  const queued = await queueMessage({ customerId: r.customer_id, key, vars, delayMs: UNDO_MS, loginId, attachments });
   // Put aside already gives the end date: a hold no longer than the reminder days
   // gets no "Your hold ends" for it as well, so the two never go back to back.
   if (key === 'c2w_put_aside' && queued.id && r.hold_until_day) await toldTheEnd(orderId, r.hold_until_day);
