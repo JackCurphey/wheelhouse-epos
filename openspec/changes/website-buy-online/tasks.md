@@ -73,7 +73,7 @@ and a hand-run CI (`gh workflow run test.yml --ref <branch>`).
 
 ## 5. Paying — server and pretend outcomes (pull request 5, about 600 lines, risky: money and stock, public routes — waits for Jack's answer to question 9)
 
-- [ ] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9
+- [x] 5.0 Test and migration (the next free number at build time): `online_order_refunds`, `online_order_refund_lines` with row-level security on `shop_id`, `store_credit_entries.online_order_id`, and the `stock_movements` refund cause — moved here from pull request 1, as their shape follows question 9
 - [x] 5.0a `server/payments/settle.js` lets go of any payment with no booking after an hour; order payments have no booking, so it needs a deposits-only filter before order payments exist
 - [x] 5.0b Before any code writes an order payment: `server/payments/refund.js`'s provider-wide sweep (`refundOwed()` with no `jobId`) would refund order payments too, and it can only refund in full
 - [x] 5.0c Before any code writes an order payment: `server/shop-data-copy.js` (the Refund rows, about lines 125–133) labels every refunded online payment as a deposit for a job ("Online deposit for job …")
