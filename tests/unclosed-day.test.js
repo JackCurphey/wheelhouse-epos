@@ -482,7 +482,8 @@ test('Close it racing tonight\'s close: each sale in one close, Monday\'s in Mon
 });
 
 // A Cycle to Work hand-over's provider share on a day nobody closed (UX walk-through 5 H3):
-// Close it keeps it as its own figure, out of Other, and in the takings, as tonight's close does.
+// Close it keeps it as its own figure, out of Other, and beside the takings, not in them, as
+// tonight's close does (Jack, 14 Nov, merge-c2w Q1 option 2).
 test('Close it keeps a day\'s Cycle to Work money as its own figure', async () => {
   const owner = await shop();
   await wednesday(owner);
@@ -492,5 +493,5 @@ test('Close it keeps a day\'s Cycle to Work money as its own figure', async () =
   const res = await post(owner, '/api/close-the-day', { day: YESTERDAY });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const c = res.body.close;
-  assert.deepEqual([c.cashPence, c.cardPence, c.otherPence, c.c2wPence, c.takingsPence], [300 + 7400 + 1000, 2000, 0, 80000, 300 + 7400 + 1000 + 2000 + 80000]);
+  assert.deepEqual([c.cashPence, c.cardPence, c.otherPence, c.c2wPence, c.takingsPence], [300 + 7400 + 1000, 2000, 0, 80000, 300 + 7400 + 1000 + 2000]);
 });
