@@ -62,7 +62,7 @@ export async function undoJobMessages(jobId) {
  * Queues one message for a customer, inside the shop's runWithShop. Returns
  * the queued message, or { skipped: 'off' | 'no_contact' }.
  */
-export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false, ending = null, at = null, email = undefined }) {
+export async function queueMessage({ customerId, jobId = null, key, vars, delayMs = 0, loginId = null, hold = false, ending = null, at = null, email = undefined, attachments = [] }) {
   const template = await templateFor(key);
   if (!template.enabled) return { skipped: 'off' };
   // `email`: always this address, not the customer's chosen way, and the
@@ -89,6 +89,7 @@ export async function queueMessage({ customerId, jobId = null, key, vars, delayM
     `INSERT INTO customer_messages (customer_id, job_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id, ending)
      VALUES (?, ?, ?, 'queued', 'intended', ?, ?, ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, jobId, body, how.channel, key, subject, how.to, sendAfter, loginId, ending);
+  if (how.channel === 'email') await attach(row.id, attachments);
   return { id: row.id, channel: how.channel, to: how.to, sendAfter: hold ? null : sendAfter, held: hold };
 }
 
@@ -118,12 +119,36 @@ export async function sendHeldNow(id) {
  * has none. Due at once; the timer sends it through the email sender, pretend
  * for now. Inside the shop's runWithShop. Returns the message's id.
  */
-export async function sendEmailTo({ to, subject, body, saleId = null, customerId = null, loginId = null, templateKey = 'receipt' }) {
+export async function sendEmailTo({ to, subject, body, saleId = null, customerId = null, loginId = null, templateKey = 'receipt', attachments = [] }) {
   const { id } = await prepare(
     `INSERT INTO customer_messages (customer_id, sale_id, body, status, intent_state, channel, template_key, subject, to_address, send_after, sent_by_login_id)
      VALUES (?, ?, ?, 'queued', 'intended', 'email', ?, ?, ?, ?, ?) RETURNING id`
   ).get(customerId, saleId, body, templateKey, subject, to, new Date().toISOString(), loginId);
+  await attach(id, attachments);
   return id;
+}
+
+/**
+ * Keeps an email message's files with it (openspec/changes/message-attachments
+ * design 1 and 2): each { filename, contentType, content: Buffer }. Inside the
+ * shop's runWithShop, with the message's own insert.
+ */
+async function attach(messageId, attachments) {
+  for (const a of attachments) {
+    await prepare('INSERT INTO customer_message_attachments (message_id, filename, content_type, content) VALUES (?, ?, ?, ?)')
+      .run(messageId, a.filename, a.contentType, a.content);
+  }
+}
+
+/** The files each email message carries, by message id, as the sender is given them. */
+async function attachmentsFor(ids) {
+  const byMessage = new Map(ids.map((id) => [id, []]));
+  if (!ids.length) return byMessage;
+  const rows = await prepare(
+    'SELECT message_id, filename, content_type, content FROM customer_message_attachments WHERE message_id = ANY(?::int[]) ORDER BY id'
+  ).all(ids);
+  for (const r of rows) byMessage.get(r.message_id).push({ filename: r.filename, contentType: r.content_type, content: r.content });
+  return byMessage;
 }
 
 /**
@@ -302,6 +327,9 @@ export async function sendDueForShop(shopId) {
       }
       sendable.push(m);
     }
+    // Each email's files, loaded with the claim; a text carries none (design 2).
+    const files = await attachmentsFor(sendable.filter((m) => m.channel === 'email').map((m) => m.id));
+    for (const m of sendable) m.attachments = files.get(m.id) ?? [];
     return sendable;
   });
   for (const m of due) {
@@ -317,7 +345,7 @@ export async function sendDueForShop(shopId) {
 async function sendOne(shopId, m) {
   let result;
   try {
-    result = await senderFor(m.channel).send({ channel: m.channel, to: m.to_address, subject: m.subject, body: m.body });
+    result = await senderFor(m.channel).send({ channel: m.channel, to: m.to_address, subject: m.subject, body: m.body, attachments: m.attachments });
   } catch (err) {
     result = { ok: false, error: err.message };
   }
