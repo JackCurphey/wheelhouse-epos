@@ -22,7 +22,7 @@ const NO_CERT = { kind: 'c2w_no_certificate', orderId: 31, customerName: 'Maya P
 const LATE = { kind: 'c2w_payment_late', orderId: 31, providerName: '[Provider]', customerName: 'Maya Patel', collectedOn: day(-20), expectedPence: 90000, expectedBy: day(-12), lateDays: 12 };
 const FOUND = { id: 31, customerName: 'Maya Patel', customerId: 5, bike: '[Bike] · [Size]', stage: 'waiting', quoteRef: 'CW-[n]', holdUntil: day(1), holdEnded: false, certificateNumber: null };
 const OPEN = { kind: 'c2w_order', id: 31, stage: 'waiting', open: true, quoteRef: 'CW-[n]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: day(1), holdEnded: false, certificateNumber: null, collectedAt: null, at: `${day(-13)}T10:00:00.000Z` };
-const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, holdEnded: false, certificateNumber: '[certificate number]', collectedAt: `${day(-10)}T10:00:00.000Z`, at: `${day(-10)}T10:00:00.000Z` };
+const COLLECTED = { kind: 'c2w_order', id: 32, stage: 'collected', open: false, quoteRef: 'CW-[m]', bike: '[Bike] · [Size]', providerName: '[Provider]', holdUntil: null, holdEnded: false, certificateNumber: '[certificate number]', collectedAt: `${day(-10)}T10:00:00.000Z`, saleId: 4071, at: `${day(-10)}T10:00:00.000Z` };
 const SEARCHED = { timeout: 5000 };
 
 const realFetch = globalThis.fetch;
@@ -37,7 +37,7 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
-async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse = null, slow = false, found = [FOUND] } = {}) {
+async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse = null, slow = false, found = [FOUND], bikes = [], undoRefuse = null } = {}) {
   calls = [];
   let attention = items;
   globalThis.fetch = async (url, init = {}) => {
@@ -54,6 +54,11 @@ async function open(path, { items = [HOLD], history = [OPEN, COLLECTED], refuse 
       attention = attention.filter((i) => i.orderId !== 31);
       return reply(200, { order: { id: 31, holdUntil: p.endsWith('hold-longer') ? day(7) : null } });
     }
+    if (method === 'POST' && p === '/api/c2w/orders/31/hold-longer/undo') {
+      if (undoRefuse) return reply(409, undoRefuse);
+      return reply(200, { order: { id: 31, holdUntil: items[0]?.holdUntil ?? null } });
+    }
+    if (p === '/api/customers/5/bikes') return reply(200, bikes);
     if (p === '/api/search') return reply(200, { jobs: [], customers: [{ id: 5, name: 'Maya Patel', phone: '07700 900 142', email: null, c2wOrders: 1 }], bikes: [], c2wOrders: found });
     if (p === '/api/customers/5') return reply(200, MAYA);
     if (p === '/api/customers/5/history') return reply(200, { items: history });
@@ -94,7 +99,7 @@ test('cw-today-held: Hold longer holds the bike in one press; the line goes and 
   fireEvent.click(longer);
   await waitFor(() => assert.ok(ui.queryByText(/hold ended/) === null));
   assert.equal(posts('/api/c2w/orders/31/hold-longer').length, 1, 'one press, one hold');
-  await waitFor(() => assert.equal(noteText(), `Maya Patel’s bike is held until ${long(day(7))}.`));
+  await waitFor(() => assert.equal(noteText().replace(/Undo$/, ''), `Maya Patel’s bike is held until ${long(day(7))}. Maya is sent “Your bike is put aside”.`));
   await waitFor(() => assert.ok(document.activeElement === ui.getByRole('heading', { name: 'Needs attention' })));
   assert.equal(shell.queryClient.getQueryState(['c2w-orders'])?.isInvalidated, true, 'the Cycle to Work list is read again');
 });
@@ -165,7 +170,29 @@ test('cw-today-held: Hold longer on a quote with no certificate holds it in one 
   fireEvent.click(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }));
   await waitFor(() => assert.ok(ui.queryByText(/no certificate yet/) === null));
   assert.equal(posts('/api/c2w/orders/31/hold-longer').length, 1);
-  await waitFor(() => assert.equal(noteText(), `Maya Patel’s bike is held until ${long(day(7))}.`));
+  await waitFor(() => assert.equal(noteText().replace(/Undo$/, ''), `Maya Patel’s bike is held until ${long(day(7))}. Maya is sent “Your bike is put aside”.`));
+});
+
+test('cw-today-held: the note’s Undo takes the Hold longer back in one press and says so', async () => {
+  const { ui, within, fireEvent, waitFor } = await open('/workshop/today');
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  fireEvent.click(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }));
+  const undo = await ui.findByRole('button', { name: 'Undo' });
+  shell.queryClient.setQueryData(['c2w-orders'], { groups: {} });
+  fireEvent.click(undo);
+  fireEvent.click(undo);
+  await waitFor(() => assert.equal(noteText(), 'Undone'));
+  assert.equal(posts('/api/c2w/orders/31/hold-longer/undo').length, 1, 'one press, one Undo');
+  assert.equal(shell.queryClient.getQueryState(['c2w-orders'])?.isInvalidated, true, 'the Cycle to Work list is read again');
+});
+
+test('cw-today-held: a refused Undo shows the server’s words in the note', async () => {
+  const words = 'There’s no Hold longer to undo now. Refresh to see the hold’s date.';
+  const { ui, within, fireEvent, waitFor } = await open('/workshop/today', { undoRefuse: { error: words, code: 'nothing_to_undo' } });
+  const box = within(await ui.findByRole('region', { name: 'Needs attention · 1' }));
+  fireEvent.click(box.getByRole('button', { name: 'Hold Maya Patel’s bike longer' }));
+  fireEvent.click(await ui.findByRole('button', { name: 'Undo' }));
+  await waitFor(() => assert.equal(noteText(), words));
 });
 
 // ---------- Search ----------
@@ -199,8 +226,23 @@ test('cs-page-c2w and -collected: the customer’s orders in their history, open
   const earlier = within(hist.getByRole('list', { name: 'Earlier, newest first' }));
   const done = earlier.getByRole('link', { name: /Cycle to Work · \[Bike\] · \[Size\] · Collected/ });
   assert.equal(done.getAttribute('href'), '/workshop/c2w/32');
-  const was = earlier.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[m] · certificate [certificate number] · collected ${long(day(-10))}`);
+  const was = earlier.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Quote CW-[m] · certificate [certificate number] · collected ${long(day(-10))} · Sale 4071`);
   assert.ok(within(was).getByText('[certificate number]').className.includes('font-[family-name:var(--wh-font-mono)]'), 'the certificate number too');
+  assert.ok(within(was).getByText('4071').className.includes('font-[family-name:var(--wh-font-mono)]'), 'and the sale’s number');
+});
+
+test('cs-page-c2w-collected: the bike handed over is in her Bikes, with its size, frame number and bought here on Cycle to Work', async () => {
+  const bikes = [
+    { id: 8, make: null, model: '[Bike]', size: '[Size]', cycleToWork: true, serialNumber: '[frame number]', boughtHereOn: day(-10), warranty: null },
+    { id: 9, make: '[Make]', model: '[Model]', size: null, cycleToWork: false, serialNumber: '[serial]', boughtHereOn: null, warranty: null },
+  ];
+  const { ui, within } = await open('/workshop/customers/5', { items: [], bikes });
+  const c2w = await ui.findByText('[Bike] · [Size]');
+  const row = within(c2w.closest('a'));
+  const sub = row.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === `Frame [frame number] · bought here on Cycle to Work 4 Sep 2026`);
+  assert.ok(within(sub).getByText('[frame number]').className.includes('font-[family-name:var(--wh-font-mono)]'), 'the frame number in the fixed-width font');
+  assert.ok(ui.getByText('[Make] [Model]') !== null, 'her own bike says nothing of Cycle to Work');
+  assert.ok(ui.queryByText(/\[serial\]/) === null, 'nor shows its serial number');
 });
 
 test('cs-search-c2w and cs-page-c2w: once a hold has ended, the order says so in the list’s words, not “held until”', async () => {

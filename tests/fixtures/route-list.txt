@@ -376,12 +376,12 @@ GET /api/reports/takings.csv
 GET /api/reports/days/:id/csv
 GET /api/reports/workshop
 GET /api/reports/workshop.csv
+GET /api/reports/c2w
+GET /api/reports/c2w.csv
 GET /api/reports/returning
 GET /api/reports/returning.csv
 GET /api/reports/vat
 GET /api/reports/vat.csv
-GET /api/reports/c2w
-GET /api/reports/c2w.csv
 GET /api/reports/margin
 GET /api/reports/margin.csv
 GET /api/reports/changed
@@ -431,6 +431,7 @@ GET /api/c2w/orders/:id/quote
 POST /api/c2w/orders/:id/hand-over/due
 POST /api/c2w/orders/:id/email-quote
 POST /api/c2w/orders/:id/hold-longer
+POST /api/c2w/orders/:id/hold-longer/undo
 POST /api/c2w/orders/:id/release
 POST /api/c2w/orders/:id/order
 POST /api/c2w/orders/:id/order/undo

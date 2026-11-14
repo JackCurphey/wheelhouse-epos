@@ -142,12 +142,12 @@ export async function queueCertificateMessage(orderId, opts) {
  * customer is stopped. The message isn't tied to the order, so it is found by
  * its customer; one already sent can't be stopped.
  */
-export async function undoReadyMessage(orderId) {
+export async function undoReadyMessage(orderId, key = 'c2w_ready') {
   await prepare(
     `UPDATE customer_messages SET intent_state = 'undone', status = 'undone'
-     WHERE intent_state = 'intended' AND template_key = 'c2w_ready'
+     WHERE intent_state = 'intended' AND template_key = ?
        AND customer_id = (SELECT customer_id FROM c2w_orders WHERE id = ?)`,
-  ).run(orderId);
+  ).run(key, orderId);
 }
 
 /**

@@ -370,3 +370,16 @@ test('9.1 Settings › Messages has the six, grouped as Cycle to Work, with the 
   // All six are live: "Your order is cancelled" joined with cancelling (pull request 8b).
   assert.deepEqual(rows.filter((t) => !t.live).map((t) => t.key), []);
 });
+
+test('10.4 Undo on Hold longer stops its waiting “Your bike is put aside”, and leaves another customer’s alone', async () => {
+  const maya = await newMaya();
+  const made = await quote(maya, await framedBike(1));
+  const other = await newMaya();
+  await quote(other, await framedBike(1));
+  assert.equal((await post(`/api/c2w/orders/${made.id}/hold-longer`, {})).status, 200);
+  const res = await post(`/api/c2w/orders/${made.id}/hold-longer/undo`, {});
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const sent = (await messagesTo(maya)).filter((m) => m.template_key === 'c2w_put_aside');
+  assert.deepEqual(sent.map((m) => m.intent_state), ['undone', 'undone'], 'the longer hold’s text is stopped');
+  assert.deepEqual((await messagesTo(other)).map((m) => m.intent_state), ['intended']);
+});

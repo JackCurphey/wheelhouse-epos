@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
 import { apiGet, apiMutate, ApiError, serverSaid } from '@/lib/api/client.ts';
 import { SavedNoteArea, useSavedNote } from '@/screens/settings/saved-note.tsx';
-import { longDate, orderHref, possessive, pounds } from '@/screens/c2w/c2w-bits.tsx';
+import { firstName, longDate, orderHref, possessive, pounds } from '@/screens/c2w/c2w-bits.tsx';
 import { REASON_LABEL } from '@/screens/stock/adjust-stock.tsx';
 import { productHref } from '@/screens/stock/stock-bits.tsx';
 import { countHref } from '@/screens/stock-take/stock-take-bits.ts';
@@ -237,12 +237,13 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
     busyHold.current.add(line.orderId);
     setHolding((c) => new Set(c).add(line.orderId));
     setRefused(null);
-    let said: string | null = null;
+    let said: Parameters<typeof note.show>[0] | null = null;
     try {
       const { order } = await apiMutate<{ order: { holdUntil: string | null } }>(`/api/c2w/orders/${line.orderId}/${step}`, {}, { method: 'POST' });
+      // cw-today-held: what she's sent, and Undo (by her first name, logged).
       said = step === 'hold-longer' && order.holdUntil
-        ? `${possessive(line.customerName)} bike is held until ${longDate(order.holdUntil)}.`
-        : `${possessive(line.customerName)} bike is back on sale. The order stays open.`;
+        ? { text: `${possessive(line.customerName)} bike is held until ${longDate(order.holdUntil)}. ${firstName(line.customerName)} is sent “Your bike is put aside”.`, action: { label: 'Undo', run: () => { note.busy(); void undoLonger(line.orderId); } } }
+        : { text: `${possessive(line.customerName)} bike is back on sale. The order stays open.` };
     } catch (err) {
       setRefused(serverSaid(err) ? err.message : 'Wheelhouse couldn’t record that. Try again in a moment.');
     } finally {
@@ -254,8 +255,22 @@ function NeedsAttention({ today, touch, phone }: { today: string; touch: boolean
       setHolding((c) => { const next = new Set(c); next.delete(line.orderId); return next; });
     }
     if (said) {
-      note.show({ text: said });
+      note.show(said);
       document.getElementById('today-attention')?.focus();
+    }
+  }
+  // The note's Undo: back to the date before; the server's words when it refuses.
+  async function undoLonger(orderId: number) {
+    try {
+      await apiMutate(`/api/c2w/orders/${orderId}/hold-longer/undo`, {}, { method: 'POST' });
+      note.show({ text: 'Undone' });
+    } catch (err) {
+      note.show({ text: serverSaid(err) ? err.message : 'Wheelhouse couldn’t save that. Try again in a moment.', failed: true });
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['needs-attention'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-orders'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-count'] });
+      void queryClient.invalidateQueries({ queryKey: ['c2w-order', orderId] });
     }
   }
   const lines = items.map((i) => {

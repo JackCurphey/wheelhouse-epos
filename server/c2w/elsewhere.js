@@ -53,6 +53,8 @@ export async function customerOrders(customerId) {
     return {
       kind: 'c2w_order', id: r.id, stage: r.stage, open, quoteRef: `${QUOTE_PREFIX}${r.quote_number}`, bike: r.bike_name, providerName: r.provider_name,
       holdUntil: r.hold_until_day, holdEnded: holdEnded(r, today), certificateNumber: r.certificate_number ?? null, collectedAt: iso(r.collected_at),
+      // The hand-over sale, for its number (cs-page-c2w-collected).
+      saleId: r.sale_id ?? null,
       at: iso(open ? r.quote_given_at : r.collected_at ?? r.quote_given_at),
     };
   });
