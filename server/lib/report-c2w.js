@@ -14,8 +14,8 @@ import { csvOf } from './csv.js';
 const inRange = (col) => `${col} >= (?::date)::timestamp AT TIME ZONE ? AND ${col} < (?::date + 1)::timestamp AT TIME ZONE ?`;
 const byProvider = (rows) => new Map(rows.map((r) => [r.provider_id, r]));
 
-// Paid and commission are counted on the day each order is marked paid (the
-// drawing's note): orders marked paid with paid_on in the period. Commission is
+// Paid and commission are counted on the day the payment was received (the
+// drawing's note; Jack, 14 Nov): orders marked paid with paid_on in the period. Commission is
 // the certificate less what the provider was expected to pay, over orders that
 // have both; on a paid order that is also what it paid, since any extra is
 // noted apart (server/c2w/money.js). A part-paid order counts nowhere until it

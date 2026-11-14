@@ -135,7 +135,7 @@ function Body({ report }: { report: C2wReport }) {
         <span>Each bike, and what’s owed on it right now, is on Cycle to Work’s Owed page.</span>
         <Link to={ROUTES['cw-owed']} aria-label="See what Cycle to Work providers owe now" className="inline-flex min-h-11 items-center px-1 font-semibold text-[var(--wh-ink)] underline">See what’s owed now</Link>
       </p>
-      <Note>Paid and commission are counted on the day each order is marked paid. They go to Xero with that day’s summary.</Note>
+      <Note>Paid and commission are counted on the day the payment was received. They go to Xero with that day’s summary.</Note>
     </>
   );
 }
