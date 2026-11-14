@@ -234,9 +234,12 @@ export function register(route) {
     const settings = await settingsRow();
     const tz = (await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get())?.time_zone || 'Europe/London';
     const day = (t) => (t ? new Date(t).toLocaleDateString('en-CA', { timeZone: tz }) : null);
-    // cw-quote-revised: the latest change, and whether the quote has been emailed since.
+    // cw-quote-revised: the latest change, and whether the quote has been emailed since,
+    // on its own or with the certificate that changed the order to match (cw-certificate:
+    // "The revised quote goes to Maya with the “Certificate received” email").
     const change = await db.prepare(`SELECT e.detail->>'what' AS what, e.detail->>'at' AS at, EXISTS (SELECT 1 FROM c2w_order_events m
-      WHERE m.order_id = e.order_id AND m.kind = 'quote_emailed' AND m.id > e.id) AS sent
+      WHERE m.order_id = e.order_id AND m.id > e.id
+        AND m.kind IN ('quote_emailed', 'revised_quote_sent')) AS sent
       FROM c2w_order_events e WHERE e.order_id = ? AND e.kind = 'changed' ORDER BY e.id DESC LIMIT 1`).get(row.id);
     sendJson(res, 200, {
       quote: {
@@ -573,6 +576,7 @@ export function register(route) {
           const total = row.total_pence - accessoriesPence(row.accessories) + accessoriesPence(extras);
           if (total > amount) throw new ValidationError('The new total is more than the certificate. Take more off, or keep the order.');
           Object.assign(fields, { accessories: JSON.stringify(extras), total_pence: total, quote_revised_at: currentMoment().toISOString() });
+          detail.revisedQuote = true;
         }
         // A bike let go before the certificate is held again if one is free at the
         // order's site; if none is, the order needs one ordering in.
@@ -594,7 +598,10 @@ export function register(route) {
         }
         return fields;
       }, { detail });
-      await queueCertificateMessage(id, { req, loginId: who.loginId });
+      const told = await queueCertificateMessage(id, { req, loginId: who.loginId });
+      // Changed to match: the revised quote went with that message, if it went at all
+      // (not shown in "What's happened"; it clears cw-quote-revised's grey message).
+      if (detail.revisedQuote && told?.id) await addEvent(id, 'revised_quote_sent', who, { detail: { messageId: told.id } });
       // The next step rides along, so the bike-was-released popup offers ordering only when the shop's rule allows it.
       const row = await loadOrder(id);
       const next = nextFor(row, (await settingsRow()).order_rule, today);

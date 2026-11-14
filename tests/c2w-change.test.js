@@ -348,3 +348,29 @@ test('4.8 the revised quote dates the change itself, not a later revision', asyn
   const q = (await own(`/api/c2w/orders/${o.id}/quote`)).body.quote;
   assert.deepEqual(q.revision, { what: 'bike', on: '2026-09-01', sent: false });
 });
+
+// cw-certificate's "change it to match": "The revised quote goes to Maya with the
+// “Certificate received” email", so the quote's grey "hasn't been sent it yet" clears.
+test('4.8 a revised quote sent with the certificate clears the grey message; keeping the order leaves it', async () => {
+  const certify = (id, body) => own(`/api/c2w/orders/${id}/certificate`, { method: 'POST', body: { number: '[certificate number]', ...body } });
+  const revision = async (id) => (await own(`/api/c2w/orders/${id}/quote`)).body.quote.revision;
+  const extra = await accessory('50.00');
+  const matched = await quote(await framedBike(1, '1000.00'), { accessoryIds: [extra] });
+  assert.equal((await change(matched.id, { what: 'bike', productId: await framedBike(1, '1000.00') })).status, 200);
+  assert.equal((await revision(matched.id)).sent, false);
+  const m = await certify(matched.id, { amountPence: 100000, difference: 'match', accessoryIds: [] });
+  assert.equal(m.status, 200, JSON.stringify(m.body));
+  assert.equal((await revision(matched.id)).sent, true, 'the revised quote went with the certificate email');
+  const kept = await quote(await framedBike(1, '1000.00'), { accessoryIds: [extra] });
+  assert.equal((await change(kept.id, { what: 'bike', productId: await framedBike(1, '1000.00') })).status, 200);
+  const k = await certify(kept.id, { amountPence: 100000, difference: 'keep' });
+  assert.equal(k.status, 200, JSON.stringify(k.body));
+  assert.equal((await revision(kept.id)).sent, false, 'kept, so no revised quote went');
+  // No email or phone, so "Certificate received" can't go, and the message stays.
+  const unreachable = (await own('/api/customers', { method: 'POST', body: { name: '[Customer with no contact details]' } })).body;
+  const quiet = await quote(await framedBike(1, '1000.00'), { accessoryIds: [extra], customerId: unreachable.id });
+  assert.equal((await change(quiet.id, { what: 'bike', productId: await framedBike(1, '1000.00') })).status, 200);
+  const q = await certify(quiet.id, { amountPence: 100000, difference: 'match', accessoryIds: [] });
+  assert.equal(q.status, 200, JSON.stringify(q.body));
+  assert.equal((await revision(quiet.id)).sent, false, 'no certificate message went, so neither did the revised quote');
+});
