@@ -283,6 +283,17 @@ export async function syncProductToShopify(product) {
   }
 }
 
+// Bikes held for Cycle to Work stay in stock but aren't for sale: Shopify is
+// sent the stock less held frames and bikes held by count, never below nought,
+// as the newer sync's productsToSend does (cycle-to-work task 5.6).
+async function lessHeld(product, quantity) {
+  if (!product.id) return quantity;
+  const row = await prepare(`SELECT
+      (SELECT count(*) FROM stock_frames f WHERE f.product_id = ? AND f.state = 'held')
+    + (SELECT count(*) FROM c2w_orders o WHERE o.product_id = ? AND c2w_count_held(o)) AS held`).get(product.id, product.id);
+  return Math.max(0, quantity - Number(row.held));
+}
+
 export async function pushInventoryLevel(product, quantity) {
   if (!product.shopify_inventory_item_id) return;
   const connection = await getShopifyConnection();
@@ -292,10 +303,11 @@ export async function pushInventoryLevel(product, quantity) {
   if (!connection || connection.status === 'not_connected') return;
 
   try {
+    const available = await lessHeld(product, quantity);
     await withRetry(() => shopifyAdminRequest(connection, 'POST', '/inventory_levels/set.json', {
       location_id: connection.location_id,
       inventory_item_id: product.shopify_inventory_item_id,
-      available: quantity,
+      available,
     }), 3, 50);
     if (connection.status === 'sync_error') {
       await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('connected', connection.id);
