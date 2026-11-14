@@ -20,9 +20,9 @@ removing the old website and the archive are in the last pull request
 order tables and settings on the server (#753, migration 154) and the six
 order messages (#758), the settings screen (#773, #775) and the order
 emails' review fixes (#776) and the basket and checkout's server half
-(#777, stopping where paying would start) are in; the basket screens are
-being built (claude/buy-online-5-basket-screens), checkout's screen up to
-paying next. Jack answered questions 9 and 11 (14 Nov, option 1 each: a
+(#777, stopping where paying would start) and the basket screens (#797) are
+in; checkout's screen up to paying is being built
+(claude/buy-online-6-checkout-screen). Jack answered questions 9 and 11 (14 Nov, option 1 each: a
 sale and the stock drop at payment; a Hand over button on the staff order
 page), so paying, the staff steps and refunds follow the screens
 (`docs/decisions/2026-11-13-website-buy-online-defaults-taken.md`). Cycle to
